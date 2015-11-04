@@ -18,15 +18,13 @@ typedef struct { uint32_t i, d0,d1,d2; float r; } sobol_fixed_4d_t;
 #define SOBOL_TO_F32 0x1p-24f
 #define SOBOL_TO_F64 0x1p-32f
 
-
-
 #else
 #include <intrin.h>
 
 #define SOBOL_TO_F32 (1.f/(1<<24))
-#define SOBOL_TO_F64 (1.0/((1<<24)))
+#define SOBOL_TO_F64 (1.0/(1.0*(1<<24)*(1<<8)))
 
-_inline __builtin_ctz(uint32_t x) { uint32_t r; _BitScanForward(&r, x); return r; }
+_inline uint32_t __builtin_ctz(uint32_t x) { unsigned long r; _BitScanForward(&r, (unsigned long)x); return (uint32_t)r; }
 
 #endif
 
@@ -330,7 +328,7 @@ inline void sobol_fixed_3d_next_f64(sobol_fixed_3d_t* s, double* d)
   s->i = i++;
 }
 
-inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, float* d)
+inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
 {
   uint32_t i = s->i;
 
