@@ -134,7 +134,7 @@ void sobol_2d_seek(sobol_2d_t* s, uint32_t off)
   s->d1 = d1;    
 }
 
-void sobol_2d_seek(sobol_2d_t* s, uint32_t off)
+void sobol_3d_seek(sobol_3d_t* s, uint32_t off)
 {
   uint32_t i  = s->i;
   uint32_t d0 = s->d0;
