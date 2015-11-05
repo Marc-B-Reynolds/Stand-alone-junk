@@ -1,4 +1,11 @@
+// Marc B. Reynolds, 2010-2015
 // Public Domain under http://unlicense.org, see link for details.
+//
+// Sobol (low-discrepancy) sequence in 1-3D, stratified in 2-4D.
+// Classic binary-reflected gray code.
+//
+// SEE: http://web.maths.unsw.edu.au/~fkuo/sobol/
+//
 
 #ifndef SOBOL_H
 #define SOBOL_H
@@ -34,17 +41,15 @@ _inline uint32_t __builtin_ctz(uint32_t x) { unsigned long r; _BitScanForward(&r
 
 #ifdef __cplusplus
 #define SOBOL_EXTERN extern "C"
-#else
 #ifdef  _MSC_VER
 #define inline _inline
 #endif
+#else
 #define SOBOL_EXTERN extern
 #endif
 
-
 #if defined(SOBOL_IMPLEMENTATION)
 
-// SEE: http://web.maths.unsw.edu.au/~fkuo/sobol/
 uint32_t sobol_table[] =
 {
   0x80000000, 0x80000000,
@@ -81,22 +86,22 @@ uint32_t sobol_table[] =
   0xffffffff, 0xc5005555
 };
 
-void sobol_1d_seek(sobol_1d_t* s, uint32_t pos)
+void sobol_1d_seek(sobol_1d_t* s, uint32_t off)
 {
   uint32_t i  = s->i;
   uint32_t d0 = s->d0;
-  uint32_t n  = i + pos;
+  uint32_t n  = i + off;
   uint32_t a  = i ^ (i >> 1);
   uint32_t b  = n ^ (n >> 1);
   uint32_t d  = a ^ b;
-  uint32_t c  = 0;
+  uint32_t c  = 0x80000000;
   
   while(d) {
     if (d & 1) {
-      d0 ^= 0x80000000 >> c;
+      d0 ^= c;
     }
     d >>= 1;
-    c  += 1;
+    c >>= 1;
   }
   
   s->i  = n;    
@@ -104,12 +109,12 @@ void sobol_1d_seek(sobol_1d_t* s, uint32_t pos)
 }
 
 
-void sobol_2d_seek(sobol_2d_t* s, uint32_t pos)
+void sobol_2d_seek(sobol_2d_t* s, uint32_t off)
 {
   uint32_t i  = s->i;
   uint32_t d0 = s->d0;
   uint32_t d1 = s->d1;
-  uint32_t n  = i + pos;
+  uint32_t n  = i + off;
   uint32_t a  = i ^ (i >> 1);
   uint32_t b  = n ^ (n >> 1);
   uint32_t d  = a ^ b;
@@ -118,7 +123,7 @@ void sobol_2d_seek(sobol_2d_t* s, uint32_t pos)
   while(d) {
     if (d & 1) {
       d0 ^= 0x80000000 >> c;
-      d1 ^= sobol_table[c];
+      d1 ^= sobol_table[2*c];
     }
     d >>= 1;
     c  += 1;
@@ -129,12 +134,40 @@ void sobol_2d_seek(sobol_2d_t* s, uint32_t pos)
   s->d1 = d1;    
 }
 
+void sobol_2d_seek(sobol_2d_t* s, uint32_t off)
+{
+  uint32_t i  = s->i;
+  uint32_t d0 = s->d0;
+  uint32_t d1 = s->d1;
+  uint32_t d2 = s->d2;
+  uint32_t n  = i + off;
+  uint32_t a  = i ^ (i >> 1);
+  uint32_t b  = n ^ (n >> 1);
+  uint32_t d  = a ^ b;
+  uint32_t c  = 0;
+  
+  while(d) {
+    if (d & 1) {
+      d0 ^= 0x80000000 >> c;
+      d1 ^= sobol_table[2*c  ];
+      d2 ^= sobol_table[2*c+1];
+    }
+    d >>= 1;
+    c  += 1;
+  }
+  
+  s->i  = n;    
+  s->d0 = d0;    
+  s->d1 = d1;    
+  s->d2 = d2;    
+}
+
 #else
 
 extern uint32_t* sobol_table;
-SOBOL_EXTERN void sobol_1d_seek(sobol_1d_t* s, uint32_t pos);
-SOBOL_EXTERN void sobol_2d_seek(sobol_2d_t* s, uint32_t pos);
-SOBOL_EXTERN void sobol_3d_seek(sobol_3d_t* s, uint32_t pos);
+SOBOL_EXTERN void sobol_1d_seek(sobol_1d_t* s, uint32_t off);
+SOBOL_EXTERN void sobol_2d_seek(sobol_2d_t* s, uint32_t off);
+SOBOL_EXTERN void sobol_3d_seek(sobol_3d_t* s, uint32_t off);
 
 #endif
 
@@ -234,7 +267,6 @@ inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
 
   sobol_3d_update(s);
 }
-
 
 inline double sobol_1d_next_f64(sobol_1d_t* s)
 {
