@@ -6,36 +6,48 @@
 //
 // SEE: http://web.maths.unsw.edu.au/~fkuo/sobol/
 //
+// TODO: documentation
 
 #ifndef SOBOL_H
 #define SOBOL_H
 
-// standard sequences
+// standard sequences: allow for progressive sampling (number of
+// samples in not decided in advance)
 typedef struct { uint32_t i, d0; }       sobol_1d_t;
 typedef struct { uint32_t i, d0,d1; }    sobol_2d_t;
 typedef struct { uint32_t i, d0,d1,d2; } sobol_3d_t;
 
-// stratified sequences: 1 dimenions lower
+// stratified sequences: 1 dimenions lower. Number of samples is
+// chosen in advance and the coordinate one dimension is an even
+// subdivision of the sample size.
 typedef struct { uint32_t i, d0;       float r; } sobol_fixed_2d_t;
 typedef struct { uint32_t i, d0,d1;    float r; } sobol_fixed_3d_t;
 typedef struct { uint32_t i, d0,d1,d2; float r; } sobol_fixed_4d_t;
 
 
 #if !defined(_MSC_VER)
-#define SOBOL_TO_F32 0x1p-24f
-#define SOBOL_TO_F64 0x1p-32f
-
+#if  defined(SOBOL_BIAS)
+#define SOBOL_TO_F32(X) ((X)*0x1p-32f)
+#else
+#define SOBOL_TO_F32(X) ((X>>8)*0x1p-24f)
+#endif
+#define SOBOL_TO_F64    (0x1p-32f)
 #else
 #include <intrin.h>
-
-#define SOBOL_TO_F32 (1.f/(1<<24))
-#define SOBOL_TO_F64 (1.0/(1.0*(1<<24)*(1<<8)))
+#if  defined(SOBOL_BIAS)
+#define SOBOL_TO_F32(X) (X*(1.f/((1<<24)*(1<<8))))
+#else
+#define SOBOL_TO_F32(X) (X*(1.f/(1<<24)))
+#endif
+#define SOBOL_TO_F64    ((1.0/(1.0*(1<<24)*(1<<8))))
 
 _inline uint32_t __builtin_ctz(uint32_t x) { unsigned long r; _BitScanForward(&r, (unsigned long)x); return (uint32_t)r; }
 
 #endif
 
 #ifndef SOBOL_NTZ
+// The input is only zero once at the last element of the sequence
+// CTZ being undefined for input zero has no meanful impact.
 #define SOBOL_NTZ(X) __builtin_ctz(X)
 #endif
 
@@ -204,7 +216,7 @@ inline void sobol_fixed_3d_init(sobol_fixed_3d_t* s, uint32_t len, uint32_t hash
   s->r = 1.f/len;
 }
 
-inline void sobol_fixed_4d_init(sobol_fixed_3d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1, uint32_t hash2)
+inline void sobol_fixed_4d_init(sobol_fixed_4d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1, uint32_t hash2)
 {
   sobol_3d_init((sobol_3d_t*)s, hash0, hash1, hash2);
   s->r = 1.f/len;
@@ -241,7 +253,7 @@ inline void sobol_3d_update(sobol_3d_t* s)
 // next float in the sequence
 inline float sobol_1d_next_f32(sobol_1d_t* s)
 {
-  float r = (s->d0 >> 8) * SOBOL_TO_F32;
+  float r = SOBOL_TO_F32(s->d0);
 
   sobol_1d_update(s);
 
@@ -251,8 +263,8 @@ inline float sobol_1d_next_f32(sobol_1d_t* s)
 // next 2 floats in the sequence
 inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
 {
-  d[0] = (s->d0 >> 8) * SOBOL_TO_F32;
-  d[1] = (s->d1 >> 8) * SOBOL_TO_F32;
+  d[0] = SOBOL_TO_F32(s->d0);
+  d[1] = SOBOL_TO_F32(s->d1);
 
   sobol_2d_update(s);
 }
@@ -260,9 +272,9 @@ inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
 // next 3 floats in the sequence
 inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
 {
-  d[0] = (s->d0 >> 8) * SOBOL_TO_F32;
-  d[1] = (s->d1 >> 8) * SOBOL_TO_F32;
-  d[2] = (s->d2 >> 8) * SOBOL_TO_F32;
+  d[0] = SOBOL_TO_F32(s->d0);
+  d[1] = SOBOL_TO_F32(s->d1);
+  d[2] = SOBOL_TO_F32(s->d2);
 
   sobol_3d_update(s);
 }
@@ -299,7 +311,7 @@ inline void sobol_fixed_2d_next_f32(sobol_fixed_2d_t* s, float* d)
 {
   uint32_t i = s->i;
 
-  d[0] = (s->d0 >> 8) * SOBOL_TO_F32;
+  d[0] = SOBOL_TO_F32(s->d0);
   d[1] = (s->r * i);
 
   sobol_1d_update((sobol_1d_t*)s);
@@ -309,8 +321,8 @@ inline void sobol_fixed_3d_next_f32(sobol_fixed_3d_t* s, float* d)
 {
   uint32_t i = s->i;
 
-  d[0] = (s->d0 >> 8) * SOBOL_TO_F32;
-  d[1] = (s->d1 >> 8) * SOBOL_TO_F32;
+  d[0] = SOBOL_TO_F32(s->d0);
+  d[1] = SOBOL_TO_F32(s->d1);
   d[2] = (s->r * i);
 
   sobol_2d_update((sobol_2d_t*)s);
@@ -320,9 +332,9 @@ inline void sobol_fixed_4d_next_f32(sobol_fixed_4d_t* s, float* d)
 {
   uint32_t i = s->i;
 
-  d[0] = (s->d0 >> 8) * SOBOL_TO_F32;
-  d[1] = (s->d1 >> 8) * SOBOL_TO_F32;
-  d[2] = (s->d1 >> 8) * SOBOL_TO_F32;
+  d[0] = SOBOL_TO_F32(s->d0);
+  d[1] = SOBOL_TO_F32(s->d1);
+  d[2] = SOBOL_TO_F32(s->d2);
   d[3] = (s->r * i);
 
   sobol_3d_update((sobol_3d_t*)s);
@@ -355,7 +367,7 @@ inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
 
   d[0] = s->d0 * SOBOL_TO_F64;
   d[1] = s->d1 * SOBOL_TO_F64;
-  d[2] = s->d1 * SOBOL_TO_F64;
+  d[2] = s->d2 * SOBOL_TO_F64;
   d[3] = s->r  * i;
 
   sobol_3d_update((sobol_3d_t*)s);
