@@ -4,11 +4,11 @@
 #define SOBOL_IMPLEMENTATION
 #include "../sobol.h"
 
-#define LEN 10
+#define LEN 100
 
 int error(int spos, int cpos)
 {
-  fprintf(stderr, "opps\n");
+  fprintf(stderr, "opps (%d,%d)\n",spos,cpos);
   return -1;
 }
 
@@ -20,6 +20,9 @@ int main(int argc, char** argv)
   sobol_fixed_2d_t s2f;
   sobol_fixed_3d_t s3f;
   sobol_fixed_4d_t s4f;
+
+  argc = argc;
+  argv = argv;
 
   uint32_t i;
   float    f1;
@@ -39,6 +42,10 @@ int main(int argc, char** argv)
     f1 = sobol_1d_next_f32(&s1p);
     sobol_2d_next_f32(&s2p, f2);
     sobol_3d_next_f32(&s3p, f3);
+
+    if (i < 22) {
+      printf("{%f,%f,%f},\n",f3[0],f3[1],f3[2]);
+    }
 
     if (f1 != f2[0] || f1 != f3[0]) { return error(i,0); }
 

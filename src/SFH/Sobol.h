@@ -175,7 +175,7 @@ void sobol_3d_seek(sobol_3d_t* s, uint32_t off)
 
 #else
 
-extern uint32_t* sobol_table;
+extern uint32_t const * const sobol_table;
 SOBOL_EXTERN void sobol_1d_seek(sobol_1d_t* s, uint32_t off);
 SOBOL_EXTERN void sobol_2d_seek(sobol_2d_t* s, uint32_t off);
 SOBOL_EXTERN void sobol_3d_seek(sobol_3d_t* s, uint32_t off);
@@ -183,20 +183,20 @@ SOBOL_EXTERN void sobol_3d_seek(sobol_3d_t* s, uint32_t off);
 #endif
 
 
-inline void sobol_1d_init(sobol_1d_t* s, uint32_t hash)
+static inline void sobol_1d_init(sobol_1d_t* s, uint32_t hash)
 {
   s->d0 = hash;
   s->i  = (uint32_t)-1;
 }
 
-inline void sobol_2d_init(sobol_2d_t* s, uint32_t hash0, uint32_t hash1)
+static inline void sobol_2d_init(sobol_2d_t* s, uint32_t hash0, uint32_t hash1)
 {
   s->d0 = hash0;
   s->d1 = hash1;
   s->i  = (uint32_t)-1;
 }
 
-inline void sobol_3d_init(sobol_3d_t* s, uint32_t hash0, uint32_t hash1, uint32_t hash2)
+static inline void sobol_3d_init(sobol_3d_t* s, uint32_t hash0, uint32_t hash1, uint32_t hash2)
 {
   s->d0 = hash0;
   s->d1 = hash1;
@@ -204,19 +204,19 @@ inline void sobol_3d_init(sobol_3d_t* s, uint32_t hash0, uint32_t hash1, uint32_
   s->i  = (uint32_t)-1;
 }
 
-inline void sobol_fixed_2d_init(sobol_fixed_2d_t* s, uint32_t len, uint32_t hash)
+static inline void sobol_fixed_2d_init(sobol_fixed_2d_t* s, uint32_t len, uint32_t hash)
 {
   sobol_1d_init((sobol_1d_t*)s, hash);
   s->r = 1.f/len;
 }
 
-inline void sobol_fixed_3d_init(sobol_fixed_3d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1)
+static inline void sobol_fixed_3d_init(sobol_fixed_3d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1)
 {
   sobol_2d_init((sobol_2d_t*)s, hash0, hash1);
   s->r = 1.f/len;
 }
 
-inline void sobol_fixed_4d_init(sobol_fixed_4d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1, uint32_t hash2)
+static inline void sobol_fixed_4d_init(sobol_fixed_4d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1, uint32_t hash2)
 {
   sobol_3d_init((sobol_3d_t*)s, hash0, hash1, hash2);
   s->r = 1.f/len;
@@ -225,14 +225,14 @@ inline void sobol_fixed_4d_init(sobol_fixed_4d_t* s, uint32_t len, uint32_t hash
 
 // state updates - normally not needed by user.
 
-inline void sobol_1d_update(sobol_1d_t* s)
+static inline void sobol_1d_update(sobol_1d_t* s)
 {
   uint32_t c = SOBOL_NTZ(s->i);
   s->d0 ^= 0x80000000 >> c;
   s->i  -= 1;    
 }
 
-inline void sobol_2d_update(sobol_2d_t* s)
+static inline void sobol_2d_update(sobol_2d_t* s)
 {
   uint32_t c = SOBOL_NTZ(s->i);
   s->d0 ^= 0x80000000 >> c;
@@ -240,7 +240,7 @@ inline void sobol_2d_update(sobol_2d_t* s)
   s->i  -= 1;    
 }
 
-inline void sobol_3d_update(sobol_3d_t* s)
+static inline void sobol_3d_update(sobol_3d_t* s)
 {
   uint32_t c = SOBOL_NTZ(s->i);
   s->d0 ^= 0x80000000 >> c;
@@ -251,7 +251,7 @@ inline void sobol_3d_update(sobol_3d_t* s)
 
 
 // next float in the sequence
-inline float sobol_1d_next_f32(sobol_1d_t* s)
+static inline float sobol_1d_next_f32(sobol_1d_t* s)
 {
   float r = SOBOL_TO_F32(s->d0);
 
@@ -261,7 +261,7 @@ inline float sobol_1d_next_f32(sobol_1d_t* s)
 }
 
 // next 2 floats in the sequence
-inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
+static inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
 {
   d[0] = SOBOL_TO_F32(s->d0);
   d[1] = SOBOL_TO_F32(s->d1);
@@ -270,7 +270,7 @@ inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
 }
 
 // next 3 floats in the sequence
-inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
+static inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
 {
   d[0] = SOBOL_TO_F32(s->d0);
   d[1] = SOBOL_TO_F32(s->d1);
@@ -279,7 +279,7 @@ inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
   sobol_3d_update(s);
 }
 
-inline double sobol_1d_next_f64(sobol_1d_t* s)
+static inline double sobol_1d_next_f64(sobol_1d_t* s)
 {
   double r = s->d0 * SOBOL_TO_F64;
 
@@ -288,7 +288,7 @@ inline double sobol_1d_next_f64(sobol_1d_t* s)
   return r;
 }
 
-inline void sobol_2d_next_f64(sobol_2d_t* s, double* d)
+static inline void sobol_2d_next_f64(sobol_2d_t* s, double* d)
 {
   d[0] = s->d0 * SOBOL_TO_F64;
   d[1] = s->d1 * SOBOL_TO_F64;
@@ -296,7 +296,7 @@ inline void sobol_2d_next_f64(sobol_2d_t* s, double* d)
   sobol_2d_update(s);
 }
 
-inline void sobol_3d_next_f64(sobol_3d_t* s, double* d)
+static inline void sobol_3d_next_f64(sobol_3d_t* s, double* d)
 {
   d[0] = s->d0 * SOBOL_TO_F64;
   d[1] = s->d1 * SOBOL_TO_F64;
@@ -307,7 +307,7 @@ inline void sobol_3d_next_f64(sobol_3d_t* s, double* d)
 
 //** 
 
-inline void sobol_fixed_2d_next_f32(sobol_fixed_2d_t* s, float* d)
+static inline void sobol_fixed_2d_next_f32(sobol_fixed_2d_t* s, float* d)
 {
   uint32_t i = s->i;
 
@@ -317,7 +317,7 @@ inline void sobol_fixed_2d_next_f32(sobol_fixed_2d_t* s, float* d)
   sobol_1d_update((sobol_1d_t*)s);
 }
 
-inline void sobol_fixed_3d_next_f32(sobol_fixed_3d_t* s, float* d)
+static inline void sobol_fixed_3d_next_f32(sobol_fixed_3d_t* s, float* d)
 {
   uint32_t i = s->i;
 
@@ -328,7 +328,7 @@ inline void sobol_fixed_3d_next_f32(sobol_fixed_3d_t* s, float* d)
   sobol_2d_update((sobol_2d_t*)s);
 }
 
-inline void sobol_fixed_4d_next_f32(sobol_fixed_4d_t* s, float* d)
+static inline void sobol_fixed_4d_next_f32(sobol_fixed_4d_t* s, float* d)
 {
   uint32_t i = s->i;
 
@@ -340,7 +340,7 @@ inline void sobol_fixed_4d_next_f32(sobol_fixed_4d_t* s, float* d)
   sobol_3d_update((sobol_3d_t*)s);
 }
 
-inline void sobol_fixed_2d_next_f64(sobol_fixed_2d_t* s, double* d)
+static inline void sobol_fixed_2d_next_f64(sobol_fixed_2d_t* s, double* d)
 {
   uint32_t i = s->i;
 
@@ -350,7 +350,7 @@ inline void sobol_fixed_2d_next_f64(sobol_fixed_2d_t* s, double* d)
   sobol_1d_update((sobol_1d_t*)s);
 }
 
-inline void sobol_fixed_3d_next_f64(sobol_fixed_3d_t* s, double* d)
+static inline void sobol_fixed_3d_next_f64(sobol_fixed_3d_t* s, double* d)
 {
   uint32_t i = s->i;
 
@@ -361,7 +361,7 @@ inline void sobol_fixed_3d_next_f64(sobol_fixed_3d_t* s, double* d)
   sobol_2d_update((sobol_2d_t*)s);
 }
 
-inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
+static inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
 {
   uint32_t i = s->i;
 
@@ -374,7 +374,7 @@ inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
 }
 
 // position in the sequence
-inline uint32_t sobol_tell(void* s)
+static inline uint32_t sobol_tell(void* s)
 {
   return ~(((sobol_1d_t*)s)->i);
 }
