@@ -5,7 +5,7 @@ Hacked together.  I know zero python, so this is cut-n-paste city.
 1) Couldn't figure out how to show pixel exact output, so this is kinda
 useless as is.
 2) It's probably buggy
-
+3) Not super motivated
 
 """
 
@@ -19,7 +19,7 @@ showSpace = True
 showPSE   = True
 
 # size to sample
-half = 256
+half = 128
 size = 2*half
 
 # sampling domain offset
@@ -52,6 +52,7 @@ def add32(a,b): return mask32(a+b)
 # xorshift
 def xs(v,s): 
     return v ^ (v >> np.uint32(s))
+    
 # xorshift - multiply
 def xsm(v,s,m): 
     v = xs(v,s)
@@ -70,6 +71,32 @@ def wang32(seed):
  
  # White noise on [0,1)
 def whiteNoise(x,y): return u64tosp(xorshift.next()) 
+
+hscale = 1.0/np.sqrt(2.0)
+
+def haar(a):
+  if len(a) == 1:
+    return a.copy()
+  
+  mid  = (a[0::2] + a[1::2]) * hscale
+  side = (a[0::2] - a[1::2]) * hscale
+  
+  return np.hstack((haar(mid), side))
+  
+
+def haar_2d(img):
+  h,w = img.shape
+  rows = np.zeros(img.shape, dtype=float)
+  
+  for y in range(h):
+    rows[y] = haar(img[y])
+  
+  cols = np.zeros(img.shape, dtype=float)
+  
+  for x in range(w):
+    cols[:,x] = haar(rows[:,x])
+  
+  return cols
 
 # As per: 
 # http://www.reedbeta.com/blog/2013/01/12/quick-and-easy-gpu-random-numbers-in-d3d11/
@@ -106,6 +133,7 @@ def mh2(h,x,y):
     h ^= y
     return h;
 
+# standard Murmurhash2 construction
 def mh2_std(x,y):
     h = mh2(0x9747b28c,x,y)
     return mh2bf(h)
@@ -126,7 +154,7 @@ def showSPE(name, func):
     # THIS IS COMPLETELY FUBARed: Can't figure out out to show
     # pixel exact figures.
     foo = 2.0*float(size)/96.0;
-    py.figure(figsize=(foo,2*(foo+10)), dpi=96) 
+    #py.figure(figsize=(foo,2*(foo+10)), dpi=100) 
    
     samples = np.ones((size, size), dtype=np.float64)
     
@@ -138,55 +166,35 @@ def showSPE(name, func):
     fft  = fftpack.fftshift(fft1)
     pse  = np.abs(fft)**2
 
-    #if (useSubPlot) 
-    py.subplot(1,2,1) 
-    #py.figure(figsize=(foo,2*(foo+10)), dpi=96)
+    if useSubPlot:
+      py.subplot(1,2,1)
+    else:
+      py.figure(1, figsize=(foo,foo), dpi=96)
+      
     py.axis("off") 
     py.title(name)
     py.xlabel("space")
     py.imshow(samples, cmap=py.cm.Greys, interpolation="nearest")
 
-    py.subplot(1,2,2)
-    #py.figure(figsize=(foo,2*(foo+10)), dpi=96)
+    if useSubPlot:
+      py.subplot(1,2,2)
+    else:
+      py.figure(2, figsize=(foo,foo), dpi=96)
+      
     py.axis("off") 
     py.imshow(np.log10(pse), cmap=py.cm.Greys, interpolation="nearest")
     py.xlabel("PSE")
     
+    #hist = np.histogram(samples, bins=np.arange(0, 256))
+    #py.plot(hist[1][:-1], hist[0], lw=2)
     #py.hist2d(np.log10(pse), bins=100)
     py.show()
-    
-    
-def showSPE_(name, func):
-    
-    # THIS IS COMPLETELY FUBARed: Can't figure out out to show
-    # pixel exact figures.
-    foo = 5.0*float(size)/96.0;
-    fig = py.figure(figsize=(foo,2*foo), dpi=96) 
-    samples = np.ones((size, size), dtype=np.float64)
-    
-    for y in range(size):
-      for x in range(size):
-        samples[y][x] = func(x-offX, y-offY)
-    
-    fft1 = fftpack.fft2(samples)        # 
-    fft  = fftpack.fftshift(fft1)
-    pse  = np.abs(fft)**2
 
-    py.subplot(1,2,1)
-    py.title(name)
-    py.xlabel("space")
-    py.imshow(samples, cmap=py.cm.Greys, interpolation="nearest")
-
-    py.subplot(1,2,2)
-    py.imshow(np.log10(pse), cmap=py.cm.Greys, interpolation="nearest")
-    py.xlabel("PSE")
-    #py.hist2d(np.log10(pse), bins=100)
-    py.show()
  
-showSPE("White noise", whiteNoise)
+showSPE("Reference white noise", whiteNoise)
 showSPE("ppoly(y+ppoly(x))", ppoly)
 showSPE("wang(y+wang(x))",     wang)
 showSPE("M(weyl(W0,x)^weyl(W1,y))", weyl)
-showSPE("M(weyl(W0,x)^weyl(W1,y))", mh2_std)
+showSPE("MurmurHash2_BF(MurmurHash(x,y))", mh2_std)
 
 

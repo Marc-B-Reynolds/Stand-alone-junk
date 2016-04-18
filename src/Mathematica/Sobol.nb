@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       157,          7]
-NotebookDataLength[     17749,        436]
-NotebookOptionsPosition[     16536,        396]
-NotebookOutlinePosition[     16960,        412]
-CellTagsIndexPosition[     16917,        409]
+NotebookDataLength[     15052,        386]
+NotebookOptionsPosition[     13885,        348]
+NotebookOutlinePosition[     14303,        364]
+CellTagsIndexPosition[     14260,        361]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -23,7 +23,16 @@ Cell[CellGroupData[{
 Cell["Sobol sequence", "Title",
  CellChangeTimes->{{3.6557901854428997`*^9, 3.6557902177918997`*^9}, {
   3.6557917655469*^9, 3.6557917787939*^9}, {3.6645029473775606`*^9, 
-  3.664502953531885*^9}}],
+  3.664502953531885*^9}, {3.669962132122634*^9, 3.6699621339414034`*^9}}],
+
+Cell["\<\
+Sup material for: \
+http://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/SFH/Sobol.h
+
+Viz for 2D standard and stratified sequences\
+\>", "Text",
+ CellChangeTimes->{{3.6699621443031483`*^9, 3.6699621535578737`*^9}, {
+  3.6699621890933084`*^9, 3.6699622236621523`*^9}}],
 
 Cell[CellGroupData[{
 
@@ -123,7 +132,7 @@ Cell[BoxData[{
    3.6557365133854*^9, 3.6557365312594*^9}, {3.6557919627169*^9, 
    3.6557919727089*^9}, {3.6557920613289003`*^9, 3.6557920848979*^9}, {
    3.6558058059249*^9, 3.6558058181219*^9}, 3.666211984029602*^9}]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -277,8 +286,6 @@ Cell[BoxData[
    3.666211962853426*^9}]
 }, Closed]],
 
-Cell[CellGroupData[{
-
 Cell[BoxData[
  RowBox[{"Manipulate", "[", 
   RowBox[{
@@ -336,69 +343,14 @@ Cell[BoxData[
    3.6557900188289003`*^9}, {3.6557913146969*^9, 3.6557913369839*^9}, {
    3.6557914729199*^9, 3.6557914812118998`*^9}, {3.6557922001359*^9, 
    3.6557922014459*^9}, {3.6557924435719*^9, 3.6557924578659*^9}, {
-   3.6558106935158997`*^9, 3.6558106943229*^9}, 3.6558107476729*^9}],
-
-Cell[BoxData[
- TagBox[
-  StyleBox[
-   DynamicModuleBox[{$CellContext`hash0$$ = 0., $CellContext`hash1$$ = 
-    0., $CellContext`method$$ = 1, $CellContext`terms$$ = 202, 
-    Typeset`show$$ = True, Typeset`bookmarkList$$ = {}, 
-    Typeset`bookmarkMode$$ = "Menu", Typeset`animator$$, Typeset`animvar$$ = 
-    1, Typeset`name$$ = "\"untitled\"", Typeset`specs$$ = {{{
-       Hold[$CellContext`method$$], 1, "generation method"}, {
-      1 -> "2D", 2 -> "Stratified"}}, {{
-       Hold[$CellContext`hash0$$], 0, "hash 0"}, 0, 4294967295, 256}, {{
-       Hold[$CellContext`hash1$$], 0, "hash 1"}, 0, 4294967295, 256}, {{
-       Hold[$CellContext`terms$$], 100, "number of points"}, 1, 2000, 1}}, 
-    Typeset`size$$ = {360., {178., 182.}}, Typeset`update$$ = 0, 
-    Typeset`initDone$$, Typeset`skipInitDone$$ = 
-    True, $CellContext`method$588$$ = False, $CellContext`hash0$593$$ = 
-    0, $CellContext`hash1$594$$ = 0, $CellContext`terms$595$$ = 0}, 
-    DynamicBox[Manipulate`ManipulateBoxes[
-     1, StandardForm, 
-      "Variables" :> {$CellContext`hash0$$ = 0, $CellContext`hash1$$ = 
-        0, $CellContext`method$$ = 1, $CellContext`terms$$ = 100}, 
-      "ControllerVariables" :> {
-        Hold[$CellContext`method$$, $CellContext`method$588$$, False], 
-        Hold[$CellContext`hash0$$, $CellContext`hash0$593$$, 0], 
-        Hold[$CellContext`hash1$$, $CellContext`hash1$594$$, 0], 
-        Hold[$CellContext`terms$$, $CellContext`terms$595$$, 0]}, 
-      "OtherVariables" :> {
-       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
-        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
-        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
-         Typeset`skipInitDone$$}, "Body" :> ListPlot[
-        $CellContext`getPointSet2D[$CellContext`hash0$$, $CellContext`hash1$$,
-          0, $CellContext`terms$$, $CellContext`method$$], AspectRatio -> 1, 
-        ImagePadding -> 20, PlotRange -> {{0, 1}, {0, 1}}, Axes -> False, 
-        Frame -> True, FrameStyle -> Directive[Gray], PlotRangeClipping -> 
-        False], "Specifications" :> {{{$CellContext`method$$, 1, 
-          "generation method"}, {
-         1 -> "2D", 2 -> "Stratified"}}, {{$CellContext`hash0$$, 0, "hash 0"},
-          0, 4294967295, 256}, {{$CellContext`hash1$$, 0, "hash 1"}, 0, 
-         4294967295, 256}, {{$CellContext`terms$$, 100, "number of points"}, 
-         1, 2000, 1}}, "Options" :> {}, "DefaultOptions" :> {}],
-     ImageSizeCache->{411., {262., 269.}},
-     SingleEvaluation->True],
-    Deinitialization:>None,
-    DynamicModuleValues:>{},
-    SynchronousInitialization->True,
-    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
-    UnsavedVariables:>{Typeset`initDone$$},
-    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
-   Deployed->True,
-   StripOnInput->False],
-  Manipulate`InterpretManipulate[1]]], "Output",
- CellChangeTimes->{3.6662118989401555`*^9, 3.666417864763336*^9}]
-}, Open  ]]
+   3.6558106935158997`*^9, 3.6558106943229*^9}, 3.6558107476729*^9}]
 }, Open  ]]
 },
 WindowSize->{964, 1087},
 WindowMargins->{{309, Automatic}, {9, Automatic}},
-FrontEndVersion->"10.3 for Microsoft Windows (64-bit) (December 10, 2015)",
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (February 25, 2016)",
 StyleDefinitions->FrontEnd`FileName[{"Report"}, "StandardReport.nb", 
-  CharacterEncoding -> "WindowsANSI"]
+  CharacterEncoding -> "UTF-8"]
 ]
 (* End of Notebook Content *)
 
@@ -412,34 +364,31 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[579, 22, 197, 3, 88, "Title"],
+Cell[579, 22, 245, 3, 88, "Title"],
+Cell[827, 27, 291, 7, 68, "Text"],
 Cell[CellGroupData[{
-Cell[801, 29, 235, 3, 30, "Text",
+Cell[1143, 38, 235, 3, 30, "Text",
  CellGroupingRules->{GroupTogetherGrouping, 10000.}],
-Cell[1039, 34, 4206, 90, 281, "Input",
+Cell[1381, 43, 4206, 90, 281, "Input",
  CellGroupingRules->{GroupTogetherGrouping, 10000.}]
-}, Open  ]],
+}, Closed]],
 Cell[CellGroupData[{
-Cell[5282, 129, 293, 7, 68, "Text",
+Cell[5624, 138, 293, 7, 65, "Text",
  CellGroupingRules->{GroupTogetherGrouping, 10001.}],
-Cell[5578, 138, 2382, 57, 281, "Input",
+Cell[5920, 147, 2382, 57, 281, "Input",
  CellGroupingRules->{GroupTogetherGrouping, 10001.}]
 }, Closed]],
 Cell[CellGroupData[{
-Cell[7997, 200, 295, 7, 65, "Text",
+Cell[8339, 209, 295, 7, 65, "Text",
  CellGroupingRules->{GroupTogetherGrouping, 10000.}],
-Cell[8295, 209, 1719, 44, 241, "Input",
+Cell[8637, 218, 1719, 44, 241, "Input",
  CellGroupingRules->{GroupTogetherGrouping, 10000.}],
-Cell[10017, 255, 969, 21, 121, "Input",
+Cell[10359, 264, 969, 21, 121, "Input",
  CellGroupingRules->{GroupTogetherGrouping, 10000.}]
 }, Closed]],
-Cell[CellGroupData[{
-Cell[11023, 281, 2526, 57, 158, "Input"],
-Cell[13552, 340, 2956, 52, 557, "Output"]
-}, Open  ]]
+Cell[11343, 288, 2526, 57, 158, "Input"]
 }, Open  ]]
 }
 ]
 *)
 
-(* End of internal cache information *)
