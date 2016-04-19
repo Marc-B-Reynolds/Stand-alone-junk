@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2013-2016
 // Public Domain under http://unlicense.org, see link for details.
 //
-// TODO: documentation
+// Documentation: http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html
 
 #ifndef PRNS_H
 #define PRNS_H
@@ -11,47 +11,45 @@ extern "C" {
 #endif
 
 
-typedef struct { uint64_t i } prns_t;
+typedef struct { uint64_t i; } prns_t;
 
-#ifndef PRNS_FAST_COUNTER
-// n = FromDigits[RealDigits[N[(Sqrt[5] - 1) 2^64, 100], 2, 64][[1]], 2];
-// SquareFreeQ[n]   -> True
-// FactorInteger[n] -> {5,139,199,82431689521877}
-// BaseForm[n, 16]  -> 0x9e3779b97f4a7c15
-#define PRNS_WEYL   0x9e3779b97f4a7c15L
-#define PRNS_WEYL_I 0xf1de83e19937733dL
-#else  
-#define PRNS_WEYL   0x1
-#define PRNS_WEYL_I 0x1
+#ifndef PRNS_WEYL
+#define PRNS_WEYL   0x61c8864680b583ebL
+#define PRNS_WEYL_I 0x0e217c1e66c88cc3L
 #endif
 
-// zimbry.blogspot.fr/2011/09/better-bit-mixing-improving-on.html
+#ifndef PRNS_WEYL_D
+#define PRNS_WEYL_D 0x1L
+#endif
+
+#ifndef PRNS_MIX_S0
 #define PRNS_MIX_S0 31
 #define PRNS_MIX_S1 27
 #define PRNS_MIX_S2 33
 #define PRNS_MIX_M0 0x7fb5d329728ea185L
 #define PRNS_MIX_M1 0x81dadef4bc2dd44dL
+#endif
 
+#ifndef PRNS_MIX
+#define PRNS_MIX(X) prns_mix(X)
+#endif    
 
-// current position in the sequence
-static inline uint64_t prns_tell(prns_t* state)
+  
+static inline uint64_t prns_tell(prns_t* gen)
 {
-  return state->i * PRNS_WEYL_I;
+  return gen->i * PRNS_WEYL_I;
 }
 
-// set the current position to 'pos'
-static inline void prns_set(prns_t* state, uint64_t pos)
+static inline void prns_set(prns_t* gen, uint64_t pos)
 {
-  state->i = PRNS_WEYL*pos;
+  gen->i = PRNS_WEYL*pos;
 }
 
-// move the current position by 'dp'
-static inline void prns_seek(prns_t* state, int64_t dp)
+static inline void prns_seek(prns_t* gen, int64_t offset)
 {
-  state->i += PRNS_WEYL*((uint64_t)dp);
+  gen->i += PRNS_WEYL*((uint64_t)offset);
 }
 
-// core mixing function 
 static inline uint64_t prns_mix(uint64_t x)
 {
   x ^= (x >> PRNS_MIX_S0);
@@ -59,20 +57,46 @@ static inline uint64_t prns_mix(uint64_t x)
   x ^= (x >> PRNS_MIX_S1);
   x *= PRNS_MIX_M1;
   x ^= (x >> PRNS_MIX_S2);
+
+  return x;
 }
 
-// returns the 'n'th member of the sequence
 static inline uint64_t prns_at(uint64_t n)
 {
   return prns_mix(PRNS_WEYL*n);
 }
 
-// returns current member of the sequence and increment the counter
-static inline uint64_t prns_next(prns_t* state)
+static inline uint64_t prns_peek(prns_t* gen)
 {
-  uint64_t i = state->i;
-  uint64_t r = prns_mix(i);
-  state->i = i + PRNS_WEYL;
+  return PRNS_MIX(gen->i);
+}
+
+static inline uint64_t prns_next(prns_t* gen)
+{
+  uint64_t i = gen->i;
+  uint64_t r = PRNS_MIX(i);
+  gen->i = i + PRNS_WEYL;
+  return r;
+}
+
+static inline uint64_t prns_prev(prns_t* gen)
+{
+  uint64_t i = gen->i;
+  uint64_t r = PRNS_MIX(i);
+  gen->i = i - PRNS_WEYL;
+  return r;
+}
+
+static inline uint64_t prns_start_down(prns_t* gen)
+{
+  return gen->i + PRNS_WEYL_D;
+}
+
+static inline uint64_t prns_down(uint64_t* state)
+{
+  uint64_t i = *state;
+  uint64_t r = PRNS_MIX(i);
+  *state = i + PRNS_WEYL_D;
   return r;
 }
 
