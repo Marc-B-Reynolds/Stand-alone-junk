@@ -4,9 +4,7 @@
 // Sobol (low-discrepancy) sequence in 1-3D, stratified in 2-4D.
 // Classic binary-reflected gray code.
 //
-// SEE: http://web.maths.unsw.edu.au/~fkuo/sobol/
-//
-// TODO: documentation
+// Documentation: http://marc-b-reynolds.github.io/shf/2016/04/18/sobol.html
 
 #ifndef SOBOL_H
 #define SOBOL_H
@@ -250,7 +248,6 @@ static inline void sobol_3d_update(sobol_3d_t* s)
 }
 
 
-// next float in the sequence
 static inline float sobol_1d_next_f32(sobol_1d_t* s)
 {
   float r = SOBOL_TO_F32(s->d0);
@@ -260,7 +257,6 @@ static inline float sobol_1d_next_f32(sobol_1d_t* s)
   return r;
 }
 
-// next 2 floats in the sequence
 static inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
 {
   d[0] = SOBOL_TO_F32(s->d0);
@@ -269,7 +265,6 @@ static inline void sobol_2d_next_f32(sobol_2d_t* s, float* d)
   sobol_2d_update(s);
 }
 
-// next 3 floats in the sequence
 static inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
 {
   d[0] = SOBOL_TO_F32(s->d0);
