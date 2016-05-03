@@ -19,19 +19,31 @@ typedef struct { uint64_t i; } prns_t;
 #endif
 
 #ifndef PRNS_WEYL_D
-#define PRNS_WEYL_D 0x1L
+#define PRNS_WEYL_D 0x4f1bbcdcbfa54001L
 #endif
 
 #ifndef PRNS_MIX_S0
+#ifdef  PRNS_MIX_13
+#define PRNS_MIX_S0 30
+#define PRNS_MIX_S1 27
+#define PRNS_MIX_S2 31
+#define PRNS_MIX_M0 0xbf58476d1ce4e5b9L
+#define PRNS_MIX_M1 0x94d049bb133111ebL
+#else
 #define PRNS_MIX_S0 31
 #define PRNS_MIX_S1 27
 #define PRNS_MIX_S2 33
 #define PRNS_MIX_M0 0x7fb5d329728ea185L
 #define PRNS_MIX_M1 0x81dadef4bc2dd44dL
 #endif
+#endif
 
 #ifndef PRNS_MIX
 #define PRNS_MIX(X) prns_mix(X)
+#endif 
+
+#ifndef PRNS_MIX_D
+#define PRNS_MIX_D(X) prns_mix(X)
 #endif    
 
   
@@ -56,7 +68,10 @@ static inline uint64_t prns_mix(uint64_t x)
   x *= PRNS_MIX_M0;
   x ^= (x >> PRNS_MIX_S1);
   x *= PRNS_MIX_M1;
+  
+#ifndef PRNS_NO_FINAL_XORSHIFT
   x ^= (x >> PRNS_MIX_S2);
+#endif
 
   return x;
 }
@@ -95,7 +110,7 @@ static inline uint64_t prns_start_down(prns_t* gen)
 static inline uint64_t prns_down(uint64_t* state)
 {
   uint64_t i = *state;
-  uint64_t r = PRNS_MIX(i);
+  uint64_t r = PRNS_MIX_D(i);
   *state = i + PRNS_WEYL_D;
   return r;
 }
