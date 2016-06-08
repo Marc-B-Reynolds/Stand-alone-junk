@@ -4,7 +4,7 @@
 // The docs and structure are here:
 //   http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html
 //
-// The testing will run until stopped.
+// The testing will run until stopped, unless NUMBER_OF_RUNS is defined
 //
 // Building requires either of these libraries:
 //   http://github.com/Marc-B-Reynolds/TestU01x
@@ -15,11 +15,12 @@
 #define NOTATION "standard"
 
 // if defined the lower 32-bit results are used for
-// integer test, otherwise the upper.  
+// integer test, otherwise the upper.  See the docs
+// on dropping final right-xorshift.
 //#define USE_LOWER_BITS
 
 // if defined run Smallcrush, otherwise Crush
-#define SMALLCRUSH
+//#define SMALLCRUSH
 
 // Run with specified inital state. Undefined uses __rdtsc()
 //#define INITAL_STATE 0x1L
@@ -28,7 +29,17 @@
 
 //#define PRNS_MIX_13
 
+#define PRNS_NO_FINAL_XORSHIFT
+
+// if defined then the value is the number of time to run the
+// battery...otherwise will continue until stopped.
+#define NUMBER_OF_RUNS 100
+
+
 #ifdef  PRNS_WEYL
+// just to prevent compile time errors. The battery only test standard
+// member access (walking forward).  Backward is identical statistical
+// properties.
 #define PRNS_WEYL_I 0x1L
 #endif
 
@@ -37,7 +48,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "../prns.h"
+#include "../SFH/prns.h"
 
 
 #if defined(_MSC_VER)
@@ -127,9 +138,19 @@ int main(void)
   printf("  WEYL: 0x%0" PRIx64 "\n", PRNS_WEYL);
   printf("  S0:   %d\n", PRNS_MIX_S0);
   printf("  S1:   %d\n", PRNS_MIX_S1);
+#ifndef PRNS_NO_FINAL_XORSHIFT
   printf("  S2:   %d\n", PRNS_MIX_S2);
+#else
+  printf("  drops last right-xorshift\n");
+#endif
   printf("  M0:   0x%0" PRIx64 "\n", PRNS_MIX_M0);
   printf("  M1:   0x%0" PRIx64 "\n", PRNS_MIX_M1);
+
+#ifdef USE_LOWER_BITS
+  printf("  low bits\n");
+#else
+  printf("  high bits\n");
+#endif
 
   // the state is initialized to a sobol sequence in
   // an attempt to get as good a coverage of the state
@@ -145,6 +166,10 @@ int main(void)
     bbattery_SmallCrush(gen);
 #else
     bbattery_Crush(gen);
+#endif
+
+#if defined(NUMBER_OF_RUNS)
+	if (0 - c >= NUMBER_OF_RUNS) break;
 #endif
 
     // could improve the domain of the search

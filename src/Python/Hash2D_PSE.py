@@ -3,8 +3,9 @@
 Hacked together.  I know zero python, so this is cut-n-paste city.
 
 1) Couldn't figure out how to show pixel exact output, so this is kinda
-useless as is.
-2) It's probably buggy
+   useless as is.
+2) It's probably buggy...because of (1) haven't bothered to check the
+   functions 
 3) Not super motivated
 
 """
@@ -153,7 +154,12 @@ def showSPE(name, func):
     
     # THIS IS COMPLETELY FUBARed: Can't figure out out to show
     # pixel exact figures.
-    foo = 2.0*float(size)/96.0;
+    
+    if useSubPlot:
+      foo = 2.0*float(size)/96.0;
+    else:
+      foo = 2.0*float(size)/96.0;
+    
     #py.figure(figsize=(foo,2*(foo+10)), dpi=100) 
    
     samples = np.ones((size, size), dtype=np.float64)

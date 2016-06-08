@@ -1,0 +1,724 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.4' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     26827,        716]
+NotebookOptionsPosition[     23370,        610]
+NotebookOutlinePosition[     24953,        660]
+CellTagsIndexPosition[     24633,        648]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Quaternion half-angle and Cayley transforms", "DemoTitle",
+ CellChangeTimes->{{3.673153723092743*^9, 3.6731537418267508`*^9}, {
+  3.6731540182878723`*^9, 3.6731540282768927`*^9}}],
+
+Cell["", "InitializationSection"],
+
+Cell[CellGroupData[{
+
+Cell["", "ManipulateSection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Manipulate", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"Module", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+      "mod", ",", " ", "theta", ",", " ", "axemin", ",", " ", "axemax", ",", 
+       " ", "rayon", ",", " ", "u", ",", " ", "v", ",", " ", "w"}], "}"}], 
+     ",", "\[IndentingNewLine]", 
+     RowBox[{"GraphicsColumn", "[", 
+      RowBox[{"{", "\[IndentingNewLine]", "  ", 
+       RowBox[{
+        RowBox[{"Graphics", "[", 
+         RowBox[{"Plot", "[", 
+          RowBox[{
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "2"}], " ", "t", " ", "max"}], "]"}], 
+              "/", 
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "2"}], " ", "max"}], "]"}]}], ",", 
+             "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "4"}], " ", "t", " ", "max"}], "]"}], 
+              "/", 
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "4"}], " ", "max"}], "]"}]}], ",", 
+             "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "8"}], " ", "t", " ", "max"}], "]"}], 
+              "/", 
+              RowBox[{"Sin", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "8"}], "max"}], "]"}]}], ",", 
+             "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{"Tan", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "4"}], " ", "t", " ", "max"}], "]"}], 
+              "/", 
+              RowBox[{"Tan", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "4"}], " ", "max"}], "]"}]}], ",", 
+             "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{"Tan", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "8"}], " ", "t", " ", "max"}], "]"}], 
+              "/", 
+              RowBox[{"Tan", "[", 
+               RowBox[{
+                RowBox[{"\[Pi]", "/", "8"}], " ", "max"}], "]"}]}]}], "}"}], 
+           ",", "\[IndentingNewLine]", 
+           RowBox[{"{", 
+            RowBox[{"t", ",", "0", ",", "1"}], "}"}]}], "]"}], "]"}], ",", 
+        " ", "\n", "           ", 
+        RowBox[{"Graphics", "[", 
+         RowBox[{"Plot", "[", 
+          RowBox[{
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "2"}], " ", "t", " ", "max"}], "]"}], 
+               "/", 
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "2"}], " ", "max"}], "]"}]}], "-", 
+              "t"}], ",", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "4"}], " ", "t", " ", "max"}], "]"}], 
+               "/", 
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "4"}], " ", "max"}], "]"}]}], "-", 
+              "t"}], ",", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "8"}], " ", "t", " ", "max"}], "]"}], 
+               "/", 
+               RowBox[{"Sin", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "8"}], "max"}], "]"}]}], "-", "t"}], 
+             ",", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Tan", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "4"}], " ", "t", " ", "max"}], "]"}], 
+               "/", 
+               RowBox[{"Tan", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "4"}], " ", "max"}], "]"}]}], "-", 
+              "t"}], ",", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Tan", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "8"}], " ", "t", " ", "max"}], "]"}], 
+               "/", 
+               RowBox[{"Tan", "[", 
+                RowBox[{
+                 RowBox[{"\[Pi]", "/", "8"}], " ", "max"}], "]"}]}], "-", 
+              "t"}]}], "}"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"{", 
+            RowBox[{"t", ",", "0", ",", "1"}], "}"}]}], "]"}], "]"}], ",", 
+        "\[IndentingNewLine]", "  ", 
+        RowBox[{"Graphics", "[", 
+         RowBox[{"Plot", "[", 
+          RowBox[{
+           RowBox[{"{", "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{
+              FractionBox["1", "2"], " ", "\[Pi]", " ", 
+              RowBox[{"Cos", "[", 
+               FractionBox[
+                RowBox[{"\[Pi]", " ", "t", " ", "max"}], "2"], "]"}], " ", 
+              RowBox[{"Csc", "[", 
+               FractionBox[
+                RowBox[{"max", " ", "\[Pi]"}], "2"], "]"}], " ", "max"}], ",",
+              "\[IndentingNewLine]", 
+             RowBox[{
+              FractionBox["1", "4"], " ", "\[Pi]", " ", 
+              RowBox[{"Cos", "[", 
+               FractionBox[
+                RowBox[{"\[Pi]", " ", "t", " ", "max"}], "4"], "]"}], " ", 
+              RowBox[{"Csc", "[", 
+               FractionBox[
+                RowBox[{"max", " ", "\[Pi]"}], "4"], "]"}], " ", "max"}], ",",
+              "\[IndentingNewLine]", 
+             RowBox[{
+              FractionBox["1", "8"], " ", "\[Pi]", " ", 
+              RowBox[{"Cos", "[", 
+               FractionBox[
+                RowBox[{"\[Pi]", " ", "t", " ", "max"}], "8"], "]"}], " ", 
+              RowBox[{"Csc", "[", 
+               FractionBox[
+                RowBox[{"max", " ", "\[Pi]"}], "8"], "]"}], " ", "max"}], ",",
+              "\[IndentingNewLine]", 
+             RowBox[{
+              FractionBox["1", "4"], " ", "\[Pi]", " ", 
+              RowBox[{"Cot", "[", 
+               FractionBox[
+                RowBox[{"max", " ", "\[Pi]"}], "4"], "]"}], " ", 
+              SuperscriptBox[
+               RowBox[{"Sec", "[", 
+                FractionBox[
+                 RowBox[{"\[Pi]", " ", "t", " ", "max"}], "4"], "]"}], "2"], 
+              " ", "max"}], ",", "\[IndentingNewLine]", 
+             RowBox[{
+              FractionBox["1", "8"], " ", "\[Pi]", " ", 
+              RowBox[{"Cot", "[", 
+               FractionBox[
+                RowBox[{"max", " ", "\[Pi]"}], "8"], "]"}], " ", 
+              SuperscriptBox[
+               RowBox[{"Sec", "[", 
+                FractionBox[
+                 RowBox[{"\[Pi]", " ", "t", " ", "max"}], "8"], "]"}], "2"], 
+              " ", "max"}]}], "\[IndentingNewLine]", "}"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"{", 
+            RowBox[{"t", ",", "0", ",", "1"}], "}"}], ",", 
+           RowBox[{"PlotRange", "\[Rule]", "Full"}]}], "]"}], "]"}]}], 
+       "\[IndentingNewLine]", "}"}], "\[IndentingNewLine]", "]"}]}], 
+    "\[IndentingNewLine]", "]"}], ",", "\[IndentingNewLine]", "Delimiter", 
+   ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"max", ",", "1", ",", 
+       RowBox[{"Text", "@", 
+        RowBox[{"Style", "[", 
+         RowBox[{"\"\<max angle/\[Pi]\>\"", ",", " ", "Larger", ",", "12"}], 
+         "]"}]}]}], "}"}], ",", ".01", ",", "1", ",", "0.01", ",", 
+     RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}], ",", 
+     RowBox[{"ImageSize", "\[Rule]", "Small"}]}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{
+  3.673335322779067*^9, {3.673335372878079*^9, 3.673335394123085*^9}, {
+   3.673335431843766*^9, 3.673335461404773*^9}, {3.6733355270447865`*^9, 
+   3.6733356620288005`*^9}, {3.6733356924898243`*^9, 3.6733357338438363`*^9}, 
+   3.6733357980828495`*^9, {3.6733358382938576`*^9, 3.673336235602358*^9}, {
+   3.673336287089389*^9, 3.673336442025405*^9}, {3.6733365005084376`*^9, 
+   3.673336566464452*^9}, {3.6733366017254586`*^9, 3.673336602847459*^9}, {
+   3.6733366336074657`*^9, 3.6733366722564745`*^9}, {3.6739507847271576`*^9, 
+   3.673950990262227*^9}, {3.673951851655738*^9, 3.673951932238058*^9}, {
+   3.6739519699229054`*^9, 3.6739519785223527`*^9}},
+ CellID->353709000],
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`max$$ = 1., Typeset`show$$ = True, 
+    Typeset`bookmarkList$$ = {}, Typeset`bookmarkMode$$ = "Menu", 
+    Typeset`animator$$, Typeset`animvar$$ = 1, Typeset`name$$ = 
+    "\"untitled\"", Typeset`specs$$ = {{{
+       Hold[$CellContext`max$$], 1, 
+       Text[
+        Style["max angle/\[Pi]", Larger, 12]]}, 0.01, 1, 0.01}}, 
+    Typeset`size$$ = {241., {213., 219.}}, Typeset`update$$ = 0, 
+    Typeset`initDone$$, Typeset`skipInitDone$$ = 
+    True, $CellContext`max$196180$$ = 0}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, "Variables" :> {$CellContext`max$$ = 1}, 
+      "ControllerVariables" :> {
+        Hold[$CellContext`max$$, $CellContext`max$196180$$, 0]}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> 
+      Module[{$CellContext`mod$, $CellContext`theta$, $CellContext`axemin$, \
+$CellContext`axemax$, $CellContext`rayon$, $CellContext`u$, $CellContext`v$, \
+$CellContext`w$}, 
+        GraphicsColumn[{
+          Graphics[
+           
+           Plot[{Sin[(Pi/2) $CellContext`t $CellContext`max$$]/
+             Sin[(Pi/2) $CellContext`max$$], 
+             Sin[(Pi/4) $CellContext`t $CellContext`max$$]/
+             Sin[(Pi/4) $CellContext`max$$], 
+             Sin[(Pi/8) $CellContext`t $CellContext`max$$]/
+             Sin[(Pi/8) $CellContext`max$$], 
+             Tan[(Pi/4) $CellContext`t $CellContext`max$$]/
+             Tan[(Pi/4) $CellContext`max$$], 
+             Tan[(Pi/8) $CellContext`t $CellContext`max$$]/
+             Tan[(Pi/8) $CellContext`max$$]}, {$CellContext`t, 0, 1}]], 
+          Graphics[
+           
+           Plot[{Sin[(Pi/2) $CellContext`t $CellContext`max$$]/
+              Sin[(Pi/2) $CellContext`max$$] - $CellContext`t, 
+             Sin[(Pi/4) $CellContext`t $CellContext`max$$]/
+              Sin[(Pi/4) $CellContext`max$$] - $CellContext`t, 
+             Sin[(Pi/8) $CellContext`t $CellContext`max$$]/
+              Sin[(Pi/8) $CellContext`max$$] - $CellContext`t, 
+             Tan[(Pi/4) $CellContext`t $CellContext`max$$]/
+              Tan[(Pi/4) $CellContext`max$$] - $CellContext`t, 
+             Tan[(Pi/8) $CellContext`t $CellContext`max$$]/
+              Tan[(Pi/8) $CellContext`max$$] - $CellContext`t}, \
+{$CellContext`t, 0, 1}]], 
+          Graphics[
+           
+           Plot[{(1/2) Pi Cos[Pi $CellContext`t $CellContext`max$$/2] 
+             Csc[$CellContext`max$$ Pi/2] $CellContext`max$$, (1/4) Pi 
+             Cos[Pi $CellContext`t $CellContext`max$$/4] 
+             Csc[$CellContext`max$$ Pi/4] $CellContext`max$$, (1/8) Pi 
+             Cos[Pi $CellContext`t $CellContext`max$$/8] 
+             Csc[$CellContext`max$$ Pi/8] $CellContext`max$$, (1/4) Pi 
+             Cot[$CellContext`max$$ Pi/4] 
+             Sec[Pi $CellContext`t $CellContext`max$$/
+                4]^2 $CellContext`max$$, (1/8) Pi 
+             Cot[$CellContext`max$$ Pi/8] 
+             Sec[Pi $CellContext`t $CellContext`max$$/
+                8]^2 $CellContext`max$$}, {$CellContext`t, 0, 1}, PlotRange -> 
+            Full]]}]], 
+      "Specifications" :> {Delimiter, {{$CellContext`max$$, 1, 
+          Text[
+           Style["max angle/\[Pi]", Larger, 12]]}, 0.01, 1, 0.01, Appearance -> 
+         "Labeled", ImageSize -> Small}}, "Options" :> {}, 
+      "DefaultOptions" :> {ControllerLinking -> True}],
+     ImageSizeCache->{290., {257., 264.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    SynchronousInitialization->True,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellChangeTimes->{
+  3.673335325376072*^9, 3.673335462143758*^9, {3.6733355663257823`*^9, 
+   3.6733355823957863`*^9}, {3.673335620218794*^9, 3.6733356628648195`*^9}, 
+   3.6733356938918276`*^9, 3.6733357355848217`*^9, 3.673335799597846*^9, 
+   3.6733358750148654`*^9, {3.6733359301468782`*^9, 3.673335995360895*^9}, 
+   3.6733360362078886`*^9, {3.6733360728233366`*^9, 3.6733361121943417`*^9}, 
+   3.6733362370553775`*^9, 3.6733362883533883`*^9, {3.673336328765396*^9, 
+   3.6733364070964146`*^9}, 3.673336443643421*^9, 3.6733365058134203`*^9, {
+   3.6733365422224464`*^9, 3.6733365679384346`*^9}, 3.6733366047894564`*^9, 
+   3.673336674721478*^9, 3.6735874583692904`*^9, 3.6739506691037207`*^9, 
+   3.6739507864406996`*^9, {3.673950839275008*^9, 3.6739508679880238`*^9}, {
+   3.6739508985998325`*^9, 3.673950924502449*^9}, 3.67395097081828*^9, 
+   3.6739519460317044`*^9, 3.673951979745676*^9},
+ CellID->1021142380]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["", "ManipulateCaptionSection"],
+
+Cell["XXXX", "ManipulateCaption"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["", "ThumbnailSection"],
+
+Cell[BoxData[
+ GraphicsBox[
+  {EdgeForm[GrayLevel[0]], FaceForm[GrayLevel[1]], RectangleBox[{0, 0}], 
+   InsetBox[
+    StyleBox["\<\"Thumbnail Placeholder\"\>",
+     StripOnInput->False,
+     FontFamily->"Verdana",
+     FontSize->14], {0.5, 0.6}], InsetBox[
+    StyleBox["\<\"Replace this with your\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.45}], InsetBox[
+    StyleBox["\<\"Manipulate at a particular setting.\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.39}], InsetBox[
+    StyleBox["\<\"(Do not use a bitmap.)\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.315}]},
+  ImageMargins->0.,
+  ImageSize->220]], "Output",
+ CellEditDuplicate->False]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["", "SnapshotsSection"],
+
+Cell[BoxData[
+ GraphicsBox[
+  {EdgeForm[GrayLevel[0]], FaceForm[GrayLevel[1]], RectangleBox[{0, 0}], 
+   InsetBox[
+    StyleBox["\<\"Snapshot Placeholder\"\>",
+     StripOnInput->False,
+     FontFamily->"Verdana",
+     FontSize->14], {0.5, 0.6}], InsetBox[
+    StyleBox["\<\"Replace this with your\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.45}], InsetBox[
+    StyleBox["\<\"Manipulate at a particular setting.\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.39}], InsetBox[
+    StyleBox["\<\"(Do not use a bitmap.)\"\>",
+     StripOnInput->False,
+     FrontFaceColor->GrayLevel[0.5],
+     GraphicsColor->GrayLevel[0.5],
+     FontFamily->"Verdana",
+     FontSize->10,
+     FontColor->GrayLevel[0.5],
+     $CellContext`BackFaceColor -> GrayLevel[0.5]], {0.5, 0.315}]},
+  ImageMargins->0.,
+  ImageSize->220]], "Output",
+ CellEditDuplicate->False]
+}, Open  ]],
+
+Cell["", "DetailsSection"],
+
+Cell[CellGroupData[{
+
+Cell["", "ControlSuggestionsSection"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Resize Images"]}],
+  "\"Click inside an image to reveal its orange resize frame.\\nDrag any of \
+the orange resize handles to resize the image.\"",
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"ResizeImages"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Rotate and Zoom in 3D"]}],
+  RowBox[{
+   "\"Drag a 3D graphic to rotate it. Starting the drag near the center \
+tumbles\\nthe graphic; starting near a corner turns it parallel to the plane \
+of the screen.\\nHold down \"", 
+    FrameBox[
+    "Ctrl", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" (or \"", 
+    FrameBox[
+    "Cmd", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" on Mac) and drag up and down to zoom.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"RotateAndZoomIn3D"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Drag Locators"]}],
+  RowBox[{"\"Drag any locator (\"", 
+    GraphicsBox[
+     LocatorBox[
+      Scaled[{0.5, 0.5}]], ImageSize -> 20], 
+    "\", etc.) to move it around.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"DragLocators"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Create and Delete Locators"]}],
+  RowBox[{"\"Insert a new locator in the graphic by holding down the \"", 
+    FrameBox[
+    "Alt", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], 
+    "\" key\\nand clicking where you want it to be. Delete a locator by \
+clicking it\\nwhile holding down the \"", 
+    FrameBox[
+    "Alt", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" key.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"CreateAndDeleteLocators"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Slider Zoom"]}],
+  RowBox[{"\"Hold down the \"", 
+    FrameBox[
+    "Alt", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], 
+    "\" key while moving a slider to make fine adjustments in the slider \
+value.\\nHold \"", 
+    FrameBox[
+    "Ctrl", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" and/or \"", 
+    FrameBox[
+    "Shift", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" at the same time as \"", 
+    FrameBox[
+    "Alt", Background -> GrayLevel[0.9], FrameMargins -> 2, FrameStyle -> 
+     GrayLevel[0.9]], "\" to make ever finer adjustments.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"SliderZoom"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Gamepad Controls"]}],
+  "\"Control this Demonstration with a gamepad or other\\nhuman interface \
+device connected to your computer.\"",
+  TooltipDelay->0.35]], "ControlSuggestions",
+ CellChangeTimes->{3.35696210375764*^9, 3.3895522232313623`*^9},
+ FontFamily->"Verdana",
+ CellTags->"GamepadControls"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Automatic Animation"]}],
+  RowBox[{"\"Animate a slider in this Demonstration by clicking the\"", 
+    AdjustmentBox[
+     Cell[
+      GraphicsData[
+      "CompressedBitmap", 
+       "eJzzTSzJSM1NLMlMTlRwL0osyMhMLlZwyy8CCjEzMjAwcIKwAgOI/R/IhBKc\n\
+/4EAyGAG0f+nTZsGwgysIJIRKsWKLAXGIHFmEpUgLADxWUAkI24jZs+eTaEt\n\
+IG+wQKRmzJgBlYf5lhEA30OqWA=="], "Graphics", ImageSize -> {9, 9}, ImageMargins -> 
+      0, CellBaseline -> Baseline], BoxBaselineShift -> 0.1839080459770115, 
+     BoxMargins -> {{0., 0.}, {-0.1839080459770115, 0.1839080459770115}}], 
+    "\"button\\nnext to the slider, and then clicking the play button that \
+appears.\\nAnimate all controls by selecting \"", 
+    StyleBox["Autorun", FontWeight -> "Bold"], "\" from the\"", 
+    AdjustmentBox[
+     Cell[
+      GraphicsData[
+      "CompressedBitmap", 
+       "eJyNULENwyAQfEySIlMwTVJlCGRFsosokeNtqBmDBagoaZjAI1C8/8GUUUC6\n\
+57h7cQ8PvU7Pl17nUav7oj/TPH7V7b2QJAUAXBkKmCPRowxICy64bRvGGNF7\n\
+X8CctGoDSN4xhIDGGDhzFXwUh3/ClBKrDQPmnGXtI6u0OOd+tZBVUqy1xSaH\n\
+UqiK6pPe4XdEdAz6563tx/gejuORGMxJaz8mdpJn7hc="], "Graphics", 
+      ImageSize -> {10, 10}, ImageMargins -> 0, CellBaseline -> Baseline], 
+     BoxBaselineShift -> 0.1839080459770115, 
+     BoxMargins -> {{0., 0.}, {-0.1839080459770115, 0.1839080459770115}}], 
+    "\"menu.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"AutomaticAnimation"],
+
+Cell[BoxData[
+ TooltipBox[
+  RowBox[{
+   CheckboxBox[False], Cell[" Bookmark Animation"]}],
+  RowBox[{
+   "\"See a prepared animation of this Demonstration by selecting\\n\"", 
+    StyleBox["Animate Bookmarks", FontWeight -> "Bold"], "\" from the\"", 
+    AdjustmentBox[
+     Cell[
+      GraphicsData[
+      "CompressedBitmap", 
+       "eJyNULENwyAQfEySIlMwTVJlCGRFsosokeNtqBmDBagoaZjAI1C8/8GUUUC6\n\
+57h7cQ8PvU7Pl17nUav7oj/TPH7V7b2QJAUAXBkKmCPRowxICy64bRvGGNF7\n\
+X8CctGoDSN4xhIDGGDhzFXwUh3/ClBKrDQPmnGXtI6u0OOd+tZBVUqy1xSaH\n\
+UqiK6pPe4XdEdAz6563tx/gejuORGMxJaz8mdpJn7hc="], "Graphics", 
+      ImageSize -> {10, 10}, ImageMargins -> 0, CellBaseline -> Baseline], 
+     BoxBaselineShift -> 0.1839080459770115, 
+     BoxMargins -> {{0., 0.}, {-0.1839080459770115, 0.1839080459770115}}], 
+    "\"menu.\""}],
+  TooltipDelay->0.35]], "ControlSuggestions",
+ FontFamily->"Verdana",
+ CellTags->"BookmarkAnimation"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["", "SearchTermsSection"],
+
+Cell["quaternions", "SearchTerms",
+ CellChangeTimes->{{3.673235963060511*^9, 3.6732359688944983`*^9}},
+ CellID->302804044],
+
+Cell["Cayley transform", "SearchTerms",
+ CellChangeTimes->{{3.673235963060511*^9, 3.6732359768724947`*^9}},
+ CellID->261451237],
+
+Cell["stereographic projection", "SearchTerms",
+ CellChangeTimes->{{3.673235963060511*^9, 3.673236001467514*^9}},
+ CellID->523763292]
+}, Open  ]],
+
+Cell["", "RelatedLinksSection"],
+
+Cell[CellGroupData[{
+
+Cell["", "AuthorSection"],
+
+Cell["Contributed by: Marc B. Reynolds", "Author",
+ CellChangeTimes->{{3.673153770846757*^9, 3.673153777536758*^9}}]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{924, 872},
+WindowMargins->{{Automatic, 178}, {Automatic, 45}},
+FrontEndVersion->"10.4 for Microsoft Windows (64-bit) (February 25, 2016)",
+StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "Demonstration.nb", 
+  CharacterEncoding -> "UTF-8"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{
+ "ResizeImages"->{
+  Cell[17096, 433, 312, 8, 22, "ControlSuggestions",
+   CellTags->"ResizeImages"]},
+ "RotateAndZoomIn3D"->{
+  Cell[17411, 443, 678, 16, 22, "ControlSuggestions",
+   CellTags->"RotateAndZoomIn3D"]},
+ "DragLocators"->{
+  Cell[18092, 461, 340, 11, 22, "ControlSuggestions",
+   CellTags->"DragLocators"]},
+ "CreateAndDeleteLocators"->{
+  Cell[18435, 474, 637, 15, 22, "ControlSuggestions",
+   CellTags->"CreateAndDeleteLocators"]},
+ "SliderZoom"->{
+  Cell[19075, 491, 844, 21, 22, "ControlSuggestions",
+   CellTags->"SliderZoom"]},
+ "GamepadControls"->{
+  Cell[19922, 514, 369, 9, 22, "ControlSuggestions",
+   CellTags->"GamepadControls"]},
+ "AutomaticAnimation"->{
+  Cell[20294, 525, 1464, 31, 22, "ControlSuggestions",
+   CellTags->"AutomaticAnimation"]},
+ "BookmarkAnimation"->{
+  Cell[21761, 558, 908, 21, 22, "ControlSuggestions",
+   CellTags->"BookmarkAnimation"]}
+ }
+*)
+(*CellTagsIndex
+CellTagsIndex->{
+ {"ResizeImages", 23742, 621},
+ {"RotateAndZoomIn3D", 23850, 624},
+ {"DragLocators", 23959, 627},
+ {"CreateAndDeleteLocators", 24074, 630},
+ {"SliderZoom", 24187, 633},
+ {"GamepadControls", 24292, 636},
+ {"AutomaticAnimation", 24404, 639},
+ {"BookmarkAnimation", 24520, 642}
+ }
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 185, 2, 74, "DemoTitle"],
+Cell[768, 26, 33, 0, 287, "InitializationSection"],
+Cell[CellGroupData[{
+Cell[826, 30, 29, 0, 192, "ManipulateSection"],
+Cell[CellGroupData[{
+Cell[880, 34, 8430, 203, 771, "Input",
+ CellID->353709000],
+Cell[9313, 239, 4937, 95, 533, "Output",
+ CellID->1021142380]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[14299, 340, 36, 0, 169, "ManipulateCaptionSection"],
+Cell[14338, 342, 33, 0, 22, "ManipulateCaption"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[14408, 347, 28, 0, 173, "ThumbnailSection"],
+Cell[14439, 349, 1242, 34, 230, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15718, 388, 28, 0, 143, "SnapshotsSection"],
+Cell[15749, 390, 1241, 34, 230, "Output"]
+}, Open  ]],
+Cell[17005, 427, 26, 0, 336, "DetailsSection"],
+Cell[CellGroupData[{
+Cell[17056, 431, 37, 0, 114, "ControlSuggestionsSection"],
+Cell[17096, 433, 312, 8, 22, "ControlSuggestions",
+ CellTags->"ResizeImages"],
+Cell[17411, 443, 678, 16, 22, "ControlSuggestions",
+ CellTags->"RotateAndZoomIn3D"],
+Cell[18092, 461, 340, 11, 22, "ControlSuggestions",
+ CellTags->"DragLocators"],
+Cell[18435, 474, 637, 15, 22, "ControlSuggestions",
+ CellTags->"CreateAndDeleteLocators"],
+Cell[19075, 491, 844, 21, 22, "ControlSuggestions",
+ CellTags->"SliderZoom"],
+Cell[19922, 514, 369, 9, 22, "ControlSuggestions",
+ CellTags->"GamepadControls"],
+Cell[20294, 525, 1464, 31, 22, "ControlSuggestions",
+ CellTags->"AutomaticAnimation"],
+Cell[21761, 558, 908, 21, 22, "ControlSuggestions",
+ CellTags->"BookmarkAnimation"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[22706, 584, 30, 0, 155, "SearchTermsSection"],
+Cell[22739, 586, 122, 2, 22, "SearchTerms",
+ CellID->302804044],
+Cell[22864, 590, 127, 2, 22, "SearchTerms",
+ CellID->261451237],
+Cell[22994, 594, 133, 2, 22, "SearchTerms",
+ CellID->523763292]
+}, Open  ]],
+Cell[23142, 599, 31, 0, 141, "RelatedLinksSection"],
+Cell[CellGroupData[{
+Cell[23198, 603, 25, 0, 129, "AuthorSection"],
+Cell[23226, 605, 116, 1, 22, "Author"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+

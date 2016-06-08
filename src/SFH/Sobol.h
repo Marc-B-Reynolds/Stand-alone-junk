@@ -374,6 +374,79 @@ static inline uint32_t sobol_tell(void* s)
   return ~(((sobol_1d_t*)s)->i);
 }
 
+#if defined(SOBOL_EXTRAS)
+#if defined(SOBOL_IMPLEMENTATION)
 
+float sobol_uniform_d1(sobol_2d_t* s, float* p)
+{
+  float d,x,y;
+  
+  do {
+    x = SOBOL_TO_F32(s->d0);
+    y = SOBOL_TO_F32(s->d1);
+    x = 2.f*x-1.f; d  = x*x;
+    y = 2.f*y-1.f; d += y*y;
+    sobol_2d_update(s);
+  } while(d >= 1.f);
+
+  p[0] = x;
+  p[1] = y;
+
+  return d;
+}
+
+float sobol_uniform_hd1(sobol_2d_t* s, float* p)
+{
+  float d,x,y;
+  
+  do {
+    x = SOBOL_TO_F32(s->d0);
+    y = SOBOL_TO_F32(s->d1);
+    d = x*x;
+    y = 2.f*y-1.f; d += y*y;
+    sobol_2d_update(s);
+  } while(d >= 1.f);
+
+  p[0] = x;
+  p[1] = y;
+
+  return d;
+}
+
+void sobol_uniform_s2(sobol_2d_t* s, float* p)
+{
+  float d,m;
+  float a[2];
+
+  d = sobol_uniform_d1(s, a);  
+  m = 2.f*sqrtf(1.f-d);
+
+  p[0] = m*a[0];
+  p[1] = m*a[1];
+  p[2] = 1.f-2.f*d;
+}
+
+void sobol_uniform_hs2(sobol_2d_t* s, float* p)
+{
+  float d,m;
+  float a[2];
+
+  d = sobol_uniform_hd1(s, a);  
+  m = 2.f*sqrtf(1.f-d);
+
+  p[0] = 1.f-2.f*d;
+  p[1] = m*a[1];
+  p[2] = m*a[0];
+}
+
+#else
+
+SOBOL_EXTERN float sobol_uniform_d1(sobol_2d_t* s, float* p);
+SOBOL_EXTERN float sobol_uniform_hd1(sobol_2d_t* s, float* p);
+SOBOL_EXTERN float sobol_uniform_s2(sobol_2d_t* s, float* p);
+SOBOL_EXTERN float sobol_uniform_hs2(sobol_2d_t* s, float* p);
+
+#endif
+#endif
 
 #endif
