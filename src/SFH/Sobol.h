@@ -413,6 +413,24 @@ float sobol_uniform_hd1(sobol_2d_t* s, float* p)
   return d;
 }
 
+float sobol_uniform_qd1(sobol_2d_t* s, float* p)
+{
+  float d,x,y;
+  
+  do {
+    x  = SOBOL_TO_F32(s->d0);
+    y  = SOBOL_TO_F32(s->d1);
+    d  = x*x;
+    d += y*y;
+    sobol_2d_update(s);
+  } while(d >= 1.f);
+
+  p[0] = x;
+  p[1] = y;
+
+  return d;
+}
+
 void sobol_uniform_s2(sobol_2d_t* s, float* p)
 {
   float d,m;
@@ -431,7 +449,7 @@ void sobol_uniform_hs2(sobol_2d_t* s, float* p)
   float d,m;
   float a[2];
 
-  d = sobol_uniform_hd1(s, a);  
+  d = sobol_uniform_hd1(s, a);
   m = 2.f*sqrtf(1.f-d);
 
   p[0] = 1.f-2.f*d;
@@ -443,8 +461,8 @@ void sobol_uniform_hs2(sobol_2d_t* s, float* p)
 
 SOBOL_EXTERN float sobol_uniform_d1(sobol_2d_t* s, float* p);
 SOBOL_EXTERN float sobol_uniform_hd1(sobol_2d_t* s, float* p);
-SOBOL_EXTERN float sobol_uniform_s2(sobol_2d_t* s, float* p);
-SOBOL_EXTERN float sobol_uniform_hs2(sobol_2d_t* s, float* p);
+SOBOL_EXTERN void  sobol_uniform_s2(sobol_2d_t* s, float* p);
+SOBOL_EXTERN void  sobol_uniform_hs2(sobol_2d_t* s, float* p);
 
 #endif
 #endif
