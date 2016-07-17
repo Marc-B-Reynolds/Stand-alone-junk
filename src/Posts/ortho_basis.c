@@ -74,7 +74,7 @@ static inline float lomont(float x)
 
 static inline float sse_rcp(float x)
 {
-  return _mm_cvtss_f32(_mm_rcp_ss(_mm_load_ss(&x)));
+  return _mm_cvtss_f32(_mm_rcp_ss((_mm_set_ss(x))));
 }
 
 // muller fixed guess, method2 only
