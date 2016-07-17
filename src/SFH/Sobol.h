@@ -461,6 +461,7 @@ void sobol_uniform_hs2(sobol_2d_t* s, float* p)
 
 SOBOL_EXTERN float sobol_uniform_d1(sobol_2d_t* s, float* p);
 SOBOL_EXTERN float sobol_uniform_hd1(sobol_2d_t* s, float* p);
+SOBOL_EXTERN float sobol_uniform_qd1(sobol_2d_t* s, float* p);
 SOBOL_EXTERN void  sobol_uniform_s2(sobol_2d_t* s, float* p);
 SOBOL_EXTERN void  sobol_uniform_hs2(sobol_2d_t* s, float* p);
 
