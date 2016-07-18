@@ -10,9 +10,15 @@
 //   http://github.com/Marc-B-Reynolds/TestU01x
 //   http://simul.iro.umontreal.ca/testu01/tu01.html
 
+#define PRNS_SMALLCRUSH
+
 // inject this note at the top of the output...for custom
 // mixing or whatever other note desired.
+#ifndef PRNS_SMALLCRUSH
 #define NOTATION "standard"
+#else
+#define NOTATION "smallcrush"
+#endif
 
 // if defined the lower 32-bit results are used for
 // integer test, otherwise the upper.  See the docs
@@ -20,7 +26,7 @@
 //#define USE_LOWER_BITS
 
 // if defined run Smallcrush, otherwise Crush
-//#define SMALLCRUSH
+#define SMALLCRUSH
 
 // Run with specified inital state. Undefined uses __rdtsc()
 //#define INITAL_STATE 0x1L
@@ -35,7 +41,6 @@
 // battery...otherwise will continue until stopped.
 #define NUMBER_OF_RUNS 100
 
-
 #ifdef  PRNS_WEYL
 // just to prevent compile time errors. The battery only test standard
 // member access (walking forward).  Backward is identical statistical
@@ -48,14 +53,14 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "../SFH/prns.h"
 
 
 #if defined(_MSC_VER)
 #define inline _inline
 #define I2F (1.0/((1.0*(1<<22))*(1.0*(1<<30))))
 _inline uint32_t __builtin_ctz(uint32_t x)  { unsigned long r; _BitScanForward(&r, (unsigned long)x); return (uint32_t)r; }
-_inline uint32_t __builtin_clzl(uint64_t x) { unsigned long r; _BitScanReverse64(&r, x); return (uint64_t)r; }
+_inline uint64_t __builtin_clzl(uint64_t x) { unsigned long r; _BitScanReverse64(&r, x); return (uint64_t)r; }
+_inline uint64_t __builtin_bswap64(uint64_t x) { return _byteswap_uint64(x); }
 #else
 #include <x86intrin.h>
 #define I2F 0x1p-52f
@@ -64,6 +69,8 @@ _inline uint32_t __builtin_clzl(uint64_t x) { unsigned long r; _BitScanReverse64
 #include "util.h"
 #include "unif01.h"
 #include "swrite.h"
+
+#include "../SFH/prns.h"
 
 prns_t state;
 
