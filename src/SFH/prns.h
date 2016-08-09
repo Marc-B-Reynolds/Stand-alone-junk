@@ -75,7 +75,7 @@ static inline uint64_t prns_mix(uint64_t x)
 {
   x ^= (x >> PRNS_MIX_S0);
   x *= PRNS_MIX_M0;
-  x ^= (x >> PRNS_MIX_S1);
+  x ^= (x >> PRNS_MIX_S1);	
   x *= PRNS_MIX_M1;
   
 #ifndef PRNS_NO_FINAL_XORSHIFT
@@ -87,7 +87,7 @@ static inline uint64_t prns_mix(uint64_t x)
 
 static inline uint64_t prns_min_mix(uint64_t x)
 {
-  x ^= (x >> 32);
+  x ^= (x >> 33);
   x *= 0xbf58476d1ce4e5b9L;
 
   return x;

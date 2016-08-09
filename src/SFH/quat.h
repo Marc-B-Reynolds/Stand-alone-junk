@@ -108,12 +108,18 @@ static inline void vec3_cross(vec3_t* r, vec3_t* a, vec3_t* b)
   vec3_set(r, x, y, z);
 }
 
+static inline void vec3_hmul(vec3_t* r, vec3_t* a, vec3_t* b)
+{
+  vec3_set(r, AX*BX, AY*BY, AZ*BZ);
+}
+
 
 static inline void vec3_set_scale(vec3_t* a, vec3_t* b, float s)
 {
   vec3_set(a, s*b->x, s*b->y, s*b->z);
 }
 
+// SEE: marc-b-reynolds.github.io/quaternions/2016/07/06/Orthonormal.html
 static inline void vec3_ortho_basis(vec3_t* v, vec3_t* xp, vec3_t* yp)
 {
   // this assumes v->z not approaching -z
@@ -243,6 +249,17 @@ static inline void quat_put_bv(vec3_t* v, quat_t* q, float s)
   vec3_set_scale(v, &(q->b), s);
 }  
 
+// Q   = s+B = cos(t)+sin(t)U, |Q|=1
+// Q^2 = s^2-(B.B) + 2s B 
+//     = cos(2t) + sin(2t)U
+static inline void quat_upow2(quat_t* q)
+{
+  float w = q->w;
+  float d = quat_bv_norm(q);
+  quat_bv_scale(q, w+w);
+  q->w = w*w-d;
+}
+
 // Q = cos(t)+sin(t)U, |Q|=1
 // sqrt(Q) = cos(t/2) + sin(t/2)U
 static inline void quat_usqrt(quat_t* q)
@@ -251,6 +268,19 @@ static inline void quat_usqrt(quat_t* q)
   float s = QUAT_RSQRT(d+d);
   quat_bv_scale(q, s);
   q->w = d*s;
+}
+
+// SEE: marc-b-reynolds.github.io/XX
+// Q = sqrt(ba^*)
+static inline void quat_from_normals(quat_t* q, vec3_t* a, vec3_t* b)
+{
+  // this assumes b not approaching -a
+  vec3_t v;
+  float d = 1.f+vec3_dot(a,b);
+  float s = QUAT_RSQRT(d+d);
+  vec3_cross(&v,a,b);
+  quat_bv_set_scale(q,&v,s);
+  q->w = s*d;
 }
 
 // QvQ^*
@@ -271,18 +301,7 @@ static inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
   vec3_set(r,x,y,z);
 }
 
-// Q   = s+B = cos(t)+sin(t)U, |Q|=1
-// Q^2 = s^2-(B.B) + 2s B 
-//     = cos(2t) + sin(2t)U
-static inline void quat_upow2(quat_t* q)
-{
-  float w = q->w;
-  float d = quat_bv_norm(q);
-  quat_bv_scale(q, w+w);
-  q->w = w*w-d;
-}
-
-// sqrt(Q), |Q|=1, return bivector part
+// sqrt(Q), |Q|=1, Q.1 >- 0, return bivector part
 static inline void quat_fha(vec3_t* v, quat_t* q)
 {
   float d = 1.f + q->w;
@@ -299,14 +318,14 @@ static inline void quat_iha(quat_t* q, vec3_t* v)
   q->w = 1.f-(d+d);
 }
 
-// forward Cayley: |Q|=1
+// forward Cayley: |Q|=1, Q.1 >= 0
 static inline void quat_fct(vec3_t* v, quat_t* q)
 {
   float s = 1.f/(1.f+q->w);
   quat_put_bv(v,q,s);
 }
 
-// inverse Cayley: dot(Q,1) = 0
+// inverse Cayley: Q.1 = 0
 static inline void quat_ict(quat_t* q, vec3_t* v)
 {
   float s = 2.f/(1.f+vec3_norm(v));
