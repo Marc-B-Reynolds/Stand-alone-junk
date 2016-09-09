@@ -34,6 +34,12 @@ static inline float rsqrtf_a(float x)
   return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x)));
 }
 
+static inline float rsqrt_nr(float x)
+{
+  float x0 = rsqrtf_a(x);
+  return x0*(1.5f - x*0.5f*x0*x0);
+}  
+  
 // for error computations of using native ~1/x without fixup
 static inline float rcp_a(float x) 
 {
@@ -120,6 +126,7 @@ static inline void vec3_set_scale(vec3_t* a, vec3_t* b, float s)
 }
 
 // SEE: marc-b-reynolds.github.io/quaternions/2016/07/06/Orthonormal.html
+// for math and other versions
 static inline void vec3_ortho_basis(vec3_t* v, vec3_t* xp, vec3_t* yp)
 {
   // this assumes v->z not approaching -z
@@ -231,12 +238,28 @@ static inline void quat_bac(quat_t* r, quat_t* a, quat_t* b)
   quat_set(r,x,y,z,w);
 }
 
+// R = sa A + ab B
+static inline void quat_wsum(quat_t* r, quat_t* a, quat_t* b, float sa, float sb)
+{
+  float x = sa*a->x + sb*b->x;
+  float y = sa*a->y + sb*b->y;
+  float z = sa*a->z + sb*b->z;
+  float w = sa*a->w + sb*b->w;
+  quat_set(r,x,y,z,w);
+}
+  
 static inline float quat_bv_norm(quat_t* r) { return quat_bdot(r,r); }
 static inline float quat_norm(quat_t* r)  { return quat_dot(r,r); }
 
 static inline void quat_bv_scale(quat_t* r, float s)
 {
   vec3_scale(&(r->b), s);
+}
+
+static inline void quat_scale(quat_t* r, float s)
+{
+  vec3_scale(&(r->b), s);
+  r->w *= s;
 }
 
 static inline void quat_bv_set_scale(quat_t* r, vec3_t* v, float s)

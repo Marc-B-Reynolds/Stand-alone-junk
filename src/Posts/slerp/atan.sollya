@@ -1,0 +1,79 @@
+
+// This is all very lazy and cut-and-paste
+
+// type of computation (float is the right answer here)
+T = floating;
+
+// error to min: abs seems the better choice
+E = absolute;
+
+display=decimal!;
+
+F = atan(x);
+
+print("atan on [-1,1]");
+R= [2^-24;1];
+
+P = fpminimax(F, [|1,3,5|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13,15|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13,15,17|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13,15,17,19|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+
+
+print("atan on [-sqrt(2)-1, sqrt(2)-1]");
+R= [2^-24; sqrt(2)-1];
+
+P = fpminimax(F, [|1,3,5|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+P = fpminimax(F, [|1,3,5,7,9,11,13,15|], [|24...|], R, T, E);
+P;
+print("norm = ", dirtyinfnorm(F-P, R), "\n");
+
+
+
