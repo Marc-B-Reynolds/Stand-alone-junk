@@ -12,6 +12,16 @@
 // to compile under VC you'll have to change the float hex-constants...couldn't
 // be bothered.
 
+// compile time configuration options
+
+#define SANITY_CHECKS
+
+#define SYM_TRIALS 0xFFFF
+
+#define TRIALS 10 // very temp hack
+
+// ------
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -47,17 +57,12 @@ static inline float recip_nr(float x)
 
 #endif
 
-// compile time configuration options
 
-// enable to test with both pseudo-random and Sobol sequences
-#define USE_SOBOL
 #define SOBOL_IMPLEMENTATION
 #define SOBOL_EXTRAS
-
 #include "../../SFH/quat.h"
 #include "../../SFH/Sobol.h"
 
-#define TRIALS 10 // very temp hack
 
 sobol_2d_t qrng;
 
@@ -383,7 +388,7 @@ static inline float cos_8_5(float x)
 static inline void quat_normalize(quat_t* r)
 {
   float s = sqrtf(quat_norm(r));
-  quat_scale(r,s);
+  quat_scale(r,1.f/s);
 }
 
 typedef struct { double x,y,z,w; } quatd_t;
@@ -464,10 +469,16 @@ void slerp_nutsy_ref(quat_t* R, quat_t* A, quat_t* B, float T)
   quatd_t a,b,m;
   double  c,f;
   double  t=T;
+  uint32_t n=0;
 
   // convert to double
   quat_to_d(&a, A);
   quat_to_d(&b, B);
+
+  // Since Q and -Q represent the same, choose both to have
+  // positive scalars. 
+  if (A->w < 0.0) quatd_neg(&a);
+  if (B->w < 0.0) quatd_neg(&b);
 
   // insure a & b are in the same half-sphere
   // near meanless error around dot(a,b) approaching zero
@@ -477,16 +488,19 @@ void slerp_nutsy_ref(quat_t* R, quat_t* A, quat_t* B, float T)
     quatd_neg(&b);
     c = -c;
   }
+
+  n--;
   
   do {
     // bisector (relative half-angle)
     quatd_add(&m, &a, &b);
-    quatd_scale(&m, 0.5);    // no error
+    quatd_scale(&m, 0.5);
     double d = quatd_dot(&m, &a);
     f = sqrt(d);
     quatd_sdiv(&m, f);
     
     t += t;
+    n++;
 
     // treating 't' as integer so the exact compares
     if (t < 1.0) {
@@ -513,7 +527,7 @@ void slerp_nutsy_ref(quat_t* R, quat_t* A, quat_t* B, float T)
     //quatd_print(&m);
     //printf("%2d %f %f %f %a %a\n", n, c, s, d,f,t);
     //n++;
-  } while(f != 1.0);
+  } while(f != 1.0 && n < 65);
 
   quatd_store(R, &m);
 }
@@ -535,7 +549,7 @@ void slerp_ref_ref(quat_t* R, quat_t* A, quat_t* B, float t)
   double s0, s1;
   
   if (ad < SLERP_CUT) {
-    double a  = acos(ad);
+    double a  = acos(ad);  // this is bad and should be change
     double sa = sin(a);
     s0 = sin((1-t) * a)/sa;
     s1 = sin((  t) * a)/sa;
@@ -588,16 +602,15 @@ void slerp_ref_1(quat_t* R, quat_t* A, quat_t* B, float t)
 
   if (d < SLERP_CUT) {
     t += t;                      // account for half-angle atan
-    float s2 = 1.f-d*d;
+    float s2 = 1.0-d*d;
     float i  = recip_nr(1.f+d);  // ~x^-1  to at least 12-bit, 1 NR step
     float rs = rsqrt_nr(s2);     // ~x^-.5 to at least 12-bit, 1 NR step
     float y  = s2*rs;          
     float a  = atanf(y*i);       // still range reduction
     float s  = sinf(t*a);        // still range reduction
-    float sm = 1.f-s*s;
-    float ic = rsqrt_nr(sm);
+    float c  = sqrtf(1.f-s*s);   // can't ~1/sqrt(x) if max angle allowed
     s1 = s*rs;                   // sgn*s1*B can be computed while 'ic', etc in progress
-    s0 = sm*ic-d*s1;
+    s0 = c-d*s1;
   } else {
     s0 = 1.0f - t;
     s1 = t;
@@ -619,15 +632,14 @@ void slerp_ref_2(quat_t* R, quat_t* A, quat_t* B, float t)
     float i  = recip_nr(1.f+d);
     float rs = rsqrt_nr(s2);   
     float y  = s2*rs;          
-    float a  = atanf(y*i);     
-    float c  = cosf(t*a);      // opposite choice just to show
-    float s  = sqrtf(1-c*c);   // and std root
-    float tc = c+c;
-    float cx = tc*c-1.f;
-    float sx = tc*c*s;
-
-    s1 = sx*rs;
-    s0 = cx-d*s1;
+    float a  = atanf(y*i);
+    float hs = sinf(t*a);
+    float hc = sqrtf(1.f-hs*hs);
+    float th = 2.f*hc;
+    float c  = hc*hc-hs*hs;
+    float s  = th*hs;
+    s1 = s*rs;
+    s0 = c-d*s1;
   } else {
     s0 = 1.0f - t;
     s1 = t;
@@ -646,12 +658,12 @@ void slerp_ref_3(quat_t* R, quat_t* A, quat_t* B, float t)
   d = fabs(d);
   
   if (d < SLERP_CUT) {
-    // 
+    // set-up for atan
     float s2 = 1.f-d*d;
     float i  = recip_nr(1.f+d);
     float rs = rsqrt_nr(s2);   
     float y  = s2*rs;          
-    float a  = atanf(y*i);        // lazy
+    float a  = atan_9(y*i);       // ~atan on [0,1]
 
     // forward trig approx (or root for one)
     float ta = t*a;
@@ -673,7 +685,8 @@ void slerp_ref_3(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, sgn*s1);
 }
 
-// branch-free sketch:
+#define SQRT2_O_2 0.707106769084930419921875f
+
 void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
 {
   float d   = quat_dot(A,B);
@@ -682,22 +695,22 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
 
   d = fabs(d);
   
-  // lerp vs. slerp part not show
   if (d < SLERP_CUT) {
-
-    // atan range reduction
-    float t  = (d < 0.707106769084930419921875f) ? 1 : 0;
+    // set-up for atan
+    float x  = (d < SQRT2_O_2) ? 1 : 0;
+    float ps = x*(PI*.25);
     float s2 = 1.f-d*d;
-    float i  = recip_nr(d+1.f-t);  
-    float rs = rsqrt_nr(s2);       
-    float y  = s2*rs+t;            
+    float i  = recip_nr(1.f-x+d);
+    float rs = rsqrt_nr(s2);   
+    float y  = s2*rs-x;
+    float a  = atan_h_6(y*i)+ps;   // 
 
-    float a  = atanf(y*i)+t*(PI*.25f);
-
-    // forward trig approx, double angle 
+    // forward trig approx (or root for one)
     float ta = t*a;
-    float c  = cos_4_5(ta);
-    float s  = sin_4_5(ta);
+    float c  = cos_4_5(ta);       // ~cos on [0, pi/4]
+    float s  = sin_4_5(ta);       // ~sin on [0, pi/4]
+
+    // double angle
     float tc = c+c;
     float cx = tc*c-1.f;
     float sx = tc*c*s;
@@ -712,9 +725,40 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, sgn*s1);
 }
 
+void slerp_ref_4c(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  float d   = quat_dot(A,B);
+  float sgn = d >= 0 ? 1 : -1;
+  float s0,s1;
+
+  d = fabs(d);
+  
+  if (d < SLERP_CUT) { t+=t;
+    float x  = (d < SQRT2_O_2) ? 1 : 0;
+    float ps = x*(PI*.25);
+    float s2 = 1.f-d*d;
+    float i  = 1.f/(1.f-x+d);
+    float rs = 1.f/sqrtf(s2);   
+    float y  = s2*rs-x;
+    float a  = atanf(y*i)+ps;
+    float ta = t*a;
+    float c  = cosf(ta); 
+    float s  = sinf(ta); 
+    s1 = s*rs;
+    s0 = c-d*s1;
+  } else {
+    s0 = 1.0f - t;
+    s1 = t;
+  }
+
+  quat_wsum(R, A, B, s0, sgn*s1);
+}
+
+
 // ****************
 // precomputation
 
+#if 0
 typedef struct {
   quat_t q0;
   quat_t q1;
@@ -761,7 +805,7 @@ void slerp_k_1(quat_t* r, slerp_k_t* k, float t)
 
   quat_wsum(r, &k->q0, &k->q1, dc, ds);
 }
-
+#endif
 
 
 
@@ -1054,13 +1098,14 @@ typedef struct {
 
 slerp_name_t funcs[] =
 {
-//SF(slerp_nutsy_ref),
-//SF(slerp_ref_ref),
+  SF(slerp_nutsy_ref),
+  SF(slerp_ref_ref),
   SF(slerp_ref_0),
   SF(slerp_ref_1),
   SF(slerp_ref_2),
   SF(slerp_ref_3),
-//SF(slerp_ref_4),
+  SF(slerp_ref_4),
+  SF(slerp_ref_4c),
   SF(slerp_id_ref_0),
   SF(slerp_id_ref_1),
   SF(slerp_eberly_1),
@@ -1072,13 +1117,14 @@ slerp_name_t funcs[] =
 
 #define SLERP_REF slerp_ref_ref
 
-#define NUM_FUNC (sizeof(funcs)/sizeof(funcs[0]))
+#define NUM_FUNCS (sizeof(funcs)/sizeof(funcs[0]))
 
 void reset_generators(uint64_t s0, uint64_t s1)
 {
   sobol_2d_init(&qrng, (uint32_t)s0, (uint32_t)(s0+(s0>>32)));
   rng_state[0] = s0;
   rng_state[1] = s1;
+  rng_u64();
 }
 
 void quat_canonical(quat_t* q)
@@ -1088,6 +1134,45 @@ void quat_canonical(quat_t* q)
   quat_neg(q,q);
 }
 
+// too lazy to do a proper scalarproduct
+float a_error(quat_t* a, quat_t* b)
+{
+  double ax = a->x, ay = a->y, az = a->z, aw = a->w;
+  double bx = b->x, by = b->y, bz = b->z, bw = b->w;
+
+  if (ax != bx || ay != by || az != bz || aw != bw) {
+    double mx = ax*bx, my = ay*by, mz = az*bz, mw = aw*bw;
+    double nd = mw+mz+my+mx;
+    double d;
+    
+    // sort into smallest to largest
+    double x = fabs(mx);
+    double y = fabs(my);
+    double z = fabs(mz);
+    double w = fabs(mw);
+    double t;
+    
+    if (x < y) { t=x; x=y; y=t; t=mx; mx=my; my=t; }
+    if (x < z) { t=x; x=z; z=t; t=mx; mx=mz; mz=t; }
+    if (x < w) { t=x; x=w; w=t; t=mx; mx=mw; mw=t; }
+    if (y < z) { t=y; y=z; z=t; t=my; my=mz; mz=t; }
+    if (y < w) { t=y; y=w; w=t; t=my; my=mw; mw=t; }
+    if (z < w) { t=z; z=w; w=t; t=mz; mz=mw; mw=t; }
+    
+    d = mw+mz+my+mx;
+    
+    // no reason to prefer slightly too large over slightly too small
+    float dot = fabs((float)d);
+    if (dot > 1.f) dot = 2.f-d;
+
+    //printf(" {%f, %f} ", dot, (float)nd);
+    
+    return 1.1459156036376953125e2f*acosf(dot);
+  }
+  
+  return 0.f;
+}
+
 #define D(X) printf("(" #X ") ")
 
 int quat_identical(quat_t* a, quat_t* b)
@@ -1095,65 +1180,50 @@ int quat_identical(quat_t* a, quat_t* b)
   // structured for relaxed IEEE rules
   float t0,t1;
 
-  t0  = (a->x - b->x);
-  t1  = (a->x + b->x);
-  t0 += (a->y - b->y);
-  t1 += (a->y + b->y);
-  t0 += (a->z - b->z);
-  t1 += (a->z + b->z);
-  t0 += (a->w - b->w);
-  t1 += (a->w + b->w);
-  t0  = fabs(t0);
-  t1  = fabs(t1);
+  t0  = fabsf(a->x - b->x);
+  t1  = fabsf(a->x + b->x);
+  t0 += fabsf(a->y - b->y);
+  t1 += fabsf(a->y + b->y);
+  t0 += fabsf(a->z - b->z);
+  t1 += fabsf(a->z + b->z);
+  t0 += fabsf(a->w - b->w);
+  t1 += fabsf(a->w + b->w);
   t0  = (t0 < t1) ? t0 : t1;
 
-  printf("(%a) ", t0);
-
-  return 0;
+  return t0 != 0;
 }
 
 
-void sym_test(uint64_t s0, uint64_t s1)
+void ortho_test(uint64_t s0, uint64_t s1)
 {
-  quat_t A,B,E;
+  quat_t A,B;
   quat_t NA,NB;
   float  t;
 
-  reset_generators(s0,s1);
-  t = rng_f32();  // change to neighboorhood of .2
-  
-  quat_qr_p(&A);
-  quat_qr_p(&B);
+  printf("* ortho test\n");
 
+  reset_generators(s0,s1);
+  t = (rng_f32()-0.5f)*0.2;
+  
   quat_set(&A,0,0,0,1);
   quat_set(&B,0,0,1,0);
-  t = 1.f;
-
+  t = 1.0f;
   
   quat_neg(&NA, &A);
   quat_neg(&NB, &B);
-
-  SLERP_REF(&E,&A,&B,t);
-  //quat_print(&A); ln();
-  //quat_print(&B); ln();
-  quat_print(&E); ln();
   
-  for(uint32_t s=0; s<sizeof(funcs)/sizeof(funcs[0]); s++) {
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
     slerp_func_t slerp = funcs[s].f;
+
+    printf("\n\n---- %30s \n", funcs[s].name);
 
     quat_t R0,R1,R2,R3;
 
-    // all permutations of signs should return numerically
-    // identical results up to sign. No methods here have
-    // any directionally dependent code such as choosing
-    // an orthonogal direction as the relative quaternion
-    // approaches one (identity).
     slerp(&R0, &A,  &B,  t);
     slerp(&R1, &A,  &NB, t);
     slerp(&R2, &NA, &B,  t);
     slerp(&R3, &NA, &NB, t);
     
-    printf("\n\n---- %30s \n", funcs[s].name);
     quat_print(&R0); 
     quat_print(&R1); ln();
     quat_print(&R2); 
@@ -1161,22 +1231,95 @@ void sym_test(uint64_t s0, uint64_t s1)
     printf("%d ",  quat_identical(&R0,&R1));
     printf("%d ",  quat_identical(&R0,&R2));
     printf("%d\n", quat_identical(&R0,&R3));
+  }
+}
 
-#if 0    
-    t = 1.f-t;
-    slerp(&R0, &A,  &B,  t);
-    slerp(&R1, &A,  &NB, t);
-    slerp(&R2, &NA, &B,  t);
-    slerp(&R3, &NA, &NB, t);
+
+// all permutations of signs should return numerically
+// identical results up to sign. No methods here have
+// any directionally dependent code such as choosing
+// an orthonogal direction as the relative quaternion
+// approaches one (identity).
+void sym_test(uint64_t s0, uint64_t s1)
+{
+  quat_t A,B,NA,NB;
+  float  t;
+
+  printf("* sym test\n");
+
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
+    slerp_func_t slerp = funcs[s].f;
+    uint32_t r = 0;
+
+    reset_generators(s0,s1);
+    t = (rng_f32()-0.5f)*0.2;
     
-    quat_printa(&R0); 
-    quat_printa(&R1); ln();
-    quat_printa(&R2); 
-    quat_printa(&R3); ln();
-    printf("%d ",  quat_identical(&R0,&R1));
-    printf("%d ",  quat_identical(&R0,&R2));
-    printf("%d\n", quat_identical(&R0,&R3));
-#endif    
+    quat_qr_p(&A);
+    quat_qr_p(&B);
+    
+    quat_neg(&NA, &A);
+    quat_neg(&NB, &B);
+    
+    for(uint32_t i=0; i<SYM_TRIALS; i++) {
+      
+      quat_t R0,R1,R2,R3;
+      
+      slerp(&R0, &A,  &B,  t);
+      slerp(&R1, &A,  &NB, t);
+      slerp(&R2, &NA, &B,  t);
+      slerp(&R3, &NA, &NB, t);
+      
+      r += quat_identical(&R0,&R1);
+      r += quat_identical(&R0,&R2);
+      r += quat_identical(&R0,&R3);
+
+      t = 1.f-t;
+      slerp(&R0, &B,  &A,  t);
+      slerp(&R1, &B,  &NA, t);
+      slerp(&R2, &NB, &A,  t);
+      slerp(&R3, &NB, &NA, t);
+      
+      r += quat_identical(&R0,&R1);
+      r += quat_identical(&R0,&R2);
+      r += quat_identical(&R0,&R3);
+
+      if (r != 0) {
+	printf("   failed: %s\n", funcs[s].name);
+	break;
+      }
+    }
+  }
+}
+
+
+void spot_dump(uint64_t s0, uint64_t s1)
+{
+  quat_t A,B,E;
+  float  t;
+
+  reset_generators(s0,s1);
+  t = rng_f32();
+  
+  quat_qr_p(&A);
+  quat_qr_p(&B);
+  printf("%f (%f) ",t, fabs(quat_dot(&A,&B)));
+  quat_print(&A);
+  quat_print(&B); ln();
+
+  slerp_ref_ref(&E,&A,&B, t);
+  
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
+    slerp_func_t slerp = funcs[s].f;
+    quat_t R,D;
+
+    printf("%15s : ", funcs[s].name);
+    slerp(&R, &A,  &B,  t);
+    float  a = a_error(&R,&E);
+    quat_sub(&D,&E,&R);
+    quat_print(&R);
+    //quat_printa(&D);
+    printf("%f\n",a);
+    //ln();
   }
 }
 
@@ -1191,46 +1334,11 @@ int main()
     s1 = 0x1234567;
   }
 
-  sym_test(s0,s1); return 0;
+  printf("SANITY TESTS\n");
+  //sym_test(s0,s1); 
+  //ortho_test(s0,s1); 
+  spot_dump(s0,s1);
 
-
-  for(uint32_t s=0; s<sizeof(funcs)/sizeof(funcs[0]); s++) {
-
-
-    for(uint32_t i=0; i<TRIALS; i++) {
-      float t = .1f;
-      quat_t A,B,R0,R1,R2,R3,R4;
-      
-      quat_qr_p(&A);
-      quat_qr_p(&B);
-      
-      slerp_nutsy_ref(&R0,&A,&B,t);    
-      slerp_ref_ref(&R1,&A,&B,t);
-      slerp_ref_0(&R2,&A,&B,t);
-      slerp_ref_1(&R3,&A,&B,t);
-      slerp_ref_2(&R4,&A,&B,t);
-      
-      //slerp_foo(&R3,&A,&B,t);
-      //slerp_eberly_1(&R4,&A,&B,t);
-      //id_slerp_ref_1(&R4,&A,&B,t);
-      //slerp_zeux_2(&R4,&A,&B,t);
-      //slerp_nlerp(&R4,&A,&B,t);
-      
-      
-      quat_print(&R0); ln();
-      quat_print(&R1); ln();
-      quat_print(&R2); ln();
-      quat_print(&R3); ln();
-      quat_print(&R4); ln();ln();
-      
-      quat_printa(&R0); ln();
-      quat_printa(&R1); ln();
-      quat_printa(&R2); ln();
-      quat_printa(&R3); ln();
-      quat_printa(&R4); ln();
-    }
-  }
-  
   return 0;
 }
 
