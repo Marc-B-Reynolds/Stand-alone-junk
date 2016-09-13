@@ -633,11 +633,21 @@ void slerp_ref_2(quat_t* R, quat_t* A, quat_t* B, float t)
     float rs = rsqrt_nr(s2);   
     float y  = s2*rs;          
     float a  = atanf(y*i);
+
+    // both elim variants
+#if 0
     float hs = sinf(t*a);
     float hc = sqrtf(1.f-hs*hs);
+    float th = 2.f*hs;
+    float c  = 1.f-hs*th;  // hc*hc-hs*hs;
+    float s  = th*hc;
+#else
+    float hc = cosf(t*a);
+    float hs = sqrtf(1.f-hc*hc);
     float th = 2.f*hc;
-    float c  = hc*hc-hs*hs;
+    float c  = hc*th-1.f;  // hc*hc-hs*hs;
     float s  = th*hs;
+#endif
     s1 = s*rs;
     s0 = c-d*s1;
   } else {
@@ -667,16 +677,15 @@ void slerp_ref_3(quat_t* R, quat_t* A, quat_t* B, float t)
 
     // forward trig approx (or root for one)
     float ta = t*a;
-    float c  = cos_4_5(ta);       // ~cos on [0, pi/4]
-    float s  = sin_4_5(ta);       // ~sin on [0, pi/4]
+    float hc = cos_4_5(ta);       // ~cos on [0, pi/4]
+    float hs = sin_4_5(ta);       // ~sin on [0, pi/4]
 
     // double angle
-    float tc = c+c;
-    float cx = tc*c-1.f;
-    float sx = tc*c*s;
-
-    s1 = sx*rs;
-    s0 = cx-d*s1;
+    float th = 2.f*hc;
+    float c  = hc*th-1.f;  // hc*hc-hs*hs
+    float s  = th*hs;
+    s1 = s*rs;
+    s0 = c-d*s1;
   } else {
     s0 = 1.0f - t;
     s1 = t;
@@ -697,7 +706,7 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
   
   if (d < SLERP_CUT) {
     // set-up for atan
-    float x  = (d < SQRT2_O_2) ? 1 : 0;
+    float x  = (d > SQRT2_O_2) ? 0 : 1;
     float ps = x*(PI*.25);
     float s2 = 1.f-d*d;
     float i  = recip_nr(1.f-x+d);
@@ -707,43 +716,13 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
 
     // forward trig approx (or root for one)
     float ta = t*a;
-    float c  = cos_4_5(ta);       // ~cos on [0, pi/4]
-    float s  = sin_4_5(ta);       // ~sin on [0, pi/4]
+    float hc = cos_4_5(ta);       // ~cos on [0, pi/4]
+    float hs = sin_4_5(ta);       // ~sin on [0, pi/4]
 
     // double angle
-    float tc = c+c;
-    float cx = tc*c-1.f;
-    float sx = tc*c*s;
-
-    s1 = sx*rs;
-    s0 = cx-d*s1;
-  } else {
-    s0 = 1.0f - t;
-    s1 = t;
-  }
-
-  quat_wsum(R, A, B, s0, sgn*s1);
-}
-
-void slerp_ref_4c(quat_t* R, quat_t* A, quat_t* B, float t)
-{
-  float d   = quat_dot(A,B);
-  float sgn = d >= 0 ? 1 : -1;
-  float s0,s1;
-
-  d = fabs(d);
-  
-  if (d < SLERP_CUT) { t+=t;
-    float x  = (d < SQRT2_O_2) ? 1 : 0;
-    float ps = x*(PI*.25);
-    float s2 = 1.f-d*d;
-    float i  = 1.f/(1.f-x+d);
-    float rs = 1.f/sqrtf(s2);   
-    float y  = s2*rs-x;
-    float a  = atanf(y*i)+ps;
-    float ta = t*a;
-    float c  = cosf(ta); 
-    float s  = sinf(ta); 
+    float th = 2.f*hc;
+    float c  = hc*th-1.f;
+    float s  = th*hs;
     s1 = s*rs;
     s0 = c-d*s1;
   } else {
@@ -754,60 +733,62 @@ void slerp_ref_4c(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, sgn*s1);
 }
 
-
 // ****************
 // precomputation
 
-#if 0
-typedef struct {
-  quat_t q0;
-  quat_t q1;
-  float  a;
-} slerp_k_t;
 
-void slerp_k_init(slerp_k_t* k, quat_t* A, quat_t* B)
+typedef struct {
+  quat_t x,y;    // the 2D orthogonal basis
+  float  a;      // the angle (+1 float to data-set)
+} slerp_pc_t;
+
+// all the various options in the reference section apply
+// here as well.  simply showning the short version to be
+// concise.
+
+void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
 {
   float d   = quat_dot(A,B);
   float sgn = d >= 0 ? 1 : -1;
 
-  // lazy straight forward way
-  quat_wsum(&k->q0, A, B, sgn, 1.f);
-  quat_normalize(&k->q0);
+  d = fabs(d);
+  quat_dup(&k->x, A);
 
   if (d < SLERP_CUT) {
-    float x = quat_dot(&k->q0, B);
-    float s = sqrtf(1-d*d);
-    float b = atan2f(s,d);
-    // nope
+    float s  = sqrtf(1-d*d);
+    float a  = atan2f(s,d);
+    float is = sgn/s;
+    quat_wsum(&k->y, A, B, -d*is, is);
+    k->a = b;
   }
   else {
-    quat_dup(&k->q1, B);
-    //k->a =  nope
+    // can't be bothered to do this the right way
+    quat_dup(&k->y, B);
+    k->a = PI*0.5f;
   }
 }
 
-void slerp_k_0(quat_t* r, slerp_k_t* k, float t)
+void slerp_pc_0(quat_t* r, slerp_pc_t* k, float t)
 {
   float ta = t*k->a;
-  float c  = cos_4_5(ta);
+
+  // all of the previous options apply
+  float c  = cosf(ta);
   float s  = sqrt(1-c*c);
-  quat_wsum(r, &k->q0, &k->q1, c, s);
+
+  // or double the angle here
+
+  // compute the weighted sum
+  quat_wsum(r, &k->x, &k->y, c, s);
 }
 
-void slerp_k_1(quat_t* r, slerp_k_t* k, float t)
+// dump wrapper for testing
+void slerp_pc_wrap_0(quat_t* R, quat_t* A, quat_t* B, float t)
 {
-  float ta = t*k->a;
-  float c  = cos_8_4(ta);
-  float s  = sin_8_4(ta);
-  float tc = c+c;
-  float dc = tc*c-1.f;
-  float ds = tc*c*s;
-
-  quat_wsum(r, &k->q0, &k->q1, dc, ds);
+  slerp_pc_t slerp;
+  slerp_pc_init_0(&slerp,A,B);
+  slerp_pc_0(R, &slerp, t);
 }
-#endif
-
-
 
 // ****************
 
@@ -1105,7 +1086,6 @@ slerp_name_t funcs[] =
   SF(slerp_ref_2),
   SF(slerp_ref_3),
   SF(slerp_ref_4),
-  SF(slerp_ref_4c),
   SF(slerp_id_ref_0),
   SF(slerp_id_ref_1),
   SF(slerp_eberly_1),
@@ -1113,11 +1093,14 @@ slerp_name_t funcs[] =
   SF(slerp_zeux_1),
   SF(slerp_zeux_2),
   SF(slerp_nlerp),
+  
+  SF(slerp_pc_wrap_0),
 };
 
 #define SLERP_REF slerp_ref_ref
 
 #define NUM_FUNCS (sizeof(funcs)/sizeof(funcs[0]))
+#define NUM_FUNCS_NW (NUM_FUNCS-1)
 
 void reset_generators(uint64_t s0, uint64_t s1)
 {
@@ -1142,7 +1125,7 @@ float a_error(quat_t* a, quat_t* b)
 
   if (ax != bx || ay != by || az != bz || aw != bw) {
     double mx = ax*bx, my = ay*by, mz = az*bz, mw = aw*bw;
-    double nd = mw+mz+my+mx;
+  //double nd = mw+mz+my+mx;
     double d;
     
     // sort into smallest to largest
@@ -1336,8 +1319,8 @@ int main()
 
   printf("SANITY TESTS\n");
   //sym_test(s0,s1); 
-  //ortho_test(s0,s1); 
-  spot_dump(s0,s1);
+  ortho_test(s0,s1); 
+  //spot_dump(s0,s1);
 
   return 0;
 }
