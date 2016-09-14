@@ -743,8 +743,8 @@ typedef struct {
 } slerp_pc_t;
 
 // all the various options in the reference section apply
-// here as well.  simply showning the short version to be
-// concise.
+// here as well.  simply showning the short and very slow
+// version to be concise.
 
 void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
 {
@@ -759,7 +759,7 @@ void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
     float a  = atan2f(s,d);
     float is = sgn/s;
     quat_wsum(&k->y, A, B, -d*is, is);
-    k->a = b;
+    k->a = a;
   }
   else {
     // can't be bothered to do this the right way
@@ -789,6 +789,24 @@ void slerp_pc_wrap_0(quat_t* R, quat_t* A, quat_t* B, float t)
   slerp_pc_init_0(&slerp,A,B);
   slerp_pc_0(R, &slerp, t);
 }
+
+
+void slerp_pc_1(quat_t* r, slerp_pc_t* k, float t)
+{
+  float ta = t*k->a;
+  float c  = cosf(ta);
+  float s  = sqrt(1-c*c);
+  quat_wsum(r, &k->x, &k->y, c, s);
+}
+
+// dump wrapper for testing
+void slerp_pc_wrap_1(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  slerp_pc_t slerp;
+  slerp_pc_init_0(&slerp,A,B);
+  slerp_pc_1(R, &slerp, t);
+}
+
 
 // ****************
 
@@ -940,11 +958,82 @@ void slerp_id_ref_1(quat_t* result, quat_t* from, quat_t* to, float t)
 #define OP_MU_15 1.94186426368404708  // 2.721482x10-9 0.2928 0.8180
 #define OP_MU_16 1.94508125972497303  // 1.177902x10-9 0.2926 0.8178
 
-// revalidate and generalize
-const float u8[] = // 1 /[i (2 i + 1 )] for i >= 1
+const float mu[] = {OP_MU_1,OP_MU_2,OP_MU_3,OP_MU_4,OP_MU_5,OP_MU_6,OP_MU_7,OP_MU_8,OP_MU_9,OP_MU_10,OP_MU_11,OP_MU_12,OP_MU_13,OP_MU_14,OP_MU_15,OP_MU_16};
+  
+const float u8[] =
 { 1.f/(1*3), 1.f/(2*5), 1.f/(3*7), 1.f/(4*9), 1.f/(5*11), 1.f/(6*13), 1.f/(7*15), OP_MU_8/(8*17) } ;
-const float v8[] = // i /(2 i + 1) for i >= 1
+
+const float v8[] = 
 { 1.f/3, 2.f/5, 3.f/7, 4.f/9, 5.f/11, 6.f/13, 7.f/15, OP_MU_8*8/17 } ;
+
+const float eberly_u[] = {  1/3.f,  1/10.f,  1/21.f,  1/36.f,  1/55.f,  1/78.f, 1/105.f, 1/136.f,
+			  1/171.f, 1/210.f, 1/253.f, 1/300.f, 1/351.f, 1/406.f, 1/465.f, 1/528.f};
+const float eberly_v[] = {  1/3.f,   2/5.f,   3/7.f,   4/9.f,  5/11.f,  6/13.f,  7/15.f,  8/17.f,
+			   9/19.f, 10/21.f, 11/23.f, 12/25.f, 13/27.f, 14/29.f, 15/31.f, 16/33.f};
+
+
+// generic version (aka slow)
+void slerp_eberly_g(quat_t* R, quat_t* A, quat_t* B, float t, uint32_t n)
+{
+  float x   = quat_dot(A,B);
+  float sgn = (x >= 0 ? 1 : -1);
+  float xm1 = fabs(x)-1.f;
+  float d   = 1.f-t;
+  float t2  = t*t;
+  float d2  = d*d;
+  float bT[16];
+  float bD[16];
+
+  for (int i = n; i >= 0; --i) {
+    bT[i] = (u8[i]*t2 - v8[i])*xm1;
+    bD[i] = (u8[i]*d2 - v8[i])*xm1;
+  }
+
+  float s1 = 1.f + bT[n];
+  float s0 = 1.f + bD[n];
+  
+  for (int i = n-1; i >= 0; --i) {
+    s0 = 1.f + bD[i]*s0;
+    s1 = 1.f + bT[i]*s1;
+  }
+  
+  s1 = sgn*t*s1;
+  s0 =     d*s0;
+
+  quat_wsum(R, A, B, s0, s1);
+}
+
+
+void slerp_eberly_g_(quat_t* R, quat_t* A, quat_t* B, float t, uint32_t n)
+{
+  float x   = quat_dot(A,B);
+  float sgn = (x >= 0 ? 1 : -1);
+  float xm1 = fabs(x)-1.f;
+  float d   = 1.f-t;
+  float t2  = t*t;
+  float d2  = d*d;
+  float bT[16];
+  float bD[16];
+
+  for (int i = n-1; i >= 0; --i) {
+    bT[i] = (u8[i]*t2 - v8[i])*xm1;
+    bD[i] = (u8[i]*d2 - v8[i])*xm1;
+  }
+
+  float s1 = 1.f + bT[n-1];
+  float s0 = 1.f + bD[n-1];
+  
+  for (int i = n-2; i >= 0; --i) {
+    s0 = 1.f + bD[i]*s0;
+    s1 = 1.f + bT[i]*s1;
+  }
+  
+  s1 = sgn*t*s1;
+  s0 =     d*s0;
+
+  quat_wsum(R, A, B, s0, s1);
+}
+
 
 void slerp_eberly_1(quat_t* R, quat_t* A, quat_t* B, float t)
 {
@@ -961,25 +1050,10 @@ void slerp_eberly_1(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, s1);
 }
 
-void slerp_eberly_8_(quat_t* R, quat_t* A, quat_t* B, float t)
+void slerp_eberly_8g(quat_t* R, quat_t* A, quat_t* B, float t)
 {
-  float x   = quat_dot(A,B);
-  float sgn = (x >= 0 ? 1 : (x = -x, -1));
-  float xm1 = x-1;
-  float d   = 1-t;
-  float t2  = t*t;
-  float d2  = d*d;
-  float bT[8], bD[8];
-
-  for (int i = 7; i >= 0; --i) {
-    bT[i] = (u8[i]*t2 - v8[i])*xm1;
-    bD[i] = (u8[i]*d2 - v8[i])*xm1;
-  }
-  
-  float s1 = sgn*t*(1 + bT[0] * (1+bT[1]*(1 + bT[2]*(1 + bT[3]*(1 + bT[4]*(1 + bT[5]*(1 + bT[6]*(1 + bT[7]))))))));
-  float s0 =     d*(1 + bD[0] * (1+bD[1]*(1 + bD[2]*(1 + bD[3]*(1 + bD[4]*(1 + bD[5]*(1 + bD[6]*(1 + bD[7]))))))));
-
-  quat_wsum(R, A, B, s0, s1);
+  //slerp_eberly_g_(R, A, B, t, 8);
+  slerp_eberly_g(R, A, B, t, 7);
 }
 
 void slerp_eberly_8(quat_t* R, quat_t* A, quat_t* B, float t)
@@ -1079,6 +1153,7 @@ typedef struct {
 
 slerp_name_t funcs[] =
 {
+#if 0  
   SF(slerp_nutsy_ref),
   SF(slerp_ref_ref),
   SF(slerp_ref_0),
@@ -1088,12 +1163,15 @@ slerp_name_t funcs[] =
   SF(slerp_ref_4),
   SF(slerp_id_ref_0),
   SF(slerp_id_ref_1),
+#endif  
   SF(slerp_eberly_1),
   SF(slerp_eberly_8),
+  SF(slerp_eberly_8g),
+#if 0  
   SF(slerp_zeux_1),
   SF(slerp_zeux_2),
   SF(slerp_nlerp),
-  
+#endif
   SF(slerp_pc_wrap_0),
 };
 
@@ -1296,11 +1374,12 @@ void spot_dump(uint64_t s0, uint64_t s1)
     quat_t R,D;
 
     printf("%15s : ", funcs[s].name);
+    quat_set(&R,0,0,0,0);  // make macro
     slerp(&R, &A,  &B,  t);
     float  a = a_error(&R,&E);
     quat_sub(&D,&E,&R);
     quat_print(&R);
-    //quat_printa(&D);
+    quat_printa(&D);
     printf("%f\n",a);
     //ln();
   }
@@ -1319,8 +1398,8 @@ int main()
 
   printf("SANITY TESTS\n");
   //sym_test(s0,s1); 
-  ortho_test(s0,s1); 
-  //spot_dump(s0,s1);
+  //ortho_test(s0,s1); 
+  spot_dump(s0,s1);
 
   return 0;
 }
