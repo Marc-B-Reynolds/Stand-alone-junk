@@ -1,0 +1,253 @@
+
+// This is all very lazy and cut-and-paste
+//verbosity=0!;
+
+// generate a slerp impl based on the reference equation
+// s(t) = (cos(ta) - d sin(ta)/sin(a)) A + sin(ta)/sin(a) B
+//   where d = A.B = cos(a)
+//         sin(a) = sqrt(1-a^2)
+
+// ****** CONFIGURATION ******
+
+// the length of the approximation in products
+cosP  = 4;    
+sinP  = 3;   
+atanP = 4;
+
+// one or zero of these
+elimSin      = true;
+elimCos      = false;
+
+hexFloats    = true;       // code using hex-floats
+atanReduce   = false;      // reduce range of atan input
+daSinCos     = true;       // double angle after sin/cos
+
+plotErrorEPS = true;       // emit an eps of t. error
+singleP      = true;       // working precision: float or double
+maxAngle     = pi/2;       // max angle to support in H (2x for R3)
+
+genCode      = true;       // generate C code
+
+negDot       = true;       // needs to handle (A.B < 0) cases
+
+sqrtd        = "sqrt";     // 
+sqrtf        = "sqrtf";    //
+
+// error to minimize
+cosE  = absolute;
+sinE  = absolute;
+atanE = absolute;
+
+// ****** CONFIGURATION (END) ******
+
+if (elimSin == true && elimCos == true) then {
+  print("error: can only eliminate one of sin/cos\n");
+  quit;
+};
+
+listing = "";
+
+display=decimal!;
+
+name = "slerp_";
+sinN = "" @ sinP;
+cosN = "" @ cosP;
+
+if (singleP == true) then {
+  fsqrt     = sqrtf;
+  fabs      = "fabsf";
+  fptype    = "float";
+  fpsuffix  = "f";
+  fpformat  = [|24...|];
+  zeroCheat = 2^-24;
+  toWP      = "";
+  toRP      = "";
+} else {
+  name      = name @ "d_";
+  fsqrt     = sqrtd;
+  fabs      = "fabs";
+  fptype    = "double";
+  fpsuffix  = "";
+  fpformat  = [|53...|];
+  zeroCheat = 2^-53;
+  toWP      = "(double)";
+  toRP      = "(float)";
+};
+
+name  = name @ atanP;
+
+// range of atan (TODO: max angle)
+if (atanReduce == true) then {
+  atanR = [zeroCheat; sqrt(2)-1];
+  name  = name @ "r_";
+} else {
+  atanR = [zeroCheat; 1];
+  name  = name @ "_";
+};
+
+// ranges of the forward trig approximation(s)
+if (daSinCos == true) then {
+  name  = name @ "d_";
+  cosR  = [zeroCheat, maxAngle/2];
+  sinR  = [zeroCheat, maxAngle/2];
+} else {
+  cosR  = [zeroCheat, maxAngle];
+  sinR  = [zeroCheat, maxAngle];
+};
+
+if (hexFloats == true) then { display=hexadecimal!; };
+
+// ****** atan approximation ******
+
+atanC = [||];
+atanL = "";
+
+for i from 1 to 2*atanP   by 2 do atanC = atanC:.i;
+
+atanA = fpminimax(atan(x), atanC, fpformat, atanR, floating, atanE);
+
+for i from 2*atanP-1 to 2 by -2 do {
+  atanL = "+a2*(" @ coeff(atanA, i) @ fpsuffix @ atanL @ ")";
+};
+
+atanL = "a*(" @ coeff(atanA, 1) @ fpsuffix @ atanL @ ");\n";
+
+// ****** sin approximation ******
+
+if (elimSin == false) then {
+  sinL = "";
+  sinC = [||];
+
+  for i from 1 to 2*sinP    by 2 do sinC  = sinC:.i;
+
+  sinA = fpminimax(sin(x),  sinC,  fpformat, sinR,  floating, sinE);
+
+  for i from 2*sinP-1 to 2 by -2 do {
+    sinL = "+a2*(" @ coeff(sinA, i) @ fpsuffix @ sinL @ ")";
+  };
+
+  sinL = "ta*(" @ coeff(sinA, 1) @ fpsuffix @ sinL @ ");\n";
+
+} else {
+  if (daSinCos == true) then {
+    sinL = fsqrt @ "(1-hc*hc);\n";
+  } else {
+    sinL = fsqrt @ "(1-c*c);\n";
+  };
+};
+
+if (daSinCos == true) then {
+  sinL = "    " @ fptype @ " hs = " @ sinL;
+} else {
+  sinL = "    " @ fptype @ " s  = " @ sinL;
+};
+
+// ****** cos approximation ******
+
+if (elimCos == false) then {
+  cosL = "";
+  cosC = [||];
+
+  for i from 0 to 2*cosP-1  by 2 do cosC  = cosC:.i;
+
+  cosA = fpminimax(cos(x),  cosC,  fpformat, cosR,  floating, cosE);
+
+  for i from 2*cosP-2 to 2 by -2 do {
+    cosL = "+a2*(" @ coeff(cosA, i) @ fpsuffix @ cosL @ ")";
+  };
+
+  cosL = coeff(cosA, 0) @ fpsuffix @ cosL @ ";\n";
+
+} else {
+  if (daSinCos == true) then {
+    sinL = fsqrt @ "(1-hs*hs);\n";
+  } else {
+    sinL = fsqrt @ "(1-s*s);\n";
+  };
+};
+
+if (daSinCos == true) then {
+  cosL = "    " @ fptype @ " hc = " @ cosL;
+} else {
+  cosL = "    " @ fptype @ " c  = " @ cosL;
+};
+
+// ****** complete ******
+
+listing = listing @
+          "    " @ fptype @ " ta = t*a;\n" @
+          "    " @ fptype @ " a2 = ta*ta;\n";
+
+if (elimCos == false) then {
+  listing = listing @ cosL @ sinL;
+} else {
+  listing = listing @ sinL @ cosL;
+};
+
+// add sin/cos angle doubling if needed
+
+if (daSinCos == true) then {
+  listing = listing @ "    // double angle of sin/cos\n";
+
+  listing = listing @
+            "    " @ fptype @ " th = hc+hc;\n" @
+            "    " @ fptype @ " c  = th*hc-1;\n" @
+            "    " @ fptype @ " s  = th*hs;\n";
+};
+
+
+// listing for explictly loading the components and performing a naive dot product
+
+dotPart = "  " @ fptype @ " ax  = A->x, ay=A->y, az=A->z, aw=A->w;\n" @
+          "  " @ fptype @ " bx  = B->x, by=B->y, bz=B->z, bw=B->w;\n";
+
+dotPart = dotPart @ 
+          "  " @ fptype @ " d   = ax*bx+ay*by+az*bz+aw*bw;\n";
+
+if (negDot == true) then {
+  dotPart = dotPart @
+            "  " @ fptype @ " sgn = d >= 0 ? 1 : -1;\n" @
+            "  d = " @ fabs @ "(d);\n\n";
+};
+
+listing = "void " @ name @
+          "(quat_t* R, quat_t* A, quat_t* B, float t)\n{\n" @
+	  dotPart @
+          "  if (d < SLERP_CUT) {\n"              @
+          "    // forward trig\n"                 @
+          listing                                 @
+          "    // weights\n"                      @
+          "    " @ fptype @ " s1 = s*rs;\n"       @
+          "    " @ fptype @ " s0 = c-d*s1;\n";
+
+
+if (negDot == true) then {
+  listing = listing @ "    s1 *= sgn;\n";
+};
+
+listing = listing @
+          "  }\n" @
+          "  else {\n" @
+          "    s0  = (1-t);\n" @
+          "    s1  = t;\n";
+
+if (negDot == true) then {
+  listing = listing @ "    s1 *= sgn;\n";
+};
+
+listing = listing @
+          "  }\n  // weight sum\n" @
+          "  R->x = " @ toRP @ "(s0*ax + s1*bx);\n" @
+          "  R->y = " @ toRP @ "(s0*ay + s1*by);\n" @
+          "  R->z = " @ toRP @ "(s0*az + s1*bz);\n" @
+          "  R->w = " @ toRP @ "(s0*aw + s1*bw);\n}\n";
+
+
+//plot(sin(x),0,cos(x),[-Pi,Pi],postscriptfile,"plotSinCos");
+
+//P;
+//print("norm   = ", dirtyinfnorm(F-P, R),   "\n");
+//print("zeroes = ", dirtyfindzeros(F-P, R), "\n");
+
+print(listing);
+
