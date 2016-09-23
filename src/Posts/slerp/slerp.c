@@ -72,11 +72,10 @@ uint64_t rng_state[2];
 
 #if defined(_MSC_VER)
 #define TO_FP32 (1.f/16777216.f)
-#define SLERP_CUT 0x1.ffffdep-1
+#define SLERP_CUT 0.999998986721038818359375f
 #else
-#define TO_FP32 0x1p-24f
+#define TO_FP32   0x1p-24f
 #define SLERP_CUT 0x1.ffffdep-1
-//#define SLERP_CUT .9f
 #endif
 
 
@@ -228,6 +227,8 @@ void vec3_printa(vec3_t* v)
 }
 
 // ***************** half-hearted trig approx
+// all the cosines are esp screwy..sollya
+// ref script will do better
 
 // damn-you microsoft for not supporting hex-floats
 // all of this is very very lazy
@@ -241,11 +242,11 @@ static inline float atan_7(float x)
   // 1.66290684247846942061144487572104929234984377645523e-6
   float x2=x*x;
   return x  * ( 0.99997723102569580078125f     +
-	 x2 * (-0.332623004913330078125f       +
-	 x2 * ( 0.19354121387004852294921875f  +
-	 x2 * (-0.116428203880786895751953125f +
-	 x2 * ( 5.2648954093456268310546875e-2f +
-  	 x2 * (-1.1719689704477787017822265625e-2f))))));
+         x2 * (-0.332623004913330078125f       +
+         x2 * ( 0.19354121387004852294921875f  +
+         x2 * (-0.116428203880786895751953125f +
+         x2 * ( 5.2648954093456268310546875e-2f +
+         x2 * (-1.1719689704477787017822265625e-2f))))));
 }
 
 static inline float atan_9(float x)
@@ -253,12 +254,12 @@ static inline float atan_9(float x)
   // 3.7748949774459410845819875721049292349843776455244e-8
   float x2=x*x;
   return x  * ( 0.999999344348907470703125f  +
-	 x2 * (-0.3332988321781158447265625f +
-	 x2 * ( 0.199467599391937255859375f  +
-	 x2 * (-0.139094293117523193359375f  +
-	 x2 * ( 9.6439607441425323486328125e-2f +
-	 x2 * (-5.59337139129638671875e-2f +
-	 x2 * ( 2.187640778720378875732421875e-2f +
+         x2 * (-0.3332988321781158447265625f +
+         x2 * ( 0.199467599391937255859375f  +
+         x2 * (-0.139094293117523193359375f  +
+         x2 * ( 9.6439607441425323486328125e-2f +
+         x2 * (-5.59337139129638671875e-2f +
+         x2 * ( 2.187640778720378875732421875e-2f +
          x2 * (-4.05799411237239837646484375e-3f))))))));
 }
 
@@ -270,8 +271,8 @@ static inline float atan_h_4(float x)
   // 3.5239539266660406716193784436021150992881940747476e-6 
   float x2=x*x;
   return x *( 0.999939382076263427734375f+
-	 x2*(-0.3303958475589752197265625f+
-	 x2*  0.16358660161495208740234375f));
+         x2*(-0.3303958475589752197265625f+
+         x2*  0.16358660161495208740234375f));
 }
 
 static inline float atan_h_5(float x)
@@ -279,8 +280,8 @@ static inline float atan_h_5(float x)
   //  1.08602353003844395753613722008077444516570936145512e-7
   float x2=x*x;
   return x *( 0.999997615814208984375f     +
-	 x2*(-0.3331419527530670166015625f +
-	 x2*( 0.1958123743534088134765625f +
+         x2*(-0.3331419527530670166015625f +
+         x2*( 0.1958123743534088134765625f +
          x2*(-0.107805170118808746337890625f))));
 }
 
@@ -289,9 +290,9 @@ static inline float atan_h_6(float x)
   // 4.71965678944543655871423692341031007285409143205719e-9
   float x2=x*x;
   return x *( 0.99999988079071044921875f    +
-	 x2*(-0.3333206474781036376953125f  +
-	 x2*( 0.19959522783756256103515625f +
-	 x2*(-0.13737906515598297119140625f +
+         x2*(-0.3333206474781036376953125f  +
+         x2*( 0.19959522783756256103515625f +
+         x2*(-0.13737906515598297119140625f +
          x2*  7.6941959559917449951171875e-2f))));
 }
 
@@ -385,6 +386,7 @@ static inline float cos_8_5(float x)
 
 // *****************
 
+// totally ingoring the actual worst case mag of input
 static inline void quat_normalize(quat_t* r)
 {
   float s = sqrtf(quat_norm(r));
@@ -464,6 +466,8 @@ void quatd_printa(quatd_t* q)
 }
 
 
+// goofying around version. could be made faster and more accurate.
+// D&C in 2D instead of 4D.
 void slerp_nutsy_ref(quat_t* R, quat_t* A, quat_t* B, float T)
 {
   quatd_t a,b,m;
@@ -505,28 +509,26 @@ void slerp_nutsy_ref(quat_t* R, quat_t* A, quat_t* B, float T)
     // treating 't' as integer so the exact compares
     if (t < 1.0) {
       if (t != 0.0)
-	quatd_dup(&b, &m);
+        quatd_dup(&b, &m);
       else {
-	quatd_store(R, &a);
-	return;
+        quatd_store(R, &a);
+        return;
       }
     }
     else if (t > 1.0) {
       if (t != 2.0) {
-	quatd_dup(&a, &m);
-	t -= 1.0;
+        quatd_dup(&a, &m);
+        t -= 1.0;
       } else {
-	quatd_store(R, &b);
-	return;
+        quatd_store(R, &b);
+        return;
       }
     } else {
       quatd_store(R, &m);
       return;
     }
 
-    //quatd_print(&m);
-    //printf("%2d %f %f %f %a %a\n", n, c, s, d,f,t);
-    //n++;
+    // f exact here is silly
   } while(f != 1.0 && n < 65);
 
   quatd_store(R, &m);
@@ -538,6 +540,7 @@ void slerp_ref_ref(quat_t* R, quat_t* A, quat_t* B, float t)
 {
   double d;
   {
+    // not wasting time on an accurate scalar product
     double ax = A->x;
     double ay = A->y;
     double az = A->z;
@@ -545,7 +548,7 @@ void slerp_ref_ref(quat_t* R, quat_t* A, quat_t* B, float t)
     d = B->x*ax + B->y*ay + B->z*az + B->w*aw;
   }
 
-  double ad = fabs(d);
+  double ad = fabsf(d);
   double s0, s1;
   
   if (ad < SLERP_CUT) {
@@ -575,7 +578,7 @@ void slerp_ref_0(quat_t* R, quat_t* A, quat_t* B, float t)
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  d = fabs(d);
+  d = fabsf(d);
   
   if (d < SLERP_CUT) {
     float s = sqrtf(1-d*d);
@@ -598,15 +601,14 @@ void slerp_ref_1(quat_t* R, quat_t* A, quat_t* B, float t)
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  d = fabs(d);
+  d = fabsf(d);
 
   if (d < SLERP_CUT) {
     t += t;                      // account for half-angle atan
     float s2 = 1.0-d*d;
-    float i  = recip_nr(1.f+d);  // ~x^-1  to at least 12-bit, 1 NR step
     float rs = rsqrt_nr(s2);     // ~x^-.5 to at least 12-bit, 1 NR step
-    float y  = s2*rs;          
-    float a  = atanf(y*i);       // still range reduction
+    float y  = 1-d;
+    float a  = atanf(y*rs);      // still range reduction
     float s  = sinf(t*a);        // still range reduction
     float c  = sqrtf(1.f-s*s);   // can't ~1/sqrt(x) if max angle allowed
     s1 = s*rs;                   // sgn*s1*B can be computed while 'ic', etc in progress
@@ -625,14 +627,13 @@ void slerp_ref_2(quat_t* R, quat_t* A, quat_t* B, float t)
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  d = fabs(d);
+  d = fabsf(d);
   
   if (d < SLERP_CUT) {
     float s2 = 1.f-d*d;
-    float i  = recip_nr(1.f+d);
     float rs = rsqrt_nr(s2);   
-    float y  = s2*rs;          
-    float a  = atanf(y*i);
+    float y  = 1-d;
+    float a  = atanf(y*rs);      // still range reduction
 
     // both elim variants
 #if 0
@@ -665,15 +666,14 @@ void slerp_ref_3(quat_t* R, quat_t* A, quat_t* B, float t)
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  d = fabs(d);
+  d = fabsf(d);
   
   if (d < SLERP_CUT) {
     // set-up for atan
     float s2 = 1.f-d*d;
-    float i  = recip_nr(1.f+d);
     float rs = rsqrt_nr(s2);   
-    float y  = s2*rs;          
-    float a  = atan_9(y*i);       // ~atan on [0,1]
+    float y  = 1-d;
+    float a  = atan_9(y*rs);       // ~atan on [0,1]
 
     // forward trig approx (or root for one)
     float ta = t*a;
@@ -694,7 +694,14 @@ void slerp_ref_3(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, sgn*s1);
 }
 
+
+#if defined(_MSC_VER)
+#define DOT_CLAMP 1.953125e-3f
 #define SQRT2_O_2 0.707106769084930419921875f
+#else
+#define DOT_CLAMP 0x1p-9f
+#define SQRT2_O_2 0xb.504f3p-4f
+#endif
 
 void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
 {
@@ -702,8 +709,9 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  d = fabs(d);
-  
+  d = fabsf(d);
+  d = (d > DOT_CLAMP) ? d : DOT_CLAMP;
+    
   if (d < SLERP_CUT) {
     // set-up for atan
     float x  = (d > SQRT2_O_2) ? 0 : 1;
@@ -712,13 +720,13 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
     float i  = recip_nr(1.f-x+d);
     float rs = rsqrt_nr(s2);   
     float y  = s2*rs-x;
-    float a  = atan_h_6(y*i)+ps;   // 
-
+    float a  = atan_h_6(y*i)+ps;
+    
     // forward trig approx (or root for one)
     float ta = t*a;
-    float hc = cos_4_5(ta);       // ~cos on [0, pi/4]
-    float hs = sin_4_5(ta);       // ~sin on [0, pi/4]
-
+    float hc = cos_4_5(ta);
+    float hs = sin_4_5(ta);
+    
     // double angle
     float th = 2.f*hc;
     float c  = hc*th-1.f;
@@ -729,8 +737,55 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
     s0 = 1.0f - t;
     s1 = t;
   }
-
+  
   quat_wsum(R, A, B, s0, sgn*s1);
+}
+
+void slerp_4_4_x(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  float ax  = A->x, ay=A->y, az=A->z, aw=A->w;
+  float bx  = B->x, by=B->y, bz=B->z, bw=B->w;
+  float d   = ax*bx+ay*by+az*bz+aw*bw;
+  float s0,s1;
+
+  float sgn = d >= 0 ? 1 : -1;
+  d = fabsf(d);
+
+  // d on ~[0,1]
+  if (d < SLERP_CUT) {
+    // atan setup
+    float y  = 1.f-d;
+    float s2 = 1.f-d*d;
+    float rs = rsqrt_nr(s2);
+    // compute the angle
+    float x  = y*rs;
+    float x2 = x*x;
+
+    float a  = x*(0xf.ffff5p-4f+x2*(-0x5.553128p-4f+x2*(0x3.3104fp-4f+x2*(-0x2.39bafp-4f+x2*(0x1.8b0442p-4f+x2*(-0xe.51acp-8f+x2*(0x5.99b138p-8f+x2*(-0x1.09f1d8p-8f))))))));
+    // forward trig
+    float ta = t*a;
+    float a2 = ta*ta;
+    float hc = 0x1.p0f+a2*(-0x8.p-4f+a2*(0xa.aaaa5p-8f+a2*(-0x5.b030b8p-12f+a2*(0x1.99eadp-16f))));
+    float hs = sqrtf(1.f-hc*hc);
+    // double angle of sin/cos
+    float th = hc+hc;
+    float c  = th*hc-1.f;
+    float s  = th*hs;
+    // weights
+    s1 = s*rs;
+    s0 = c-d*s1;
+    s1 *= sgn;
+  }
+  else {
+    s0  = 1.f-t;
+    s1  = t;
+    s1 *= sgn;
+  }
+  // weight sum
+  R->x = (s0*ax + s1*bx);
+  R->y = (s0*ay + s1*by);
+  R->z = (s0*az + s1*bz);
+  R->w = (s0*aw + s1*bw);
 }
 
 // ****************
@@ -751,7 +806,7 @@ void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
   float d   = quat_dot(A,B);
   float sgn = d >= 0 ? 1 : -1;
 
-  d = fabs(d);
+  d = fabsf(d);
   quat_dup(&k->x, A);
 
   if (d < SLERP_CUT) {
@@ -762,7 +817,6 @@ void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
     k->a = a;
   }
   else {
-    // can't be bothered to do this the right way
     quat_dup(&k->y, B);
     k->a = PI*0.5f;
   }
@@ -771,14 +825,8 @@ void slerp_pc_init_0(slerp_pc_t* k, quat_t* A, quat_t* B)
 void slerp_pc_0(quat_t* r, slerp_pc_t* k, float t)
 {
   float ta = t*k->a;
-
-  // all of the previous options apply
   float c  = cosf(ta);
   float s  = sqrt(1-c*c);
-
-  // or double the angle here
-
-  // compute the weighted sum
   quat_wsum(r, &k->x, &k->y, c, s);
 }
 
@@ -790,23 +838,93 @@ void slerp_pc_wrap_0(quat_t* R, quat_t* A, quat_t* B, float t)
   slerp_pc_0(R, &slerp, t);
 }
 
+//****************
+// fixed steps
 
-void slerp_pc_1(quat_t* r, slerp_pc_t* k, float t)
+typedef struct {
+  quat_t x,y;    // the 2D orthogonal basis
+  float  s0,s1;  // current scale
+  float  d0,d1;  // rotation
+} slerp_fs_t;
+
+void slerp_fs_init_0(slerp_fs_t* k, quat_t* A, quat_t* B, float f)
 {
-  float ta = t*k->a;
-  float c  = cosf(ta);
-  float s  = sqrt(1-c*c);
-  quat_wsum(r, &k->x, &k->y, c, s);
+  float d   = quat_dot(A,B);
+  float sgn = d >= 0 ? 1 : -1;
+  float a;
+
+  d = fabsf(d);
+  quat_dup(&k->x, A);
+
+  if (d < SLERP_CUT) {
+    float s  = sqrtf(1-d*d);
+    float is = sgn/s;
+    a  = atan2f(s,d);
+    quat_wsum(&k->y, A, B, -d*is, is);
+  }
+  else {
+    quat_dup(&k->y, B);
+    a = PI*0.5f;
+  }
+
+  k->s0 = 1.f;
+  k->s1 = 0.f;
+  k->d0 = cosf(f*a);
+  k->d1 = sinf(f*a);
 }
 
-// dump wrapper for testing
-void slerp_pc_wrap_1(quat_t* R, quat_t* A, quat_t* B, float t)
+void slerp_fs_0(quat_t* r, slerp_fs_t* k)
 {
-  slerp_pc_t slerp;
-  slerp_pc_init_0(&slerp,A,B);
-  slerp_pc_1(R, &slerp, t);
+  float s0 = k->s0;
+  float s1 = k->s1;
+  quat_wsum(r, &k->x, &k->y, s0, s1);
+  k->s0 = k->d0*s0 - k->d1*s1;
+  k->s1 = k->d1*s0 + k->d0*s1;
 }
 
+
+typedef struct {
+  quat_t q;       // current (duplicate)
+  quat_t dq;      // the rotation
+} slerp_fr_t;
+
+
+void slerp_fr_init_0(slerp_fr_t* k, quat_t* A, quat_t* B, float f)
+{
+  float t = f;
+
+  // slerp_ref_1: cut-and-paste as example
+  float d   = quat_dot(A,B);
+  float sgn = d >= 0 ? 1 : -1;
+  float s0,s1;
+
+  d = fabsf(d);
+
+  if (d < SLERP_CUT) {
+    t += t; 
+    float s2 = 1.0-d*d;
+    float i  = recip_nr(1.f+d);
+    float rs = rsqrt_nr(s2);
+    float y  = s2*rs;          
+    float a  = atanf(y*i);
+    float s  = sinf(t*a);
+    float c  = sqrtf(1.f-s*s);
+    s1 = s*rs;
+    s0 = c-d*s1;
+  } else {
+    s0 = 1.0f - t;
+    s1 = t;
+  }
+
+  quat_wsum(&k->dq, A, B, s0, sgn*s1);
+  quat_dup(&k->q, A);
+}
+
+void slerp_fr_0(quat_t* r, slerp_fr_t* k)
+{
+  quat_mul(&k->q, &k->q, &k->dq);
+  quat_dup(r, &k->q);
+}
 
 // ****************
 
@@ -849,7 +967,7 @@ void slerp_id_ref_0(quat_t* result, quat_t* from, quat_t* to, float t)
 {
   float cosom, absCosom, sinom, sinSqr, omega, scale0, scale1;
   cosom = quat_dot(from, to);
-  absCosom = fabs( cosom );
+  absCosom = fabsf( cosom );
 
   if ( ( 1.0f - absCosom ) > 1e-6f ) {
     sinSqr = 1.0f - absCosom * absCosom;
@@ -920,7 +1038,7 @@ void slerp_id_ref_1(quat_t* result, quat_t* from, quat_t* to, float t)
 {
   float cosom, absCosom, sinom, sinSqr, omega, scale0, scale1;
   cosom = quat_dot(from, to);
-  absCosom = fabs( cosom );
+  absCosom = fabsf( cosom );
 
   if ( ( 1.0f - absCosom ) > 1e-6f ) {
     sinSqr = 1.0f - absCosom * absCosom;
@@ -962,31 +1080,32 @@ void slerp_id_ref_1(quat_t* result, quat_t* from, quat_t* to, float t)
 const float mu[] = {OP_MU_1,OP_MU_2,OP_MU_3,OP_MU_4,OP_MU_5,OP_MU_6,OP_MU_7,OP_MU_8,OP_MU_9,OP_MU_10,OP_MU_11,OP_MU_12,OP_MU_13,OP_MU_14,OP_MU_15,OP_MU_16};
 
 const float eberly_u[] = {  1/3.f,  1/10.f,  1/21.f,  1/36.f,  1/55.f,  1/78.f, 1/105.f, 1/136.f,
-			  1/171.f, 1/210.f, 1/253.f, 1/300.f, 1/351.f, 1/406.f, 1/465.f, 1/528.f};
+                          1/171.f, 1/210.f, 1/253.f, 1/300.f, 1/351.f, 1/406.f, 1/465.f, 1/528.f};
 const float eberly_v[] = {  1/3.f,   2/5.f,   3/7.f,   4/9.f,  5/11.f,  6/13.f,  7/15.f,  8/17.f,
-			   9/19.f, 10/21.f, 11/23.f, 12/25.f, 13/27.f, 14/29.f, 15/31.f, 16/33.f};
+                           9/19.f, 10/21.f, 11/23.f, 12/25.f, 13/27.f, 14/29.f, 15/31.f, 16/33.f};
+
 
 // generic version: constructed from the paper, not copied
 static inline void slerp_eberly_g(quat_t* R, quat_t* A, quat_t* B, float t, uint32_t n)
 {
-  float x  = quat_dot(A,B);
+  float d  = quat_dot(A,B);
   float s  = 1.f-t;
   float t2 = t*t;
   float s2 = s*s;
 
-  t = (x >= 0) ? t : -t;
-  x = fabs(x)-1.f;
+  t = (d >= 0) ? t : -t;
+  d = fabsf(d)-1.f;
 
   // one more rounding step for the mu product..removable
-  float s0 = 1.f + mu[n]*(eberly_u[n]*s2 - eberly_v[n])*x;
-  float s1 = 1.f + mu[n]*(eberly_u[n]*t2 - eberly_v[n])*x;
+  float s0 = 1.f + mu[n]*(eberly_u[n]*s2 - eberly_v[n])*d;
+  float s1 = 1.f + mu[n]*(eberly_u[n]*t2 - eberly_v[n])*d;
   float k0,k1,u,v;
   
   for (int i = n-1; i >= 0; --i) {
     u  = eberly_u[i];
     v  = eberly_v[i];
-    k0 = (u*s2 - v)*x;
-    k1 = (u*t2 - v)*x;
+    k0 = (u*s2 - v)*d;
+    k1 = (u*t2 - v)*d;
     s0 = 1.f + s0*k0;
     s1 = 1.f + s1*k1;
   }
@@ -1042,6 +1161,11 @@ void slerp_eberly_8(quat_t* R, quat_t* A, quat_t* B, float t)
 // ****************
 // http://zeuxcg.org/2015/07/23/approximating-slerp/
 
+// these are cut-paste-modify of
+//   http://gist.github.com/zeux/1935b5f6d1c8c311e68bbd4a13955dfa
+
+
+// A0,B0,K0 variant
 void slerp_zeux_1(quat_t* r, quat_t* a, quat_t* b, float t)
 {
   float ca = quat_dot(a,b);
@@ -1056,11 +1180,14 @@ void slerp_zeux_1(quat_t* r, quat_t* a, quat_t* b, float t)
   quat_normalize(r);
 }
 
+// A1,B1,K1 variant: sample as n2 except constants. see post.
+
+// A2,B2,K2 variant
 void slerp_zeux_2(quat_t* r, quat_t* a, quat_t* b, float t)
 {
   float ca = quat_dot(a, b);
   float d  = fabsf(ca);
-  float A  = 1.0904f + d * (-3.2452f + d * (3.55645f - d * 1.43519f));
+  float A  = 1.0904f   + d * (-3.2452f  + d * (3.55645f - d * 1.43519f));
   float B  = 0.848013f + d * (-1.06021f + d * 0.215638f);
   float k  = A * (t - 0.5f) * (t - 0.5f) + B;
   float ot = t + t * (t - 0.5f) * (t - 1) * k;
@@ -1116,15 +1243,18 @@ slerp_name_t funcs[] =
 {
   //SF(slerp_nutsy_ref),
   SF(slerp_ref_ref),
-#if 0  
+#if 1
   SF(slerp_ref_0),
   SF(slerp_ref_1),
   SF(slerp_ref_2),
   SF(slerp_ref_3),
   SF(slerp_ref_4),
-  SF(slerp_id_ref_0),
-  SF(slerp_id_ref_1),
-#endif  
+  //SF(slerp_id_ref_0),
+  //SF(slerp_id_ref_1),
+#endif
+  SF(slerp_ref_5),
+  SF(slerp_4_4_x),
+#if 0
   SF(slerp_eberly_1g),
   SF(slerp_eberly_2g),
   SF(slerp_eberly_3g),
@@ -1134,18 +1264,24 @@ slerp_name_t funcs[] =
   SF(slerp_eberly_7g),
   SF(slerp_eberly_8g),
   SF(slerp_eberly_8),
-#if 0  
+#endif  
+#if 0
   SF(slerp_zeux_1),
   SF(slerp_zeux_2),
   SF(slerp_nlerp),
 #endif
-  SF(slerp_pc_wrap_0),
+
+  // 
+  //SF(slerp_pc_wrap_0),
 };
 
+#define NUM_WRAP  1
 #define SLERP_REF slerp_ref_ref
 
 #define NUM_FUNCS (sizeof(funcs)/sizeof(funcs[0]))
-#define NUM_FUNCS_NW (NUM_FUNCS-1)
+
+
+#define NUM_FUNCS_NW (NUM_FUNCS-NUM_WRAP)
 
 void reset_generators(uint64_t s0, uint64_t s1)
 {
@@ -1252,10 +1388,10 @@ void ortho_test(uint64_t s0, uint64_t s1)
     slerp(&R2, &NA, &B,  t);
     slerp(&R3, &NA, &NB, t);
     
-    quat_print(&R0); 
-    quat_print(&R1); ln();
-    quat_print(&R2); 
-    quat_print(&R3); ln();
+    quat_printa(&R0); 
+    quat_printa(&R1); ln();
+    quat_printa(&R2); 
+    quat_printa(&R3); ln();
     printf("%d ",  quat_identical(&R0,&R1));
     printf("%d ",  quat_identical(&R0,&R2));
     printf("%d\n", quat_identical(&R0,&R3));
@@ -1312,13 +1448,16 @@ void sym_test(uint64_t s0, uint64_t s1)
       r += quat_identical(&R0,&R3);
 
       if (r != 0) {
-	printf("   failed: %s\n", funcs[s].name);
-	break;
+        printf("   failed: %s\n", funcs[s].name);
+        break;
       }
     }
   }
 }
 
+void inc_test(uint64_t s0, uint64_t s1)
+{
+}
 
 void spot_dump(uint64_t s0, uint64_t s1)
 {
@@ -1330,7 +1469,7 @@ void spot_dump(uint64_t s0, uint64_t s1)
   
   quat_qr_p(&A);
   quat_qr_p(&B);
-  printf("%f (%f) ",t, fabs(quat_dot(&A,&B)));
+  printf("%f (%f) ",t, fabsf(quat_dot(&A,&B)));
   quat_print(&A);
   quat_print(&B); ln();
 
@@ -1352,6 +1491,40 @@ void spot_dump(uint64_t s0, uint64_t s1)
   }
 }
 
+
+#if 0
+static inline float dot_flatten(float d)
+{
+  d = (d <= 1.f) ? d : 2.f-d;
+  d = d/sqrtf((1-d)*(1+d));
+}
+
+void brute_force_error(uint64_t s0, uint64_t s1)
+{
+  quat_t A,B,NA,NB;
+  float  t;
+
+  printf("* brute_force\n");
+
+  for(uint32_t s=0; s<NUM_FUNCS_NW; s++) {
+    slerp_func_t slerp = funcs[s].f;
+    uint32_t r = 0;
+
+    reset_generators(s0,s1);
+    
+    for(uint32_t i=0; i<SYM_TRIALS; i++) {
+      quat_t R0,R1,R2,R3;      
+
+      t = (rng_f32()-0.5f)*0.2;
+      quat_qr_p(&A);
+      quat_qr_p(&B);
+
+      
+      slerp(&R0, &A,  &B,  t);
+    }
+  }
+}
+#endif
 
 int main()
 {

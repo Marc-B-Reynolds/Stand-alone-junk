@@ -16,17 +16,17 @@
 // ****** CONFIGURATION ******
 
 // the length of the approximation in products
-cosP  = 4;    
-sinP  = 3;   
-atanP = 4;
+cosP  = 5;
+sinP  = 5;
+atanP = 8;
 
 // which to eliminiate: one or zero of these
-elimSin      = true;
+elimSin      = false;
 elimCos      = false;
 
 hexFloats    = true;         // use hex-floats (otherwise decimal)
-atanReduce   = false;        // reduce range of atan input
-daSinCos     = false;         // double angle after sin/cos
+atanReduce   = false;        // reduce range of atan input - NOT SUPPORTED
+daSinCos     = true;         // double angle after sin/cos
 
 plotErrorEPS = true;         // emit an eps of t. error
 singleP      = true;         // working precision: float or double
@@ -36,14 +36,15 @@ genCode      = false;        // store gen C into 'name'.h
 
 negDot       = true;         // needs to handle (A.B < 0) cases
 
-approxRsqrt  = true;         //
-approxRecip  = true;         //
-approxSqrt   = true;         // 
+approxRsqrt  = true;         // use 1/sqrt or approx func ersqrt{d,f}
+approxRecip  = true;         // use 1/x    or approx func erecip{d,f} (not used yet)
+approxSqrt   = true;         // (not used yet)
 
-ersqrtd      = "rsqrtd_nr";   // 
-ersqrtf      = "fsqrt_nr";    //
-erecipd      = "recipd_nr";   // 
+// name of approximation functions
+ersqrtf      = "rsqrt_nr";    //
 erecipf      = "recip_nr";    //
+erecipd      = "recipd_nr";   // 
+ersqrtd      = "rsqrtd_nr";   // 
 
 // error to minimize
 cosE  = absolute;
@@ -52,13 +53,6 @@ atanE = absolute;
 
 // ****** CONFIGURATION (END) ******
 
-sqrtd        = "sqrt";       // 
-sqrtf        = "sqrtf";      //
-
-rsqrtd       = "1.0/sqrt";   // 
-rsqrtf       = "1.f/sqrtf";  //
-recipd       = "1.0/";       // 
-recipf       = "1.f/";       //
 
 execute("util/util.sollya");
 
@@ -77,7 +71,6 @@ cosN = "" @ cosP;
 
 if (singleP == true) then {
   name      = name @ "_";
-  fsqrt     = sqrtf;
   fabs      = "fabsf";
   fptype    = "float";
   fpsuffix  = "f";
@@ -86,9 +79,12 @@ if (singleP == true) then {
   toWP      = "";
   toRP      = "";
   one       = "1.f";
+  fsqrt     = "sqrtf";
+  recip     = "1.f/";
+  rsqrt     = "1.f/sqrtf";
+  if (approxRsqrt == true) then { rsqrt = ersqrtf;};
 } else {
   name      = name @ "d_";
-  fsqrt     = sqrtd;
   fabs      = "fabs";
   fptype    = "double";
   fpsuffix  = "";
@@ -97,6 +93,10 @@ if (singleP == true) then {
   toWP      = "(double)";
   toRP      = "(float)";
   one       = "1.0";
+  fsqrt     = "sqrt";
+  recip     = "1.0/";
+  rsqrt     = "1.0/sqrt";
+  if (approxRsqrt == true) then { rsqrt = ersqrtd;};
 };
 
 cosZ = [||];
@@ -109,8 +109,8 @@ dotMinL = "" @ dotMin;
 
 name = name @ atanP;
 
-// range of atan (TODO: max angle)
-if (atanReduce == true) then {
+// range of atan (TODO: max angle) and add support
+if (false/*atanReduce == true*/) then {
   atanR = [zeroCheat; sqrt(2)-1];
   name  = name @ "r_";
 } else {
@@ -145,15 +145,14 @@ for i from 2*atanP-1 to 2 by -2 do {
 };
 
 atanL = "    // compute the angle\n" @
-        "    " @ fptype @ " x  = y*i;\n" @
-        "    " @ fptype @ " x2 = x*x;\n" @
+        "    " @ fptype @ " x  = y*rs;\n" @
+        "    " @ fptype @ " x2 = x*x;\n"  @
         "    " @ fptype @ " a  = x*(" @ coeff(atanA, 1) @ fpsuffix @ atanL @ ");\n";
 
-atanL = "    // atan setup\n"               @
+atanL = "    // atan setup\n"                         @
+        "    " @ fptype @ " y  = " @ one @ "-d;\n"    @
         "    " @ fptype @ " s2 = " @ one @ "-d*d;\n"  @
-        "    " @ fptype @ " i  = recip_nr(" @ one @ "+d);\n" @
-        "    " @ fptype @ " rs = rsqrt_nr(s2);\n"    @
-        "    " @ fptype @ " y  = s2*rs;\n"           @
+        "    " @ fptype @ " rs = " @ rsqrt @ "(s2);\n"     @
         atanL;
 
 // ****** sin approximation ******
@@ -257,13 +256,15 @@ dotPart = "  " @ fptype @ " ax  = A->x, ay=A->y, az=A->z, aw=A->w;\n" @
           "  " @ fptype @ " bx  = B->x, by=B->y, bz=B->z, bw=B->w;\n";
 
 dotPart = dotPart @ 
-          "  " @ fptype @ " d   = ax*bx+ay*by+az*bz+aw*bw;\n";
+          "  " @ fptype @ " d   = ax*bx+ay*by+az*bz+aw*bw;\n" @
+          "  " @ fptype @ " s0,s1;\n\n";
 
 if (negDot == true) then {
   dotPart = dotPart @
             "  " @ fptype @ " sgn = d >= 0 ? 1 : -1;\n" @
             "  d = " @ fabs @ "(d);\n\n";
 };
+
 
 listing = "void " @ name @
           "(quat_t* R, quat_t* A, quat_t* B, float t)\n{\n" @
@@ -274,8 +275,8 @@ listing = "void " @ name @
           "    // forward trig\n"                 @
           listing                                 @
           "    // weights\n"                      @
-          "    " @ fptype @ " s1 = s*rs;\n"       @
-          "    " @ fptype @ " s0 = c-d*s1;\n";
+          "    s1 = s*rs;\n"                      @
+          "    s0 = c-d*s1;\n";
 
 
 if (negDot == true) then {
