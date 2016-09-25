@@ -1,0 +1,128 @@
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+// load the needed utility proceedures
+execute("util.sollya");
+execute("struct.sollya");
+
+// approx control structure:
+//             1234
+//   _name     *... string for pretty printing
+//   _nterms   *... target number of terms
+//   _symmetry *... 0=even, 1=odd, 2=neither
+//
+//   _func     .... function to approximate
+//   _range    .... input range (domain)
+//   _degree   .... list of values for fpminimax
+//   _min_type .... absolute or relative
+//   
+//   _r_fp32   .... input/ouput in binary32?
+//   _w_fp32   .... working in binary32?
+//
+//   _terror   ....
+
+// 1) setup code
+// 2) fpminimax
+// 3) guessdegree
+
+_a_debug = false;
+
+procedure a_debug_print(s)
+{
+  if (_a_debug == true) then {
+     print(s);
+  };
+};
+
+// f(p)-dx <0 && fp(p)+dx > 0 for all of dom
+procedure a_detect_sym_(f,dx,p,dom)
+{
+  var x0,x1,r;
+  r  = false;
+
+  x0 = evaluate(f-dx, p);
+  x1 = evaluate(f+dx, p);
+  
+  if ((x1 > 0) && (x0 < 0)) then {
+    var z0,z1;
+
+    z0 = dirtyfindzeros(f-dx, dom);
+    z1 = dirtyfindzeros(f+dx, dom);
+
+    if ((z1 == [||]) && (z0 == [||])) then {
+      r = true;
+   };
+  };
+  return r;
+};
+
+
+procedure a_detect_symmetry(s)
+{
+  var dom,f;
+  var res;
+  var dx;
+  var ep;
+
+  dx  = 2^-24;
+  dom = s._range;
+  dom = [0; max(abs(sup(dom)), abs(inf(dom)))];
+  ep  = sup(dom)/2;
+
+  res = { .okay = false };
+
+  // even/odd testing functions
+  // even: f(x)-f(-x) = 0 -> f(x)/f(-x)-1 = 0
+  // odd : f(x)+f(-x) = 0 -> f(x)/f(-x)+1 = 0
+  f = simplifysafe(s._func(x)/s._func(-x)-1);
+
+  if (a_detect_sym_(f,ep,dx,dom)) then {
+    res.okay = true;
+    res.evenSymmetry = true;
+  } else  {
+    f = simplifysafe(s._func(x)/s._func(-x)+1);
+
+    if (a_detect_sym_(f,ep,dx,dom)) then {
+      res.okay = true;
+      res.evenSymmetry = false;
+    };
+  };
+  
+  return res;
+};
+
+// Guess the needed degree for given error defined
+// by field "_target_error".
+procedure a_guessdegree(s)
+{
+  var r;
+  struct_debug_print("struct_guessdegree");
+  r = guessdegree(s._func, s._range, s._target_error);
+  struct_debug_print("struct_guessdegree");
+  return r;
+};
+
+procedure a_fpminimax(s)
+{
+  var r;
+  struct_debug_print("struct_fpminimax");
+  r = fpminimax(s._func, s._degree, bool_to_fp(s._w_fp32), s._range, floating, s._min_type);
+  struct_debug_print("struct_fpminimax");
+  return r;
+};
+
+procedure a_setup(f,r)
+{
+  var s;
+  s._func     = f;           // the function to approx
+  s._range    = r;           // input domain of approx
+  s._min_type = relative;    // minimize relative error
+  s._r_fp32   = true;        // in/out in binary32
+  s._w_fp32   = true;        // work in binary32
+  return s;
+};
+
+procedure a_build_approx(s)
+{
+};
+

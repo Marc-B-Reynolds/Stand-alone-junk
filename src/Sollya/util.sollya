@@ -1,0 +1,73 @@
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+// first 'n' odd values
+procedure odd_list(n)
+{
+  var c,l;
+  c = 2*n;
+  l = [||];  
+
+  for i from 1 to c by 2 do l = l:.i;
+
+  return l;
+};
+
+// first 'n' even values
+procedure even_list(n)
+{
+  var c,l;
+  c = 2*n-1;
+  l = [||];  
+
+  for i from 0 to c by 2 do l = l:.i;
+
+  return l;
+};
+
+procedure to_csv_string(l=...)
+{
+  var s,e;
+
+  s = "";
+  e = length(l)-2;
+
+  for i from 0 to e do {
+    s = s @ l[i] @ ",";
+  };
+
+  s = s @ l[e+1];
+
+  return s;
+};
+
+
+// make a copy of list as binary32
+procedure list_to_f32(l)
+{
+  var r,v;
+
+  r = [||];
+
+  for i from 0 to length(l)-1 do {
+   v = l[i];
+   r = r :. single(v);
+  };
+
+  return r;
+};
+
+// scale elem of 'l' by 's' and convert to binary32
+procedure scale_list_to_f32(l,s)
+{
+  var r,v;
+
+  r = [||];
+
+  for i from 0 to length(l)-1 do {
+   v = s*l[i];
+   r = r :. single(v);
+  };
+
+  return r;
+};
