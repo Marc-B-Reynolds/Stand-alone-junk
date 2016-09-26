@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
-// utility procs for manipulating structures
+// utility procs for manipulating structures.
 
 // returns value of field named 'f' from struct 's' if defined, otherwise returns 'd'
 procedure s_get_field(s,f,d)
@@ -16,6 +16,14 @@ procedure s_has_field(s,f)
 {
   var t;
   t = "match s with { ." @ f @ " = default } : (true) default: (false) ;";
+  return parse(t);
+};
+
+// returns a copy of 's'
+procedure s_copy(s)
+{
+  var t,S;
+  t = "" @ s;
   return parse(t);
 };
 

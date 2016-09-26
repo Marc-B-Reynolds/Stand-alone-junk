@@ -1,6 +1,11 @@
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
+procedure within_dx(a,b,d)
+{
+  return abs(a-b) < d;
+};
+
 // first 'n' odd values
 procedure odd_list(n)
 {
@@ -24,6 +29,17 @@ procedure even_list(n)
 
   return l;
 };
+
+procedure full_list(n)
+{
+  var c,l;
+  l = [||];  
+
+  for i from 0 to n-1 do l = l:.i;
+
+  return l;
+};
+
 
 procedure to_csv_string(l=...)
 {
