@@ -1,6 +1,8 @@
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
+_util_library_loaded = true;
+
 procedure within_dx(a,b,d)
 {
   return abs(a-b) < d;
@@ -55,6 +57,21 @@ procedure to_csv_string(l=...)
   s = s @ l[e+1];
 
   return s;
+};
+
+// make a copy of list with f applied
+procedure list_apply(l,f)
+{
+  var r,v;
+
+  r = [||];
+
+  for i from 0 to length(l)-1 do {
+   v = f(l[i]);
+   r = r :. v;
+  };
+
+  return r;
 };
 
 

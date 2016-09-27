@@ -1,10 +1,6 @@
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
-// load the needed utility proceedures
-execute("util.sollya");
-execute("struct.sollya");
-
 // approx control structure:
 //             1234
 //   _name     *... string for pretty printing
@@ -26,6 +22,11 @@ execute("struct.sollya");
 // 3) guessdegree
 
 _a_debug = false;
+_a_library_loaded = true;
+
+// amount to bias the range in an end-point is a zero.
+// massive hack city.
+_a_zero_range_bias = 2^-24;
 
 procedure a_debug_print(l)
 {
@@ -56,7 +57,7 @@ procedure a_detect_sym_(f,dx,p,dom)
   return r;
 };
 
-// defines for _symmetry field
+// defines for _symmetry field. Any reason to bother with odd biased?
 A_SYMMETRY_EVEN = 0;
 A_SYMMETRY_ODD  = 1;
 A_SYMMETRY_NONE = 2;
@@ -88,6 +89,8 @@ procedure a_detect_symmetry(s)
 
     if (a_detect_sym_(f,ep,dx,dom)) then {
       r = A_SYMMETRY_ODD;
+    } else {
+      print("WARNING: I'm not doing anything reasonable with functions which are neither odd nor even");
     };
   };
 
@@ -125,19 +128,22 @@ procedure a_bool_to_fp(is_single)
 
 procedure a_wp(s)
 {
-  //return a_bool_to_fp(s_get_field(s,"_f_fp32",true));
-  a_fp_format_f32;
-  return a_fp_format_f32;
+  return a_bool_to_fp(s_get_field(s,"_f_fp32",true));
 };
 
 
 procedure a_fpminimax(s)
 {
-  var r;
   a_debug_print("a_fpminimax");
-  r = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
+  a_debug_print(s);
+  suppressmessage(346);
+  s._poly    = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
+//s._supnorm = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
+  s._infnorm = single(dirtyinfnorm(s._func-s._poly, s._a_range));
+  s._zeros   = list_to_f32(dirtyfindzeros(s._func-s._poly, s._a_range));
+
   a_debug_print("a_fpminimax");
-  return r;
+  return s;
 };
 
 procedure a_setup(f,r)
@@ -153,14 +159,16 @@ procedure a_setup(f,r)
 
 procedure a_create_degree(s,n)
 {
-  var d,t,z;
+  var d,t,z,m;
 
   a_debug_print("a_create_degree");
   t = s._symmetry;
 
   if (t == A_SYMMETRY_EVEN) then {
+    n = ceil((n+1)/2);
     d = even_list(n);
   } else if (t==A_SYMMETRY_ODD) then {
+    n = ceil((n+1)/2);
     d = odd_list(n);
   } else {
     d = full_list(n);
@@ -171,7 +179,26 @@ procedure a_create_degree(s,n)
   return d;
 };
 
-_a_zero_range_bias = 2^-128;
+procedure a_create_nterms(s,n)
+{
+  var d,t,z,m;
+
+  a_debug_print("a_create_nterms");
+  t = s._symmetry;
+
+  if (t == A_SYMMETRY_EVEN) then {
+    d = even_list(n);
+  } else if (t==A_SYMMETRY_ODD) then {
+    d = odd_list(n);
+  } else {
+    d = full_list(n);
+  };
+
+  a_debug_print("a_create_nterms");
+
+  return d;
+};
+
 
 procedure a_narrow_range(s)
 {
@@ -219,18 +246,20 @@ procedure a_narrow_range(s)
 procedure a_build_approx(s)
 {
   var t, refine, success;
+  
+  a_debug_print("a_build_approx");
 
   refine  = false;
   success = true;
 
-  // If we don't have an explict list of terms we
+   // If we don't have an explict list of terms we
   // need to perform some prep work.
   if (s_has_field(s,"_degree") == false) then {
-
+  
     // If we don't know if odd/even/neither...figure it out
     s._symmetry = s_get_field(s, "_symmetry", -1);
 
-    if (s._symmetry < 0 || s._symmetry > 0) then
+    if (s._symmetry < 0 || s._symmetry > A_SYMMETRY_NONE) then
       s._symmetry = a_detect_symmetry(s);
 
     // Do we have a target theoretic error?
@@ -239,26 +268,29 @@ procedure a_build_approx(s)
       s._degree = a_create_degree(s, sup(s._guessdegree));
       refine = true;
     } else if (s_has_field(s, "_nterms") == true) then {
-      s._degree = a_create_degree(s, s._nterm);
+      s._degree = a_create_nterms(s, s._nterms);
     } else {
       success = false;
       print("ERROR: set _target_error and/or _nterms.");
     };
   };
 
+  a_debug_print("a_build_approx: range");
+
   // work out the actual range to use for the approximation
   if (s_has_field(s,"_a_range") == false) then {
     s._a_range = a_narrow_range(s);
   };
 
-  if (s_has_field(s,"_degree") == true && success == true) then {
-    s._poly = a_fpminimax(s);
+  if (s_has_field(s,"_degree") == true && success == true && s._a_range != [||]) then {
+    s = a_fpminimax(s);
   };
 
   if (success == false) then {
     print("ERROR: could not create approximation.");
   };
 
+  a_debug_print("a_build_approx");
   return s;
 };
 
@@ -268,27 +300,23 @@ procedure a_term_add(s)
   var S,t;
   S = s_copy(s);
 
-  if (s_has_field(S,"_degree") != false) then {
+  if (s_has_field(S,"_a_range") != false) then {
+    var t,v;
     t = s._degree;
-    t;
+    v = t[length(t)-1];
+
+    if (s._symmetry != A_SYMMETRY_NONE) then {
+      t = t :. (v+2);
+    } else {
+      t = t :. (v+1);
+    };
+    
+    S._degree = t;
+    S = a_build_approx(S);
   } else {
-    //print("ERROR: foo");
+    print("ERROR: error in input function.");
   };
 
-  return s;
+  return S;
 };
 
-// returns a copy of 's' with one less product
-procedure a_term_sub(s)
-{
-  var S,t;
-  S = s_copy(s);
-
-  if (s_has_field(S,"_degree") != false) then {
-    t = s._degree;
-  } else {
-    print("ERROR: foo");
-  };
-
-  return s;
-};

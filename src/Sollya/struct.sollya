@@ -3,6 +3,8 @@
 
 // utility procs for manipulating structures.
 
+_s_library_loaded = true;
+
 // returns value of field named 'f' from struct 's' if defined, otherwise returns 'd'
 procedure s_get_field(s,f,d)
 {
