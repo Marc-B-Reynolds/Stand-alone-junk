@@ -3,6 +3,8 @@
 
 // utility procs for manipulating structures.
 
+if (!isbound(_s_library_loaded)) then {
+
 _s_library_loaded = true;
 
 // returns value of field named 'f' from struct 's' if defined, otherwise returns 'd'
@@ -28,4 +30,4 @@ procedure s_copy(s)
   t = "" @ s;
   return parse(t);
 };
-
+};

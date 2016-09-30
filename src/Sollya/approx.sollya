@@ -24,6 +24,19 @@
 _a_debug = false;
 _a_library_loaded = true;
 
+/*
+if (!isbound(__argv)) then {
+  print("ERROR: requires sollya 5+");
+  quit;
+};
+
+if (__argv == [||]) then {
+  print("USAGE: sollya approx.solly scripts...");
+  quit;
+};
+*/
+
+
 // amount to bias the range in an end-point is a zero.
 // massive hack city.
 _a_zero_range_bias = 2^-24;
@@ -98,6 +111,32 @@ procedure a_detect_symmetry(s)
   
   return r;
 };
+
+// symmetry check of the polynomial approximation
+procedure a_check_symmetry(s)
+{
+  var p,r,d,e,o,i;
+  
+  a_debug_print("a_check_symmetry");
+  p = s._poly;
+  d = degree(p);
+  r = A_SYMMETRY_NONE;
+  e = 0;
+  o = 0;
+
+  for i from 0 to d by 2 do
+    if (coeff(p,i) != 0) then e := e + 1;
+
+  for i from 1 to d by 2 do
+    if (coeff(p,i) != 0) then o := o + 1;
+
+  if ((e!=0) && (o==0)) then r = A_SYMMETRY_EVEN;
+  if ((e==0) && (o!=0)) then r = A_SYMMETRY_ODD;
+  a_debug_print("a_check_symmetry");
+
+  return r;
+};
+
 
 // Guess the needed degree for given error defined
 // by field "_target_error".
@@ -297,11 +336,11 @@ procedure a_build_approx(s)
 // returns a copy of 's' with one more product
 procedure a_term_add(s)
 {
-  var S,t;
-  S = s_copy(s);
+  var S;
 
-  if (s_has_field(S,"_a_range") != false) then {
+  if (s_has_field(s,"_a_range") != false) then {
     var t,v;
+    S = s_copy(s);
     t = s._degree;
     v = t[length(t)-1];
 
@@ -320,3 +359,237 @@ procedure a_term_add(s)
   return S;
 };
 
+
+// returns a copy of 's' with one less product
+procedure a_term_sub(s)
+{
+  var S;
+
+  if (s_has_field(s,"_a_range") != false) then {
+    var t,v,e,i;
+    
+    S = s_copy(s);
+    t = [||];
+    e = length(s._degree);
+
+    for i from 0 to e-2 do {
+      t = t :. s._degree[i];
+    };
+    
+    S._degree = t;
+    S = a_build_approx(S);
+  } else {
+    print("ERROR: error in input function.");
+  };
+
+  return S;
+};
+
+//  _lo._infnorm <= s._target_error <= _hi.infnorm
+procedure a_to_target_bound(s)
+{
+  var r,lo,hi,done,t,te;
+  te   = s._target_error;
+  done = 5;
+  lo   = s;
+  hi   = s;
+
+  if (s._infnorm < te) then {
+    while (done > 0) do {
+      t  = hi;
+      hi = a_term_sub(hi);
+      lo = t;
+      done := done-1;
+      
+      if (hi._infnorm >= te) then {
+        done = 0;
+      };
+    };
+  } else {
+    while (done > 0) do {
+      t  = lo;
+      lo = a_term_add(lo);
+      hi = t;
+      done := done-1;
+      
+      if (lo._infnorm <= te) then {
+        done = 0;
+      };
+    };
+  };
+
+  r._lo = lo;
+  r._hi = hi;
+
+  return r;
+};
+
+{
+  var ws,v,i;
+  ws = [||];
+  v  = "";
+
+  for i from 0 to 20 do {
+    ws = ws :. v;
+    v = v @ " ";
+  };
+
+  a_env._ws = ws;
+};
+
+//a_env._ws;
+a_env._level   = 1;     // block level of output
+a_env._inset   = 2;     // number of spaces per block level
+a_env._ivar    = "x";   // input to core of approximation
+a_env._rvar    = "r";   // computed result of approximation
+a_env._r_fp32  = true;  // in/out in binary32
+a_env._w_fp32  = true;  // working precision in binary32
+a_env._compile = "gcc -Wall -o test";
+
+// returns field 'f' in 's' if exists, otherwise defaults to a_env.'f'
+procedure a_env_field(s,f)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: (s_get_field(a_env,\""@ f @ "\",0));";
+  return parse(t);
+};
+
+
+// make a degree list from polynomial 'p'.
+procedure a_poly_to_degree(p)
+{
+  var d,e,c,i;
+  d = [||];
+  e = degree(p);
+  for i from 0 to e do {
+    c = coeff(p,i);
+    if (c != 0) then { d = d :. i; };
+  };
+  return d;
+};
+
+// this is dumb
+a_decimal_digits = [|"0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19"|];
+
+// convert a polynomial into c-source
+//   p    = polynomial
+//   ivar = name of input variable
+//   rvar = name of result variable
+//
+// returns a structure:
+//   .listing  = c-source fragment (poly only)
+//   .runnable = false if we have term gaps greater than
+//               currently handled..needs manual fix-up.
+procedure a_poly_to_source_c(p,ivar,rvar,inset,si,sw)
+{
+  var m,e,l,c,ld,d,line,ce,r,i;
+  var le,sl,me;
+  var fpsuffix;
+  var fptype;
+  var runnable;
+  var lead_ws,line_init;
+
+  runnable = true;
+
+  if (sw) then {
+    fpsuffix = "f";
+    fptype   = "float";
+  } else {
+    fpsuffix = "";
+    fptype   = "double";
+  };
+
+  m  = a_poly_to_degree(p);
+  e  = length(m)-1;
+  l  = "";
+  sl = "";
+  ld = 0;
+  me = 0;
+  lead_ws = a_env._ws[inset];
+  line_init = lead_ws @ rvar @ "  = ";
+
+  // build the poly from highest to lowest terms.
+  // currently one term per source line.
+  for i from 0 to e do {
+    d    = m[i];
+    c    = coeff(p,d);
+    ce   = d-ld;
+    line = line_init;
+
+    // deal with the power
+    if (ce > 1) then {
+      line = line @ ivar @ a_decimal_digits[ce] @ "*(";
+
+      // power usage: track max and warn for unhandled cases.
+      if (ce <= 5) then {
+        if (ce > me) then {me=ce;};
+      } else {
+	print("WARNING: source needs fixup for powers\n");
+	runnable = false;
+      };
+    } else if (d-ld == 1) then {
+      line = line @ ivar @ " *(";
+    } else {
+      line = line @ "   (";
+    };
+
+    // first term = no composition
+    if (i != e) then {
+      line = line @ rvar;
+    } else {
+      line = line @ " ";
+    };
+
+    // add a plus sign if not negative
+    if (c > 0) then { line = line @ "+";};
+
+    // add coefficient
+    line = line @ c @ fpsuffix @ ");\n";
+
+    ld = d;
+    l = line @ l;
+  };
+
+  // create working vars
+  {
+    var pre;
+    pre = lead_ws @ fptype @ " " @ ivar;
+    if (me == 5) then { l = pre @ "5 = " @ ivar @ "*"  @ ivar @ "4;\n" @ l;};
+    if (me >= 4) then { l = pre @ "4 = " @ ivar @ "2*" @ ivar @ "2;\n" @ l;};
+    if (me >= 3) then { l = pre @ "3 = " @ ivar @ "*"  @ ivar @ "2;\n" @ l;};
+    if (me >= 2) then { l = pre @ "2 = " @ ivar @ "*"  @ ivar @  ";\n" @ l;};
+  };
+
+  r._listing  = l;
+  r._runnable = runnable;
+
+  return r;
+};
+
+procedure a_make_listing(s)
+{
+  var level,inset,ivar,rvar,rfp,wfp;
+  var r;
+
+  // grab some pretty printing values from either 's' or 'a_env'
+  level = a_env_field(s, "_level");
+  inset = a_env_field(s, "_inset");
+  ivar  = a_env_field(s, "_ivar");
+  rvar  = a_env_field(s, "_rvar");
+  rfp   = a_env_field(s, "_r_fp32");
+  wfp   = a_env_field(s, "_w_fp32");
+
+  r = a_poly_to_source_c(s._poly, ivar, rvar, level*inset, rfp, wfp);
+
+  s._listing  = r._listing;
+  s._runnable = r._runnable;
+
+  return s;
+};
+
+
+/*
+for i in __argv do {
+  execute(__argv[i]);
+};
+*/

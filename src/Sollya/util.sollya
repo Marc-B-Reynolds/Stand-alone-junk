@@ -1,5 +1,5 @@
-// Marc B. Reynolds, 2016
-// Public Domain under http://unlicense.org, see link for details.
+
+if (!isbound(_util_library_loaded)) then {
 
 _util_library_loaded = true;
 
@@ -11,7 +11,7 @@ procedure within_dx(a,b,d)
 // first 'n' odd values
 procedure odd_list(n)
 {
-  var c,l;
+  var c,l,i;
   c = 2*n;
   l = [||];  
 
@@ -23,9 +23,9 @@ procedure odd_list(n)
 // first 'n' even values
 procedure even_list(n)
 {
-  var c,l;
+  var c,l,i;
   c = 2*n-1;
-  l = [||];  
+  l = [||];
 
   for i from 0 to c by 2 do l = l:.i;
 
@@ -34,7 +34,7 @@ procedure even_list(n)
 
 procedure full_list(n)
 {
-  var c,l;
+  var c,l,i;
   l = [||];  
 
   for i from 0 to n-1 do l = l:.i;
@@ -45,7 +45,7 @@ procedure full_list(n)
 
 procedure to_csv_string(l=...)
 {
-  var s,e;
+  var s,e,i;
 
   s = "";
   e = length(l)-2;
@@ -62,7 +62,7 @@ procedure to_csv_string(l=...)
 // make a copy of list with f applied
 procedure list_apply(l,f)
 {
-  var r,v;
+  var r,v,i;
 
   r = [||];
 
@@ -78,13 +78,13 @@ procedure list_apply(l,f)
 // make a copy of list as binary32
 procedure list_to_f32(l)
 {
-  var r,v;
+  var r,v,i;
 
   r = [||];
 
   for i from 0 to length(l)-1 do {
-   v = l[i];
-   r = r :. single(v);
+   v := single(l[i]);
+   r  = r :. v;
   };
 
   return r;
@@ -93,14 +93,15 @@ procedure list_to_f32(l)
 // scale elem of 'l' by 's' and convert to binary32
 procedure scale_list_to_f32(l,s)
 {
-  var r,v;
+  var r,v,i;
 
   r = [||];
 
   for i from 0 to length(l)-1 do {
-   v = s*l[i];
-   r = r :. single(v);
+   v := s*single(l[i]);
+   r  = r :. v;
   };
 
   return r;
+};
 };

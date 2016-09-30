@@ -7,7 +7,12 @@
 //   where d = A.B = cos(a)
 //         sin(a) = sqrt(1-a^2)
 
-// slerp{d}_{c}_{s}{d}
+// slerp{d}_{a}_{c}_{s}{d}
+//   d = present if working in doubles
+//   a = degree of atan
+//   c = degree of cos (x if eliminated)
+//   s = degree of sin (x if eliminated)
+//   d = present if double angle
 
 // TODO (aka stuff that wasn't pretty much copy-n-paste):
 // * zeros aren't rescaled to new range on range reduction/expansion
@@ -15,14 +20,25 @@
 
 // ****** CONFIGURATION ******
 
-// the length of the approximation in products
+// explict lengths of polynomials (if useTarget is false)
 cosP  = 5;
 sinP  = 5;
 atanP = 8;
 
+// attempt to match a maximum target error (very hacky atm)
+useTarget = true;
+
+// the target error to match (if useTarget is true)
+targetError = 2^-24; // temp hack - not working properly
+
 // which to eliminiate: one or zero of these
 elimSin      = false;
 elimCos      = false;
+
+// errors to minimize
+sin_a._min_type  = absolute;
+cos_a._min_type  = absolute;
+atan_a._min_type = absolute;
 
 hexFloats    = true;         // use hex-floats (otherwise decimal)
 atanReduce   = false;        // reduce range of atan input - NOT SUPPORTED
@@ -46,15 +62,14 @@ erecipf      = "recip_nr";    //
 erecipd      = "recipd_nr";   // 
 ersqrtd      = "rsqrtd_nr";   // 
 
-// error to minimize
-cosE  = absolute;
-sinE  = absolute;
-atanE = absolute;
 
 // ****** CONFIGURATION (END) ******
 
+// load libraries (hacky)
+execute("../../Sollya/util.sollya");
+execute("../../Sollya/struct.sollya");
+execute("../../Sollya/approx.sollya");
 
-execute("util/util.sollya");
 
 if (elimSin == true && elimCos == true) then {
   print("error: can only eliminate one of sin/cos\n");
@@ -66,8 +81,6 @@ listing = "";
 display=decimal!;
 
 name = "slerp";
-sinN = "" @ sinP;
-cosN = "" @ cosP;
 
 if (singleP == true) then {
   name      = name @ "_";
@@ -99,23 +112,14 @@ if (singleP == true) then {
   if (approxRsqrt == true) then { rsqrt = ersqrtd;};
 };
 
-cosZ = [||];
-sinZ = [||];
-cosI = 0; // todo for elim 
-sinI = 0; // todo for elim
-
 dotMin  = single(cos(maxAngle));
 dotMinL = "" @ dotMin;
-
-name = name @ atanP;
 
 // range of atan (TODO: max angle) and add support
 if (false/*atanReduce == true*/) then {
   atanR = [zeroCheat; sqrt(2)-1];
-  name  = name @ "r_";
 } else {
   atanR = [zeroCheat; 1];
-  name  = name @ "_";
 };
 
 // ranges of the forward trig approximation(s)
@@ -127,27 +131,97 @@ if (daSinCos == true) then {
   sinR  = [zeroCheat, maxAngle];
 };
 
+// init some structure (ranges are temp hack)
+
+a_env._level = 2;
+
+sin_a  = a_setup(sin(x),  sinR);
+cos_a  = a_setup(cos(x),  cosR);
+atan_a = a_setup(atan(x), atanR);
+
+
+sin_a._symmetry  = A_SYMMETRY_ODD;
+cos_a._symmetry  = A_SYMMETRY_EVEN;
+atan_a._symmetry = A_SYMMETRY_ODD;
+
+atan_a._rvar = "a";
+atan_a._ivar = "x";
+sin_a._ivar  = "ta";
+cos_a._ivar  = "ta";
+
+if (daSinCos == true) then {
+  sin_a._rvar = "hs";
+  cos_a._rvar = "hc";
+} else {
+  sin_a._rvar = "s";
+  cos_a._rvar = "c";
+};
+
+if (useTarget == false) then {
+  sin_a._nterms  = sinP;
+  cos_a._nterms  = cosP;
+  atan_a._nterms = atanP;
+} else {
+  var e;
+  e = 2^-24;
+  sin_a._target_error  = e/2;
+  cos_a._target_error  = e/2;
+  atan_a._target_error = e/2;
+};
+
+
+
+
+
+// ****** build approximations ******
+//_a_debug = true;
+
+// TODO: target error choice code can be improved
+atan_a = a_build_approx(atan_a);
+
+if (useTarget) then {
+  atan_b = a_to_target_bound(atan_a);
+};
+
+display=decimal!;
+
+if (!elimSin) then {
+  sin_a = a_build_approx(sin_a);
+
+  if (useTarget == true) then {
+    sin_b = a_to_target_bound(sin_a);
+  };
+  
+  sinN = length(sin_a._degree);
+} else sinN = "x";
+
+if (!elimCos) then {
+  cos_a = a_build_approx(cos_a);
+
+  if (useTarget) then {
+    cos_b = a_to_target_bound(cos_a);
+  };
+  
+  cosN = length(cos_a._degree);
+} else cosN = "x";
+
+
+// build the atan listing using the library
+atan_a = a_make_listing(atan_a);
+name   = name  @ length(atan_a._degree) @ "_" @ cosN @ "_" @ sinN;
+
+if (daSinCos == true) then {
+  name  = name @ "d";
+};
+
+
 if (hexFloats == true) then { display=hexadecimal!; };
 
 // ****** atan approximation ******
 
-atanC = [||];
-atanL = "";
+atanL = "\n    // compute the angle\n" @ "    " @ fptype @ " x  = y*rs;\n";
 
-for i from 1 to 2*atanP by 2 do atanC = atanC:.i;
-
-atanA = fpminimax(atan(x), atanC, fpformat, atanR, floating, atanE);
-atanZ = dirtyfindzeros(atan(x)-atanA, atanR);
-atanI = dirtyinfnorm(atan(x)-atanA,   atanR);
-
-for i from 2*atanP-1 to 2 by -2 do {
-  atanL = "+x2*(" @ coeff(atanA, i) @ fpsuffix @ atanL @ ")";
-};
-
-atanL = "    // compute the angle\n" @
-        "    " @ fptype @ " x  = y*rs;\n" @
-        "    " @ fptype @ " x2 = x*x;\n"  @
-        "    " @ fptype @ " a  = x*(" @ coeff(atanA, 1) @ fpsuffix @ atanL @ ");\n";
+atanL = atanL @ atan_a._listing;
 
 atanL = "    // atan setup\n"                         @
         "    " @ fptype @ " y  = " @ one @ "-d;\n"    @
@@ -158,20 +232,18 @@ atanL = "    // atan setup\n"                         @
 // ****** sin approximation ******
 
 if (elimSin == false) then {
+  var p;
+
+  p = sin_a._poly;
+
+  // manually generating the poly for the moment
   sinL = "";
-  sinC = [||];
 
-  for i from 1 to 2*sinP    by 2 do sinC  = sinC:.i;
-
-  sinA = fpminimax(sin(x),  sinC,  fpformat, sinR,  floating, sinE);
-  sinZ = dirtyfindzeros(sin(x)-sinA, sinR);
-  sinI = dirtyinfnorm(sin(x)-sinA,   sinR);
-
-  for i from 2*sinP-1 to 2 by -2 do {
-    sinL = "+a2*(" @ coeff(sinA, i) @ fpsuffix @ sinL @ ")";
+  for i from degree(p) to 2 by -2 do {
+    sinL = "+a2*(" @ coeff(p, i) @ fpsuffix @ sinL @ ")";
   };
 
-  sinL = "ta*(" @ coeff(sinA, 1) @ fpsuffix @ sinL @ ");\n";
+  sinL = "ta*(" @ coeff(p, 1) @ fpsuffix @ sinL @ ");\n";
 
 } else {
   sinN = "x";
@@ -191,20 +263,17 @@ if (daSinCos == true) then {
 // ****** cos approximation ******
 
 if (elimCos == false) then {
+  var p;
+  p = cos_a._poly;
+
+  // manually generating the poly for the moment
   cosL = "";
-  cosC = [||];
 
-  for i from 0 to 2*cosP-1  by 2 do cosC  = cosC:.i;
-
-  cosA = fpminimax(cos(x),  cosC,  fpformat, cosR,  floating, cosE);
-  cosZ = dirtyfindzeros(cos(x)-cosA, cosR);
-  cosI = dirtyinfnorm(cos(x)-cosA,   cosR);
-
-  for i from 2*cosP-2 to 2 by -2 do {
-    cosL = "+a2*(" @ coeff(cosA, i) @ fpsuffix @ cosL @ ")";
+  for i from degree(p) to 2 by -2 do {
+    cosL = "+a2*(" @ coeff(cos_a._poly, i) @ fpsuffix @ cosL @ ")";
   };
 
-  cosL = coeff(cosA, 0) @ fpsuffix @ cosL @ ";\n";
+  cosL = coeff(cos_a._poly, 0) @ fpsuffix @ cosL @ ";\n";
 
 } else {
   cosN = "x";
@@ -221,11 +290,6 @@ if (daSinCos == true) then {
   cosL = "    " @ fptype @ " c  = " @ cosL;
 };
 
-name = name @ cosN @ "_" @ sinN;
-
-if (daSinCos == true) then {
-  name  = name @ "d_";
-};
 
 // ****** complete ******
 
@@ -242,7 +306,7 @@ if (elimCos == false) then {
 // add sin/cos angle doubling if needed
 
 if (daSinCos == true) then {
-  listing = listing @ "    // double angle of sin/cos\n";
+  listing = listing @ "\n    // double angle of sin/cos\n";
 
   listing = listing @
             "    " @ fptype @ " th = hc+hc;\n" @
@@ -272,9 +336,9 @@ listing = "void " @ name @
           "  // d on ~[" @ dotMinL @ ",1]\n"      @
           "  if (d < SLERP_CUT) {\n"              @
           atanL                                   @
-          "    // forward trig\n"                 @
+          "\n    // forward trig\n"               @
           listing                                 @
-          "    // weights\n"                      @
+          "\n    // weights\n"                    @
           "    s1 = s*rs;\n"                      @
           "    s0 = c-d*s1;\n";
 
@@ -294,7 +358,7 @@ if (negDot == true) then {
 };
 
 listing = listing @
-          "  }\n  // weight sum\n" @
+          "  }\n\n  // weight sum\n" @
           "  R->x = " @ toRP @ "(s0*ax + s1*bx);\n" @
           "  R->y = " @ toRP @ "(s0*ay + s1*by);\n" @
           "  R->z = " @ toRP @ "(s0*az + s1*bz);\n" @
@@ -307,20 +371,23 @@ listing = listing @
 //print("norm   = ", dirtyinfnorm(F-P, R),   "\n");
 //print("zeroes = ", dirtyfindzeros(F-P, R), "\n");
 
-//display=decimal!;
-
-//atanZ;
-//sinZ;
-//cosZ;
+display=decimal!;
 
 
 print(listing);
 
-//atanZ;
-xxx=scale_list_to_f32(atanZ,2);
-xxx;
+targetError/2;
+atan_a._infnorm;
+cos_a._infnorm;
+sin_a._infnorm;
+atan_a;
+
 if (genCode == true) then {
   fname = name @ ".h";
   print(listing) > fname;
 };
+
+
+display=decimal!;
+
 

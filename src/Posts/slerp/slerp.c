@@ -741,6 +741,39 @@ void slerp_ref_4(quat_t* R, quat_t* A, quat_t* B, float t)
   quat_wsum(R, A, B, s0, sgn*s1);
 }
 
+
+void slerp_ref_5(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  float d   = quat_dot(A,B);
+  float sgn = d >= 0 ? 1 : -1;
+  float s0,s1;
+
+  d = fabsf(d);
+  
+  if (d < SLERP_CUT) {
+    float s2 = 1.f-d*d;
+    float rs = rsqrt_nr(s2);   
+    float y  = 1-d;
+    float a  = atan_9(y*rs);
+    float ta = t*a;
+    float hc = cos_4_5(ta);
+    float hs = sin_4_5(ta);
+    float th = 2.f*hc;
+    float c  = hc*th-1.f;
+    float s  = th*hs;
+    s1 = s*rs;
+    s0 = c-d*s1;
+  } else {
+    s0 = 1.0f - t;
+    s1 = t;
+  }
+
+  quat_wsum(R, A, B, s0, sgn*s1);
+}
+
+
+
+
 void slerp_4_4_x(quat_t* R, quat_t* A, quat_t* B, float t)
 {
   float ax  = A->x, ay=A->y, az=A->z, aw=A->w;
@@ -893,7 +926,7 @@ void slerp_fr_init_0(slerp_fr_t* k, quat_t* A, quat_t* B, float f)
 {
   float t = f;
 
-  // slerp_ref_1: cut-and-paste as example
+  // slerp_ref_1: cut-and-paste as example - same reductions apply
   float d   = quat_dot(A,B);
   float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
@@ -937,6 +970,16 @@ void slerp_nlerp(quat_t* r, quat_t* a, quat_t* b, float t)
   quat_wsum(r, a, b, s0, s1);
   quat_normalize(r);
 }
+
+// A.B >= 0 should be invariant
+void slerp_nlerp_1(quat_t* r, quat_t* a, quat_t* b, float t)
+{
+  float s0 = 1.0f-t;
+  float s1 = t;
+  quat_wsum(r, a, b, s0, s1);
+  quat_normalize(r);
+}
+
 
 // ****************
 // "Slerping Clock Cycles", J.M.P. van Waveren, 2005
@@ -1085,7 +1128,7 @@ const float eberly_v[] = {  1/3.f,   2/5.f,   3/7.f,   4/9.f,  5/11.f,  6/13.f, 
                            9/19.f, 10/21.f, 11/23.f, 12/25.f, 13/27.f, 14/29.f, 15/31.f, 16/33.f};
 
 
-// generic version: constructed from the paper, not copied
+// generic version: constructed from the paper
 static inline void slerp_eberly_g(quat_t* R, quat_t* A, quat_t* B, float t, uint32_t n)
 {
   float d  = quat_dot(A,B);
