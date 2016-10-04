@@ -24,6 +24,7 @@
 _a_debug = false;
 _a_library_loaded = true;
 
+
 /*
 if (!isbound(__argv)) then {
   print("ERROR: requires sollya 5+");
@@ -41,12 +42,60 @@ if (__argv == [||]) then {
 // massive hack city.
 _a_zero_range_bias = 2^-24;
 
+{
+  var ws,v,i;
+  ws = [||];
+  v  = "";
+
+  for i from 0 to 20 do {
+    ws = ws :. v;
+    v = v @ " ";
+  };
+
+  a_env._ws = ws;
+};
+
+//a_env._ws;
+a_env._level   = 1;     // block level of output
+a_env._inset   = 2;     // number of spaces per block level
+a_env._ivar    = "x";   // input to core of approximation
+a_env._rvar    = "r";   // computed result of approximation
+a_env._r_fp32  = true;  // in/out in binary32
+a_env._w_fp32  = true;  // working precision in binary32
+a_env._hexfp   = false; // generate fp constants in hex 
+a_env._compile = "gcc -Wall -o test";
+
+// returns field 'f' in 's' if exists, otherwise defaults to a_env.'f'
+procedure a_env_field(s,f)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: (s_get_field(a_env,\""@ f @ "\",0));";
+  return parse(t);
+};
+
 procedure a_debug_print(l)
 {
   if (_a_debug == true) then {
      print(l);
   };
 };
+
+procedure a_env_hex_in()
+{
+  if (s_get_field(a_env, "_hexfp", false)) then display=hexadecimal!;
+};
+
+procedure a_env_hex_out()
+{
+  display=decimal!;
+};
+
+
+// defines for _symmetry field. Any reason to bother with odd biased?
+A_SYMMETRY_EVEN = 0;
+A_SYMMETRY_ODD  = 1;
+A_SYMMETRY_NONE = 2;
+
 
 // f(p)-dx <0 && fp(p)+dx > 0 for all of dom
 procedure a_detect_sym_(f,dx,p,dom)
@@ -69,12 +118,6 @@ procedure a_detect_sym_(f,dx,p,dom)
   };
   return r;
 };
-
-// defines for _symmetry field. Any reason to bother with odd biased?
-A_SYMMETRY_EVEN = 0;
-A_SYMMETRY_ODD  = 1;
-A_SYMMETRY_NONE = 2;
-
 
 procedure a_detect_symmetry(s)
 {
@@ -103,7 +146,17 @@ procedure a_detect_symmetry(s)
     if (a_detect_sym_(f,ep,dx,dom)) then {
       r = A_SYMMETRY_ODD;
     } else {
-      print("WARNING: I'm not doing anything reasonable with functions which are neither odd nor even");
+      // TODO: could check of biased odd as well
+      // (f(x)+k)+(f(-x)+k) = 2k -> f(x)/f(-x) = 1/(2k)
+      //var z0,z1,x0,x1;
+      //x0 = evaluate(f-dx, dom);
+      //x1 = evaluate(f+dx, dom);
+      //z0 = dirtyfindzeros(f-dx, dom);
+      //z1 = dirtyfindzeros(f+dx, dom);
+      //x0;
+      //x1;
+      //z0;
+      //z1;
     };
   };
 
@@ -179,7 +232,7 @@ procedure a_fpminimax(s)
   s._poly    = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
 //s._supnorm = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
   s._infnorm = single(dirtyinfnorm(s._func-s._poly, s._a_range));
-  s._zeros   = list_to_f32(dirtyfindzeros(s._func-s._poly, s._a_range));
+  s._maxpnts = list_to_f32(dirtyfindzeros(diff(s._func-s._poly), s._a_range));
 
   a_debug_print("a_fpminimax");
   return s;
@@ -291,16 +344,16 @@ procedure a_build_approx(s)
   refine  = false;
   success = true;
 
+  // If we don't know if odd/even/neither...figure it out
+  s._symmetry = s_get_field(s, "_symmetry", -1);
+
+  if (s._symmetry < 0 || s._symmetry > A_SYMMETRY_NONE) then
+    s._symmetry = a_detect_symmetry(s);
+
    // If we don't have an explict list of terms we
   // need to perform some prep work.
   if (s_has_field(s,"_degree") == false) then {
   
-    // If we don't know if odd/even/neither...figure it out
-    s._symmetry = s_get_field(s, "_symmetry", -1);
-
-    if (s._symmetry < 0 || s._symmetry > A_SYMMETRY_NONE) then
-      s._symmetry = a_detect_symmetry(s);
-
     // Do we have a target theoretic error?
     if (s_has_field(s, "_target_error") == true) then {
       s._guessdegree = a_guessdegree(s);
@@ -423,37 +476,6 @@ procedure a_to_target_bound(s)
 
   return r;
 };
-
-{
-  var ws,v,i;
-  ws = [||];
-  v  = "";
-
-  for i from 0 to 20 do {
-    ws = ws :. v;
-    v = v @ " ";
-  };
-
-  a_env._ws = ws;
-};
-
-//a_env._ws;
-a_env._level   = 1;     // block level of output
-a_env._inset   = 2;     // number of spaces per block level
-a_env._ivar    = "x";   // input to core of approximation
-a_env._rvar    = "r";   // computed result of approximation
-a_env._r_fp32  = true;  // in/out in binary32
-a_env._w_fp32  = true;  // working precision in binary32
-a_env._compile = "gcc -Wall -o test";
-
-// returns field 'f' in 's' if exists, otherwise defaults to a_env.'f'
-procedure a_env_field(s,f)
-{
-  var t;
-  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: (s_get_field(a_env,\""@ f @ "\",0));";
-  return parse(t);
-};
-
 
 // make a degree list from polynomial 'p'.
 procedure a_poly_to_degree(p)
@@ -585,6 +607,50 @@ procedure a_make_listing(s)
   s._runnable = r._runnable;
 
   return s;
+};
+
+// create a quick-n-direct inline code listing
+// f = function to approximate
+// d = degree list of approximation
+// r = input domain
+// name = generate function name
+procedure a_simple_inline_f32(f,d,r,name)
+{
+  var p,e,infn,z;
+
+  suppressmessage(346);
+  
+  p    = fpminimax(f, d, [|24...|], r, floating, E);
+  e    = f-p;
+  infn = dirtyinfnorm(f-p, r);
+  z    = list_to_f32(dirtyfindzeros(diff(e), r));
+
+  a_env_hex_in();
+  print("// abs error =", single(infn));
+  print("// zero      =",z);
+  print("static inline float " @ name @ "(float x) {");
+  a_poly_to_source_c(p, "x", "r", 2, true, true)._listing;
+  print("  return r;\n}\n");
+};
+
+// values to automatically check for proceedures X
+A_CHECK_INF_NORM     = 0;  // dirty inf normal of abs error
+A_CHECK_MAX_POINTS   = 1;  // point on approx domain of max abs error
+A_CHECK_EMPIRIC_TEST = 2;  // compile and test theoritic error results
+
+procedure a_simple_check_f32(name,f,r)
+{
+  var p,e,infn,z;
+
+  p    = parse(name);
+  e    = f-p;
+  infn = dirtyinfnorm(f-p, r);
+  z    = list_to_f32(dirtyfindzeros(diff(e), r));
+  a_env_hex_in();
+  print(name);
+  print("  abs error =", single(infn));
+  //print("  zero      =",z);
+  a_env_hex_out();
 };
 
 

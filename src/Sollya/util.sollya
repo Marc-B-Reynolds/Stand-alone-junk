@@ -90,6 +90,24 @@ procedure list_to_f32(l)
   return r;
 };
 
+// return true if 'v' is in list 'l'
+procedure is_in_list(l, v)
+{
+  var i,r,n;
+
+  i = 0;
+  r = false;
+  n = length(l);
+  
+  while ((i < n) && (!r)) do {
+    if (l[i] == v) then {r = true;};
+    i := i + 1;
+  };
+
+  return r;
+};
+ 
+ 
 // scale elem of 'l' by 's' and convert to binary32
 procedure scale_list_to_f32(l,s)
 {
