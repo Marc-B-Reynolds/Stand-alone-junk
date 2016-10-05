@@ -246,6 +246,7 @@ procedure a_setup(f,r)
   s._min_type = relative;    // minimize relative error
   s._r_fp32   = true;        // in/out in binary32
   s._w_fp32   = true;        // work in binary32
+  s._name     = "" @ f;      // use function as default name
   return s;
 };
 

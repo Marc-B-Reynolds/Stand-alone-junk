@@ -1,0 +1,161 @@
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+// Create plot.ly plots including generating an html page which can be auto-displayed.
+
+_plotly._html_header = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Plot</title></script><script src='http://cdn.plot.ly/plotly-latest.min.js'></script></head><body>";
+_plotly._html_footer = "</body></html>";
+
+_plotly._round_digits = 12;       // number of binary digits to round to
+_plotly._entries_per_line = 3;    // number of values to emit per line
+
+// I'm ignoring these for the moment
+_plotly._tickformat_x     = "";
+_plotly._tickformat_y     = "";
+_plotly._ticks_x          = 4;
+_plotly._ticks_y          = 4;
+
+_plotly_ostype_macro = "  case `uname -s` in Linux*) echo 0;; CYGWIN*) echo 1 ;; Darwin*) echo 2;; *) echo -1;;esac";
+
+// attempt to figure out some shell commands
+procedure plotly_guess_environment()
+{
+  var t;
+
+  t = parse(bashevaluate(_plotly_ostype_macro));
+
+  if (t == 1) then {
+    _plotly._open_html = "cygstart ";
+    } else if (t == 2) then {
+     _plotly._open_html = "open ";
+  };
+};
+
+// attempt to show 'fname' in a browser
+procedure plotly_show_html(fname)
+{
+  if (!s_has_field(_plotly, "_open_html")) then {
+    plotly_guess_environment();      
+  };
+
+  if (s_has_field(_plotly, "_open_html")) then {
+    bashexecute(_plotly._open_html @ fname);
+  } else {
+    print("ERROR: I'm not smart enough to open a brower page");
+  };
+};
+
+
+// start a new figure.
+procedure plotly_new_figure(title)
+{
+  _plotly._figure._title  = title;
+  _plotly._figure._trace  = [||];
+};
+
+plotly_new_figure("approx.sollya");
+
+// adds a plot trace to the current figure
+procedure plotly_add_trace(t)
+{
+  _plotly._figure._trace = _plotly._figure._trace :. t;
+};
+
+
+// creates a plot trace of function 'f' over range 'r'
+// using 'n' equispaced samples.  Names the plot 'tname'
+// using plot.ly mode 'tmode'.
+procedure plotly_make_trace(f,r,n,tname,tmode)
+{
+  // nothing clever just equispaced sampling
+  // of the function.
+  var r,i;
+  var xl,yl;
+  var x0,x1,y0,dx,nd,ei;
+
+  x0  = inf(r);
+  x1  = sup(r);
+  dx := (x1-x0)/n;
+  xl  = "    x:[";
+  yl  = "    y:[";
+  i   = 0;
+  nd  = _plotly._round_digits;
+  ei  = _plotly._entries_per_line;
+
+  while(x0 <= x1) do {
+    xl = xl @ round(x0,nd,RN);
+    yl = yl @ round(evaluate(f,x0),nd,RN);
+    x0 := x0+dx;
+    i  := i+1;
+
+    if (x0 <= x1) then {
+      xl = xl @ ",";
+      yl = yl @ ",";
+    };
+    
+    if (i > ei) then {
+      i  = 0;
+      xl = xl @ "\n    ";
+      yl = yl @ "\n    ";
+    } else {
+      xl = xl @ " ";
+      yl = yl @ " ";
+    };
+  };
+
+  xl = xl @ "],\n";
+  yl = yl @ "],\n  mode: '" @ tmode @ "'";
+  yl = yl @ ",\n  name: '" @ tname @ "'";
+  yl = yl @ "\n};\n\n";
+
+  r = " = {\n" @ xl @ yl;
+
+  return r;
+};
+
+// given approximation structure 's' make an error plot
+procedure plotly_error_trace(s)
+{
+  var fig;
+
+  fig = plotly_make_trace(s._poly(x)-s._func(x), s._range, 20, s._name, "lines");
+  
+  return fig;
+};
+
+// open up a brower tab with the error plot of 's'
+procedure plotly_error_in_brower(s)
+{
+  var prev_fig;
+  var r,f,tname,ptype;
+
+  prev_fig = _plotly._figure;
+
+  if (s._min_type == relative) then {
+    f = 1-s._poly(x)/s._func(x);
+    ptype = "rel error: ";
+  } else {
+    f = s._func(x)-s._poly(x);
+    ptype = "abs error: ";
+  };
+  
+  r = s._range;
+  tname = s_get_string_field(s, "_name", "" @ s._func);
+  r = plotly_make_trace(f, r, 400, tname, "lines");
+
+
+  r = _plotly._html_header     @
+      "<div id='fig1' style='width:80%'></div>"  @
+      "<script>\nvar plot0"    @
+      r                        @
+      "var data = [plot0];\n"  @
+      "var layout = {title:  '" @ ptype @ tname @ "'};\n" @
+      "Plotly.newPlot('fig1', data, layout, {displaylogo: false, autosizable: true});</script>\n"               @
+      _plotly._html_footer;
+
+  _plotly._figure = prev_fig;
+
+  print(r) > "junk.html";
+  plotly_show_html("junk.html");
+
+};

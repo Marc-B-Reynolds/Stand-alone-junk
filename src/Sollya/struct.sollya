@@ -8,6 +8,8 @@ if (!isbound(_s_library_loaded)) then {
 _s_library_loaded = true;
 
 // returns value of field named 'f' from struct 's' if defined, otherwise returns 'd'
+// WARNING 'd' cannot be a string, use s_get_string_field. Could probably change this
+// to using isbound instead.
 procedure s_get_field(s,f,d)
 {
   var t;
@@ -15,6 +17,14 @@ procedure s_get_field(s,f,d)
   return parse(t);
 };
 
+procedure s_get_string_field(s,f,d)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: (\""@ d @ "\") ;";
+  return parse(t);
+};
+ 
+ 
 // returns true if 's' is a structure with field named 'f'
 procedure s_has_field(s,f)
 {

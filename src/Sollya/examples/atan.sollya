@@ -3,6 +3,7 @@
 execute("../util.sollya");
 execute("../struct.sollya");
 execute("../approx.sollya");
+execute("../plotly.sollya");
 
 // set up a template structure for full range min abs error
 atan_a = a_setup(atan(x), [-1;1]);
@@ -73,18 +74,26 @@ atan_r1._degree = [|0,2|];
 atan_r1;
 atan_r1 = a_build_approx(atan_r1);
 atan_r1;
-quit;
 
 
-atan_a._nterms   = 4;      
+//atan_a._symmetry = A_SYMMETRY_ODD;  // library can deduce
+atan_a._nterms   = 2;
+//atan_a._min_type = relative;
 atan_a = a_build_approx(atan_a);
 atan_a._poly;
 atan_a._infnorm;
-atan_a._zeros;
-zz = dirtyfindzeros(diff(atan(x)-atan_a._poly(x)), [0;1]);
-evaluate(atan(x)-atan_a._poly(x), zz[0]);
-evaluate(atan(x)-atan_a._poly(x), zz[1]);
+atan_a._maxpnts;
+//zz = dirtyfindzeros(diff(atan(x)-atan_a._poly(x)), [0;1]);
+//zz;
+//evaluate(atan(x)-atan_a._poly(x), zz[0]);
+//evaluate(atan(x)-atan_a._poly(x), zz[1]);
 
-//atan_a._symmetry = A_SYMMETRY_ODD;  // library can deduce
 
+
+//trace = plotly_make_trace(atan_a._poly(x)-atan(x),[-1;1],200,"atan","lines");
+//plotly_new_figure("atan approx");
+//print("*****");
+//plotly_guess_environment();
+//print("*****");
+plotly_error_in_brower(atan_a);
 
