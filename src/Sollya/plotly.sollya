@@ -3,11 +3,19 @@
 
 // Create plot.ly plots including generating an html page which can be auto-displayed.
 
-_plotly._html_header = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Plot</title></script><script src='http://cdn.plot.ly/plotly-latest.min.js'></script></head><body>";
+// environment variables
+_plotly._html_header = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Plot</title>" @
+                       "<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>"     @
+                       "<script type='text/javascript' src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>" @
+                       "</head><body>\n";
 _plotly._html_footer = "</body></html>";
 
 _plotly._round_digits = 12;       // number of binary digits to round to
 _plotly._entries_per_line = 3;    // number of values to emit per line
+
+_plotly._pages = [||];            // list of pages being built
+
+_plotly._points           = 400;
 
 // I'm ignoring these for the moment
 _plotly._tickformat_x     = "";
@@ -15,7 +23,17 @@ _plotly._tickformat_y     = "";
 _plotly._ticks_x          = 4;
 _plotly._ticks_y          = 4;
 
+// dumb attempt to figure out the OS
 _plotly_ostype_macro = "  case `uname -s` in Linux*) echo 0;; CYGWIN*) echo 1 ;; Darwin*) echo 2;; *) echo -1;;esac";
+
+// page structure: _plotly.pages stores an in-order list of structures
+//   _fname   file name to create (foo.html)
+//   _figs    in-order list of figures (figure structure)
+
+// figure structure: actively building at _plotly._figure
+//   _title   tile of the plot
+//   _trace   list of traces
+
 
 // attempt to figure out some shell commands
 procedure plotly_guess_environment()
@@ -105,7 +123,7 @@ procedure plotly_make_trace(f,r,n,tname,tmode)
 
   xl = xl @ "],\n";
   yl = yl @ "],\n  mode: '" @ tmode @ "'";
-  yl = yl @ ",\n  name: '" @ tname @ "'";
+  yl = yl @ ",\n  name: '"  @ tname @ "'";
   yl = yl @ "\n};\n\n";
 
   r = " = {\n" @ xl @ yl;
@@ -113,15 +131,71 @@ procedure plotly_make_trace(f,r,n,tname,tmode)
   return r;
 };
 
-// given approximation structure 's' make an error plot
-procedure plotly_error_trace(s)
+procedure plotly_abs_error_trace(s, tname)
 {
-  var fig;
-
-  fig = plotly_make_trace(s._poly(x)-s._func(x), s._range, 20, s._name, "lines");
-  
-  return fig;
+  return plotly_make_trace(s._poly(x)-s._func(x), s._range, _plotly._points, tname, "lines");
 };
+
+
+procedure plotly_rel_error_trace(s,name)
+{
+  return plotly_make_trace(1-s._poly(x)/s._func(x), s._range, _plotly._points, tname, "lines");
+};
+
+
+procedure plotly_poly_to_mathjax(p)
+{
+  // only 
+  var l,e,m,d,i, _display,xe,xm;
+  l = "";
+  m = a_poly_to_degree(p);
+  e = length(m)-1;
+  m;
+  e;
+
+  _display = display;
+  display  = decimal!;
+
+  for i from e to 0 by -1 do {
+    d = m[i];
+    c = coeff(p,d);
+    xe = exponent(c);
+    xm = mantissa(c);
+
+    if (d > 1) then {
+      l = " x^{" @ d @ "}" @ l;
+    } else if (d == 1) then {
+      l = " x" @ l;
+    };
+
+    if (xe != 0) then {
+      l = " \\times 2^{" @ xe @ "}" @ l;
+    };
+
+    l = xm @ l;
+
+    if (c >= 0 && i != 0) then {
+      l = "+" @ l;
+    };
+  };
+
+  display  = _display!;
+
+  return "\n\\( " @ l @ " \\)\n\n";
+};
+
+
+// start building a new html page with 'n' the name of file to generate
+procedure plotly_new_page(n)
+{
+  var p;
+
+  p._fname = n;
+  p._figs  = [||];
+
+  _plotly._pages = _plotly._pages :. p;
+};
+
 
 // open up a brower tab with the error plot of 's'
 procedure plotly_error_in_brower(s)
@@ -145,6 +219,7 @@ procedure plotly_error_in_brower(s)
 
 
   r = _plotly._html_header     @
+    plotly_poly_to_mathjax(s._poly) @
       "<div id='fig1' style='width:80%'></div>"  @
       "<script>\nvar plot0"    @
       r                        @

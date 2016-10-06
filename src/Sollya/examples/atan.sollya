@@ -14,6 +14,8 @@ atan_h._min_type = absolute;
 
 _s = proc(x) { single(x); };
 
+plotly_new_page("ex_atan.html");
+
 // ***********************************************************************
 // APPROXIMATIONS FOR DIGITAL COMPUTERS, Hastings, 1955
 // sheets 8-13  x on [-1,1] (TODO: wrap contants in single)
@@ -45,6 +47,7 @@ atan_pa._maxpnts;                   // test vector points of max error on _a_ran
 // ***********************************************************************
 // Efficient Approximations for the Arctangent Function, Rajan, Wang, Inkol, Joyal, 2006
 
+/*
 atan_rwj_eq5  = single(pi/4)*x+0.285*x*(1-abs(x));
 atan_rwj_eq7  = single(pi/4)*x+0.273*x*(1-abs(x));
 atan_rwj_eq8  = single(pi/4)*x+x*(0.186982-.191942*x*x);
@@ -58,7 +61,7 @@ a_simple_check_f32("atan_rwj_eq8",  atan(x), [-1;1]);
 a_simple_check_f32("atan_rwj_eq9",  atan(x), [-1;1]);
 a_simple_check_f32("atan_rwj_eq10", atan(x), [-1;1]);
 a_simple_check_f32("atan_rwj_eq11", atan(x), [-1;1]);
-
+*/
 
 atan_rwj = x*(-0.1784 * abs(x) - 0.0663*x*x + 1.0301);
 a_simple_check_f32("atan_rwj",      atan(x), [-1;1]);
@@ -77,8 +80,9 @@ atan_r1;
 
 
 //atan_a._symmetry = A_SYMMETRY_ODD;  // library can deduce
-atan_a._nterms   = 2;
+atan_a._nterms   = 4;
 //atan_a._min_type = relative;
+atan_a._func = cos(x);
 atan_a = a_build_approx(atan_a);
 atan_a._poly;
 atan_a._infnorm;
@@ -96,4 +100,7 @@ atan_a._maxpnts;
 //plotly_guess_environment();
 //print("*****");
 plotly_error_in_brower(atan_a);
+display=powers!;
+atan_a._poly;
+//_plotly._pages;
 
