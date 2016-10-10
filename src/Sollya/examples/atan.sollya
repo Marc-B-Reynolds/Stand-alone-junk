@@ -1,4 +1,11 @@
+/* -*- mode: c; -*- */
 
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+//verbosity=10;
+
+// Using arctangent as an example
 // load the library
 execute("../util.sollya");
 execute("../struct.sollya");
@@ -12,57 +19,74 @@ atan_a._min_type = absolute;          // default is relative error
 atan_h = a_setup(atan(x), [0;1]);
 atan_h._min_type = absolute;
 
-_s = proc(x) { single(x); };
 
-plotly_new_page("ex_atan.html");
+// ***********************************************************************
+// start building an html report
+page.new("atan.html");
 
 // ***********************************************************************
 // APPROXIMATIONS FOR DIGITAL COMPUTERS, Hastings, 1955
-// sheets 8-13  x on [-1,1] (TODO: wrap contants in single)
+// sheets 8-13 x on [-1,1] 
 
-atan_ch_8  = x*(0.995354 + x^2*(-0.288679 + 0.079331*x^2));
-atan_ch_9  = x*(0.999215 + x^2*(-0.3211819 + x^2*(0.1462766 - 0.0389929*x^2)));
-atan_ch_10 = x*(0.999866 + x^2*(-0.3302995 + x^2*(0.180141 + x^2*(-0.085133 + 0.0208351*x^2))));
-atan_ch_11 = x*(.99997726 + x^2*(-.33262347 + x^2*(.19354346 + x^2*(-.11643287 + x^2*(.05265332 + -.01172120*x^2)))));
-//atan_ch_12 = x*( + x^2*( + x^2*( + x^2*( + x^2*( + *x^2)))));
-//atan_ch_13 = x*( + x^2*( + x^2*( + x^2*( + x^2*( + *x^2)))));
+ch_8  = x*(0.995354 + x^2*(-0.288679 + 0.079331*x^2));
+ch_9  = x*(0.999215 + x^2*(-0.3211819 + x^2*(0.1462766 - 0.0389929*x^2)));
+ch_10 = x*(0.999866 + x^2*(-0.3302995 + x^2*(0.180141 + x^2*(-0.085133 + 0.0208351*x^2))));
+ch_11 = x*(.99997726 + x^2*(-.33262347 + x^2*(.19354346 + x^2*(-.11643287 + x^2*(.05265332 + -.01172120*x^2)))));
 
-a_simple_check_f32("atan_ch_8",   atan(x), [-1;1]);
-a_simple_check_f32("atan_ch_9",   atan(x), [-1;1]);
-a_simple_check_f32("atan_ch_10",   atan(x), [-1;1]);
-a_simple_check_f32("atan_ch_11",   atan(x), [-1;1]);
-//a_simple_check_f32("atan_ch_12",   atan(x), [-1;1]);
-//a_simple_check_f32("atan_ch_13",   atan(x), [-1;1]);
-
-// all of these are straight polynomial approx on [-1,1] so this simple lib handles
-// setting the _nterms field to 3 produces and equivalent to sheet 8.
 atan_pa = s_copy(atan_a);           // make a copy
 atan_pa._nterms   = 3;              // 3=sheet8,4=sheet9...
 atan_pa = a_build_approx(atan_pa);  // make the approx
-atan_pa._poly;                      // show polynomial
-atan_pa._infnorm;                   // max error
-atan_pa._maxpnts;                   // test vector points of max error on _a_range
 
+
+atan_ch_8  = a_mock_ex(atan_pa, ch_8);
+atan_ch_9  = a_mock_ex(atan_pa, ch_9);
+atan_ch_10 = a_mock_ex(atan_pa, ch_10);
+atan_ch_11 = a_mock_ex(atan_pa, ch_11);
+
+a_simple_check_f32("ch_8",  atan(x), [-1;1]);
+a_simple_check_f32("ch_9",  atan(x), [-1;1]);
+a_simple_check_f32("ch_10", atan(x), [-1;1]);
+a_simple_check_f32("ch_11", atan(x), [-1;1]);
+
+plotly_new_error_figure("polynomial, abs error, range=[-1,1]");
+
+page.section("Cecil Hastings, 1955");
+page.add_trace(atan_ch_8);
+page.add_trace(atan_ch_9);
+page.add_trace(atan_ch_10);
+page.add_trace(atan_ch_11);
+page.add_trace(atan_pa);
 
 // ***********************************************************************
 // Efficient Approximations for the Arctangent Function, Rajan, Wang, Inkol, Joyal, 2006
 
-/*
-atan_rwj_eq5  = single(pi/4)*x+0.285*x*(1-abs(x));
-atan_rwj_eq7  = single(pi/4)*x+0.273*x*(1-abs(x));
-atan_rwj_eq8  = single(pi/4)*x+x*(0.186982-.191942*x*x);
-atan_rwj_eq9  = single(pi/4)*x-x*(abs(x)-1)*(0.2447+.0663*abs(x));
-atan_rwj_eq10 = x/(1+.28086*x*x);
-atan_rwj_eq11 = x/(1+.28125*x*x);
 
-a_simple_check_f32("atan_rwj_eq5",  atan(x), [-1;1]);
-a_simple_check_f32("atan_rwj_eq7",  atan(x), [-1;1]);
-a_simple_check_f32("atan_rwj_eq8",  atan(x), [-1;1]);
-a_simple_check_f32("atan_rwj_eq9",  atan(x), [-1;1]);
-a_simple_check_f32("atan_rwj_eq10", atan(x), [-1;1]);
-a_simple_check_f32("atan_rwj_eq11", atan(x), [-1;1]);
+plotly_new_error_figure("polynomial, abs error, range=[-1,1]");
+
+rwj_eq5  = single(pi/4)*x+0.285*x*(1-abs(x));
+rwj_eq7  = single(pi/4)*x+0.273*x*(1-abs(x));
+rwj_eq8  = single(pi/4)*x+x*(0.186982-.191942*x*x);
+rwj_eq9  = single(pi/4)*x-x*(abs(x)-1)*(0.2447+.0663*abs(x));
+rwj_eq10 = x/(1+.28086*x*x);
+rwj_eq11 = x/(1+.28125*x*x);
+
+plotly_new_error_figure("figure 2");
+_plotly._figure._text = "bar";
+page.add_trace(atan_ch_10);
+page.add_trace(atan_ch_11);
+page.add_trace(atan_pa);
+
+plotly_new_error_figure("figure 3");
+/*
+a_simple_check_f32("rwj_eq5",  atan(x), [-1;1]);
+a_simple_check_f32("rwj_eq7",  atan(x), [-1;1]);
+a_simple_check_f32("rwj_eq8",  atan(x), [-1;1]);
+a_simple_check_f32("rwj_eq9",  atan(x), [-1;1]);
+a_simple_check_f32("rwj_eq10", atan(x), [-1;1]);
+a_simple_check_f32("rwj_eq11", atan(x), [-1;1]);
 */
 
+/*
 atan_rwj = x*(-0.1784 * abs(x) - 0.0663*x*x + 1.0301);
 a_simple_check_f32("atan_rwj",      atan(x), [-1;1]);
 
@@ -78,29 +102,23 @@ atan_r1;
 atan_r1 = a_build_approx(atan_r1);
 atan_r1;
 
-
+*/
 //atan_a._symmetry = A_SYMMETRY_ODD;  // library can deduce
 atan_a._nterms   = 4;
 //atan_a._min_type = relative;
-atan_a._func = cos(x);
+//atan_a._func = cos(x);
 atan_a = a_build_approx(atan_a);
-atan_a._poly;
-atan_a._infnorm;
-atan_a._maxpnts;
+//atan_a._poly;
+//atan_a._infnorm;
+//atan_a._maxpnts;
 //zz = dirtyfindzeros(diff(atan(x)-atan_a._poly(x)), [0;1]);
 //zz;
 //evaluate(atan(x)-atan_a._poly(x), zz[0]);
 //evaluate(atan(x)-atan_a._poly(x), zz[1]);
 
-
-
 //trace = plotly_make_trace(atan_a._poly(x)-atan(x),[-1;1],200,"atan","lines");
-//plotly_new_figure("atan approx");
-//print("*****");
 //plotly_guess_environment();
-//print("*****");
-plotly_error_in_brower(atan_a);
-display=powers!;
-atan_a._poly;
-//_plotly._pages;
+//plotly_error_in_brower(atan_a);
 
+plotly_build_pages();
+//plotly_show_html("ex_atan.html");

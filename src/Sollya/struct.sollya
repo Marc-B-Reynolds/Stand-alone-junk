@@ -1,3 +1,5 @@
+/* -*- mode: c; -*- */
+
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -33,6 +35,14 @@ procedure s_has_field(s,f)
   return parse(t);
 };
 
+// not done
+//procedure s_has_fields(l=...)
+//{
+//  var s,t,e;
+//  e = length(l);
+//};
+
+ 
 // returns a copy of 's'
 procedure s_copy(s)
 {

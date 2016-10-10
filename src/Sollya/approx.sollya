@@ -1,3 +1,5 @@
+/* -*- mode: c; -*- */
+
 // Marc B. Reynolds, 2016
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -24,6 +26,7 @@
 _a_debug = false;
 _a_library_loaded = true;
 
+suppressmessage(346);
 
 /*
 if (!isbound(__argv)) then {
@@ -73,6 +76,32 @@ procedure a_env_field(s,f)
   return parse(t);
 };
 
+
+//**************************************
+// warnings and debugging support
+
+_a_warn_once = [||];
+
+procedure a_warn_once(str)
+{
+  var r;
+
+  r = false;
+  
+  if (!is_in_list(_a_warn_once, str)) then {
+     print("WARNING:", str);
+    _a_warn_once = _a_warn_once :. str;
+   r = true;
+  };
+
+  return r;
+};
+
+procedure a_warn_once_reset()
+{
+ _a_warn_once = [||];
+};
+
 procedure a_debug_print(l)
 {
   if (_a_debug == true) then {
@@ -88,6 +117,28 @@ procedure a_env_hex_in()
 procedure a_env_hex_out()
 {
   display=decimal!;
+};
+
+procedure a_has_error(s)
+{
+  var r;
+
+  r = false;
+  
+  if (s_has_field(s, "_error")) then {
+    r = s._error != 0;
+  };
+  
+  return r;
+};
+
+// not done
+procedure a_is_valid(s)
+{
+  var r;
+  r = true;
+  
+  if (!s_has_field(s, "_error")) then { r = false; };
 };
 
 
@@ -146,6 +197,7 @@ procedure a_detect_symmetry(s)
     if (a_detect_sym_(f,ep,dx,dom)) then {
       r = A_SYMMETRY_ODD;
     } else {
+       a_warn_once("no symmetry detected..not handling this case well.");
       // TODO: could check of biased odd as well
       // (f(x)+k)+(f(-x)+k) = 2k -> f(x)/f(-x) = 1/(2k)
       //var z0,z1,x0,x1;
@@ -218,6 +270,7 @@ procedure a_bool_to_fp(is_single)
   return r;
 };
 
+// format list of binary32 and binary64
 procedure a_wp(s)
 {
   return a_bool_to_fp(s_get_field(s,"_f_fp32",true));
@@ -228,7 +281,6 @@ procedure a_fpminimax(s)
 {
   a_debug_print("a_fpminimax");
   a_debug_print(s);
-  suppressmessage(346);
   s._poly    = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
 //s._supnorm = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
   s._infnorm = single(dirtyinfnorm(s._func-s._poly, s._a_range));
@@ -236,6 +288,24 @@ procedure a_fpminimax(s)
 
   a_debug_print("a_fpminimax");
   return s;
+};
+
+procedure a_mock_ex(s,p)
+{
+  var r;
+  r = s_copy(s);
+
+  if (!s_has_field(s,"_a_range")) then {
+    a_warn_once("a_mock_ex - no reduced approximation range. Defaulting to full range.");
+    s._a_range = s._range;
+  };
+  
+  r._poly    = roundcoefficients(p, a_wp(r));
+  r._degree  = a_poly_to_degree(r._poly);
+  r._infnorm = single(dirtyinfnorm(r._func-r._poly, r._a_range));
+  r._maxpnts = list_to_f32(dirtyfindzeros(diff(r._func-r._poly), r._a_range));
+
+  return r;
 };
 
 procedure a_setup(f,r)
@@ -345,6 +415,8 @@ procedure a_build_approx(s)
   refine  = false;
   success = true;
 
+  if (s_has_field(s,"_error")) then s._error = 0;
+
   // If we don't know if odd/even/neither...figure it out
   s._symmetry = s_get_field(s, "_symmetry", -1);
 
@@ -364,6 +436,7 @@ procedure a_build_approx(s)
       s._degree = a_create_nterms(s, s._nterms);
     } else {
       success = false;
+      s._error = 1; // TODO: 
       print("ERROR: set _target_error and/or _nterms.");
     };
   };
@@ -503,6 +576,9 @@ a_decimal_digits = [|"0","1","2","3","4","5","6","7","8","9","10","11","12","13"
 //   .listing  = c-source fragment (poly only)
 //   .runnable = false if we have term gaps greater than
 //               currently handled..needs manual fix-up.
+
+// TODO: if not hex output instead output exact rationals
+// like plotly_poly_to_mathjax output.
 procedure a_poly_to_source_c(p,ivar,rvar,inset,si,sw)
 {
   var m,e,l,c,ld,d,line,ce,r,i;

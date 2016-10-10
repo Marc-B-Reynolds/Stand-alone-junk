@@ -1,3 +1,4 @@
+/* -*- mode: c; -*- */
 
 if (!isbound(_util_library_loaded)) then {
 
