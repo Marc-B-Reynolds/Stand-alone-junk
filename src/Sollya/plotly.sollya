@@ -70,9 +70,13 @@ procedure plotly_new_page(n)
     };
   };
 
+  // build into temp variable to insure there are no left-overs
+  // from previous structure.
   p._fname   = n;
   p._figs    = [||];
   p._traces  = [||];
+  p._text    = "";
+  p._num_traces = 0;
 
   _plotly._page = p;
 };
@@ -85,12 +89,40 @@ procedure _page_add_text(s)
   plotly_debug_print("  :_page_add_text");
 };
 
-// container
-page.add_text   = _page_add_text;
-page.new        = plotly_new_page;
-page.section    = proc(s) { page.add_text("<h1>" @ s @ "</h1>\n"); };
-page.subsection = proc(s) { page.add_text("<h2>" @ s @ "</h2>\n"); };
-page.add_trace  = proc(s) { plotly_add_trace(s); };
+procedure plotly_add_trace(l=...)
+{
+  var s;
+  plotly_debug_print("plotly_add_trace");
+  s = l[0];
+
+  // only add an approximation that isn't in error
+  if (!a_has_error(s)) then {
+    var pname;
+    var tnum;
+    tnum = _plotly._page._num_traces;
+
+    if (length(l) > 1) then {
+      pname = l[1];
+      if (length(l) > 2) then {
+        s._equation = l[2];
+      };
+    } else {
+      pname = "P_" @ tnum;
+    }; 
+
+    s._trace_num = tnum;    
+    _plotly._figure._latex  = _plotly._figure._latex :. pname;
+    _plotly._figure._approx = _plotly._figure._approx :. s;
+    _plotly._page._num_traces := tnum + 1;
+  } else {
+    a_warn_once("plotly_add_trace - adding an approximation with an error");
+  };
+
+  plotly_debug_print("  :plotly_add_trace");
+};
+
+
+
 
 
 
@@ -214,11 +246,12 @@ procedure plotly_poly_to_mathjax(p)
 {
   // only 
   var l,e,m,d,i, _display,xe,xm;
+
+  plotly_debug_print("plotly_to_mathjax");
+  
   l = "";
   m = a_poly_to_degree(p);
   e = length(m)-1;
-  m;
-  e;
 
   _display = display;
   display  = decimal!;
@@ -247,6 +280,7 @@ procedure plotly_poly_to_mathjax(p)
   };
 
   display  = _display!;
+  plotly_debug_print("  :plotly_to_mathjax");
 
   return l;
 };
@@ -257,7 +291,10 @@ procedure plotly_build_pages()
 {
   var e,i,_display;
 
-  plotly_debug_print("plotly_build_pages", _plotly._junk_file);
+  plotly_debug_print("plotly_build_pages");
+
+  // add last figure to page
+  _plotly_push_figure(false);  
 
   // add any current page to list
   if (s_has_field(_plotly, "_page")) then {
@@ -411,18 +448,6 @@ procedure plotly_new_func_figure(title)
 //**************************************
 // generic plot support
 
-procedure plotly_add_trace(L=...)
-{
-  var s;
-  s = L[0];
-  
-  if (!a_has_error(s)) then {
-    // TODO: name
-    _plotly._figure._approx = _plotly._figure._approx :. s;
-  } else {
-    a_warn_once("plotly_add_trace - adding an approximation with an error");
-  };
-};
 
 // KILL: do everything at page time
 procedure plotly_build_figure()
@@ -457,17 +482,24 @@ procedure _plotly_build_page(page)
 
     // user specified type
     if (s_has_field(f, "_text")) then {
-      s = s @ f._text;
+       s = s @ f._text;
     };
 
-    // show the approximation
-    s = s @ "\n<div>\\( ";
+    // show the approximation equation
+    plotly_debug_print("  approximations:");
+    s = s @ "\n<p>\n<div>\\( ";
 
     nt = length(f._approx)-1;
     for j from 0 to nt do {
-	var name;
-	name = "P_" @ j;
-      s = s @ name @ " (x)  =" @ plotly_poly_to_mathjax(f._approx[j]._poly) @ "\\\\ \n";
+      var name;
+      name = "P_" @ j;
+      name = f._latex[j];
+
+      if (!s_has_field(f._approx[j], "_equation")) then {
+        s = s @ name @ " (x)  =" @ plotly_poly_to_mathjax(f._approx[j]._poly) @ "\\\\ \n";
+      } else {
+	s = s @ name @ " (x)  =" @ f._approx[j]._equation @ "\\\\ \n";
+      };
     };
     
     s = s @ "\\)\n</div>\n";
@@ -477,19 +509,49 @@ procedure _plotly_build_page(page)
     s = s @ "\n<div id='fig" @ i @ "' style='width:" @ t @ "'></div>\n";
   };
 
+  
+   plotly_debug_print("  plot.ly:");
 
+
+  s = s @ "\n\n<script>\n";
+
+  // place all of the trace samples
   for i from 0 to e do {
     var nt;
+    var bt,a;
+
     f  = page._figs[i];
-    nt = length(f._approx);
+    nt = length(f._approx)-1;
+    //bt = 
+
     for j from 0 to nt do {
-      s = s @ j @ "\n";
+      a = f._approx[j];
+      s = s @ "  trace" @ a._trace_num @ plotly_abs_error_trace(a, f._latex[j]);
     };
   };
-  
+
+  // place all of the trace data
   for i from 0 to e do {
-    s = s @ "var data" @ i @ "= []\n";
-    s = s @ "var layout" @ i @ "= {}\n";
+    var nt;
+
+    f  = page._figs[i];
+    nt = length(f._approx)-1;
+    s  = s @ "var data" @ i @ "= [";
+
+    for j from 0 to nt do {
+      s = s @ "trace" @ f._approx[j]._trace_num;
+      if (j != nt) then { s = s @ ","; };
+    };
+    
+    s = s @ "];\n";
+  };
+
+  s = s @ "\n";
+
+  // place the layout and create the plot scripts
+  for i from 0 to e do {
+    f  = page._figs[i];
+    s = s @ "var layout" @ i @ "= {title:  'figure "@(i+1)@"'};\n";
     s = s @ "Plotly.newPlot('fig"    @ i @ "'," @ 
                             "data"   @ i @ ", " @ 
                             "layout" @ i @ ", {displaylogo: false, autosizable: true});\n";
@@ -502,3 +564,13 @@ procedure _plotly_build_page(page)
 
   plotly_debug_print("  :_plotly_build_page");
 };
+
+// container 
+page.add_text   = _page_add_text;
+page.new        = plotly_new_page;
+page.section    = proc(s)    { page.add_text("<h1>" @ s @ "</h1>\n"); };
+page.subsection = proc(s)    { page.add_text("<h2>" @ s @ "</h2>\n"); };
+page.add_trace  = plotly_add_trace;
+page.add_tex    = proc(s)    { page.add_text("\\(" @ s @ "\\)"); };
+
+page.get_trace_id = proc() { return _plotly._page._num_traces; };

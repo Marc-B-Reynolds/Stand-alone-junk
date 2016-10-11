@@ -308,6 +308,24 @@ procedure a_mock_ex(s,p)
   return r;
 };
 
+procedure a_mock_ex_fake(s,p)
+{
+  var r;
+  r = s_copy(s);
+
+  if (!s_has_field(s,"_a_range")) then {
+    a_warn_once("a_mock_ex - no reduced approximation range. Defaulting to full range.");
+    s._a_range = s._range;
+  };
+
+  r._poly    = p;
+  r._degree  = a_poly_to_degree(r._poly);
+  r._infnorm = single(dirtyinfnorm(r._func-r._poly, r._a_range));
+  r._maxpnts = list_to_f32(dirtyfindzeros(diff(r._func-r._poly), r._a_range));
+
+  return r;
+};
+
 procedure a_setup(f,r)
 {
   var s;

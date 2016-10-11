@@ -12,6 +12,17 @@ execute("../struct.sollya");
 execute("../approx.sollya");
 execute("../plotly.sollya");
 
+// ***********************************************************************
+// Configure how the scipt is to be run
+
+// define to true to output html report (data is generated regardless)
+makeReport = true;
+
+// 
+performTest = true;
+
+
+
 // set up a template structure for full range min abs error
 atan_a = a_setup(atan(x), [-1;1]);
 atan_a._min_type = absolute;          // default is relative error
@@ -20,9 +31,6 @@ atan_h = a_setup(atan(x), [0;1]);
 atan_h._min_type = absolute;
 
 
-// ***********************************************************************
-// start building an html report
-page.new("atan.html");
 
 // ***********************************************************************
 // APPROXIMATIONS FOR DIGITAL COMPUTERS, Hastings, 1955
@@ -37,7 +45,6 @@ atan_pa = s_copy(atan_a);           // make a copy
 atan_pa._nterms   = 3;              // 3=sheet8,4=sheet9...
 atan_pa = a_build_approx(atan_pa);  // make the approx
 
-
 atan_ch_8  = a_mock_ex(atan_pa, ch_8);
 atan_ch_9  = a_mock_ex(atan_pa, ch_9);
 atan_ch_10 = a_mock_ex(atan_pa, ch_10);
@@ -48,35 +55,68 @@ a_simple_check_f32("ch_9",  atan(x), [-1;1]);
 a_simple_check_f32("ch_10", atan(x), [-1;1]);
 a_simple_check_f32("ch_11", atan(x), [-1;1]);
 
-plotly_new_error_figure("polynomial, abs error, range=[-1,1]");
 
-page.section("Cecil Hastings, 1955");
-page.add_trace(atan_ch_8);
-page.add_trace(atan_ch_9);
-page.add_trace(atan_ch_10);
-page.add_trace(atan_ch_11);
-page.add_trace(atan_pa);
+if (makeReport) then  {
+  // ***********************************************************************
+  // start building an html report
+  page.new("atan.html");
+
+  // reports are associated with figures. start a new figure and
+  // all "text" added appears above it.
+  plotly_new_error_figure("figure 1");
+
+  page.section("Example report using arctangent");
+  page.add_text("This is overkill 'reporting' as demo\n");
+
+  page.subsection("Straight polynomial approximations");
+  page.add_text("All are minimizing for absolute error on range ");
+  page.add_tex("x \\in [-1,1]");
+  page.add_text(".<p>The ");
+  page.add_tex("H_n");
+  page.add_text(" polynomials are from Hasting 1955.  The ");
+  page.add_tex("S_n");
+  page.add_text(" polynomials are using the library.");
+
+  // give the traces explict names rather than default P_n
+  page.add_trace(atan_ch_8,  "H_3");
+  page.add_trace(atan_pa,    "S_3");
+  page.add_trace(atan_ch_9,  "H_4");
+  page.add_trace(atan_ch_10, "H_5");
+  page.add_trace(atan_ch_11, "H_6");
+};
+
 
 // ***********************************************************************
 // Efficient Approximations for the Arctangent Function, Rajan, Wang, Inkol, Joyal, 2006
 
+rwj_eq5  = a_mock_ex_fake(atan_pa, single(pi/4)*x+single(0.285)*x*(1-abs(x)));
+rwj_eq7  = a_mock_ex_fake(atan_pa, single(pi/4)*x+single(0.273)*x*(1-abs(x)));
+rwj_eq8  = a_mock_ex_fake(atan_pa, single(pi/4)*x+x*(single(0.186982)-single(.191942)*x*x));
+rwj_eq9  = a_mock_ex_fake(atan_pa, single(pi/4)*x-x*(abs(x)-1)*(single(0.2447)+single(.0663)*abs(x)));
 
-plotly_new_error_figure("polynomial, abs error, range=[-1,1]");
+if (makeReport) then  {
+  plotly_new_error_figure("figure 2");
+  page.subsection("Polynomial approximations with constraints");
+  page.add_text("\n");
 
-rwj_eq5  = single(pi/4)*x+0.285*x*(1-abs(x));
-rwj_eq7  = single(pi/4)*x+0.273*x*(1-abs(x));
-rwj_eq8  = single(pi/4)*x+x*(0.186982-.191942*x*x);
-rwj_eq9  = single(pi/4)*x-x*(abs(x)-1)*(0.2447+.0663*abs(x));
-rwj_eq10 = x/(1+.28086*x*x);
-rwj_eq11 = x/(1+.28125*x*x);
+  // currently no support for making TeX from non-polynomial equations,
+  // so a work-around-hack is to explitly pass it in.  
+  page.add_trace(rwj_eq5, "E_5", "" @ rwj_eq5._poly);
+  page.add_trace(rwj_eq7, "E_7", "" @ rwj_eq7._poly);
+  page.add_trace(rwj_eq8, "E_8", "" @ rwj_eq8._poly); 
+  page.add_trace(rwj_eq9, "E_9", "" @ rwj_eq9._poly);
+};
 
-plotly_new_error_figure("figure 2");
-_plotly._figure._text = "bar";
-page.add_trace(atan_ch_10);
-page.add_trace(atan_ch_11);
-page.add_trace(atan_pa);
+//rwj_eq10 = x/(1+.28086*x*x);
+//rwj_eq11 = x/(1+.28125*x*x);
 
-plotly_new_error_figure("figure 3");
+//plotly_new_error_figure("figure 2");
+//page.subsection("Rajan, Wang, Inkol, Joyal, 2006");
+//page.add_text("foo bar baz");
+//page.add_trace(atan_ch_10);
+//page.add_trace(atan_ch_11);
+//page.add_trace(atan_pa);
+
 /*
 a_simple_check_f32("rwj_eq5",  atan(x), [-1;1]);
 a_simple_check_f32("rwj_eq7",  atan(x), [-1;1]);
@@ -120,5 +160,6 @@ atan_a = a_build_approx(atan_a);
 //plotly_guess_environment();
 //plotly_error_in_brower(atan_a);
 
-plotly_build_pages();
+if (makeReport) then 
+  plotly_build_pages();
 //plotly_show_html("ex_atan.html");
