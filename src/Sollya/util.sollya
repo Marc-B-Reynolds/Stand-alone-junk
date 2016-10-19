@@ -4,6 +4,16 @@ if (!isbound(_util_library_loaded)) then {
 
 _util_library_loaded = true;
 
+procedure coeff_f32(p)
+{
+  return roundcoefficients(p,[|24...|]);
+};
+
+ procedure coeff_f64(p)
+{
+  return roundcoefficients(p,[|53...|]);
+};
+
 procedure within_dx(a,b,d)
 {
   return abs(a-b) < d;

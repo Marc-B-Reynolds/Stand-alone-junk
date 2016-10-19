@@ -13,24 +13,92 @@ execute("../approx.sollya");
 execute("../plotly.sollya");
 
 // ***********************************************************************
-// Configure how the scipt is to be run
+// Use the library to build some approximations
 
-// define to true to output html report (data is generated regardless)
-makeReport = true;
+print("creating approximations");
 
-// 
-performTest = true;
-
-
-
-// set up a template structure for full range min abs error
-atan_a = a_setup(atan(x), [-1;1]);
+// set up a template structure for full range min rel and abs error
+atan_r = a_setup(atan(x), [-1;1]);
+atan_a = s_copy(atan_r);
 atan_a._min_type = absolute;          // default is relative error
 
-atan_h = a_setup(atan(x), [0;1]);
-atan_h._min_type = absolute;
+// build an intial abs error approximation
+print("  abs error");
+atan_a2 = s_copy(atan_a);         
+atan_a2._nterms = 2;            
+atan_a2 = a_build_approx(atan_a2);
+
+// build some more approximations by adding a term to the previous
+atan_a3 = a_add_term(atan_a2);
+atan_a4 = a_add_term(atan_a3);
+atan_a5 = a_add_term(atan_a4);
+atan_a6 = a_add_term(atan_a5);
+
+// convert abs error into naive constrained end-points
+print("  abs error (simple constrained)");
+atan_c2 = a_constrain(atan_a2, 1, pi/4);
+atan_c3 = a_constrain(atan_a3, 1, pi/4);
+atan_c4 = a_constrain(atan_a4, 1, pi/4);
+atan_c5 = a_constrain(atan_a5, 1, pi/4);
+atan_c6 = a_constrain(atan_a6, 1, pi/4);
+
+print("  abs error (first term constant of one)");
+atan_ma2 = s_copy(atan_a2);
+atan_ma2._degree    = [|3|];
+atan_ma2._constrain = x;
+atan_ma2 = a_build_approx(atan_ma2);
+atan_ma3 = a_add_term(atan_ma2);
+atan_ma4 = a_add_term(atan_ma3);
+atan_ma5 = a_add_term(atan_ma4);
+atan_ma6 = a_add_term(atan_ma5);
+
+atan_mc2 = a_constrain(atan_ma2, 1, pi/4);
+atan_mc3 = a_constrain(atan_ma3, 1, pi/4);
+atan_mc4 = a_constrain(atan_ma4, 1, pi/4);
+atan_mc5 = a_constrain(atan_ma5, 1, pi/4);
+atan_mc6 = a_constrain(atan_ma6, 1, pi/4);
 
 
+// build relative error in same manner as abs
+print("  rel error");
+atan_r2 = s_copy(atan_a);           // make a copy
+atan_r2._nterms   = 2;
+atan_r2._min_type = relative;
+atan_r2 = a_build_approx(atan_r2);
+atan_r3 = a_add_term(atan_r2);
+atan_r4 = a_add_term(atan_r3);
+atan_r5 = a_add_term(atan_r4);
+atan_r6 = a_add_term(atan_r5);
+
+// convert rel error into naive constrained end-points
+print("  rel error (simple constrained)");
+atan_rc2 = a_constrain(atan_r2, 1, pi/4);
+atan_rc3 = a_constrain(atan_r3, 1, pi/4);
+atan_rc4 = a_constrain(atan_r4, 1, pi/4);
+atan_rc5 = a_constrain(atan_r5, 1, pi/4);
+atan_rc6 = a_constrain(atan_r6, 1, pi/4);
+
+print("  rel error (first term constant of one)");
+atan_mr2 = s_copy(atan_r2);
+atan_mr2._degree    = [|3|];
+atan_mr2._constrain = x;
+atan_mr2 = a_build_approx(atan_mr2);
+atan_mr3 = a_add_term(atan_mr2);
+atan_mr4 = a_add_term(atan_mr3);
+atan_mr5 = a_add_term(atan_mr4);
+atan_mr6 = a_add_term(atan_mr5);
+
+print("  rel error (first term constant of one + constrain)");
+atan_mrc2 = a_constrain(atan_mr2, 1, pi/4);
+atan_mrc3 = a_constrain(atan_mr3, 1, pi/4);
+atan_mrc4 = a_constrain(atan_mr4, 1, pi/4);
+atan_mrc5 = a_constrain(atan_mr5, 1, pi/4);
+atan_mrc6 = a_constrain(atan_mr6, 1, pi/4);
+
+
+// ***********************************************************************
+// EXTERNAL METHODS
+print("external methods");
 
 // ***********************************************************************
 // APPROXIMATIONS FOR DIGITAL COMPUTERS, Hastings, 1955
@@ -41,125 +109,144 @@ ch_9  = x*(0.999215 + x^2*(-0.3211819 + x^2*(0.1462766 - 0.0389929*x^2)));
 ch_10 = x*(0.999866 + x^2*(-0.3302995 + x^2*(0.180141 + x^2*(-0.085133 + 0.0208351*x^2))));
 ch_11 = x*(.99997726 + x^2*(-.33262347 + x^2*(.19354346 + x^2*(-.11643287 + x^2*(.05265332 + -.01172120*x^2)))));
 
-atan_pa = s_copy(atan_a);           // make a copy
-atan_pa._nterms   = 3;              // 3=sheet8,4=sheet9...
-atan_pa = a_build_approx(atan_pa);  // make the approx
-
-atan_ch_8  = a_mock_ex(atan_pa, ch_8);
-atan_ch_9  = a_mock_ex(atan_pa, ch_9);
-atan_ch_10 = a_mock_ex(atan_pa, ch_10);
-atan_ch_11 = a_mock_ex(atan_pa, ch_11);
-
-a_simple_check_f32("ch_8",  atan(x), [-1;1]);
-a_simple_check_f32("ch_9",  atan(x), [-1;1]);
-a_simple_check_f32("ch_10", atan(x), [-1;1]);
-a_simple_check_f32("ch_11", atan(x), [-1;1]);
+// temp hacky way to add an external approximation
+atan_ch_8  = a_mock_ex(atan_a3, ch_8);
+atan_ch_9  = a_mock_ex(atan_a3, ch_9);
+atan_ch_10 = a_mock_ex(atan_a3, ch_10);
+atan_ch_11 = a_mock_ex(atan_a3, ch_11);
 
 
-if (makeReport) then  {
-  // ***********************************************************************
-  // start building an html report
-  page.new("atan.html");
+// ***********************************************************************
+// http://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/
+// directly from blog post table and not from the mathematica notebook
+sl_p2r   = a_mock_ex_fake(atan_a3, 1.01991* x -0.218891 *x*abs(x));
+sl_p2a   = a_mock_ex_fake(atan_a3, 1.05863* x -0.269408 *x*abs(x));
+sl_p3r   = a_mock_ex_fake(atan_a3, 1.00536* x -0.0889206*x*abs(x) -0.135249 *x^3);
+sl_p3a   = a_mock_ex_fake(atan_a3, 1.0307*  x -0.17239  *x*abs(x) -0.0745631*x^3);
 
-  // reports are associated with figures. start a new figure and
-  // all "text" added appears above it.
-  plotly_new_error_figure("figure 1");
-
-  page.section("Example report using arctangent");
-  page.add_text("This is overkill 'reporting' as demo\n");
-
-  page.subsection("Straight polynomial approximations");
-  page.add_text("All are minimizing for absolute error on range ");
-  page.add_tex("x \\in [-1,1]");
-  page.add_text(".<p>The ");
-  page.add_tex("H_n");
-  page.add_text(" polynomials are from Hasting 1955.  The ");
-  page.add_tex("S_n");
-  page.add_text(" polynomials are using the library.");
-
-  // give the traces explict names rather than default P_n
-  page.add_trace(atan_ch_8,  "H_3");
-  page.add_trace(atan_pa,    "S_3");
-  page.add_trace(atan_ch_9,  "H_4");
-  page.add_trace(atan_ch_10, "H_5");
-  page.add_trace(atan_ch_11, "H_6");
-};
+sl_op3r  = a_mock_ex(atan_a3, coeff_f32(0.987305*x -0.211868 *x^3));
+sl_op3a  = a_mock_ex(atan_a3, coeff_f32(0.970592*x -0.190604 *x^3));
+eberly_3 = a_mock_ex(atan_a3, coeff_f32(         x -0.214602 *x^3));
+sl_op5r  = a_mock_ex(atan_a3, coeff_f32(0.998422*x -0.301029 *x^3 +0.0892423*x^5));
+sl_op5a  = a_mock_ex(atan_a3, coeff_f32(0.994792*x -0.287946 *x^3 +0.079271 *x^5));
+eberly_5 = a_mock_ex(atan_a3, coeff_f32(         x -0.301895 *x^3 +0.0872929*x^5)); 
 
 
 // ***********************************************************************
 // Efficient Approximations for the Arctangent Function, Rajan, Wang, Inkol, Joyal, 2006
 
-rwj_eq5  = a_mock_ex_fake(atan_pa, single(pi/4)*x+single(0.285)*x*(1-abs(x)));
-rwj_eq7  = a_mock_ex_fake(atan_pa, single(pi/4)*x+single(0.273)*x*(1-abs(x)));
-rwj_eq8  = a_mock_ex_fake(atan_pa, single(pi/4)*x+x*(single(0.186982)-single(.191942)*x*x));
-rwj_eq9  = a_mock_ex_fake(atan_pa, single(pi/4)*x-x*(abs(x)-1)*(single(0.2447)+single(.0663)*abs(x)));
+rwj_eq5  = a_mock_ex_fake(atan_a3, single(pi/4)*x+0.285*x*(1-abs(x)));
+rwj_eq7  = a_mock_ex_fake(atan_a3, single(pi/4)*x+0.273*x*(1-abs(x)));
+rwj_eq9  = a_mock_ex_fake(atan_a3, single(pi/4)*x-x*(abs(x)-1)*(0.2447+.0663*abs(x)));
+rwj_eq8  = a_mock_ex_fake(atan_a3, single(pi/4)*x+x*(0.186982-.191942*x*x));
 
-if (makeReport) then  {
-  plotly_new_error_figure("figure 2");
-  page.subsection("Polynomial approximations with constraints");
-  page.add_text("\n");
+md       = a_mock_ex_fake(atan_a3, x*(-0.1784 * abs(x) - 0.0663 * x^2 + 1.0301));
 
-  // currently no support for making TeX from non-polynomial equations,
-  // so a work-around-hack is to explitly pass it in.  
-  page.add_trace(rwj_eq5, "E_5", "" @ rwj_eq5._poly);
-  page.add_trace(rwj_eq7, "E_7", "" @ rwj_eq7._poly);
-  page.add_trace(rwj_eq8, "E_8", "" @ rwj_eq8._poly); 
-  page.add_trace(rwj_eq9, "E_9", "" @ rwj_eq9._poly);
-};
+// temp hack..make a TeX equation
+rwj_eq8_n  = a_constant_power_tex(pi/4, true) @ "x+x(" @ a_constant_power_tex(0.186982, true) @ "-" @ a_constant_power_tex(.191942, true) @ "x^2)";
 
-//rwj_eq10 = x/(1+.28086*x*x);
-//rwj_eq11 = x/(1+.28125*x*x);
+// not doing anything with the rational approximations ATM
+rwj_eq10 = x/(1+.28086*x*x);
+rwj_eq11 = x/(1+.28125*x*x);
 
-//plotly_new_error_figure("figure 2");
-//page.subsection("Rajan, Wang, Inkol, Joyal, 2006");
-//page.add_text("foo bar baz");
-//page.add_trace(atan_ch_10);
-//page.add_trace(atan_ch_11);
-//page.add_trace(atan_pa);
 
-/*
-a_simple_check_f32("rwj_eq5",  atan(x), [-1;1]);
-a_simple_check_f32("rwj_eq7",  atan(x), [-1;1]);
-a_simple_check_f32("rwj_eq8",  atan(x), [-1;1]);
-a_simple_check_f32("rwj_eq9",  atan(x), [-1;1]);
-a_simple_check_f32("rwj_eq10", atan(x), [-1;1]);
-a_simple_check_f32("rwj_eq11", atan(x), [-1;1]);
-*/
+// ***********************************************************************
+// start building an html report
+print("building report");
 
-/*
-atan_rwj = x*(-0.1784 * abs(x) - 0.0663*x*x + 1.0301);
-a_simple_check_f32("atan_rwj",      atan(x), [-1;1]);
+page.new("atan.html");
 
-atan_r = a_setup(x/atan(x), [0;1]);
-atan_r._nterms = 2;
-atan_r._min_type = absolute;
-atan_r0 = a_build_approx(atan_r);
+// reports are associated with figures. start a new figure and
+// all "text" added appears above it.
+plotly_new_error_figure("figure 1");
 
-//_a_debug = true;
-atan_r1 = s_copy(atan_r);
-atan_r1._degree = [|0,2|];
-atan_r1;
-atan_r1 = a_build_approx(atan_r1);
-atan_r1;
+page.section("Example report using arctangent");
+page.add_text("This is overkill 'reporting' as demo. Actual intended use is to quickly visualize a small set of approximations over the domain. The script builds the HTML and can automatically open the results in a brower. A fair number of plot traces are so close they overlay one another\n");
+page.add_text("Generated from: <a href=https://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/Sollya/examples/atan.sollya>this script</a><p>");
 
-*/
-//atan_a._symmetry = A_SYMMETRY_ODD;  // library can deduce
-atan_a._nterms   = 4;
-//atan_a._min_type = relative;
-//atan_a._func = cos(x);
-atan_a = a_build_approx(atan_a);
-//atan_a._poly;
-//atan_a._infnorm;
-//atan_a._maxpnts;
-//zz = dirtyfindzeros(diff(atan(x)-atan_a._poly(x)), [0;1]);
-//zz;
-//evaluate(atan(x)-atan_a._poly(x), zz[0]);
-//evaluate(atan(x)-atan_a._poly(x), zz[1]);
+page.add_text("The \\( P_n \\) polynomials are using the library (sollya results).<br>");
+page.add_text("The \\( H_n \\) are from Hasting 1955.<br>");
+page.add_text("The \\( R_n \\) <i>Efficient Approximations for the Arctangent Function</i> Rajan, Wang, Inkol, Joyal, 2006.<br>");
+page.add_text("The \\( E_n \\) David Eberly (via Lagarde)<br>");
+page.add_text("The \\( S_n \\) <i><a href=http://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/>Inverse trigonometric functions GPU optimization for AMD GCN architecture</a></i>, Sebastien Lagarde, 2014<br>");
+page.add_text("<br>All are binary32 input and working precision. Currently the reported numbers are not exact as they do not properly account for rounding errors.<p>Plots with many traces will have a scroll bar on the left side of the legend.");
+  
+page.subsection("polynomial: absolute error.  \\( x \\in [-1,1] \\)");
 
-//trace = plotly_make_trace(atan_a._poly(x)-atan(x),[-1;1],200,"atan","lines");
-//plotly_guess_environment();
-//plotly_error_in_brower(atan_a);
+// give the external traces explict names rather than default P_n
+page.add_trace(atan_ma2);
+page.add_trace(atan_a2);
+page.add_trace(sl_p2a, "S_{2ea}");
+page.add_trace(rwj_eq8,    "R_8", rwj_eq8_n);
+page.add_trace(sl_p3a, "S_{3ea}");
+page.add_trace(sl_op3a,    "S_{3a}");
+page.add_trace(atan_ma3);
+page.add_trace(atan_ch_8,  "H_3");
+page.add_trace(atan_ma3);
+page.add_trace(atan_a3);
+page.add_trace(sl_op5a,    "S_{5a}");
+page.add_trace(atan_ch_9,  "H_4");
+page.add_trace(atan_ma4);
+page.add_trace(atan_a4);
+page.add_trace(atan_ch_10, "H_5");
+page.add_trace(atan_ma5);
+page.add_trace(atan_a5);
+page.add_trace(atan_ch_11, "H_6");
+page.add_trace(atan_ma6);
+page.add_trace(atan_a6);
 
-if (makeReport) then 
-  plotly_build_pages();
-//plotly_show_html("ex_atan.html");
+plotly_new_error_figure("figure 3");
+page.subsection("polynomial: relative error  \\( x \\in [-1,1] \\)");
+page.add_trace(sl_p2r, "S_{2er}");
+page.add_trace(atan_mr2);
+page.add_trace(atan_r2);
+page.add_trace(sl_op3r, "S_{3r}");
+page.add_trace(sl_p3r, "S_{3er}");
+page.add_trace(atan_mr3);
+page.add_trace(atan_r3);
+page.add_trace(sl_op5r, "S_{5r}");
+page.add_trace(atan_mr4);
+page.add_trace(atan_r4);
+page.add_trace(atan_mr5);
+page.add_trace(atan_r5);
+page.add_trace(atan_mr6);
+page.add_trace(atan_r6);
+
+plotly_new_error_figure("figure 2");
+page.subsection("absolute error: exact endpoints. \\( x \\in [-1,1] \\)");
+page.add_text("The library versions are using a hack ATM: Fix up final coefficient");
+
+// currently no support for making TeX from non-polynomial equations,
+// so a work-around-hack is to explitly pass it in.  
+page.add_trace(eberly_3,"E_3");
+page.add_trace(rwj_eq5, "R_5", "" @ rwj_eq5._poly);
+page.add_trace(rwj_eq7, "R_7", "" @ rwj_eq7._poly);
+page.add_trace(atan_mc2);
+page.add_trace(atan_c2);
+page.add_trace(rwj_eq9, "R_9", "" @ rwj_eq9._poly);
+page.add_trace(eberly_5,"E_5");
+page.add_trace(atan_mc3);
+page.add_trace(atan_c3);
+page.add_trace(atan_mc4);
+page.add_trace(atan_c4);
+page.add_trace(atan_mc5);
+page.add_trace(atan_c5);
+page.add_trace(atan_mc6);
+page.add_trace(atan_c6);
+
+plotly_new_error_figure("figure 2");
+page.subsection("relative error: with exact endpoints. \\( x \\in [-1,1] \\)");
+page.add_trace(atan_mrc2);
+page.add_trace(atan_rc2);
+page.add_trace(md, "M_3");
+page.add_trace(atan_mrc3);
+page.add_trace(atan_rc3);
+page.add_trace(atan_mrc4);
+page.add_trace(atan_rc4);
+page.add_trace(atan_mrc5);
+page.add_trace(atan_rc5);
+page.add_trace(atan_mrc6);
+page.add_trace(atan_rc6);
+
+plotly_build_pages();
+plotly_show_html("atan.html");  // automatically open the result

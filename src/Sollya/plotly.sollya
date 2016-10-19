@@ -9,7 +9,15 @@
 _plotly._html_header = "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Plot</title>" @
                        "<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>"     @
                        "<script type='text/javascript' src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>" @
-                       "</head><body>\n";
+                       "</head><body>\n" @
+  "<style>body{margin:auto;padding:15px;text-align:justify;line-height:140%; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-size:14px;font-smoothing:antialiased;color:#222;" @
+   "font-family:Roboto, sans-serif;" @
+  "}</style><style>h1{border-bottom: 2px solid #666; color: #333; padding: 20px 0 8px }</style><style>h2{border-bottom: 1px solid #888; color: #555; padding: 20px 0 4px }</style></style><style>div.funclist{font-size: 12px}</style>";
+
+
+//<script type='text/x-mathjax-config'>MathJax.Hub.Config({ TeX: { equationNumbers: {autoNumber: 'AMS'} } });</script>";
+
+  
 _plotly._html_footer = "</body></html>";
 
 _plotly._round_digits = 12;       // number of binary digits to round to
@@ -20,8 +28,8 @@ _plotly._pages = [||];            // list of pages being built
 _plotly._points           = 400;
 _plotly._junk_file        = "junk.html";
 
-_plotly._fig_width        = "100%";
-_plotly._tickformat_x     = "";
+_plotly._fig_width        = "80%";
+_plotly._tickformat_x     = "e";
 _plotly._tickformat_y     = "";
 _plotly._ticks_x          = 4;
 _plotly._ticks_y          = 4;
@@ -107,7 +115,7 @@ procedure plotly_add_trace(l=...)
         s._equation = l[2];
       };
     } else {
-      pname = "P_" @ tnum;
+      pname = "P_{" @ tnum @ "}";
     }; 
 
     s._trace_num = tnum;    
@@ -242,12 +250,12 @@ procedure plotly_add_error_trace(s)
 
 
 // returns an inline string of polynomial 'p' using exactly representable coefficients
-procedure plotly_poly_to_mathjax(p)
+procedure plotly_poly_to_tex(p)
 {
   // only 
   var l,e,m,d,i, _display,xe,xm;
 
-  plotly_debug_print("plotly_to_mathjax");
+  plotly_debug_print("plotly_to_tex");
   
   l = "";
   m = a_poly_to_degree(p);
@@ -256,31 +264,38 @@ procedure plotly_poly_to_mathjax(p)
   _display = display;
   display  = decimal!;
 
-  for i from e to 0 by -1 do {
-    d = m[i];
-    c = coeff(p,d);
-    xe = exponent(c);
-    xm = mantissa(c);
+  if (e != -1) then {
+    for i from e to 0 by -1 do {
+      d = m[i];
+      c = coeff(p,d);
+      xe = exponent(c);
+      xm = mantissa(c);
 
-    if (d > 1) then {
-      l = " x^{" @ d @ "}" @ l;
-    } else if (d == 1) then {
-      l = " x" @ l;
+      if (d > 1) then {
+        l = " x^{" @ d @ "}" @ l;
+      } else if (d == 1) then {
+        l = " x" @ l;
+      };
+
+      if (xe != 0) then {
+        l = " \\times 2^{" @ xe @ "}" @ l;
+      };
+
+      if (xm != 1 || e == 0) then {
+         l = xm @ l;
+      };
+
+      if (c >= 0 && i != 0) then {
+        l = "+" @ l;
+      };
     };
-
-    if (xe != 0) then {
-      l = " \\times 2^{" @ xe @ "}" @ l;
-    };
-
-    l = xm @ l;
-
-    if (c >= 0 && i != 0) then {
-      l = "+" @ l;
-    };
+  } else {
+    print("  :WARNING: plotly_to_tex - not a straight polynomial", p);
+    l = "" @ p;
   };
 
   display  = _display!;
-  plotly_debug_print("  :plotly_to_mathjax");
+  plotly_debug_print("  :plotly_to_tex");
 
   return l;
 };
@@ -327,7 +342,7 @@ procedure plotly_build_pages()
 // temp hack
 procedure plotly_approx_to_tex(s, name)
 {
-  return "\n \\( " @ name @ " (x)  =" @ plotly_poly_to_mathjax(s._poly) @ "\\\\ \\)";
+  return "\n \\( " @ name @ " (x)  =" @ plotly_poly_to_tex(s._poly) @ "\\\\ \\)";
 };
 
 // open up a brower tab with the error plot of 's'
@@ -426,7 +441,7 @@ procedure _plotly_new_figure_setup(title)
   // new structure to insure everthing's reset
   f._title   = title;  // title for figure
   f._approx = [||];    // list of approximations
-  f._latex  = [||];    // list of MathJAX names per approximation
+  f._latex  = [||];    // list of Tex names per approximation
   _plotly._figure = f;
 };
 
@@ -487,22 +502,22 @@ procedure _plotly_build_page(page)
 
     // show the approximation equation
     plotly_debug_print("  approximations:");
-    s = s @ "\n<p>\n<div>\\( ";
+    s = s @ "\n<p>\n<div class='funclist'>\\( \\begin{align}\n";
 
     nt = length(f._approx)-1;
     for j from 0 to nt do {
       var name;
-      name = "P_" @ j;
       name = f._latex[j];
 
       if (!s_has_field(f._approx[j], "_equation")) then {
-        s = s @ name @ " (x)  =" @ plotly_poly_to_mathjax(f._approx[j]._poly) @ "\\\\ \n";
+	  //s = s @ name @ " (x) & =" @ plotly_poly_to_tex(f._approx[j]._poly) @ " \\label{eq" @ f._approx[j]._trace_num @  "} \\\\ \n";
+	s = s @ name @ " (x) & =" @ plotly_poly_to_tex(f._approx[j]._poly) @  "\\\\ \n";
       } else {
-	s = s @ name @ " (x)  =" @ f._approx[j]._equation @ "\\\\ \n";
+	s = s @ name @ " (x) & =" @ f._approx[j]._equation @ "\\\\ \n";
       };
     };
     
-    s = s @ "\\)\n</div>\n";
+    s = s @ "\\end{align} \\)\n</div>\n";
 
     // place the figure
     t = s_get_string_field(f, "_fig_width", _plotly._fig_width);
@@ -519,6 +534,9 @@ procedure _plotly_build_page(page)
   for i from 0 to e do {
     var nt;
     var bt,a;
+    var func;
+
+    func = plotly_abs_error_trace;
 
     f  = page._figs[i];
     nt = length(f._approx)-1;
@@ -526,7 +544,7 @@ procedure _plotly_build_page(page)
 
     for j from 0 to nt do {
       a = f._approx[j];
-      s = s @ "  trace" @ a._trace_num @ plotly_abs_error_trace(a, f._latex[j]);
+      s = s @ "  trace" @ a._trace_num @ func(a, f._latex[j]);
     };
   };
 

@@ -281,7 +281,13 @@ procedure a_fpminimax(s)
 {
   a_debug_print("a_fpminimax");
   a_debug_print(s);
-  s._poly    = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
+
+  if (!s_has_field(s,"_constrain")) then {
+    s._poly = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type);
+  } else {
+    s._poly = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type, s._constrain);
+  };
+    
 //s._supnorm = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
   s._infnorm = single(dirtyinfnorm(s._func-s._poly, s._a_range));
   s._maxpnts = list_to_f32(dirtyfindzeros(diff(s._func-s._poly), s._a_range));
@@ -423,6 +429,57 @@ procedure a_narrow_range(s)
   return nr;
 };
 
+// Add a constraint that f(n) = v. This simply replaces
+// the final term of the polynomial, so the result is
+// sub-optimal.
+// TODO: broken for n!=1 sigh
+procedure a_constrain(s,n,v)
+{
+  var p,r,m,e,f;
+
+  r = s_copy(s);
+  p = s._poly;
+
+  if (n != 1) then {
+    print("  :ERROR: a_constraint - n != 1 needs to be fixed");
+  };
+
+  // choose the function to insure proper rounding
+  if (s._w_fp32) then {
+    f = proc(n) { return single(n); };
+  } else {
+    f = proc(n) { return double(n); };
+  };
+
+  m = a_poly_to_degree(p);
+  e = length(m)-1;
+
+  if (e != -1) then {
+    var o,d,c,s,i;
+    o = p;
+    d = m[0];
+    c = f(coeff(p,d));
+    s = c;
+    p = c*x^d;
+      
+    for i from 1 to e-1 do {
+      d = m[i];
+      c = f(coeff(o,d));
+      p = p + c*x^d;
+      s := s+c;
+    };
+
+    d = m[e];
+    p = p + f((v/n)-s)*x^d;
+  } else {
+    print("  :ERROR: a_constraint - not a straight polynomial", p);
+    p = p;
+  };
+
+  r._poly = p;
+
+  return r;
+};
 
 procedure a_build_approx(s)
 {
@@ -466,7 +523,7 @@ procedure a_build_approx(s)
     s._a_range = a_narrow_range(s);
   };
 
-  if (s_has_field(s,"_degree") == true && success == true && s._a_range != [||]) then {
+  if (s_has_field(s,"_degree") && success == true && s._a_range != [||]) then {
     s = a_fpminimax(s);
   };
 
@@ -479,7 +536,7 @@ procedure a_build_approx(s)
 };
 
 // returns a copy of 's' with one more product
-procedure a_term_add(s)
+procedure a_add_term(s)
 {
   var S;
 
@@ -506,7 +563,7 @@ procedure a_term_add(s)
 
 
 // returns a copy of 's' with one less product
-procedure a_term_sub(s)
+procedure a_sub_term(s)
 {
   var S;
 
@@ -542,7 +599,7 @@ procedure a_to_target_bound(s)
   if (s._infnorm < te) then {
     while (done > 0) do {
       t  = hi;
-      hi = a_term_sub(hi);
+      hi = a_sub_term(hi);
       lo = t;
       done := done-1;
       
@@ -553,7 +610,7 @@ procedure a_to_target_bound(s)
   } else {
     while (done > 0) do {
       t  = lo;
-      lo = a_term_add(lo);
+      lo = a_add_term(lo);
       hi = t;
       done := done-1;
       
@@ -596,7 +653,7 @@ a_decimal_digits = [|"0","1","2","3","4","5","6","7","8","9","10","11","12","13"
 //               currently handled..needs manual fix-up.
 
 // TODO: if not hex output instead output exact rationals
-// like plotly_poly_to_mathjax output.
+// like plotly_poly_to_tex output.
 procedure a_poly_to_source_c(p,ivar,rvar,inset,si,sw)
 {
   var m,e,l,c,ld,d,line,ce,r,i;
@@ -681,6 +738,64 @@ procedure a_poly_to_source_c(p,ivar,rvar,inset,si,sw)
   r._runnable = runnable;
 
   return r;
+};
+
+// helper function for exact rationals
+procedure a_constant_rational(c, fp32)
+{
+  var n,d;
+  var r;
+
+  // insure constant is properly rounded to required precision
+  if (fp32) then {
+    c = single(c);
+  } else {
+    c = double(c);
+  };
+
+  r.n = mantissa(c);
+  r.d = 2^(-exponent(c));
+
+  return r;
+};
+
+// returns \frac{num}{dem}
+procedure a_constant_power_tex(c, fp32)
+{
+  // insure constant is properly rounded to required precision
+  if (fp32) then {
+    c = single(c);
+  } else {
+    c = double(c);
+  };
+  
+  return mantissa(c) @  "\\times 2^{" @ exponent(c) @ "}";
+};
+
+// returns \frac{num}{dem}
+procedure a_constant_rational_tex(c, fp32)
+{
+  var r;
+  r = a_constant_rational(c, fp32);
+  return "\\frac{" @ r.n @  "}{" @ r.d @ "}";
+};
+
+// returns (num/dem)
+procedure a_constant_rational_c(c, fp32)
+{
+  var r,s;
+  r = a_constant_rational(c, fp32);
+
+  // TODO: should be verifing that the output is
+  // exactly representable.
+  
+  if (fp32) then {
+    s = ".f";
+  } else {
+    s = ".0";
+  };
+  
+  return "(" @ r.n @ s @ "/" @ r.d @ s @ ")";
 };
 
 procedure a_make_listing(s)
