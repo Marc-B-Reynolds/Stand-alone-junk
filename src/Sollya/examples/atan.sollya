@@ -12,6 +12,9 @@ execute("../struct.sollya");
 execute("../approx.sollya");
 execute("../plotly.sollya");
 
+// temp hack..html is too big for a gist
+_plotly._points = 200;
+
 // ***********************************************************************
 // Use the library to build some approximations
 
@@ -169,16 +172,16 @@ page.add_text("The \\( H_n \\) are from Hasting 1955.<br>");
 page.add_text("The \\( R_n \\) <i>Efficient Approximations for the Arctangent Function</i> Rajan, Wang, Inkol, Joyal, 2006.<br>");
 page.add_text("The \\( E_n \\) David Eberly (via Lagarde)<br>");
 page.add_text("The \\( S_n \\) <i><a href=http://seblagarde.wordpress.com/2014/12/01/inverse-trigonometric-functions-gpu-optimization-for-amd-gcn-architecture/>Inverse trigonometric functions GPU optimization for AMD GCN architecture</a></i>, Sebastien Lagarde, 2014<br>");
-page.add_text("<br>All are binary32 input and working precision. Currently the reported numbers are not exact as they do not properly account for rounding errors.<p>Plots with many traces will have a scroll bar on the left side of the legend.");
+page.add_text("<br>All are binary32 input and working precision. Currently the reported numbers are not exact as they do not properly account for rounding errors.<p>Plots with many traces will have a scroll bar on the left side of the legend.<p>NOTE: the range of this example is not reasonable, see <a href=https://basesandframes.wordpress.com/2016/05/17/faster-math-functions><i>Faster Math Functions</i> (part 2, page 35), Robin Green, 2001</a>");
   
 page.subsection("polynomial: absolute error.  \\( x \\in [-1,1] \\)");
 
 // give the external traces explict names rather than default P_n
 page.add_trace(atan_ma2);
 page.add_trace(atan_a2);
-page.add_trace(sl_p2a, "S_{2ea}");
+page.add_trace(sl_p2a,     "S_{2ea}");
 page.add_trace(rwj_eq8,    "R_8", rwj_eq8_n);
-page.add_trace(sl_p3a, "S_{3ea}");
+page.add_trace(sl_p3a,     "S_{3ea}");
 page.add_trace(sl_op3a,    "S_{3a}");
 page.add_trace(atan_ma3);
 page.add_trace(atan_ch_8,  "H_3");
@@ -197,11 +200,11 @@ page.add_trace(atan_a6);
 
 plotly_new_error_figure("figure 3");
 page.subsection("polynomial: relative error  \\( x \\in [-1,1] \\)");
-page.add_trace(sl_p2r, "S_{2er}");
+page.add_trace(sl_p2r,  "S_{2er}");
 page.add_trace(atan_mr2);
 page.add_trace(atan_r2);
 page.add_trace(sl_op3r, "S_{3r}");
-page.add_trace(sl_p3r, "S_{3er}");
+page.add_trace(sl_p3r,  "S_{3er}");
 page.add_trace(atan_mr3);
 page.add_trace(atan_r3);
 page.add_trace(sl_op5r, "S_{5r}");

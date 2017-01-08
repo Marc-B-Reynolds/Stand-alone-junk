@@ -70,6 +70,9 @@ procedure to_csv_string(l=...)
   return s;
 };
 
+u_round_f32 = proc(n) { return single(n); };
+u_round_f64 = proc(n) { return double(n); };
+
 // make a copy of list with f applied
 procedure list_apply(l,f)
 {
@@ -87,14 +90,17 @@ procedure list_apply(l,f)
 
 
 // make a copy of list as binary32
-procedure list_to_f32(l)
+procedure list_to_f32(l) { return list_apply(l, u_round_f32); };
+
+ // make a copy of list as binary64
+procedure list_to_f64(l)
 {
   var r,v,i;
 
   r = [||];
 
   for i from 0 to length(l)-1 do {
-   v := single(l[i]);
+   v := double(l[i]);
    r  = r :. v;
   };
 

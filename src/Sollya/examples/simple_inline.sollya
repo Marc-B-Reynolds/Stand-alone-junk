@@ -1,5 +1,0 @@
-
-// load the library
-execute("util.sollya");
-execute("struct.sollya");
-execute("approx.sollya");

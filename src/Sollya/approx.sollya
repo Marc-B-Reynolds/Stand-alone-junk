@@ -270,10 +270,26 @@ procedure a_bool_to_fp(is_single)
   return r;
 };
 
+
+procedure a_round_func(is_single)
+{
+  var r;
+  
+  if (is_single != false) then {
+    r = a_round_f32;
+  }
+  else {
+    r = a_round_f64;
+  };
+  return r;
+};
+
+
+
 // format list of binary32 and binary64
 procedure a_wp(s)
 {
-  return a_bool_to_fp(s_get_field(s,"_f_fp32",true));
+  return a_bool_to_fp(s_get_field(s,"_w_fp32",true));
 };
 
 
@@ -288,9 +304,10 @@ procedure a_fpminimax(s)
     s._poly = fpminimax(s._func, s._degree, a_wp(s), s._a_range, floating, s._min_type, s._constrain);
   };
     
-//s._supnorm = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
-  s._infnorm = single(dirtyinfnorm(s._func-s._poly, s._a_range));
-  s._maxpnts = list_to_f32(dirtyfindzeros(diff(s._func-s._poly), s._a_range));
+//s._supnorm  = supnorm(s._poly, s._func, s._a_range, s._min_type, 2^-128);
+  s._infnorm  = single(dirtyinfnorm(s._func-s._poly, s._a_range));
+  s._maxpnts  = list_to_f32(dirtyfindzeros(diff(s._func-s._poly), s._a_range));
+  s._zeropnts = list_to_f32(dirtyfindzeros(s._func-s._poly,       s._a_range));
 
   a_debug_print("a_fpminimax");
   return s;
@@ -306,10 +323,11 @@ procedure a_mock_ex(s,p)
     s._a_range = s._range;
   };
   
-  r._poly    = roundcoefficients(p, a_wp(r));
-  r._degree  = a_poly_to_degree(r._poly);
-  r._infnorm = single(dirtyinfnorm(r._func-r._poly, r._a_range));
-  r._maxpnts = list_to_f32(dirtyfindzeros(diff(r._func-r._poly), r._a_range));
+  r._poly     = roundcoefficients(p, a_wp(r));
+  r._degree   = a_poly_to_degree(r._poly);
+  r._infnorm  = single(dirtyinfnorm(r._func-r._poly, r._a_range));
+  r._maxpnts  = list_to_f32(dirtyfindzeros(diff(r._func-r._poly), r._a_range));
+  r._zeropnts = list_to_f32(dirtyfindzeros(s._func-s._poly,       s._a_range));
 
   return r;
 };
@@ -738,6 +756,19 @@ procedure a_poly_to_source_c(p,ivar,rvar,inset,si,sw)
   r._runnable = runnable;
 
   return r;
+};
+
+procedure a_to_inline_f32(S,name)
+{
+  var s;
+  
+  s = "static inline float " @ name @ "(float x) {\n" @
+    a_poly_to_source_c(S._poly,"x","r",2,true,true)._listing @
+    "  return r;\n}\n";
+
+  s = "// abs error = " @ S._infnorm @ "\n" @ s;
+
+  return s;
 };
 
 // helper function for exact rationals
