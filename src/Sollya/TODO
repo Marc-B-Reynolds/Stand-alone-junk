@@ -1,0 +1,11 @@
+This is very hacky. List of things I'll probably never get around to
+
+Approximations (approx.sollya)
+* improve and extend approx with constraints
+
+HTML plotting (plotly.sollya)
+* emit javascript to generate and share 'x' coord of error plots with
+  the same range and sample points
+* make the TeX function configurable (rational vs integer x 2^e) code
+  is already in approx.sollya
+  

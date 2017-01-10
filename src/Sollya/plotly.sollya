@@ -568,9 +568,11 @@ procedure _plotly_build_page(page)
 
   // place the layout and create the plot scripts
   for i from 0 to e do {
+    var ft;
     f  = page._figs[i];
-    s = s @ "var layout" @ i @ "= {title:  'figure "@(i+1)@"'};\n";
-    s = s @ "Plotly.newPlot('fig"    @ i @ "'," @ 
+    ft = "'" @ f._title @ "'"; //"'figure " @ (i+1) @ "'";
+    s  = s @ "var layout" @ i @ "= {title:  " @ ft @  "};\n";
+    s  = s @ "Plotly.newPlot('fig"    @ i @ "'," @ 
                             "data"   @ i @ ", " @ 
                             "layout" @ i @ ", {displaylogo: false, autosizable: true});\n";
   };

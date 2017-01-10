@@ -1,6 +1,8 @@
+// Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
 // http://marc-b-reynolds.github.io/math/2017/01/08/SquareDisc.html
+// Scalar only, more toward clairty than performance
 
 #include <stdint.h>
 #include <stdio.h>
@@ -8,7 +10,7 @@
 #include <x86intrin.h>
 #include <math.h>
 
-// xoroshiro128+
+// external code: xoroshiro128+
 
 uint64_t rng_state[2];
 
@@ -52,8 +54,8 @@ static inline float rng_f32(void)
   return (rng_u64() >> 40)*TO_FP32;
 }
 
-// simple defs
-typedef union { struct{ float x,y; }; float f[2];  } vec2_t;
+// simple defs (union not actually used)
+typedef union { struct{ float x,y; }; float f[2]; } vec2_t;
 
 void vec2_printa(vec2_t* v)
 {
@@ -76,10 +78,13 @@ void ln()
   printf("\n");
 }
 
-// 
+// for quickly/first-pass hacking in arch specific junk
+// !!!!!! the recip hurts performance w current gcc/clang..
+//        actually does the 1/x and product...sigh.
 static inline float sgn(float x) { return x >= 0.f ? 1.f : -1.f; }
 static inline float mulsgn(float x, float v) { return x >= 0.f ? v : -v; }
 static inline float rsqrt(float v) { return 1.f/sqrtf(v); }
+static inline float recip(float v) { return 1.f/v; }
 
 // 
 
@@ -107,7 +112,8 @@ void map_rs_ds(vec2_t* d, vec2_t* s)
   float x2 = x*x;
   float y2 = y*y;
   float m  = x2 > y2 ? x : y;
-  m = sqrtf(x2+y2)/(fabsf(m)+EPS);
+  float r  = recip(fabsf(m)+EPS);
+  m = sqrtf(x2+y2)*r;
   d->x = m*x;
   d->y = m*y;
 }
@@ -121,14 +127,16 @@ void map_con_sd(vec2_t* d, vec2_t* s)
   float t;
 
   if (fabsf(x) > fabsf(y)) {
-    t = sinf(0.25f*PI*(y/x));
-    d->x = x*sqrtf(1.f-t*t);
+    float r = recip(x);
+    t = sinf(0.25f*PI*(y*r));
+    d->x = x*sqrtf(1.f-t*t); // longer dep-chain this way (showing correctness)
     d->y = x*t;
   }
   else {
-    t = sinf(0.25f*PI*(x/(y+EPS)));
+    float r = recip(y+EPS);
+    t = sinf(0.25f*PI*(x*r));
     d->x = y*t;
-    d->y = y*sqrtf(1.f-t*t);
+    d->y = y*sqrtf(1.f-t*t);   // ditto
   }
 }
 
@@ -142,14 +150,40 @@ void map_con_ds(vec2_t* d, vec2_t* s)
   float m  = sqrtf(x2+y2);
 
   if (x2 > y2) {
+    float r = recip(fabs(x));
     d->x = mulsgn(x, m);
-    d->y = m*(4*RPI)*atanf(y/fabs(x));
+    d->y = m*(4*RPI)*atanf(y*r);
   }
   else {
-    d->x = m*(4*RPI)*atan(x/(fabsf(y)+EPS));
+    float r = recip((fabsf(y)+EPS));
+    d->x = m*(4*RPI)*atanf(x*r);
     d->y = mulsgn(y, m);
   }
 }
+
+// sin(pi*x/4): order-3, end-point constrained, min-abs-err on [-1,1]
+float ssin_a2(float x) { return x*(25711.f/32768.f-x*x*5202995.f/67108864.f); }
+
+void map_con_sd_a2(vec2_t* d, vec2_t* s)
+{
+  float x = s->x;
+  float y = s->y;
+  float t;
+
+  if (fabsf(x) > fabsf(y)) {
+    float r = recip(x);
+    t = ssin_a2(y*r);
+    d->x = x*sqrtf(1.f-t*t);
+    d->y = x*t;
+  }
+  else {
+    float r = recip(y+EPS);
+    t = ssin_a2(x*r);
+    d->x = y*t;
+    d->y = y*sqrtf(1.f-t*t);
+  }
+}
+
 
 
 //****** approximate equal area
@@ -157,16 +191,18 @@ void map_con_ds(vec2_t* d, vec2_t* s)
 // square->disc
 void map_aea_sd(vec2_t* d, vec2_t* s)
 {
-  float x2 = s->x*s->x;
-  float y2 = s->y*s->y;
+  float x  = s->x;
+  float y  = s->y;
+  float x2 = x*x;
+  float y2 = y*y;
 
   if (x2 > y2) {
-    float m = sgn(s->x);
-    d->y = 0.5f*SQRT2*s->y;
+    float m = sgn(x);
+    d->y = 0.5f*SQRT2*y;
     d->x = m*sqrtf(x2-0.5f*y2);
   } else {
-    float m = sgn(s->y);
-    d->x = 0.5f*SQRT2*s->x;
+    float m = sgn(y);
+    d->x = 0.5f*SQRT2*x;
     d->y = m*sqrtf(y2-0.5f*x2);
   }
 }
@@ -174,19 +210,23 @@ void map_aea_sd(vec2_t* d, vec2_t* s)
 // disc->square
 void map_aea_ds(vec2_t* d, vec2_t* s)
 {
-  float x2 = s->x*s->x;
-  float y2 = s->y*s->y;
+  float x  = s->x;
+  float y  = s->y;
+  float x2 = x*x;
+  float y2 = y*y;
   float m  = sqrtf(x2+y2);
 
   if (x2 > y2) {
-    d->y = SQRT2*s->y;
-    d->x = mulsgn(s->x, m);
+    d->y = SQRT2*y;
+    d->x = mulsgn(x, m);
   } else {
-    d->x = SQRT2*s->x;
-    d->y = mulsgn(s->y, m);
+    d->x = SQRT2*x;
+    d->y = mulsgn(y, m);
   }
 }
 
+// Silly little round-trip test and spew out max sum-of-abs-diff as seen.
+// Only purpose is to catch bad translation of math to code.
 void test()
 {
   float max = ULP1;
@@ -195,8 +235,8 @@ void test()
     vec2_t p,d,r,diff;
     p.x = 2.f*rng_f32()-1.f;
     p.y = 2.f*rng_f32()-1.f;
-    map_con_ds(&d,&p);
-    map_con_sd(&r,&d);
+    map_con_sd_a2(&d,&p);
+    map_con_ds(&r,&d);
     vec2_sub(&diff, &p, &r);
 
     float t = fabs(diff.x)+fabs(diff.y);

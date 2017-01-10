@@ -790,7 +790,7 @@ procedure a_constant_rational(c, fp32)
   return r;
 };
 
-// returns \frac{num}{dem}
+// returns fp as: i \time 2^{e}
 procedure a_constant_power_tex(c, fp32)
 {
   // insure constant is properly rounded to required precision
@@ -803,7 +803,7 @@ procedure a_constant_power_tex(c, fp32)
   return mantissa(c) @  "\\times 2^{" @ exponent(c) @ "}";
 };
 
-// returns \frac{num}{dem}
+// returns fp as: \frac{num}{dem}
 procedure a_constant_rational_tex(c, fp32)
 {
   var r;

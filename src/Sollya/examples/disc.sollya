@@ -1,0 +1,90 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2017
+// Public Domain under http://unlicense.org, see link for details.
+
+// sin(pi/4 x), cos(pi/4 x), 4 atan(x)/pi for x on [-1,1],
+// no range reduction for atan.
+
+// make html plots of approximations
+
+//verbosity=10;
+
+// load the library
+execute("../util.sollya");
+execute("../struct.sollya");
+execute("../approx.sollya");
+execute("../plotly.sollya");
+
+// temp hack..html is too big for a gist
+_plotly._points = 200;
+
+// setup functions to approximate
+sin_2  = a_setup(sin((pi/4)*x),  [-1;1]);
+sin_2._nterms = 2;            
+
+cos_2  = a_setup(cos((pi/4)*x),  [-1;1]);
+cos_2._nterms = 2;            
+
+print("creating sin");
+sin_2 = a_build_approx(sin_2);
+sin_3 = a_add_term(sin_2);
+sin_4 = a_add_term(sin_3);
+
+sin_2c = a_constrain(sin_2, 1, sqrt(2)/2);
+sin_3c = a_constrain(sin_3, 1, sqrt(2)/2);
+sin_4c = a_constrain(sin_4, 1, sqrt(2)/2);
+
+print("creating cos");
+cos_2 = a_build_approx(cos_2);
+cos_3 = a_add_term(cos_2);
+cos_4 = a_add_term(cos_3);
+
+cos_2c = a_constrain(cos_2, 1, sqrt(2)/2);
+cos_3c = a_constrain(cos_3, 1, sqrt(2)/2);
+cos_4c = a_constrain(cos_4, 1, sqrt(2)/2);
+
+print("building report");
+
+page.new("disc.html");
+
+plotly_new_error_figure("~sin(pi x/4)");
+page.section("Approximation of sin");
+
+page.add_trace(sin_2c);
+page.add_trace(sin_2);
+page.add_trace(sin_3c);
+page.add_trace(sin_3);
+page.add_trace(sin_4c);
+page.add_trace(sin_4);
+
+plotly_new_error_figure("~cos(pi x/4)");
+page.section("Approximation of cos");
+page.add_trace(cos_2c);
+page.add_trace(cos_2);
+page.add_trace(cos_3c);
+page.add_trace(cos_3);
+page.add_trace(cos_4c);
+page.add_trace(cos_4);
+
+plotly_build_pages();
+plotly_show_html("disc.html");  // automatically open the result
+
+print("making listings");
+
+a_to_inline_f32(sin_2,  "sin2");
+a_to_inline_f32(sin_2c, "sin2c");
+a_to_inline_f32(sin_3,  "sin3");
+a_to_inline_f32(sin_3c, "sin3c");
+a_to_inline_f32(sin_4,  "sin4");
+a_to_inline_f32(sin_4c, "sin4c");
+
+a_to_inline_f32(cos_2,  "cos2");
+a_to_inline_f32(cos_2c, "cos2c");
+a_to_inline_f32(cos_3,  "cos3");
+a_to_inline_f32(cos_3c, "cos3c");
+a_to_inline_f32(cos_4,  "cos4");
+a_to_inline_f32(cos_4c, "cos4c");
+
+
+
