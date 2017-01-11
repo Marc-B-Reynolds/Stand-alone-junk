@@ -3,7 +3,7 @@
 // Marc B. Reynolds, 2017
 // Public Domain under http://unlicense.org, see link for details.
 
-// sin(pi/4 x), cos(pi/4 x), 4 atan(x)/pi for x on [-1,1],
+// sin(pi/4 x), cos(pi/4 x) for x on [-1,1],
 // no range reduction for atan.
 
 // make html plots of approximations
@@ -22,9 +22,11 @@ _plotly._points = 200;
 // setup functions to approximate
 sin_2  = a_setup(sin((pi/4)*x),  [-1;1]);
 sin_2._nterms = 2;            
+sin_2._min_type = absolute;
 
 cos_2  = a_setup(cos((pi/4)*x),  [-1;1]);
 cos_2._nterms = 2;            
+cos_2._min_type = absolute;
 
 print("creating sin");
 sin_2 = a_build_approx(sin_2);
