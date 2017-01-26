@@ -3,12 +3,25 @@
 // Toy code for:
 // http://marc-b-reynolds.github.io/math/2017/01/08/SquareDisc.html
 // Scalar only, more toward clairty than performance
+// no deps unless USE_SOBOL is defined, then needs Sobol.h from SFH directory
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <x86intrin.h>
 #include <math.h>
+
+#define USE_SOBOL
+
+#define SYM_TRIALS 0x3FFFFFF
+
+#if defined USE_SOBOL
+#define SOBOL_IMPLEMENTATION
+#include "../SFH/Sobol.h"
+
+// strat 3D geneator
+sobol_2d_t qrng;
+#endif
 
 // external code: xoroshiro128+
 
@@ -59,18 +72,24 @@ typedef union { struct{ float x,y; }; float f[2]; } vec2_t;
 
 void vec2_printa(vec2_t* v)
 {
-  printf("(%a %a) ",v->x,v->y);
+  printf("(% a % a) ",v->x,v->y);
 }
 
 void vec2_print(vec2_t* v)
 {
-  printf("(%f %f) ",v->x,v->y);
+  printf("(% f % f) ",v->x,v->y);
 }
 
-void vec2_sub(vec2_t* d, vec2_t*a, vec2_t* b)
+void vec2_sub(vec2_t* d, vec2_t* a, vec2_t* b)
 {
   d->x = a->x - b->x;
   d->y = a->y - b->y;
+}
+
+void vec2_dup(vec2_t* d, vec2_t* s)
+{
+  d->x = s->x;
+  d->y = s->y;
 }
 
 void ln()
@@ -225,37 +244,223 @@ void map_aea_ds(vec2_t* d, vec2_t* s)
   }
 }
 
-// Silly little round-trip test and spew out max sum-of-abs-diff as seen.
-// Only purpose is to catch bad translation of math to code.
-void test()
+
+// square->disc
+void map_fong_sd(vec2_t* D, vec2_t* S)
 {
-  float max = ULP1;
+  float x  = S->x;
+  float y  = S->y;
+  float x2 = x*x;
+  float y2 = y*y;
+  float d  = x2+y2;
+  float r  = rsqrt(d+EPS*EPS);
+  float s  = r*sqrtf(d-x2*y2);
+  
+  D->x = s*x;
+  D->y = s*y;
+}
+
+// disc->square
+void map_fong_ds(vec2_t* D, vec2_t* S)
+{
+  // this is unstable
+  double x  = S->x;
+  double y  = S->y;
+  double x2 = x*x;
+  double y2 = y*y;
+
+  if (x2 < 256.f*EPS || y2 < 256.f*EPS) { vec2_dup(D,S); return; }
+  
+  double d  = x2+y2;
+  double xy = x*y;
+  double r  = d*(d-4.f*xy*xy);
+  double s  = sgn(xy)*sqrt(0.5*(d-sqrt(r)));
+  D->x = s/(y+EPS);
+  D->y = s/(x+EPS);  
+}
+
+// square->disc
+void map_nowell_sd(vec2_t* D, vec2_t* S)
+{
+  float x  = S->x;
+  float y  = S->y;
+  D->x = x*sqrtf(1.f-0.5*y*y);
+  D->y = y*sqrtf(1.f-0.5*x*x);
+}
+
+// disc->square
+void map_nowell_ds(vec2_t* D, vec2_t* S)
+{
+  float x  = 0.5f*S->x;
+  float y  = 0.5f*S->y;
+  float x2 = x*x;
+  float y2 = y*y;
+  float t  = x2-y2;
+  float a  = sqrtf(0.5f + t + SQRT2*x);
+  float b  = sqrtf(0.5f + t - SQRT2*x);
+  float c  = sqrtf(0.5f - t + SQRT2*y);
+  float d  = sqrtf(0.5f - t - SQRT2*y);
+  D->x = a-b;
+  D->y = c-d;
+}
+
+
+// define maps
+typedef void (*map_func_t)(vec2_t*, vec2_t*);
+
+typedef struct {
+  map_func_t f;
+  map_func_t i;
+  char*      name;
+} maps_t;
+
+#define DEF(X) {& map_ ## X ## _sd, & map_ ## X ## _ds, #X}
+
+maps_t maps[] =
+{
+  DEF(rs),
+  DEF(con),
+  DEF(aea),
+  DEF(fong),
+  DEF(nowell)
+};
+
+#define NUM_FUNCS (sizeof(maps)/sizeof(maps[0]))
+
+#undef DEF
+
+
+void reset_generators(uint64_t s0, uint64_t s1, uint32_t len)
+{
+#ifdef USE_SOBOL
+  sobol_2d_init(&qrng, (uint32_t)s0, (uint32_t)(s0>>32));
+#endif
+  rng_state[0] = s0;
+  rng_state[1] = s1;
+  rng_u64();
+}
+
+void uniform_rt_test(uint64_t s0, uint64_t s1)
+{
+  printf("* uniform round-trip: disc orig-square recon-square square-diff\n");
+  
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
+    map_func_t f = maps[s].f;
+    map_func_t i = maps[s].i;
+    float      e  = 0.f;
+    vec2_t     mp;
+    vec2_t     p,d,r,diff;
+
+    reset_generators(s0,s1,SYM_TRIALS);
+    
+    for(uint32_t j=0; j<SYM_TRIALS; j++) {
+      
+      // generate a uniform point in [-1,1]^2
+      p.x = 2.f*rng_f32()-1.f;
+      p.y = 2.f*rng_f32()-1.f;
+
+      f(&d,&p);
+      i(&r,&d);
+      vec2_sub(&diff, &p, &r);
+
+      float t = fabs(diff.x)+fabs(diff.y)+fabs(diff.y);
+
+      if (t > e) {
+	e = t; vec2_dup(&mp, &p);
+      }
+    }
+
+    // report
+    f(&d, &mp);
+    i(&r, &d);
+    vec2_sub(&diff, &mp, &r);
+    
+    printf("%8s: ", maps[s].name);
+    vec2_print(&d); vec2_print(&mp); vec2_print(&r); vec2_printa(&diff); ln();
+  }
+}
+
+void sobol_rt_test(uint64_t s0, uint64_t s1)
+{
+  printf("* sobol round-trip: disc orig-square recon-square square-diff\n");
+  
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
+    map_func_t f = maps[s].f;
+    map_func_t i = maps[s].i;
+    float      e  = 0.f;
+    vec2_t     mp;
+    vec2_t     p,d,r,diff;
+
+    reset_generators(s0,s1,SYM_TRIALS);
+    
+    for(uint32_t j=0; j<SYM_TRIALS; j++) {
+      
+      // generate point in [-1,1]^2
+      sobol_2d_next_f32(&qrng, p.f);
+
+      f(&d,&p);
+      i(&r,&d);
+      vec2_sub(&diff, &p, &r);
+
+      float t = fabs(diff.x)+fabs(diff.y)+fabs(diff.y);
+
+      if (t > e) {
+	e = t; vec2_dup(&mp, &p);
+      }
+    }
+
+    // report
+    f(&d, &mp);
+    i(&r, &d);
+    vec2_sub(&diff, &mp, &r);
+    
+    printf("%8s: ", maps[s].name);
+    vec2_print(&d); vec2_print(&mp); vec2_print(&r); vec2_printa(&diff); ln();
+  }
+}
+
+void test(uint64_t s0, uint64_t s1)
+{
+  float max = 0.f;//ULP1;
+  printf("* single method check: disc orig-square recon-square square-diff\n");
+
+  reset_generators(s0,s1,0xFFFFFFF);
   
   for(uint32_t i=0; i<0xFFFFFFF; i++) {
     vec2_t p,d,r,diff;
-    p.x = 2.f*rng_f32()-1.f;
-    p.y = 2.f*rng_f32()-1.f;
-    map_con_sd_a2(&d,&p);
-    map_con_ds(&r,&d);
+
+    // generate a uniform point in [-1,1]^2
+    p.x = rng_f32();
+    p.y = rng_f32();
+    p.x = 2.f*p.x-1.f;
+    p.y = 2.f*p.y-1.f;
+    map_nowell_sd(&d,&p);
+    map_nowell_ds(&r,&d);
     vec2_sub(&diff, &p, &r);
 
     float t = fabs(diff.x)+fabs(diff.y);
     if (t > max) {
       max = t;
-      vec2_printa(&diff); vec2_print(&p); vec2_print(&r); ln();
+      vec2_print(&d); vec2_print(&p); vec2_print(&r); vec2_printa(&diff); printf(" %f\n",t);
     }
   }
 }
+
 
 int main(int argc, char** argv)
 {
   uint64_t s0;
   uint64_t s1;
   
-  rng_state[0] = s0 = _rdtsc();
-  rng_state[1] = s1 = 0x1234567;
-  rng_u64();
-  test();
+  s0 = 0x01;//_rdtsc();
+  s1 = 0x1234567;
+
+  test(s0,s1);
+  uniform_rt_test(s0,s1);
+
+#ifdef USE_SOBOL
+  sobol_rt_test(s0,s1);
+#endif
   
   return 0;
 }

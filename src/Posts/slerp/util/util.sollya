@@ -1,5 +1,4 @@
-
-
+/* -*- mode: c; -*- */
 
 // angle of lerp with dot=d at t
 procedure lerp_phi(d,t)
@@ -29,18 +28,15 @@ procedure lerp_angle_error_a(a,t)
   return t*a - lerp_phi_a(a,t);
 };
 
-fp_format_f32 = [|24...|];
-fp_format_f64 = [|53...|];
 
-procedure bool_to_fp(is_single)
+procedure lerp_me(d)
 {
-  var r;
-  
-  if (is_single != false) then {
-    r = fp_format_f32;
-  }
-  else {
-    r = fp_format_f64;
-  };
-  return r;
+  return .5*(1-sqrt((1+d-(2*sqrt(1-d^2)/acos(d)))/(d-1)));
 };
+
+
+procedure lerp_reparam(d,t)
+{
+  return 1/(1-d+sqrt(1-d^2)/tan(t*acos(d)))
+};
+
