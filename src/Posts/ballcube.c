@@ -5,6 +5,7 @@
 // Scalar only, more toward clairty than performance
 // no deps unless USE_SOBOL is defined, then needs Sobol.h from SFH directory
 
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -90,8 +91,6 @@ static inline void vec2_set(vec2_t* d, float x, float y)
 {
   d->x = x; d->y = y;
 }
-
-
 
 // uniform on disk
 float uniform_disk(vec2_t* p)
@@ -366,265 +365,50 @@ void map_nowell_ds(vec2_t* D, vec2_t* S)
   D->y = c-d;
 }
 
-//****** ball/cube/cylinder stuff
+//****** ball/cube/cylinder stuff 
+
+// hacky macros to fill coordinate
+#define LOAD_XYZ(S)  float x=S->x, y=S->y, z=S->z;
+#define LOAD_XYZ2(S) float x=S->x, y=S->y, z=S->z, x2=x*x, y2=y*y, z2=z*z;
 
 // stretch
-void map_rs_cb(vec3_t* d, vec3_t* s)
+void map_rs_cb(vec3_t* D, vec3_t* S)
 {
-  float x  = s->x;
-  float y  = s->y;
-  float z  = s->z;
-  float x2 = x*x;
-  float y2 = y*y;
-  float z2 = z*z;
-  float m  = x2 > y2 ? x : y;
-  m = fabsf(m)*rsqrt(x2+y2+z2+EPS);
+  LOAD_XYZ2(S);
 
-  vec3_set(d, m*x, m*y, m*z);
+  float m = x2 > y2 ? x : y;
+  float s = fabsf(m)*rsqrt(x2+y2+z2+EPS);
+
+  vec3_set(D, s*x, s*y, s*z);
 }
 
-void map_rs_bc(vec3_t* d, vec3_t* s)
+void map_rs_bc(vec3_t* D, vec3_t* S)
 {
-  float x  = s->x;
-  float y  = s->y;
-  float z  = s->z;
-  float x2 = x*x;
-  float y2 = y*y;
-  float z2 = z*z;
-  float m  = x2 > y2 ? x : y;
-  m = sqrtf(x2+y2+z2)/(fabsf(m)+EPS);
-  vec3_set(d, m*x, m*y, m*z);
+  LOAD_XYZ2(S);
+
+  float m = x2 > y2 ? x : y;
+  float s = sqrtf(x2+y2+z2)/(fabsf(m)+EPS);
+
+  vec3_set(D, s*x, s*y, s*z);
 }
-
-// volume preserving: cylinder+concentric
-void map_vp_cb_(vec3_t* D, vec3_t* S)
-{
-  float x  = S->x;
-  float y  = S->y;
-  float z  = S->z;
-  float x2 = x*x;
-  float y2 = y*y;
-  float z2 = z*z;
-  float a,b,d;
-
-  // square->disc part
-  if (x2 > y2) {
-    float t = sinf(0.25f*PI*(y/x));
-    d = x2;
-    a = x*sqrtf(1.f-t*t);
-    b = x*t;
-  }
-  else {
-    float t = sinf(0.25f*PI*(x/(y+EPS)));
-    d = y2;
-    a = y*t;
-    b = y*sqrtf(1.f-t*t);
-  }
-
-  // cylinder->ball part
-  float s;
-
-  if (z2 > d) {
-    float t = 1.f/(3.f*z+EPS);
-    s = sqrtf((2.f/3.f)-d/(9*z2));
-    z = z - d*t;
-  }
-  else {
-    s = sqrtf(1-(4*z2)/(9*d));
-    z *= (2.f/3.f);
-  }
-
-  vec3_set(D, s*a, s*b, z);
-}
-
-void map_vp_cb(vec3_t* D, vec3_t* S)
-{
-  float x  = S->x;
-  float y  = S->y;
-  float z  = S->z;
-  //float x2 = x*x;
-  //float y2 = y*y;
-  float z2 = z*z;
-  float a,b,t;
-
-  //****
-  if (fabsf(x) > fabsf(y)) {
-    float r = recip(x);
-    t = sinf(0.25f*PI*(y*r));
-    a = x*sqrtf(1.f-t*t);
-    b = x*t;
-  }
-  else {
-    float r = recip(y+EPS);
-    t = sinf(0.25f*PI*(x*r));
-    a = y*t;
-    b = y*sqrtf(1.f-t*t);
-  }
-
-  float a2 = a*a;
-  float b2 = b*b;
-  float d  = a2+b2;
-  float s;
-
-  if (z2 > d) {
-    s = sqrtf((2.f/3.f)-d/(9*z2));
-    z = z - d/(3.f*z);
-  }
-  else {
-    s = sqrtf(1-(4*z2)/(9*d));
-    z *= (2.f/3.f);
-  }
-
-  vec3_set(D,s*a,s*b,z);
-}
-
-
-void map_vp_bc(vec3_t* tD, vec3_t* tS)
-{
-  float a  = tS->x;
-  float b  = tS->y;
-  float z  = tS->z;
-  float x2 = a*a;
-  float y2 = b*b;
-  float z2 = z*z;
-  float d  = x2+y2+z2;
-  float t  = sqrtf(d);
-  float s;
-
-  // sphere->cylinder
-  if (x2+y2 < 5.f/4.f*z2) {
-    s = sqrtf(3.f*t/(t+fabsf(z)));
-    tD->z = sgn(z)*t;
-  }
-  else {
-    s = t*rsqrt(x2+y2);
-    tD->z = 1.5f*z;
-  }
-
-  // disc->square
-  vec2_t S = {.x=s*a,.y=s*b};
-  vec2_t D;
-  {
-    float x  = S.x;
-    float y  = S.y;
-    float x2 = x*x;
-    float y2 = y*y;
-    float m  = sqrtf(x2+y2);
-    
-    if (x2 > y2) {
-      float r = recip(fabs(x));
-      D.x = mulsgn(x, m);
-      D.y = m*(4*RPI)*atanf(y*r);
-    }
-    else {
-      float r = recip((fabsf(y)+EPS));
-      D.x = m*(4*RPI)*atanf(x*r);
-      D.y = mulsgn(y, m);
-    }
-  }
-
-  tD->x = D.x;
-  tD->y = D.y;
-}
-
-
-#if 0
-// cut-n-paste, fill in the blanks, reduce
-
-void map_XXX_cb(vec3_t* tD, vec3_t* tS)
-{
-  float x  = tS->x;
-  float y  = tS->y;
-  float z  = tS->z;
-  float x2 = x*x;
-  float y2 = y*y;
-  float z2 = z*z;
-  float a,b;
-
-  // square->disc
-  vec2_t S = {.x=x,.y=y};
-  vec2_t D;
-  {
-  }
-  float a = D.x;
-  float b = D.y;
-
-  // cylinder->sphere
-  float a2 = a*a;
-  float b2 = b*b;
-  float d  = a2+b2;
-  float s;
-
-  if (z2 > d) {
-    s = sqrtf((2.f/3.f)-d/(9*z2));
-    z = z - d/(3.f*z);
-  }
-  else {
-    s = sqrtf(1-(4*z2)/(9*d));
-    z *= (2.f/3.f);
-  }
-
-  vec3_set(tD,s*a,s*b,z);
-}
-
-void map_XXX_bc(vec3_t* tD, vec3_t* tS)
-{
-  float a  = tS->x;
-  float b  = tS->y;
-  float z  = tS->z;
-  float x2 = a*a;
-  float y2 = b*b;
-  float z2 = z*z;
-  float d  = x2+y2+z2;
-  float t  = sqrtf(d);
-  float s;
-
-  // sphere->cylinder
-  if (x2+y2 < 5.f/4.f*z2) {
-    s = sqrtf(3.f*t/(t+fabsf(z)));
-    tD->z = sgn(z)*t;
-  }
-  else {
-    s = t*rsqrt(x2+y2);
-    tD->z = 1.5f*z;
-  }
-
-  // disc->square
-  vec2_t S = {.x=s*a,.y=s*b};
-  vec2_t D;
-  {
-  }
-
-  tD->x = D.x;
-  tD->y = D.y;
-}
-
-
-
-#endif
-
 
 void map_fong_cb(vec3_t* D, vec3_t* S)
 {
-  float x  = S->x;
-  float y  = S->y;
-  float z  = S->z;
-  float x2 = x*x;
-  float y2 = y*y;
-  float z2 = z*z;
-  float d  = x2+y2+z2;
-  float n  = rsqrt(d+EPS);
-  float m  = sqrtf(d-x2*y2-y2*z2-x2*z2+x2*y2*z2);
+  LOAD_XYZ2(S);
+
+  float d = x2+y2+z2;
+  float n = rsqrt(d+EPS);
+  float m = sqrtf(d-x2*y2-y2*z2-x2*z2+x2*y2*z2);
   m *= n;
+  
   vec3_set(D,m*x,m*y,m*z);
 }
 
 // unstable..can't be bother to rewrite
 void map_fong_bc(vec3_t* D, vec3_t* s)
 {
-  float x = s->x;
-  float v = s->y;
-  float w = s->z;
+  LOAD_XYZ(s);
+  float v=y,w=z;
 
   if (fabs(x) < EPS) {
     vec2_t b;
@@ -693,7 +477,357 @@ void map_fong_bc(vec3_t* D, vec3_t* s)
   }
 }
 
+// didn't bother to tested w/o inverse
+void map_nowell_cb(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
 
+  float u = x*sqrt(1.f-0.5f*y2-z2*(.5f+(1.f/1.3)*y2));
+  float v = y*sqrt(1.f-0.5f*z2-x2*(.5f+(1.f/1.3)*z2));
+  float w = z*sqrt(1.f-0.5f*x2-y2*(.5f+(1.f/1.3)*x2));
+
+  vec3_set(D,u,v,w);
+}
+
+
+//****** ball/cube/cylinder stuff (via cylinder methods)
+// a number of sqrt(div) could be broken into sqrt*rsqrt
+
+// volume preserving: cylinder+concentric
+void map_vp_cb(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float a,b,t,d,s;
+
+  // square->disc
+  if (x2 > y2) {
+    float r = recip(x);
+    t = sinf(0.25f*PI*(y*r));
+    a = x*sqrtf(1.f-t*t);
+    b = x*t;
+    d = x2;
+  }
+  else {
+    float r = recip(y+EPS);
+    t = sinf(0.25f*PI*(x*r));
+    a = y*t;
+    b = y*sqrtf(1.f-t*t);
+    d = y2;
+  }
+
+  // cylinder-> ball
+  if (z2 > d) {
+    float iz = 1.f/(3.f*z);
+    float dz = d*iz;
+    s = sqrtf((2.f/3.f)-dz*iz);
+    z = z - dz;
+  }
+  else {
+    s = sqrtf(1-(4*z2)/(9*d));
+    z *= (2.f/3.f);
+  }
+
+  vec3_set(D,s*a,s*b,z);
+}
+
+void map_vp_bc(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float pd = x2+y2;
+  float d  = pd+z2;
+  float t  = sqrtf(d);
+  float rd = rsqrt(pd+EPS);
+  float s  = rd*pd;
+
+  if (pd < 5.f/4.f*z2) {
+    s *= sqrtf(3.f*t/(t+fabsf(z)));
+    D->z = sgn(z)*t;
+  }
+  else {
+    s *= t*rd;
+    D->z = 1.5f*z;
+  }
+
+  if (x2 > y2) {
+    float r = recip(fabs(x));
+    D->x = mulsgn(x, s);
+    D->y = s*(4*RPI)*atanf(y*r);
+  }
+  else {
+    float r = recip((fabsf(y)+EPS));
+    D->x = s*(4*RPI)*atanf(x*r);
+    D->y = mulsgn(y, s);
+  }
+}
+
+
+// radial stretch+cylinder
+void map_rsc_cb(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float a,b;
+
+  // square->disc
+  float pd = x2+y2;
+  float m  = x2 > y2 ? x : y;
+  m = fabsf(m)*rsqrt(pd+EPS);
+  a = m*x;
+  b = m*y;
+
+  // cylinder->ball
+  float d = a*a+b*b; // m^2 pd
+  float s;
+
+  if (z2 > d) {
+    float iz = 1.f/(3.f*z);
+    float dz = d*iz;
+    s = sqrtf((2.f/3.f)-dz*iz);
+    z = z - dz;
+  }
+  else {
+    s = sqrtf(1-(4*z2)/(9*d));
+    z *= (2.f/3.f);
+  }
+
+  vec3_set(D,s*a,s*b,z);
+}
+
+void map_rsc_bc(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float pd = x2+y2;
+  float id = rsqrt(pd);
+  float d  = pd+z2;
+  float t  = sqrtf(d);
+  float m = x2 > y2 ? x : y;
+  float r = recip(fabsf(m)+EPS);
+  float s = id*pd*r;
+
+  if (pd < 5.f/4.f*z2) {
+    s   *= sqrtf(3.f*t/(t+fabsf(z)));
+    D->z = sgn(z)*t;
+  }
+  else {
+    s   *= t*id;
+    D->z = 1.5f*z;
+  }
+
+  D->x = s*x;
+  D->y = s*y;
+}
+
+// approx equal volume = approx equal area+cylinder
+void map_aev_cb(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float a,b,d;
+
+  // square->disc
+  if (x2 > y2) {
+    float m = sgn(x);
+    b = 0.5f*SQRT2*y;
+    a = m*sqrtf(x2-0.5f*y2);
+    d = a*a+b*b;
+  } else {
+    float m = sgn(y);
+    a = 0.5f*SQRT2*x;
+    b = m*sqrtf(y2-0.5f*x2);
+    d = a*a+b*b;
+  }
+
+  // cylinder->ball
+  float s;
+
+  if (z2 > d) {
+    float iz = 1.f/(3.f*z);
+    float dz = d*iz;
+    s = sqrtf((2.f/3.f)-dz*iz);
+    z = z - dz;
+  }
+  else {
+    s = sqrtf(1-(4*z2)/(9*d));
+    z *= (2.f/3.f);
+  }
+
+  vec3_set(D,s*a,s*b,z);
+}
+
+void map_aev_bc(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+  float pd = x2+y2;
+  float d  = pd+z2;
+  float t  = sqrtf(d);
+  float ip = rsqrt(pd);
+  float s,m;
+
+  // ball->cylinder
+  if (pd < 5.f/4.f*z2) {
+    s = sqrtf(3.f*t/(t+fabsf(z)));
+    m = s*ip*pd;
+    D->z = sgn(z)*t;
+  }
+  else {
+    s = t*ip;
+    m = t;
+    D->z = 1.5f*z;
+  }
+
+  // disc->square  
+  s *= SQRT2;
+
+  if (x2 > y2) {
+    D->x = mulsgn(x, m);
+    D->y = s*y;
+  } else {
+    D->x = s*x;
+    D->y = mulsgn(y, m);
+  }
+}
+
+
+void map_ell_cb(vec3_t* D, vec3_t* S)
+{
+  LOAD_XYZ2(S);
+
+  float a = x*sqrtf(1.f-0.5*y2);
+  float b = y*sqrtf(1.f-0.5*x2);
+  float a2 = a*a;
+  float b2 = b*b;
+  float d  = a2+b2; 
+  float s;
+
+  if (z2 > d) {
+    float iz = 1.f/(3.f*z);
+    float dz = d*iz;
+    s = sqrtf((2.f/3.f)-dz*iz);
+    z = z - dz;
+  }
+  else {
+    s = sqrtf(1-(4*z2)/(9*d));
+    z *= (2.f/3.f);
+  }
+
+  vec3_set(D,s*a,s*b,z);
+}
+
+void map_ell_bc(vec3_t* D, vec3_t* S)
+{
+  float a  = S->x;
+  float b  = S->y;
+  float z  = S->z;
+  float a2 = a*a;
+  float b2 = b*b;
+  float z2 = z*z;
+  float dp = a2+b2;
+  float d  = dp+z2;
+  float t  = sqrtf(d);
+  float s;
+
+  // ball->cylinder
+  if (dp < 5.f/4.f*z2) {
+    s  = sqrtf(3.f*t/(t+fabsf(z)));
+    D->z = sgn(z)*t;
+  }
+  else {
+    s  = t*rsqrt(dp);
+    D->z = 1.5f*z;
+  }
+
+  // disc->square
+  float x  = 0.5f*s*a;
+  float y  = 0.5f*s*b;
+  float x2 = x*x;
+  float y2 = y*y;
+  float T  = x2-y2;
+  float a0 = sqrtf(0.5f + T + SQRT2*x);
+  float b0 = sqrtf(0.5f + T - SQRT2*x);
+  float c0 = sqrtf(0.5f - T + SQRT2*y);
+  float d0 = sqrtf(0.5f - T - SQRT2*y);
+
+  D->x = a0-b0;
+  D->y = c0-d0;
+}
+
+
+#if 0
+// cut-n-paste, fill in the blanks, reduce
+
+// not reduced
+void map_XXX_cb(vec3_t* tD, vec3_t* tS)
+{
+  float x  = tS->x;
+  float y  = tS->y;
+  float z  = tS->z;
+  float x2 = x*x;
+  float y2 = y*y;
+  float z2 = z*z;
+  float a,b;
+
+  // square->disc
+  vec2_t S = {.x=x,.y=y};
+  vec2_t D;
+  {
+  }
+  a = D.x;
+  b = D.y;
+
+  // cylinder->ball
+  float a2 = a*a;
+  float b2 = b*b;
+  float d  = a2+b2;
+  float s;
+
+  if (z2 > d) {
+    s = sqrtf((2.f/3.f)-d/(9*z2));
+    z = z - d/(3.f*z);
+  }
+  else {
+    s = sqrtf(1-(4*z2)/(9*d));
+    z *= (2.f/3.f);
+  }
+
+  vec3_set(tD,s*a,s*b,z);
+}
+
+// not reduced
+void map_XXX_bc(vec3_t* tD, vec3_t* tS)
+{
+  float a  = tS->x;
+  float b  = tS->y;
+  float z  = tS->z;
+  float x2 = a*a;
+  float y2 = b*b;
+  float z2 = z*z;
+  float d  = x2+y2+z2;
+  float t  = sqrtf(d);
+  float s;
+
+  // ball->cylinder
+  if (x2+y2 < 5.f/4.f*z2) {
+    s = sqrtf(3.f*t/(t+fabsf(z)));
+    tD->z = sgn(z)*t;
+  }
+  else {
+    s = t*rsqrt(x2+y2);
+    tD->z = 1.5f*z;
+  }
+
+  // disc->square
+  vec2_t S = {.x=s*a,.y=s*b};
+  vec2_t D;
+  {
+  }
+
+  tD->x = D.x;
+  tD->y = D.y;
+}
+
+
+
+#endif
+
+#if 0
 // for testing disc method derivations: explict cube->cylinder->ball & inverse
 typedef void (*map_2d_t)(vec2_t*, vec2_t*);
 
@@ -760,7 +894,7 @@ void map_hell_cb(vec3_t* d, vec3_t* s)  { map_wrap_cb(d,s, map_nowell_sd); }
 void map_hell_bc(vec3_t* d, vec3_t* s)  { map_wrap_bc(d,s, map_nowell_ds); }
 void map_hfong_cb(vec3_t* d, vec3_t* s) { map_wrap_cb(d,s, map_fong_sd);   }
 void map_hfong_bc(vec3_t* d, vec3_t* s) { map_wrap_bc(d,s, map_fong_ds);   }
-
+#endif
 
 // define maps
 typedef void (*map_func_t)(vec3_t*, vec3_t*);
@@ -775,22 +909,25 @@ typedef struct {
 
 maps_t maps[] =
 {
-  {.cb=map_vp_cb, .bc=map_haea_bc, .name= "foo"},
-  
+  // cylinder based
+  DEF(rsc),
+  DEF(vp),
+  DEF(aev),
+  DEF(ell),
+
   // validation versions via cylinder
+#if 0  
   DEF(hrs),
   DEF(hcon),
   DEF(haea),
   DEF(hell),
-  DEF(hfong),
+  DEF(hfong)
+#endif
 
   // direct methods
-  DEF(fong),          // unstable
+  DEF(rs),
 //DEF(nowell),        // no inverse
-  DEF(rs)
-
-  // cylinder based
-
+  DEF(fong)           // unstable
 };
 
 #define NUM_FUNCS (sizeof(maps)/sizeof(maps[0]))
@@ -810,7 +947,7 @@ void reset_generators(uint64_t s0, uint64_t s1, uint32_t len)
 
 void uniform_s2_rt_test(uint64_t s0, uint64_t s1)
 {
-  printf("* uniform surface round-trip: cube orig-ball recon-ball cube-diff\n");
+  printf("* uniform surface round-trip: name: rms cube orig-ball recon-ball cube-diff\n");
   
   for(uint32_t s=0; s<NUM_FUNCS; s++) {
     map_func_t cb = maps[s].cb;
@@ -841,7 +978,7 @@ void uniform_s2_rt_test(uint64_t s0, uint64_t s1)
     bc(&r, &d);
     vec3_sub(&diff, &mp, &r);
     
-    printf("%8s: %f", maps[s].name, sqrtf(e));
+    printf("%8s: %f ", maps[s].name, sqrtf(e));
     vec3_print(&d); vec3_print(&mp); vec3_print(&r); vec3_printa(&diff); ln();
   }
 }
@@ -849,7 +986,10 @@ void uniform_s2_rt_test(uint64_t s0, uint64_t s1)
 // simple round-trip test of pseudo-random points on cube
 void uniform_rt_test(uint64_t s0, uint64_t s1)
 {
-  printf("* uniform round-trip: ball orig-cube recon-cube cube-diff\n");
+  printf("* uniform round-trip:\n name:    "
+	 "RMS       ball                              orig-cube"
+	 "                        recon-cube"
+	 "                        cube-diff\n");
   
   for(uint32_t s=0; s<NUM_FUNCS; s++) {
     map_func_t cb = maps[s].cb;
@@ -883,7 +1023,7 @@ void uniform_rt_test(uint64_t s0, uint64_t s1)
     bc(&r, &d);
     vec3_sub(&diff, &mp, &r);
     
-    printf("%8s: %f", maps[s].name, sqrt(e));
+    printf("%8s: %f ", maps[s].name, sqrt(e));
     vec3_print(&d); vec3_print(&mp); vec3_print(&r); vec3_printa(&diff); ln();
   }
 }
@@ -892,7 +1032,10 @@ void uniform_rt_test(uint64_t s0, uint64_t s1)
 // simple round-trip test of sobol sequence points on cube
 void sobol_rt_test(uint64_t s0, uint64_t s1)
 {
-  printf("* uniform round-trip: sphere orig-cube recon-cube cube-diff\n");
+  printf("* sobol round-trip:\n name:    "
+	 "RMS       ball                              orig-cube"
+	 "                        recon-cube"
+	 "                        cube-diff\n");
   
   for(uint32_t s=0; s<NUM_FUNCS; s++) {
     map_func_t cb = maps[s].cb;
@@ -923,7 +1066,7 @@ void sobol_rt_test(uint64_t s0, uint64_t s1)
     bc(&r, &d);
     vec3_sub(&diff, &mp, &r);
     
-    printf("%8s: %f", maps[s].name,  sqrt(e));
+    printf("%8s: %f ", maps[s].name,  sqrt(e));
     vec3_print(&d); vec3_print(&mp); vec3_print(&r); vec3_printa(&diff); ln();
   }
 }
@@ -932,16 +1075,20 @@ void sobol_rt_test(uint64_t s0, uint64_t s1)
 // Silly little round-trip test and spew out max sum-of-abs-diff as seen.
 // Only purpose is to catch bad translation of math to code.
 
-#define C2Br map_vp_cb
-#define B2Cr map_vp_bc
-#define C2Bt map_haea_cb
-#define B2Ct map_haea_bc
+#define C2Bt map_vp_cb
+#define B2Ct map_vp_bc
+//#define C2Br map_haea_cb
+#define XSTR(X) STR(X)
+#define STR(X)  #X
 
 void test(uint64_t s0, uint64_t s1)
 {
   float max = -1.f;
 
-  printf("* single method round-trip: ball orig-cube recon-cube cube-diff\n");
+  printf("* single method (" XSTR(C2Bt) ") round-trip:\n sample#  "
+	 "RMS       ball                              orig-cube"
+	 "                        recon-cube"
+	 "                        cube-diff\n");
 
   reset_generators(s0,s1,0xFFFFFFF);
   
@@ -965,10 +1112,10 @@ void test(uint64_t s0, uint64_t s1)
       
     if (t > max) {
       max = t;
-      printf("%08x:",i);
-      vec3_print(&d); vec3_print(&p); vec3_print(&r); vec3_printa(&diff); printf(" %f\n", sqrt(t));
+      printf("%08x: %f ",i, sqrt(t));
+      vec3_print(&d); vec3_print(&p); vec3_print(&r); vec3_printa(&diff); ln();
 #if 0
-      // dump-out a reference xform at same
+      // dump-out a reference xform for same input
       C2Br(&d,&p);
       B2Cr(&r,&d);
       vec3_sub(&diff, &p, &r);
