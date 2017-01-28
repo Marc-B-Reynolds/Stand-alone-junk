@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016
+// Marc B. Reynolds, 2016-2017
 // Public Domain under http://unlicense.org, see link for details.
 //
 // This is utter junk example code for some posts.
@@ -324,7 +324,7 @@ static inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
   vec3_set(r,x,y,z);
 }
 
-// sqrt(Q), |Q|=1, Q.1 >- 0, return bivector part
+// sqrt(Q), |Q|=1, Q.1 >= 0, return bivector part
 static inline void quat_fha(vec3_t* v, quat_t* q)
 {
   float d = 1.f + q->w;
