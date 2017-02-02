@@ -376,7 +376,7 @@ void map_rs_cb(vec3_t* D, vec3_t* S)
 {
   LOAD_XYZ2(S);
 
-  float m = x2 > y2 ? x : y;
+  float m = x2 > y2 ? x : y; m = m*m > z2 ? m : z;
   float s = fabsf(m)*rsqrt(x2+y2+z2+EPS);
 
   vec3_set(D, s*x, s*y, s*z);
@@ -386,7 +386,7 @@ void map_rs_bc(vec3_t* D, vec3_t* S)
 {
   LOAD_XYZ2(S);
 
-  float m = x2 > y2 ? x : y;
+  float m = x2 > y2 ? x : y; m = m*m > z2 ? m : z;
   float s = sqrtf(x2+y2+z2)/(fabsf(m)+EPS);
 
   vec3_set(D, s*x, s*y, s*z);

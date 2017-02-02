@@ -39,12 +39,37 @@ static inline float rsqrt_nr(float x)
   float x0 = rsqrtf_a(x);
   return x0*(1.5f - x*0.5f*x0*x0);
 }  
-  
+
+static inline float rsqrt_nr2(float x)
+{
+  float x0;
+  x0 = rsqrtf_a(x);
+  x0 = x0*(1.5f - x*0.5f*x0*x0);
+  x0 = x0*(1.5f - x*0.5f*x0*x0);
+  return x0;
+}  
+
 // for error computations of using native ~1/x without fixup
 static inline float rcp_a(float x) 
 {
   return _mm_cvtss_f32(_mm_rcp_ss(_mm_set_ss(x)));
 }
+
+static inline float rcp_nr(float x) 
+{
+  float x0 = rcp_a(x);
+  return x0*(2.f - x*x0);
+}
+
+  static inline float rsqrt_nr2(float x)
+{
+  float x0;
+  x0 = rcp_a(x);
+  x0 = x0*(2.f - x*x0);
+  x0 = x0*(2.f - x*x0);
+  return x0;
+}  
+
 #endif
 
 // another temp hack
@@ -62,9 +87,9 @@ typedef union {
   float f[2];
 } vec2_t;
 
-static inline void vec2_zero(vec2_t* v)
+static inline void vec2_set(vec2_t* d, float x, float y)
 {
-  v->x = v->y = 0.f;
+  d->x = x; d->y = y;
 }
 
 static inline float vec2_dot(vec2_t* a, vec2_t* b)
@@ -72,6 +97,8 @@ static inline float vec2_dot(vec2_t* a, vec2_t* b)
   return a->x*b->x + a->y*b->y;
 }
 
+static inline void vec2_zero(vec2_t* v) { vec2_set(v,0.f,0.f); }
+static inline void vec2_dup(vec2_t* d, vec2_t* s) { vec2_set(d,s->x,s->y); }
 static inline float vec2_norm(vec2_t* a) { return vec2_dot(a,a); }
 
 //------------------  
@@ -112,6 +139,13 @@ static inline void vec3_cross(vec3_t* r, vec3_t* a, vec3_t* b)
   float y = a->z*b->x - a->x*b->z;
   float z = a->x*b->y - a->y*b->x;
   vec3_set(r, x, y, z);
+}
+
+void vec3_sub(vec3_t* d, vec3_t* a, vec3_t* b)
+{
+  d->x = a->x - b->x;
+  d->y = a->y - b->y;
+  d->z = a->z - b->z;
 }
 
 static inline void vec3_hmul(vec3_t* r, vec3_t* a, vec3_t* b)
