@@ -306,10 +306,7 @@ static inline void quat_put_bv(vec3_t* v, quat_t* q, float s)
   vec3_set_scale(v, &(q->b), s);
 }  
 
-// Q   = s+B = cos(t)+sin(t)U, |Q|=1
-// Q^2 = s^2-(B.B) + 2s B 
-//     = cos(2t) + sin(2t)U
-static inline void quat_upow2(quat_t* q)
+static inline void quat_sq(quat_t* q)
 {
   float w = q->w;
   float d = quat_bv_norm(q);
@@ -317,6 +314,13 @@ static inline void quat_upow2(quat_t* q)
   q->w = w*w-d;
 }
 
+static inline void quat_upow2(quat_t* q)
+{
+  float t = 2.f*q->w;
+  quat_bv_scale(q, t);
+  q->w = t-1.f;
+}
+  
 // Q = cos(t)+sin(t)U, |Q|=1
 // sqrt(Q) = cos(t/2) + sin(t/2)U
 static inline void quat_usqrt(quat_t* q)
@@ -394,6 +398,49 @@ static inline int quat_in_cos_delta(quat_t* a, quat_t* b, float cosd)
 {
   return quat_dot(a,b) >= cosd;
 }
+
+static inline void quat_local_x(vec3_t* v, quat_t* q)
+{
+  float ty = 2.f * q->y;
+  float tz = 2.f * q->z;
+  float yy = ty  * q->y;
+  float zz = tz  * q->z;
+  float xy = ty  * q->x;
+  float xz = tz  * q->x;
+  float wy = ty  * q->w;
+  float wz = tz  * q->w;
+  
+  vec3_set(v, 1.f-(yy+zz), xy+wz, xz-wy);
+}
+
+static inline void quat_local_y(vec3_t* v, quat_t* q)
+{
+  float tx = 2.f * q->x;
+  float tz = 2.f * q->z;
+  float xx = tx  * q->x;
+  float zz = tz  * q->z;
+  float xy = tx  * q->y;
+  float yz = tz  * q->y;
+  float wx = tx  * q->w;
+  float wz = tz  * q->w;
+  
+  vec3_set(v, xy-wz, 1.f-(xx+zz), wx+yz);
+}
+
+static inline void quat_local_z(vec3_t* v, quat_t* q)
+{
+  float tx = 2.f * q->x;
+  float ty = 2.f * q->y;
+  float xx = tx  * q->x;
+  float yy = ty  * q->y;
+  float xz = tx  * q->z;
+  float yz = ty  * q->z;
+  float wx = tx  * q->w;
+  float wy = ty  * q->w;
+  
+  vec3_set(v, wy+xz, yz-wx, 1.f-(xx+yy));
+}
+
   
 #if defined(QUAT_IMPLEMENTATION)
 #else
