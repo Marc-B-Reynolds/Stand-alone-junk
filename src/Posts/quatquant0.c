@@ -204,6 +204,7 @@ float uniform_qdisc(vec2_t* p)
 
   return d;
 }
+
 void uniform_s2(vec3_t* p)
 {
   float d,s;
@@ -215,7 +216,6 @@ void uniform_s2(vec3_t* p)
   p->y = s*v.y;
   p->z = 1.f-2.f*d;
 }
-
 
 // all positive (for sym)
 void uniform_ps2(vec3_t* p)
@@ -256,17 +256,18 @@ void uniform_quat_from_z(quat_t* q)
 void uniform_s1_px(vec2_t* p)
 {
   float d = uniform_disc(p);
-  float s = rsqrt(d+(CBIAS*CBIAS));  // 1/sqrt approx + X NR steps
-  p->x += CBIAS;                     // map (0,0) -> (1,0)
+  float s = rsqrt(d+(CBIAS*CBIAS)); 
+  p->x += CBIAS;                    
   p->x *= s;
   p->y *= s;
 }
+
 
 void uniform_quat_about_x(quat_t* q)
 {
   vec2_t p;
   uniform_s1_px(&p);
-  quat_set(q, p.y, 0.f, 0.f, fabs(p.x)); // silly...direct half-circle
+  quat_set(q, p.y, 0.f, 0.f, fabsf(p.x)); // silly...should direct half-circle instead
 }
 
 void uniform_quat_about_xy(quat_t* q)
@@ -422,6 +423,7 @@ void map_rs_bc(vec3_t* D, vec3_t* S)
 
   float m = x2 > y2 ? x : y; m = m*m > z2 ? m : z;
   float s = sqrtf(x2+y2+z2)/(fabsf(m)+EPS);
+
   //printf("%f", s);
 
   vec3_set(D, s*x, s*y, s*z);
@@ -787,13 +789,14 @@ void ihm(quat_t* q, vec3_t* v)
 }
 
 // log(q) & exp(b)
+
 #if 1
 
 void fem(vec3_t* v, quat_t* q)
 {
   float w = q->w;
   float a = 1.f-w*w;
-  float b = rsqrt(a+EPS*EPS);
+  float b = rsqrt(a+EPS);
   float k = a*b;
   float s = (2.f/PI)*atanf(k/w)*b;
   quat_put_bv(v,q,s);
@@ -802,7 +805,7 @@ void fem(vec3_t* v, quat_t* q)
 void iem(quat_t* q, vec3_t* v)
 {
   float d = vec3_norm(v);
-  float t = rsqrt(d+EPS*EPS);
+  float t = rsqrt(d+EPS);
   float a = (PI/2.f)*t*d;
   float s = sinf(a);
   float k = s*t;
@@ -816,25 +819,32 @@ void iem(quat_t* q, vec3_t* v)
 // testing junk
 void fem(vec3_t* v, quat_t* q)
 {
-  float w = q->w;
-  float a = 1.f-w*w;
-  float b = rsqrt(a+EPS*EPS);
-  float k = a*b;
-  float s = (2.f/PI)*atanf(k/w);
-  quat_put_bv(v,q, s*b);
+  double w = q->w;
+  
+  double a = 1.0-w*w;
+  double b = 1.0/sqrt(a+EPS);
+  double k = a*b;
+  double s = (2.0/PI)*atan(k/w)*b;
+  v->x = (float)(s*q->x);
+  v->y = (float)(s*q->y);
+  v->z = (float)(s*q->z);
+
 }
 
-void iemx(quat_t* q, vec3_t* v)
+void iem(quat_t* q, vec3_t* v)
 {
-  float d = vec3_norm(v);
-  float t = rsqrt(d+EPS*EPS);
-  float a = (PI/2.f)*t*d;
-  float s = sinf(a);
-  float k = s*t;
-  quat_bv_set_scale(q,v,k);
-  q->w = cosf(a);
+  double d = vec3_norm(v);
+  double t = 1.0/sqrt(d+ULP1);
+  double a = (PI/2.0)*t*d;
+  double s = sin(a);
+  double k = s*t;
+  q->x = (float)(k*v->x);
+  q->y = (float)(k*v->y);
+  q->z = (float)(k*v->z);
+  q->w = (float)sqrt(1.0-s*s);//cosf(a);
 }
 #endif
+
 
 // proc pointer to quaternion generator
 typedef void (*qsrc)(quat_t*);
@@ -883,7 +893,7 @@ maps_t maps[] =
   DEF(ha,rs),
   DEF(ct,rs),
 #endif  
-
+  
 //DEF(dw,id),  // no transform
 //DEF(em,vp),
 //DEF(em,rs),
@@ -918,12 +928,22 @@ maps_t maps[] =
 uint64_t quant(float f, float s)
 {
   uint64_t i = (uint64_t)(f*s);
-  if (i > s) i = s;
+  if (i > s-1.f) i = (uint64_t)(s-1.f);
   return i;
 }
 
 float dequant(uint64_t b, float s) { return (b+0.5f)*s; }
 #else
+
+uint64_t quant(float f, float s)
+{
+  uint64_t i = (uint64_t)(f*(s-1.f)+0.5f);
+  if (i > s-1.f) i = s-1.f;
+  return i;
+}
+
+float dequant(uint64_t b, float s) { return b*s; }
+
 #endif
 
 void vsdecode(vec3_t* v, uint64_t b)
@@ -990,10 +1010,10 @@ uint64_t vencode(vec3_t* v)
 // smallest-of-three
 uint64_t fsot(quat_t* q)
 {
-  float    m  = fabs(q->w);
-  float    ax = fabs(q->x);
-  float    ay = fabs(q->y);
-  float    az = fabs(q->z);
+  float    m  = fabsf(q->w);
+  float    ax = fabsf(q->x);
+  float    ay = fabsf(q->y);
+  float    az = fabsf(q->z);
   uint32_t id = 3;
   uint64_t r;
   vec3_t   t;
@@ -1043,11 +1063,11 @@ uint64_t fem1(quat_t* q)
   uint64_t r = 0;
   float    w = q->w;
   float    a = 1.f-w*w;
-  float    b = rsqrt(a+EPS*EPS);
+  float    b = rsqrt(a+EPS);
   float    k = a*b;
   float    s = (2.f/PI)*atanf(k/w)*b;
 
-  if (w > SQRT2) { s *= 2.f; r |= 1L<<63; }
+  if (w > SQRT2) { s *= 2.f; r |= 1ULL<<63; }
 
   quat_put_bv(&v,q,s);
   
@@ -1062,7 +1082,7 @@ void iem1(quat_t* q, uint64_t b)
   if ((int64_t)b < 0) { vec3_scale(&v, 0.5f); }
   
   float d = vec3_norm(&v);
-  float t = rsqrt(d+EPS*EPS);
+  float t = rsqrt(d+EPS);
   float a = (PI/2.f)*t*d;
   float s = sinf(a);
   float k = s*t;
@@ -1086,9 +1106,9 @@ uint64_t fha1(quat_t* q)
   vec3_t   v;
   uint64_t r = 0;
   float    d = 1.f + q->w;
-  float    s = QUAT_RSQRT(d);
+  float    s = rsqrt(d);
 
-  if (q->w >= K0) { s *= K1; r |= 1L<<63; }
+  if (q->w >= K0) { s *= K1; r |= 1ULL <<63; }
   
   quat_put_bv(&v,q,s);
   return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
@@ -1102,7 +1122,7 @@ void iha1(quat_t* q, uint64_t b)
   if ((int64_t)b < 0) { vec3_scale(&v, K2); }
 
   float d = vec3_norm(&v);
-  float s = QUAT_SQRT(2.f-d); 
+  float s = sqrtf(2.f-d); 
   quat_bv_set_scale(q,&v,s);
   q->w = 1.f-d;
 }
@@ -1111,7 +1131,72 @@ void iha1(quat_t* q, uint64_t b)
 #undef K1
 #undef K2
 
-uint64_t ftoy(quat_t* q)
+// TODO -- hack to half-angle of isoclinic rotation
+uint64_t fhir(quat_t* q)
+{
+  float    m  = fabsf(q->w);
+  float    ax = fabsf(q->x);
+  float    ay = fabsf(q->y);
+  float    az = fabsf(q->z);
+  uint32_t id = 3;
+  uint64_t r;
+  quat_t   t;
+  vec3_t   b;
+
+  if (ax > m) { id=0; m=ax; }
+  if (ay > m) { id=1; m=ay; }
+  if (az > m) { id=2; }
+
+  r = id; r <<= 62;
+
+  float s = sgn(q->f[id]);
+
+  t.w = s*q->f[id]; id = (id+1)&3;
+  t.x = s*q->f[id]; id = (id+1)&3;
+  t.y = s*q->f[id]; id = (id+1)&3;
+  t.z = s*q->f[id];
+
+  //quat_put_bv(&b, &t, SQRT2); // nope
+  fha(&b,&t);
+  
+  return r|vencodex(&b, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+}
+
+void ihir(quat_t* q, uint64_t bits)
+{
+  uint32_t id = (uint32_t)(bits >> 62);
+  vec3_t b;
+  //quat_t t;
+
+  vdecodex(&b, bits, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+
+#if 0  
+  quat_bv_set_scale(q, &b, 1.f);
+
+  q->f[id] = sqrtf(1.f-0.5f*vec3_norm(&b));
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*b.x; 
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*b.y; 
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*b.z;
+#else
+  iha(q, &b);
+
+  q->f[id] = sqrtf(1.f-vec3_norm(&b));
+  id = (id+1)&3; q->f[id] = b.x; 
+  id = (id+1)&3; q->f[id] = b.y; 
+  id = (id+1)&3; q->f[id] = b.z;
+#endif
+  
+  // this is just for compat with other tests.
+  // insure that 'w' is positive
+  if (q->f[3] >= 0.f) return;
+  q->f[0] = -q->f[0];
+  q->f[1] = -q->f[1];
+  q->f[2] = -q->f[2];
+  q->f[3] = -q->f[3];
+}
+
+
+uint64_t fnct(quat_t* q)
 {
   vec3_t   v;
   uint64_t r = 0;
@@ -1119,14 +1204,104 @@ uint64_t ftoy(quat_t* q)
 
   if (w >= .5f*SQRT2) {
     quat_put_bv(&v,q, SQRT2);
-    //fha(&v,q);
   }
   else {
-    r |= 1L<<63;
-    fem(&v,q);
-    //float d = 1.f + w;
-    //float s = QUAT_RSQRT(d);
+    r |= 1ULL <<63U;
+    float s = 1.f/(1.f+q->w);
+    quat_put_bv(&v,q,s);
+  }
+
+  return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+}
+
+void inct(quat_t* q, uint64_t b)
+{
+  vec3_t v;
+
+  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+
+  if ((int64_t)b >= 0) {
+    float d = vec3_norm(&v);
+    quat_bv_set_scale(q,&v, 0.5f*SQRT2);
+    q->w = sqrtf(1.f-0.5f*d);
+  }
+  else {
+    float s = 2.f/(1.f+vec3_norm(&v));
+    quat_bv_set_scale(q,&v,s);
+    q->w = s-1.f;
+  }
+}
+
+
+uint64_t ftoy_(quat_t* q)
+{
+  vec3_t   v;
+  uint64_t r = 0;
+  float    w = q->w;
+
+  if (w >= .5f*SQRT2) {
+    quat_put_bv(&v,q, SQRT2);
+  }
+  else {
+    r |= 1ULL << 63;
+
+    //float s = 1.f/(1.f+q->w);
     //quat_put_bv(&v,q,s);
+    frct(&v,q);
+    vec3_scale(&v, SQRT2M1);
+  }
+
+  return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+}
+
+void itoy_(quat_t* q, uint64_t b)
+{
+  vec3_t v;
+
+  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+
+  if ((int64_t)b >= 0) {
+    float d = vec3_norm(&v);
+    quat_bv_set_scale(q,&v, 0.5f*SQRT2);
+    q->w = sqrtf(1.f-0.5f*d);
+  }
+  else {
+    //float s = 2.f/(1.f+vec3_norm(&v));
+    //quat_bv_set_scale(q,&v,s);
+    //q->w = s-1.f;
+    vec3_scale(&v, SQRT2P1);
+    irct(q, &v);
+  }
+}
+
+//#define TCUT 0.5f*SQRT2
+//#define TSF  SQRT2
+//#define TSI  0.5f*SQRT2
+#define TCUT 0.634393284f
+#define TSF  1.29364357f
+#define TSI  0.773010453f
+//#define TCUT 0.555570233f
+//#define TSF  1.20268977f 
+//#define TSI  0.831469612f
+
+#define SSS SQRT2P1
+//#define SSS 5.02733949f
+
+uint64_t ftoy(quat_t* q)
+{
+  vec3_t   v;
+  uint64_t r = 0;
+  float    w = q->w;
+
+  if (w >= TCUT) {
+    quat_put_bv(&v,q, TSF);
+  }
+  else {
+    //quat_t t;
+    r |= 1ULL <<63;
+    //quat_dup(&t,q); //quat_usqrt(&t);
+    //frct(&v, &t); vec3_scale(&v, (1.f/SSS));
+    fhm(&v,q);
   }
 
   return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
@@ -1139,16 +1314,15 @@ void itoy(quat_t* q, uint64_t b)
   vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
 
   if ((int64_t)b >= 0) {
-    //iha(q,&v);
+    vec3_scale(&v, TSI);
     float d = vec3_norm(&v);
-    quat_bv_set_scale(q,&v, 0.5f*SQRT2);
-    q->w = sqrtf(1.f-0.5f*d);
+    quat_bv_set_scale(q, &v, 1.f);
+    q->w = sqrtf(1.f-d);
   }
   else {
-    iem(q,&v);
-    //float s = QUAT_SQRT(2.f-d); 
-    //quat_bv_set_scale(q,&v,s);
-    //q->w = 1.f-d;
+    //vec3_scale(&v, SSS); irct(q, &v);
+    //quat_upow2(q);
+    ihm(q,&v);
   }
 }
 
@@ -1190,8 +1364,6 @@ typedef struct {
 } e_histo_t;
 
 
-#define HLEN 80
-
 typedef struct {
   e_histo_t a[HLEN];  // rotation angle histo
 } a_error_t;
@@ -1218,6 +1390,7 @@ double error_add(quat_t* s, quat_t* r, a_error_t* e)
     h->max = ae;
     quat_dup(&h->s, s);
   }
+
   return t;
 }
 
@@ -1299,12 +1472,11 @@ void error_dump()
 void rt_test_x(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
 {
   for(uint32_t s=0; s<NUM_XFUNCS; s++) {
-    q_to_bits encode = xmaps[s].encode;
-    bits_to_q decode = xmaps[s].decode;
-    quat_t    q,r,mq;
-    uint64_t  bits;
-    double    e   = 0.f;
-    double    rms = 0.0;
+    q_to_bits  encode = xmaps[s].encode;
+    bits_to_q  decode = xmaps[s].decode;
+    a_error_t* e = &a_errors[s+NUM_FUNCS];
+    quat_t     q,r,mq;
+    uint64_t   bits;
 
     // reset base generators
     reset_generators(s0,s1,len);
@@ -1314,33 +1486,12 @@ void rt_test_x(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
       gen(&q);                        // H in distribution
       bits = encode(&q);              // quantize
       decode(&r, bits);               // dequantize
-      double ae = a_error(&q,&r);     // R3 degrees
-      rms += ae*ae;                   // for rms error
-      
-      // track max error
-      if (ae > e) {
-	e = ae;
-	quat_dup(&mq, &q);
-#if 0
-	printf("          % 2.4f %s", e, "                                         "); 
-	quat_print(&q); quat_print(&r); ln();
-#endif      
-      }
+      error_add(&q,&r,e);
     }
     
-    // reconstruct the found max error
-    quat_dup(&q,&mq);
-    bits = encode(&q);
-    decode(&r, bits);
-    
-    printf("%8s: ", xmaps[s].name);
-    printf("% 2.4f ", e);
-    printf("% 2.4f ", sqrt(rms/(1.0*len+1.0)));
-  //printf(": % 2.4f ", sqrt(vec3_norm(&b)));
-    quat_print(&q); quat_print(&r);
-    quat_sub(&r,&q,&r); quat_printa(&r);
-    ln();
+    printf("%s ", xmaps[s].name);
   }
+  //ln();
 }
 
 // measure round-trip errors using distribution of 'gen'. two-stage
@@ -1353,12 +1504,11 @@ void rt_test(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
     b3_to_s3   g  = maps[s].g;
     map_func_t bc = maps[s].bc;
     map_func_t cb = maps[s].cb;
+    a_error_t* e  = &a_errors[s];
     quat_t     q,r,mq;
     vec3_t     b,rb;
     vec3_t     c,rc;
     uint64_t   bits;
-    double     e   = 0.0;
-    double     rms = 0.0;
 
     reset_generators(s0,s1,len);
     quat_set(&mq,0,0,0,1);
@@ -1370,41 +1520,20 @@ void rt_test(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
       bits = vencode(&c);
       vdecode(&rc, bits);
       cb(&rb, &rc);
+      
       g(&r, &rb);
-      double ae = a_error(&q,&r);
-      rms += ae*ae;
-
-      if (ae > e) {
-	e = ae;
-	quat_dup(&mq, &q);
-	//printf("          %f ",ae); vec3_print(&b); quat_print(&q); quat_print(&r); ln();
-      }
+      g(&r, &b); // hack for no-quantization
+      error_add(&q,&r,e);
     }
 
-    quat_dup(&q,&mq);
-    f(&b, &q);  
-    bc(&c, &b);
-    bits = vencode(&c);
-    vdecode(&rc, bits);
-    cb(&rb, &rc);
-    g(&r, &rb);
-
-    printf("%8s: ", maps[s].name);
-    printf("% 2.4f ", e);
-    printf("% 2.4f ", sqrt(rms/(1.0*len+1.0)));
-  //printf(": % 2.4f ", sqrt(vec3_norm(&b)));
-    vec3_print(&b); quat_print(&q); quat_print(&r);
-    quat_sub(&r,&q,&r); quat_printa(&r);
-    ln();
+    printf("%s ", maps[s].name);
   }
+  ln();
 }
-
-#undef HLEN
 
 // a simple round-trip test for debugging inital mapping function
 //   half-angle, exp, etc.
 #define TLEN 0x2FFFFFF
-#define HLEN 80
 #define TEX
 
 void rt_xform_test(uint64_t s0, uint64_t s1)
@@ -1425,7 +1554,7 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
   for(uint32_t i=0; i<TLEN; i++) {
     uniform_quat(&p);
-    p.w = fabs(p.w);
+    p.w = fabsf(p.w);
 
     // test generalize or explict
 #if !defined(TEX)
@@ -1559,7 +1688,7 @@ void s2_rt_test(uint64_t s0, uint64_t s1)
     t.y = v.y*s;
 
     d   = t.x*t.x+t.y*t.y;
-    s   = 2.f*sqrt(1.f-d);
+    s   = 2.f*sqrtf(1.f-d);
     r.x = t.x*s;
     r.y = t.y*s;
     r.z = 1.f-2.f*(d);
@@ -1621,7 +1750,7 @@ void shell_sanity()
 void ptest()
 {
   quat_t q,r,d;
-  
+
   //quat_set(&q, -0x1.6a118ep-13f, 0, 0, 0x1.fffffep-1f);
 
   //quat_set(&q, 0.5f*SQRT2, 0.f, 0.f, 0.5f*SQRT2); 
@@ -1652,10 +1781,6 @@ int main(int argc, char** argv)
   uint64_t s1;
 
   error_init();
-
-  //dq_rt();
-  //foo(); return 0;
-  //test(); return 0;
 
 #ifdef RANDOMIZE
   s0 = _rdtsc();
@@ -1698,6 +1823,7 @@ int main(int argc, char** argv)
 #endif
 #endif  
   printf("prng rt\n");
+
 #if defined(CM_TESTS)
   rt_test  (s0,s1, &uniform_quat_from_z,     SYM_TRIALS);
   rt_test  (s0,s1, &uniform_quat,            SYM_TRIALS);
@@ -1718,7 +1844,7 @@ int main(int argc, char** argv)
   rt_test  (s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
 #endif
 
-  //error_dump();
+  error_dump();
   
   return 0;
 }
