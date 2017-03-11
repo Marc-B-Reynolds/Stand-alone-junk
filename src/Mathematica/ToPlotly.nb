@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     12004,        322]
-NotebookOptionsPosition[     11342,        297]
-NotebookOutlinePosition[     11690,        312]
-CellTagsIndexPosition[     11647,        309]
+NotebookDataLength[     13515,        377]
+NotebookOptionsPosition[     12539,        341]
+NotebookOutlinePosition[     12887,        356]
+CellTagsIndexPosition[     12844,        353]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -28,6 +28,23 @@ Dumb but less verbose conversion to c-style numbers.  Assumes base 10.\
 \>", "Text",
  CellChangeTimes->{{3.672995763498113*^9, 3.6729957954631124`*^9}, {
   3.6729970427822704`*^9, 3.6729970808382783`*^9}}],
+
+Cell[TextData[{
+ "Dumb refinement of some emprically measured data set into a smaller number:\
+\n\ng=ListLinePlot[",
+ StyleBox["empiricalDataSet",
+  FontSlant->"Italic"],
+ ", MaxPlotPoints\[Rule]",
+ StyleBox["numberOfDesiredSamples",
+  FontSlant->"Italic"],
+ "]\ntoPlotly[g]\n"
+}], "Text",
+ CellChangeTimes->{{3.698144454350408*^9, 3.698144543311672*^9}}],
+
+Cell[CellGroupData[{
+
+Cell["Common defs", "Subsubsection",
+ CellChangeTimes->{{3.698140704095848*^9, 3.6981407337983584`*^9}}],
 
 Cell[BoxData[
  RowBox[{
@@ -60,7 +77,33 @@ Cell[BoxData[
   ";"}]], "Input",
  CellChangeTimes->{{3.673000567056286*^9, 3.673000595853286*^9}, {
   3.6730006441042976`*^9, 3.673000684879407*^9}, {3.673000792593437*^9, 
-  3.6730008009194174`*^9}, {3.673012743455921*^9, 3.673012782361912*^9}}],
+  3.6730008009194174`*^9}, {3.673012743455921*^9, 3.673012782361912*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Empirical data", "Subsubsection",
+ CellChangeTimes->{{3.698140704095848*^9, 3.698140711469002*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"dataToTable", "[", "y_", "]"}], ":=", 
+  RowBox[{"Table", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"i", ",", 
+      RowBox[{"y", "[", 
+       RowBox[{"[", "i", "]"}], "]"}]}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"i", ",", 
+      RowBox[{"Length", "[", "y", "]"}]}], "}"}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.698140746802148*^9, 3.6981407635229974`*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Analytic data", "Subsubsection",
+ CellChangeTimes->{{3.698140704095848*^9, 3.698140742678897*^9}}],
 
 Cell["Simply grabbing Line defs for the moment for a simple Plot", "Text",
  CellChangeTimes->{{3.672995763498113*^9, 3.6729957954631124`*^9}}],
@@ -294,6 +337,7 @@ Cell[BoxData[
    3.672984289996131*^9}, {3.6729849647133827`*^9, 3.672984966661779*^9}, {
    3.672990713845882*^9, 3.6729907143038807`*^9}, 3.6729932019229546`*^9}]
 }, Open  ]]
+}, Open  ]]
 },
 WindowSize->{761, 1141},
 WindowMargins->{{Automatic, 131}, {Automatic, 60}},
@@ -314,15 +358,26 @@ Notebook[{
 Cell[CellGroupData[{
 Cell[580, 22, 130, 1, 63, "Section"],
 Cell[713, 25, 215, 4, 30, "Text"],
-Cell[931, 31, 414, 11, 31, "Input"],
-Cell[1348, 44, 736, 18, 72, "Input"],
-Cell[2087, 64, 142, 1, 30, "Text"],
-Cell[2232, 67, 4270, 88, 392, "Input"],
-Cell[6505, 157, 821, 21, 111, "Input"],
-Cell[7329, 180, 185, 3, 31, "Input"],
-Cell[7517, 185, 694, 21, 31, "Input"],
-Cell[8214, 208, 1464, 43, 152, "Input"],
-Cell[9681, 253, 1645, 41, 72, "Input"]
+Cell[931, 31, 355, 10, 106, "Text"],
+Cell[CellGroupData[{
+Cell[1311, 45, 104, 1, 34, "Subsubsection"],
+Cell[1418, 48, 414, 11, 31, "Input"],
+Cell[1835, 61, 736, 18, 72, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2608, 84, 105, 1, 34, "Subsubsection"],
+Cell[2716, 87, 412, 12, 31, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3165, 104, 104, 1, 34, "Subsubsection"],
+Cell[3272, 107, 142, 1, 30, "Text"],
+Cell[3417, 110, 4270, 88, 392, "Input"],
+Cell[7690, 200, 821, 21, 111, "Input"],
+Cell[8514, 223, 185, 3, 31, "Input"],
+Cell[8702, 228, 694, 21, 31, "Input"],
+Cell[9399, 251, 1464, 43, 152, "Input"],
+Cell[10866, 296, 1645, 41, 72, "Input"]
+}, Open  ]]
 }, Open  ]]
 }
 ]
