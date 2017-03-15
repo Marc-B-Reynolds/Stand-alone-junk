@@ -17,6 +17,8 @@
 // run sobol sequence tests
 #define USE_SOBOL
 
+#define USE_PRNG
+
 // number of trials to run per test
 //#define SYM_TRIALS 0x7FFFFFF
 #define SYM_TRIALS 0xFFFFFF
@@ -893,7 +895,7 @@ void fem(vec3_t* v, quat_t* q)
   float a = 1.f-w*w;
   float b = rsqrt(a+EPS);
   float k = a*b;
-  float s = (2.f/PI)*atanf(k/w)*b;
+  float s = (2.f/PI)*atanf(k/w)*b; // TODO: RPI
   quat_put_bv(v,q,s);
 }
 
@@ -919,7 +921,7 @@ void fem(vec3_t* v, quat_t* q)
   double a = 1.0-w*w;
   double b = 1.0/sqrt(a+EPS);
   double k = a*b;
-  double s = (2.0/PI)*atan(k/w)*b;
+  double s = (2.0/PI)*atan(k/w)*b;  // !!!
   v->x = (float)(s*q->x);
   v->y = (float)(s*q->y);
   v->z = (float)(s*q->z);
@@ -1099,8 +1101,10 @@ uint64_t vencode(vec3_t* v)
 //********
 // explicit methods
 
+
 #define QUANT_S(V,B)   (uint64_t)((V+1.0f)*(1<<(B-1)))
-#define QUANT_E(V,B)   (uint64_t)((V+1.0f)*(1<<(B-1)))
+#define QUANT_E(V,B)   (uint64_t)((0.5f*V+.5f)*((1<<B))-1)
+
 #define DEQUANT_S(I,B) ((I)+0.5f)*(1.f/(1<<(B-1)))-1.f;
 #define DEQUANT_E(I,B) ((I)+1.0f)*(1.f/(1<<(B-1)))-1.f;
 
@@ -1161,10 +1165,43 @@ void isot(quat_t* q, uint64_t b)
   q->f[3] = -q->f[3];
 }
 
-
 // all temp hacks
 
-//#define QUANT_S(V,B) (uint64_t)((0.5f*V+0.5f)*(1<<B))
+// Tait-Bryan: yaw-pitch-roll 
+
+void fypr(vec3_t* v, quat_t* q)
+{
+  float x=q->x, y=q->y, z=q->z, w=q->w;
+  float t  = x*z-y*w;
+  float yy = 2.f*(z*w+x*y);
+  float yx = 1.f-2.f*(y*y+z*z);
+
+  v->x = RPI*atan2f(yy,yx);
+  v->y = 2.0f*RPI*atan2f( 2.f*t, sqrtf(1.f-4.f*t*t));
+  v->z = RPI*atan2f(-2.f*(x*w+y*z), 1-2.f*(x*x+y*y));
+}
+
+void iypr(quat_t* q, vec3_t* v)
+{
+  float hy = 0.50f*PI*v->x;
+  float hp = 0.25f*PI*v->y;
+  float hr = 0.50f*PI*v->z;
+  float ys = sinf(hy), yc = cosf(hy);
+  float ps = sinf(hp), pc = cosf(hp);
+  float rs = sinf(hr), rc = cosf(hr);
+
+  q->x =  rc*ps*ys - rs*pc*yc;
+  q->y = -rc*ps*yc - rs*pc*ys;
+  q->z =  rc*pc*ys - rs*ps*yc;
+  q->w =  rc*pc*yc + rs*ps*ys;
+
+  // this is just for compat with other tests.
+  // insure that 'w' is positive
+  if (q->w >= 0.f) return;
+  quat_neg(q,q);
+}
+
+
 #define M ((1<<10)-1)
 #if 1
 #define QUANT   QUANT_S
@@ -1580,10 +1617,9 @@ void rt_test(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
   ln();
 }
 
-// a simple round-trip test for debugging inital mapping function
-//   half-angle, exp, etc.
+// a simple round-trip test for debugging dev of mapping function
 #define TLEN 0x2FFFFFF
-#define TEX
+//#define TEX
 
 void rt_xform_test(uint64_t s0, uint64_t s1)
 {
@@ -1607,11 +1643,11 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
     // test generalize or explict
 #if !defined(TEX)
-    frct(&v,&p);
-    irct(&r,&v); 
+    fypr(&v,&p);
+    iypr(&r,&v); 
     
     //bar_(&v);
-
+#if 0
     float r2 = vec3_norm(&v);
     uint32_t id = (uint32_t)((HLEN-1)*r2);
     if (id < HLEN)
@@ -1620,6 +1656,7 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
       printf(".%d.",id);
 
     if (r2 > rm) { rm = r2; /*printf("R(%f)\n", r2);*/ }
+#endif    
 #else
     uint64_t bits = fsot(&p);
     isot(&r,bits);
@@ -1633,10 +1670,12 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
     if (ae > e) {
       e = ae;
       printf("%08x: %f %f ",i, ae, sqrt(rms/(i+1.0)) );
+      quat_print(&p);
 #if !defined(TEX)      
       vec3_print(&v);
 #endif      
-      quat_print(&p); quat_print(&r); quat_printa(&diff);
+      quat_print(&r);
+      quat_printa(&diff);
       printf(" %f \n", rm);
     }
   }
@@ -1798,21 +1837,66 @@ void shell_sanity()
 
 #define P 4
 #define N (1<<P)
+#if 1
+#define QUANT   QUANT_S
+#define DEQUANT DEQUANT_S
+#else
+#define QUANT   QUANT_E
+#define DEQUANT DEQUANT_E
+#endif
 
 void foo()
 {
-  for(int64_t i=0; i<N; i++) {
-  //float d = DEQUANT_S(i,P);
-    float d = DEQUANT_E(i,P);
-    printf("%f ", d);
+  float x = DEQUANT(0,P);
+  float p = -1.f;
+  uint32_t t = 0;
+
+  while (x <= 1.f) {
+    uint64_t bits = QUANT(x,P) & ((1<<P)-1);
+    float    r    = DEQUANT(bits,P);
+    t++;
+    if (r != p) {
+      printf("%3d: % f % f  (% f) %a\n", bits,x,r,r-p,x);
+      p = r;
+      t = 0;
+    }
+    x += 0x1p-23;
   }
-    printf("\n");
-  
+  printf("done\n");
 }
 
 #undef N
 #undef P
+#undef QUANT
+#undef DEQUANT
 
+void angle_histo_x(uint64_t s0, uint64_t s1)
+{
+#ifdef USE_SOBOL
+  rt_test_x(s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
+  rt_test_x(s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
+  rt_test_x(s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
+#endif
+#ifdef USE_PRNG  
+  rt_test_x(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
+  rt_test_x(s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
+  rt_test_x(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+#endif  
+}
+
+void angle_histo(uint64_t s0, uint64_t s1)
+{
+#ifdef USE_SOBOL
+  rt_test(s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
+  rt_test(s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
+  rt_test(s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
+#endif
+#ifdef USE_PRNG  
+  rt_test(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
+  rt_test(s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
+  rt_test(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+#endif  
+}
 
 void ptest()
 {
@@ -1864,9 +1948,8 @@ int main(int argc, char** argv)
 
   //foo(); return 0;
   //ptest(); return 0;
-  //rt_xform_test(s0,s1); return 0;
+  rt_xform_test(s0,s1); return 0;
 
-#if 0
 #ifdef USE_SOBOL
   printf("sobol rt\n");
 #if defined(CM_TESTS)
@@ -1891,24 +1974,9 @@ int main(int argc, char** argv)
   rt_test_x(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
   rt_test_x(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
 #endif
-#else
-  
-//rt_test_x(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
-//rt_test_x(s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
-//rt_test_x(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
-//rt_test_x(s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
-//rt_test_x(s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
-  rt_test_x(s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
-  
-//rt_test  (s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
-//rt_test  (s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
-//rt_test  (s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
-//rt_test  (s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
-//rt_test  (s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
-//rt_test  (s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
-#endif
 
   error_dump();
-  
+
+
   return 0;
 }
