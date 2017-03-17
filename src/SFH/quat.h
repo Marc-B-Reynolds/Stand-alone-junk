@@ -316,9 +316,10 @@ static inline void quat_sq(quat_t* q)
 
 static inline void quat_upow2(quat_t* q)
 {
-  float t = 2.f*q->w;
+  float w = q->w;
+  float t = 2.f*w;
   quat_bv_scale(q, t);
-  q->w = t-1.f;
+  q->w = w*t-1.f;
 }
   
 // Q = cos(t)+sin(t)U, |Q|=1
@@ -441,6 +442,29 @@ static inline void quat_local_z(vec3_t* v, quat_t* q)
   vec3_set(v, wy+xz, yz-wx, 1.f-(xx+yy));
 }
 
+static inline void quat_to_basis(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
+{
+  float tx = 2.f * q->x;
+  float ty = 2.f * q->y;
+  float tz = 2.f * q->z;
+
+  float xx = tx  * q->x;
+  float yy = ty  * q->y;
+  float zz = tz  * q->z;
+  
+  float xy = ty  * q->x;
+  float xz = tz  * q->x;
+  float yz = ty  * q->z;
+
+  float wx = tx  * q->w;
+  float wy = ty  * q->w;
+  float wz = tz  * q->w;
+
+  vec3_set(X, 1.f-(yy+zz), xy+wz, xz-wy);
+  vec3_set(Y, xy-wz, 1.f-(xx+zz), wx+yz);
+  vec3_set(Z, wy+xz, yz-wx, 1.f-(xx+yy));
+}
+  
   
 #if defined(QUAT_IMPLEMENTATION)
 #else
