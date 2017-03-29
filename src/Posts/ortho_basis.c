@@ -6,11 +6,14 @@
 // error measures here are sloppy. Also no reworking of sub-expressions or
 // what have you.  Specifically for goofying with how approx of 1/(1+z) performs
 // and choices of threshold for method 1.
+// 
+// The error measurements are somewhat lacking.
 //
 // hack rcp_1 for method 1 and rcp_2 for 2/2a
 //
 // to compile under VC you'll have to change the float hex-constants...couldn't
 // be bothered.
+
 
 #include <stdio.h>
 #include <stdint.h>
@@ -28,26 +31,10 @@
 // enable to test with both pseudo-random and Sobol sequences
 #define USE_SOBOL
 
-// number of trials to run (2x this if using Sobol as well) and another 2x for
-// method-1 (default tests half-sphere)
-#define TRIALS 0xFFFFFFF
+#define TRIALS 0x7FFFFFFF
 //#define TRIALS 0xFFFFFF
 
 #define THRESHOLD -0x1.0p-14f
-
-// 0=method1, 1=method2, 2=method2a
-#define METHOD 0
-
-#if   (METHOD==0)
-#define METHODF ortho_basis_1
-#define FULL_SPHERE
-#elif (METHOD==1)
-#define METHODF ortho_basis_2
-#elif (METHOD==2)
-#define METHODF ortho_basis_2a
-#else
-opps
-#endif
 
 // minimax of 1/x has slow conv. 
 // sollya 1/x on [1,2] 
@@ -212,13 +199,31 @@ void ln(void) {printf("\n");}
 
 void vec3_print(vec3_t* v)
 {
-  printf("(%+f,%+f,%+f) ",v->x,v->y,v->z);
+  printf("(% f,% f,% f) ",v->x,v->y,v->z);
 }
 
 void vec3_printa(vec3_t* v)
 {
   printf("(%+a,%+a,%+a) ",v->x,v->y,v->z);
 }
+
+typedef union {
+  struct {
+    float m00,m01,m02;
+    float m10,m11,m12;
+    float m20,m21,m22;
+  };
+  vec3_t row[3];
+  float  f[3*3];
+} m33_t;
+
+void m33_print(m33_t* m)
+{
+  vec3_print(m->row  ); ln();
+  vec3_print(m->row+1); ln();
+  vec3_print(m->row+2); ln();
+}
+
 
 void ortho_basis_1(vec3_t* v, vec3_t* xp, vec3_t* yp)
 {
@@ -269,10 +274,58 @@ void ortho_basis_2a(vec3_t* v, vec3_t* xp, vec3_t* yp)
   vec3_set(yp, c,   1.f-b, -sz*y); 
 }
 
+void ortho_frisvad(vec3_t* n, vec3_t* b1, vec3_t* b2)
+{
+  if(n->z < -0.9999999f) {
+    vec3_set(b1,  0.0f,-1.0f, 0.0f);
+    vec3_set(b2, -1.0f, 0.0f, 0.0f);
+    return;
+  }
+  
+  float a = 1.f / (1.f + n->z);
+  float b = -n->x*n->y*a;
+  vec3_set(b1, 1.f - n->x*n->x*a, b, -n->x);
+  vec3_set(b2, b, 1.f - n->y*n->y*a, -n->y);
+}
+
+
+// "Building an Orthonormal Basis, Revisited"
+// Tom Duff, James Burgess, Per Christensen, Christophe Hery,
+// Andrew Kensler,Max Liani, and Ryusuke Villemin
+// Journal of Computer Graphics Techniques, Vol. 6, No. 1, 2017
+void ortho_basis_pixar(vec3_t* n, vec3_t* b1, vec3_t* b2)
+{
+  float sign = copysignf(1.0f, n->z);
+  const float a = -1.0f / (sign + n->z);
+  const float b = n->x * n->y * a;
+  vec3_set(b1, 1.0f + sign * n->x * n->x * a, sign * b, -sign * n->x);
+  vec3_set(b2, b, sign + n->y * n->y * a, -n->y);
+}
+
+typedef void(*ortho_gen_t)(vec3_t* v, vec3_t* xp, vec3_t* yp);
+
 typedef struct {
-  double d0,d1,d2;
-  double minm0,minm1;
-  double maxm0,maxm1;
+  ortho_gen_t f;
+  char*       name;
+} gens_t;
+
+// only full shell generators
+gens_t gens[] = {
+  {&ortho_basis_2,     "method2"},
+  {&ortho_basis_2a,    "method2a"},
+  {&ortho_frisvad,     "frisvad"},
+  {&ortho_basis_pixar, "pixar"}
+};
+
+#define NUM_GENS (sizeof(gens)/sizeof(gens[0]))
+
+typedef struct {
+  double   d0,d1,d2;
+  double   minm0,minm1;
+  double   maxm0,maxm1;
+  double   rms;
+  double   peak;
+  uint64_t cnt;
   vec3_t v0,v1,v2,v3,v4,v5,v6;
 } ortho_error_t;
 
@@ -280,6 +333,8 @@ void ortho_error_init(ortho_error_t* e)
 {
   e->d0 = e->d1 = e->d2 = 0.f;
   e->minm0=e->minm1=e->maxm0=e->maxm1=1.f;
+  e->rms = 0;
+  e->peak = 0;
 }
 
 static inline double vec3_dot_d(vec3_t* a, vec3_t* b)
@@ -316,27 +371,38 @@ void ortho_check(ortho_error_t* e, vec3_t* v, vec3_t* x, vec3_t* y)
   else if (e->maxm0 < m0) {e->maxm0 = m0; vec3_dup(&e->v4, v); display=1; }
   if (e->minm1 > m1)      {e->minm1 = m1; vec3_dup(&e->v5, v); display=1; }
   else if (e->maxm1 < m1) {e->maxm1 = m1; vec3_dup(&e->v6, v); display=1; }
+
+  // add RMS measure
+  double t,error;
+  t = vec3_norm_d(v);
+  t = sqrt(t) -1.0; error  = t*t;
+  t = sqrt(m0)-1.0; error += t*t;
+  t = sqrt(m1)-1.0; error += t*t;
+  error += d0*d0;
+  error += d1*d1;
+  error += d2*d2;
+
+  if (error > e->peak) e->peak = error;
+
+  e->rms += error;
+  e->cnt++;
   
   if (display) {
     printf("."); fflush(stdout);
   }
 }
 
-void ortho_basis_spew(vec3_t* v)
+void ortho_basis_spew(ortho_gen_t f, vec3_t* v)
 {
   vec3_t x,y;
-  METHODF(v, &x, &y);
-  printf("  v:");   vec3_print(v);  
-  printf("\n  x:"); vec3_print(&x);
-  printf("\n  y:"); vec3_print(&y);
-  printf("\n  v:"); vec3_printa(v);
-  printf("\n  x:"); vec3_printa(&x);
-  printf("\n  y:"); vec3_printa(&y);
-  ln();
+  f(v, &x, &y);
+  vec3_print(v);  vec3_printa(v);  ln();
+  vec3_print(&x); vec3_printa(&x); ln();
+  vec3_print(&y); vec3_printa(&y); ln();
 }
 
 
-void ortho_spew(ortho_error_t* e)
+double ortho_spew(ortho_gen_t f, ortho_error_t* e)
 {
   double minx = sqrt(e->minm0);
   double maxx = sqrt(e->maxm0);
@@ -345,81 +411,118 @@ void ortho_spew(ortho_error_t* e)
   double avx  = 1.0-0xa.2f983p-4*acos(e->d0);
   double avy  = 1.0-0xa.2f983p-4*acos(e->d1);
   double axy  = 1.0-0xa.2f983p-4*acos(e->d1);
+  double rms  = sqrt(e->rms/(6.0*e->cnt));
+  double peak = sqrt(e->peak/6.0);
 
-  printf("\nmax v.x: %f %a | rel angle error: %f %a\n", e->d0, e->d0, avx,avx); ortho_basis_spew(&e->v0);
-  printf("\nmax v.y: %f %a | rel angle error: %f %a\n", e->d1, e->d1, avy,avy); ortho_basis_spew(&e->v1);
-  printf("\nmax x.y: %f %a | rel angle error: %f %a\n", e->d2, e->d2, axy,axy); ortho_basis_spew(&e->v2);
-  printf("\nmin |x|: %f %a\n", minx, minx);   ortho_basis_spew(&e->v3);
-  printf("\nmax |x|: %f %a\n", maxx, maxx);   ortho_basis_spew(&e->v4);
-  printf("\nmin |y|: %f %a\n", miny, miny);   ortho_basis_spew(&e->v5);
-  printf("\nmax |y|: %f %a\n", maxy, maxy);   ortho_basis_spew(&e->v6);
+  printf("\nmax v.x:   %e %a | rel angle error: %e %a\n", e->d0, e->d0, avx,avx); ortho_basis_spew(f,&e->v0);
+  printf("\nmax v.y:   %e %a | rel angle error: %e %a\n", e->d1, e->d1, avy,avy); ortho_basis_spew(f,&e->v1);
+  printf("\nmax x.y:   %e %a | rel angle error: %e %a\n", e->d2, e->d2, axy,axy); ortho_basis_spew(f,&e->v2);
+  printf("\n1-min|x|:  %e %a\n", 1.0-minx, 1.0-minx); ortho_basis_spew(f,&e->v3);
+  printf("\nmax|x|-1:  %e %a\n", maxx-1.0, maxx-1.0); ortho_basis_spew(f,&e->v4);
+  printf("\n1-min|y|:  %e %a\n", 1.0-miny, 1.0-miny); ortho_basis_spew(f,&e->v5);
+  printf("\nmax|y|-1:  %e %a\n", maxy-1.0, maxy-1.0); ortho_basis_spew(f,&e->v6);
+  printf("max error: %e %a\n",   peak, peak);
+  printf("\nRMS:       %e %a\n", rms, rms);
+
+  return rms;
 }
 
-void ortho_test()
+void gen_reset(uint64_t s0, uint64_t s1)
 {
-  ortho_error_t e0;
+  rng_state[0] = s0;
+  rng_state[1] = s1;
   
-  vec3_t n;
-  vec3_t x;
-  vec3_t y;
-  
-  ortho_error_init(&e0);
-
 #ifdef  USE_SOBOL
-  printf("sobol\n");
-  for(uint32_t i=0; i<TRIALS; i++) {
-    sobol_uniform_hs2(&qrng, n.f);
-    METHODF(&n, &x, &y);
-    ortho_check(&e0, &n, &x, &y);
-
-#ifdef FULL_SPHERE
-    n.z = -n.z;
-    METHODF(&n, &x, &y);
-
-#if (METHOD==1)
-    vec3_neg(&x);
+  sobol_2d_init(&qrng, (uint32_t)rng_u64(), (uint32_t)rng_u64());
 #endif
-    ortho_check(&e0, &n, &x, &y);
-#endif    
+
+}
+
+
+void ortho_test(uint64_t s0, uint64_t s1)
+{
+  double rms[NUM_GENS];
+  
+  for(uint32_t gi=0; gi<NUM_GENS; gi++) {
+    ortho_gen_t f = gens[gi].f;
+    ortho_error_t e0;
+    
+    vec3_t n;
+    vec3_t x;
+    vec3_t y;
+
+    gen_reset(s0,s1);
+    
+    ortho_error_init(&e0);
+    printf("method: %s\n", gens[gi].name);
+    
+#ifdef  USE_SOBOL
+    printf("sobol\n");
+    
+    for(uint64_t i=0; i<TRIALS; i++) {
+      sobol_uniform_hs2(&qrng, n.f);
+      f(&n, &x, &y);
+      ortho_check(&e0, &n, &x, &y);
+      
+      n.z = -n.z;
+      f(&n, &x, &y);
+      ortho_check(&e0, &n, &x, &y);
+    }
+    printf("\npseudo-random\n");
+    fflush(stdout);
+#endif
+    
+    for(uint64_t i=0; i<TRIALS; i++) {
+      uniform_hs2(&n);
+      f(&n, &x, &y);
+      ortho_check(&e0, &n, &x, &y);
+      
+      n.z = -n.z;
+      f(&n, &x, &y);
+      
+      ortho_check(&e0, &n, &x, &y);
+    }
+    
+    rms[gi] = ortho_spew(f, &e0);
+    ln();
   }
-  printf("\npseudo-random\n");
-  fflush(stdout);
-#endif
 
-  for(uint32_t i=0; i<TRIALS; i++) {
-    uniform_hs2(&n);
-    METHODF(&n, &x, &y);
-    ortho_check(&e0, &n, &x, &y);
-
-#ifdef FULL_SPHERE
-    n.z = -n.z;
-    METHODF(&n, &x, &y);
-
-#if (METHOD==1)
-    vec3_neg(&x);
-#endif
-    ortho_check(&e0, &n, &x, &y);
-#endif
+  printf("method   RMS\n");
+  for(uint32_t gi=0; gi<NUM_GENS; gi++) {
+    printf("%8s %e\n", gens[gi].name, rms[gi]);
   }
 
-  ortho_spew(&e0);
+}
+
+// hack to dump out the first COUNT produced by each method
+#define COUNT 5
+void foo(uint64_t s0, uint64_t s1)
+{
+  m33_t b;
+
+  gen_reset(s0,s1);
+  uniform_s2(b.row);
+
+  for(uint32_t c=0; c<COUNT; c++) {
+    for(uint32_t gi=0; gi<NUM_GENS; gi++) {
+      printf("%s\n", gens[gi].name);
+      ortho_gen_t f = gens[gi].f;
+      f(b.row, b.row+1, b.row+2);
+      m33_print(&b); ln();
+    }
+  }
 }
 
 int main()
 {
   uint64_t t = __rdtsc();
+  uint64_t s0,s1;
   
-  // initalize the PR and LDS generators 
+  s0 = t;
+  s1 = t ^ 0x123456789;
   
-  rng_state[0] = t;
-  rng_state[1] = t ^ _rdtsc();
-  //printf("%08x\n",(uint32_t)rng_u64());
-
-#ifdef  USE_SOBOL
-  sobol_2d_init(&qrng, (uint32_t)rng_u64(), (uint32_t)rng_u64());
-#endif
-  
-  ortho_test();
+  //foo(s0,s1);
+  ortho_test(s0,s1);
   
   return 0;
 }
