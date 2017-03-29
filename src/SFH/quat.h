@@ -442,7 +442,7 @@ static inline void quat_local_z(vec3_t* v, quat_t* q)
   vec3_set(v, wy+xz, yz-wx, 1.f-(xx+yy));
 }
 
-static inline void quat_to_basis(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
+static inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
 {
   float tx = 2.f * q->x;
   float ty = 2.f * q->y;
