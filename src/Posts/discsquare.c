@@ -100,7 +100,7 @@ void ln()
 // for quickly/first-pass hacking in arch specific junk
 // !!!!!! the recip hurts performance w current gcc/clang..
 //        actually does the 1/x and product...sigh.
-static inline float sgn(float x) { return x >= 0.f ? 1.f : -1.f; }
+static inline float sgn(float x) { return copysignf(1.f,x); }
 static inline float mulsgn(float x, float v) { return x >= 0.f ? v : -v; }
 static inline float rsqrt(float v) { return 1.f/sqrtf(v); }
 static inline float recip(float v) { return 1.f/v; }
@@ -455,7 +455,7 @@ int main(int argc, char** argv)
   s0 = 0x01;//_rdtsc();
   s1 = 0x1234567;
 
-  test(s0,s1);
+  //test(s0,s1);
   uniform_rt_test(s0,s1);
 
 #ifdef USE_SOBOL

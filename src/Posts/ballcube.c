@@ -170,7 +170,7 @@ void ln()
 // for quickly/first-pass hacking in arch specific junk
 // !!!!!! the recip hurts performance w current gcc/clang..
 //        actually does the 1/x and product...sigh.
-static inline float sgn(float x) { return x >= 0.f ? 1.f : -1.f; }
+static inline float sgn(float x) { return copysignf(1.f,x); }
 static inline float mulsgn(float x, float v) { return x >= 0.f ? v : -v; }
 static inline float rsqrt(float v) { return 1.f/sqrtf(v); }
 static inline float recip(float v) { return 1.f/v; }
