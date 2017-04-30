@@ -3,12 +3,13 @@
 // Toy code for:
 // http://marc-b-reynolds.github.io
 
-// This performs sloppy empirical testing.  
+// This performs sloppy empirical testing, the code is very likely to be broken
+// and is intended for hacking.
 
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-//#include <x86intrin.h>
+#include <x86intrin.h>
 #include <math.h>
 
 
@@ -39,14 +40,17 @@
 // rotation angle buckets
 #define HLEN 80
 
-// With standard sampling strategies, these are off
+// With standard sampling strategies, these will
+// return BS results: uniform is a minor strategy.
 //#define DUMP_RMS
 //#define DUMP_AVE
 
-// choose between atan or acos based error measuring
-//#define ACOS_MEASURE
-
+#define TRACE_PEAK
+//#define NORMALIZE_SAMPLES
 // end config
+
+// choose between atan or acos based error measuring
+#define ACOS_MEASURE
 
 #define XSTR(X) STR(X)
 #define STR(X)  #X
@@ -117,18 +121,18 @@ static inline float rng_f32(void)
 // for quickly/first-pass hacking in arch specific junk
 // !!!!!! the recip hurts performance w current gcc/clang..
 //        actually does the 1/x and product...sigh.
-static inline float sgn(float x) { return copysignf(1.f,x); }
-static inline float mulsgn(float x, float v) { return sgn(x)*v; }
-static inline float rsqrt(float v) { return 1.f/sqrtf(v); }
-static inline float recip(float v) { return 1.f/v; }
-static inline float rnd(float v)   { return floorf(v+0.5f); }
-static inline double sgnd(double x) { return copysign(1.0,x); }
+ inline float sgn(float x) { return copysignf(1.f,x); }
+ inline float mulsgn(float x, float v) { return sgn(x)*v; }
+ inline float rsqrt(float v) { return 1.f/sqrtf(v); }
+ inline float recip(float v) { return 1.f/v; }
+ inline float rnd(float v)   { return floorf(v+0.5f); }
+ inline double sgnd(double x) { return copysign(1.0,x); }
 
-static inline float pmax(float a, float b)   { return a >= b ? a : b; }
-static inline float pmin(float a, float b)   { return a <= b ? a : b; }
+ inline float pmax(float a, float b)   { return a >= b ? a : b; }
+ inline float pmin(float a, float b)   { return a <= b ? a : b; }
 
 
-static inline float clamp(float v, float lo, float hi)
+ inline float clamp(float v, float lo, float hi)
 {
   if (v >= lo) {
     if (v <= hi)
@@ -368,24 +372,34 @@ void sobol_quat(quat_t* q)
 // H in binary64 for error measures
 typedef struct { double x,y,z,w; } quatd_t;
 
-static inline void quat_to_d(quatd_t* r, quat_t* q)
+inline void quat_to_d(quatd_t* r, quat_t* q)
 {
   r->x = q->x; r->y = q->y; r->z = q->z; r->w = q->w;
 }
 
-static inline void quatd_set(quatd_t* r, double x, double y, double z, double w)
+inline void quatd_set(quatd_t* r, double x, double y, double z, double w)
 {
   r->x=x; r->y=y; r->z=z; r->w=w;
 }
 
-static inline void quatd_conj(quatd_t* a)
+inline void quatd_conj(quatd_t* a)
 {
   a->x = -a->x;
   a->y = -a->y;
   a->z = -a->z;
 }
 
-static inline void quatd_mul(quatd_t* r, quatd_t* a, quatd_t* b)
+inline double quatd_dot(quatd_t* a, quatd_t* b)
+{
+  return a->x*b->x + a->y*b->y + a->z*b->z + a->w*b->w;
+}
+
+inline double quatd_norm(quatd_t* a)
+{
+  return quatd_dot(a,a);
+}
+
+inline void quatd_mul(quatd_t* r, quatd_t* a, quatd_t* b)
 {
   double x = a->w*b->x + a->x*b->w + a->y*b->z - a->z*b->y;  
   double y = a->w*b->y - a->x*b->z + a->y*b->w + a->z*b->x;
@@ -396,10 +410,10 @@ static inline void quatd_mul(quatd_t* r, quatd_t* a, quatd_t* b)
 
 // returned angle is in degrees and as R^3 and not H.
 // use doubles to compute relative quaternion BA*,
-// and atan2 to determine angle between A & B. This
-// measure isn't effected by errors in magnitude..
-// better or worse than acos measure..it depends.
-// (well, really you can choose which measure)
+// and atan2 to determine angle between A & B.
+
+#define TO_R3_DEGREES 114.59156036376953125  // 2(180/pi), the 2 for H to R3 angle measure
+
 float a_error(quat_t* a, quat_t* b)
 {
 #if !defined(ACOS_MEASURE)  
@@ -412,17 +426,18 @@ float a_error(quat_t* a, quat_t* b)
   double x = R.w;
   double y = sqrt(R.x*R.x+R.y*R.y+R.z*R.z);
   double t = atan2(y,x);
-  float  r = (float)(1.1459156036376953125e2*t);
+  float  r = (float)(TO_R3_DEGREES*t);
 
   if (r <= 180.f) return r;
 
   return 180.f-r;
 #else
-  double ax=a->x, ay=a->y, az=a->z, aw=a->w;
-  double bx=b->x, by=b->y, bz=a->z, bw=b->w;
-  double d = ax*bx + ay*by + az*bz + aw*bw;
-  double t = d <= 1.0 ? acos(d) : 0;
-  return 1.1459156036376953125e2*t;
+  quatd_t A,B;
+  quat_to_d(&A,a);
+  quat_to_d(&B,b);
+  double d = fabs(quatd_dot(&A,&B));
+  double t = d < 1.0 ? acos(d) : 0;
+  return TO_R3_DEGREES*t;
 #endif  
 }
 
@@ -888,12 +903,13 @@ void ihm(quat_t* q, vec3_t* v)
 
 // log(q) & exp(b)
 
-#if 1
-
 void fem(vec3_t* v, quat_t* q)
 {
+  // for noisy input with w=1 & x,y,z!= 0, don't compute a as 1-w^2
+  // for higher bit packages. explodes error near identity
   float w = q->w;
-  float a = 1.f-w*w;
+//float a = 1.f-w*w;
+  float a = quat_bnorm(q);
   float b = rsqrt(a+EPS);
   float k = a*b;
   float s = (2.f*RPI)*atanf(k/w)*b;
@@ -910,38 +926,6 @@ void iem(quat_t* q, vec3_t* v)
   quat_bv_set_scale(q,v,k);
   q->w = cosf(a);
 }
-
-#else
-
-// testing junk
-void fem(vec3_t* v, quat_t* q)
-{
-  double w = q->w;
-  
-  double a = 1.0-w*w;
-  double b = 1.0/sqrt(a+EPS);
-  double k = a*b;
-  double s = (2.0/PI)*atan(k/w)*b;  // !!!
-  v->x = (float)(s*q->x);
-  v->y = (float)(s*q->y);
-  v->z = (float)(s*q->z);
-
-}
-
-void iem(quat_t* q, vec3_t* v)
-{
-  double d = vec3_norm(v);
-  double t = 1.0/sqrt(d+EPS);
-  double a = (PI/2.0)*t*d;
-  double s = sin(a);
-  double k = s*t;
-  q->x = (float)(k*v->x);
-  q->y = (float)(k*v->y);
-  q->z = (float)(k*v->z);
-//q->w = cosf(a);
-  q->w = (float)sqrt(1.0-s*s);
-}
-#endif
 
 
 // proc pointer to quaternion generator
@@ -970,8 +954,9 @@ typedef void (*map_func_t)(vec3_t*, vec3_t*);
 
 maps_t maps[] =
 {
-//DEF(dw,id),  // no transform
-#if 0  
+  DEF(dw,id),  // no transform (for post comp with sot)
+#if 0
+  // nothing to see here. ;)
   DEF(em,vp),
   DEF(hm,vp),
   DEF(ha,vp),
@@ -990,13 +975,9 @@ maps_t maps[] =
   DEF(em,rs),
   DEF(ct,rs),
 #endif
-//DEF(hm,rs),
-//DEF(ha,rs),
-//DEF(em,vp),
-//DEF(em,rs),
-//DEF(em,aeaz),
-  DEF(em,id),  // exp-map
+
 #if 0
+  DEF(em,id),  // exp-map
   DEF(hm,id),  // harmonic mean
   DEF(ha,id),  // half-angle
   DEF(ct,id)   // Cayley
@@ -1022,8 +1003,6 @@ maps_t maps[] =
 #define BITS_MY ((1<<BITS_Y)-1)
 #define BITS_MZ ((1<<BITS_Z)-1)
 
-#if 1
-
 static inline uint64_t quant(float f, float s)
 {
   uint64_t i = (uint64_t)(f*s);
@@ -1032,22 +1011,6 @@ static inline uint64_t quant(float f, float s)
 }
 
 static inline float dequant(uint64_t b, float s) { return (b+0.5f)*s; }
-
-#else
-
-uint64_t quant(float f, float s)
-{
-  uint64_t i = (uint64_t)(f*(s-1.f)+.5f);
-  //if (i > s-1.f) i = (uint64_t)(s-1.f);
-  return i;
-}
-
-float dequant(uint64_t b, float s)
-{
-  return b*s;
-}
-
-#endif
 
 void vsdecode(vec3_t* v, uint64_t b)
 {
@@ -1170,7 +1133,7 @@ void isot(quat_t* q, uint64_t b)
 // storage of values in struct swap x&y given bit allocation
 // strategy used in this file.
 
-void fypr(vec3_t* v, quat_t* q)
+void quat_to_zyx(vec3_t* v, quat_t* q)
 {
   double x=q->x, y=q->y, z=q->z, w=q->w;
   
@@ -1191,7 +1154,7 @@ void fypr(vec3_t* v, quat_t* q)
     v->y = (float)(2.0*atan2(x,w) - sgnd(xz)*v->z);
 }
 
-void iypr(quat_t* q, vec3_t* v)
+void zyx_to_quat(quat_t* q, vec3_t* v)
 {
   float hy = 0.5f*v->z;
   float hp = 0.5f*v->x;
@@ -1205,32 +1168,31 @@ void iypr(quat_t* q, vec3_t* v)
   q->y = rc*ps*yc + rs*pc*ys;
   q->z = rc*pc*ys - rs*ps*yc;
 
-  // below here temp. hacks for error measures
+  // below here temp hacks for error measures
   if (q->w >= 0.f) return;
   quat_neg(q,q);
 }
 
-uint64_t fyprx(quat_t* q)
+uint64_t fzyx(quat_t* q)
 {
   vec3_t v;
-  fypr(&v, q);
+  quat_to_zyx(&v, q);
   v.x *= 2.f*RPI;
   v.y *= RPI;
   v.z *= RPI;
   return vencode(&v);
 }
 
-void iyprx(quat_t* q, uint64_t b)
+void izyx(quat_t* q, uint64_t b)
 {
   vec3_t v;
   vdecode(&v, b);
   v.x *= 0.5f*PI;
   v.y *= PI;
   v.z *= PI;
-  iypr(q, &v);
+  zyx_to_quat(q, &v);
 }
 
-#if 1
 void quat_to_zxz(vec3_t* v, quat_t* q)
 {
   double x=q->x, y=q->y, z=q->z, w=q->w;
@@ -1242,66 +1204,23 @@ void quat_to_zxz(vec3_t* v, quat_t* q)
   v->y = s-d;               // alpha
   v->z = s+d;               // gamma
 
-#if 1 // temp hack  
-  if (fabs(v->y) > PI) v->y -= sgn(v->y)*2.f*PI;
-  if (fabs(v->z) > PI) v->z -= sgn(v->z)*2.f*PI;
-#else
-  if ((fabs(v->y) > PI && (x > 0 || y < 0))
-   || (fabs(v->z) > PI && (x > 0 || y > 0))) {
-    if (x >= 0.f)
-      printf("------ %f %f\n", s,d);
+  // this is a hack I can't be bothered to fix.
+  // if 'x' is negative we don't have a min range
+  // for gamma or alpha. The proper fix is to
+  // convert computing 'd' by single parameter
+  // atan and pull-out the arg reduction and
+  // constants. Could fold with 's' arg reduction
+  // as well.
+  if (x < 0) {
+    if (fabs(v->y) > PI) v->y -= sgn(v->y)*2.f*PI;
+    if (fabs(v->z) > PI) v->z -= sgn(v->z)*2.f*PI;
   }
-#endif
   
   if (c2 != 0.0)
     v->x = 2.0*atan(sqrt(s2/c2));
   else
     v->x = (0.5 > s2) ? 0 : PI;
 }
-#else
-void quat_to_zxz(vec3_t* v, quat_t* q)
-{
-  double x=q->x, y=q->y, z=q->z, w=q->w;
-
-  double x2 = x*x;
-  double y2 = y*y;
-  double s2 = x2+y2;     // sin(beta)^2
-  double c2 = w*w+z*z;   // cos(beta)^2
-  double s  = atan(z/w); // (gamma+alpha)/2  <- tighten
-  doubld sx = sgnd(x);
-  double sy = sgnd(y);
-  double a,m,d;
-
-  if (x2 > y2) {
-    d = y2/x2;
-    m =  1;
-  } else {
-    d = x2/y2;
-    m = -1;
-  }
-  
-  v->y = s-d;               // alpha
-  v->z = s+d;               // gamma
-
-#if 0
-#if 0
-  if (fabs(v->y) > PI) v->y -= sgn(v->y)*2.f*PI;
-  if (fabs(v->z) > PI) v->z -= sgn(v->z)*2.f*PI;
-#else
-  if ((fabs(v->y) > PI && (x > 0 || y < 0))
-   || (fabs(v->z) > PI && (x > 0 || y > 0))) {
-    if (x >= 0.f)
-      printf("------ %f %f\n", s,d);
-  }
-#endif
-#endif  
-  
-  if (c2 != 0.0)
-    v->x = 2.0*atan(sqrt(s2/c2));
-  else
-    v->x = (0.5 > s2) ? 0 : PI;
-}
-#endif
 
 void zxz_to_quat(quat_t* q, vec3_t* v)
 {
@@ -1323,8 +1242,6 @@ void zxz_to_quat(quat_t* q, vec3_t* v)
   quat_neg(q,q);
 }
 
-float amin=0,amax=0,bmin=0,bmax=0,cmin=0,cmax=0;
-
 uint64_t fzxz(quat_t* q)
 {
   vec3_t v;
@@ -1333,10 +1250,6 @@ uint64_t fzxz(quat_t* q)
   v.x = v.x*RPI;
   v.y = v.y*RPI/2.f+.5f;
   v.z = v.z*RPI/2.f+.5f;
-
-  if (v.x < amin) amin=v.x; else if (v.x > amax) amax=v.x;
-  if (v.y < bmin) bmin=v.y; else if (v.y > bmax) bmax=v.y;
-  if (v.z < cmin) cmin=v.z; else if (v.z > cmax) cmax=v.z;
 
   uint64_t b;
 
@@ -1363,218 +1276,6 @@ void izxz(quat_t* q, uint64_t b)
 }
 
 
-#define M ((1<<10)-1)
-#if 1
-#define QUANT   QUANT_S
-#define DEQUANT DEQUANT_S
-#else
-#define QUANT   QUANT_E
-#define DEQUANT DEQUANT_E
-#endif
-
-uint64_t fem_x0(quat_t* q)
-{
-  vec3_t v,c;
-  {
-    float w = q->w;
-    float a = 1.f-w*w;
-    float b = rsqrt(a+EPS);
-    float k = a*b;
-    float s = (2.f/PI)*atanf(k/w)*b;
-    
-    quat_put_bv(&v,q,s);
-    map_rs_bc(&c,&v);
-  }
-  
-  uint64_t bits;
-
-  bits  = QUANT(c.x, 10);
-  bits |= QUANT(c.y, 10) << 10;
-  bits |= QUANT(c.z, 10) << 20;
-  return bits;
-}
-
-void iem_x0(quat_t* q, uint64_t b)
-{
-  vec3_t c,v;
-
-  c.x = DEQUANT(b & M, 10); b >>= 10;
-  c.y = DEQUANT(b & M, 10); b >>= 10;
-  c.z = DEQUANT(b & M, 10);
-
-  map_rs_cb(&v,&c);
-  
-  float d = vec3_norm(&v);
-  float t = rsqrt(d+EPS);
-  float a = (PI/2.f)*t*d;
-  float s = sinf(a);
-  float k = s*t;
-  quat_bv_set_scale(q,&v,k);
-  q->w = sqrtf(1.f-s*s);
-}
-
-#undef M
-#undef QUANT
-#undef DEQUANT
-
-
-uint64_t fnct(quat_t* q)
-{
-  vec3_t   v;
-  uint64_t r = 0;
-  float    w = q->w;
-
-  if (w >= .5f*SQRT2) {
-    quat_put_bv(&v,q, SQRT2);
-  }
-  else {
-    r |= 1ULL <<63U;
-    float s = 1.f/(1.f+q->w);
-    quat_put_bv(&v,q,s);
-  }
-
-  return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-}
-
-void inct(quat_t* q, uint64_t b)
-{
-  vec3_t v;
-
-  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-
-  if ((int64_t)b >= 0) {
-    float d = vec3_norm(&v);
-    quat_bv_set_scale(q,&v, 0.5f*SQRT2);
-    q->w = sqrtf(1.f-0.5f*d);
-  }
-  else {
-    float s = 2.f/(1.f+vec3_norm(&v));
-    quat_bv_set_scale(q,&v,s);
-    q->w = s-1.f;
-  }
-}
-
-
-uint64_t ftoy_(quat_t* q)
-{
-  vec3_t   v;
-  uint64_t r = 0;
-  float    w = q->w;
-
-  if (w >= .5f*SQRT2) {
-    quat_put_bv(&v,q, SQRT2);
-  }
-  else {
-    r |= 1ULL << 63;
-    frct(&v,q);
-    vec3_scale(&v, SQRT2M1);
-  }
-
-  return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-}
-
-void itoy_(quat_t* q, uint64_t b)
-{
-  vec3_t v;
-
-  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-
-  if ((int64_t)b >= 0) {
-    float d = vec3_norm(&v);
-    quat_bv_set_scale(q,&v, 0.5f*SQRT2);
-    q->w = sqrtf(1.f-0.5f*d);
-  }
-  else {
-    vec3_scale(&v, SQRT2P1);
-    irct(q, &v);
-  }
-}
-
-//#define TCUT 0.5f*SQRT2
-//#define TSF  SQRT2
-//#define TSI  0.5f*SQRT2
-
-//#define TCUT 0.555570233f // too far left
-//#define TSF  1.20268977f 
-//#define TSI  0.831469612f
-
-//#define TCUT 0.6216099683f // too far right
-//#define TSF  1.276606213f
-//#define TSI  0.7833269096f
-
-//#define TCUT 0.634393284f // too far right (slightly)
-//#define TSF  1.29364357f
-//#define TSI  0.773010453f
-
-//#define TCUT 0.6599831459f // too far left (85/100)
-//#define TSF  1.331060937f
-//#define TSI  0.751280405f
-
-#define TCUT 0.6371511442f 
-#define TSF  1.297456282f
-#define TSI  0.7707388789f
-
-
-
-#define SSS SQRT2P1
-//#define SSS 5.02733949f
-
-// TCUT cos(t)
-// TSF  1/sin(t)
-// TSI  sin(t)
-
-uint64_t fidhm(quat_t* q)
-{
-  vec3_t   v;
-  uint64_t r = 0;
-  float    w = q->w;
-
-  if (w >= TCUT) {
-    quat_put_bv(&v,q, TSF);
-  }
-  else {
-    r |= 1ULL <<63;
-#if 0    
-    fhm(&v,q);
-#else
-    quat_t t;
-    quat_dup(&t,q);
-    quat_usqrt(&t);
-    quat_fct(&v,&t);
-    vec3_scale(&v, SQRT2P1);
-#endif    
-  }
-
-  return r|vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-}
-
-void iidhm(quat_t* q, uint64_t b)
-{
-  vec3_t v;
-
-  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
-
-  if ((int64_t)b >= 0) {
-    vec3_scale(&v, TSI);
-    float d = vec3_norm(&v);
-    quat_bv_set_scale(q, &v, 1.f);
-    q->w = sqrtf(1.f-d);
-  }
-  else {
-#if 0    
-    ihm(q,&v);
-#else
-    vec3_t t;
-    vec3_set_scale(&t, &v, SQRT2M1);
-    quat_ict(q, &t);
-    quat_upow2(q);
-#endif
-  }
-}
-
-
-
-
 // ** Explict quantization methods
 
 typedef uint64_t (*q_to_bits)(quat_t*);
@@ -1590,16 +1291,9 @@ typedef struct {
 
 x_maps_t xmaps[] =
 {
-//DEF(em1),
-//DEF(ha1),
-//DEF(hir),
-//DEF(toy_),
-//DEF(em_x0),
   DEF(sot),
-  DEF(yprx),
+  DEF(zyx),
   DEF(zxz),
-//DEF(yprhx)
-//DEF(idhm),
 };
 
 #undef DEF
@@ -1732,6 +1426,21 @@ void error_dump()
   }
 }
 
+#if defined(NORMALIZE_SAMPLES)
+inline void NORMALIZE(quat_t* q)
+{
+  double x=q->x,y=q->y,z=q->z,w=q->w;
+  double s = 1.0/sqrt(x*x+y*y+z*z+w*w);
+  q->x=s*x;
+  q->y=s*y;
+  q->z=s*z;
+  q->w=s*w;;
+}
+#else
+#define NORMALIZE(X)
+#endif
+
+
 // measure round-trip errors using distribution of 'gen'
 // using direct quat routines
 void rt_test_x(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
@@ -1742,19 +1451,31 @@ void rt_test_x(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
     a_error_t* e = &a_errors[s+NUM_FUNCS];
     quat_t     q,r,mq;
     uint64_t   bits;
+    double     maxe = 0;
 
     // reset base generators
     reset_generators(s0,s1,len);
     quat_set(&mq,0,0,0,1);
+    printf("\n%s\n", xmaps[s].name);
     
     for(uint32_t i=0; i<len; i++) {
+      double ae;
       gen(&q);                        // H in distribution
+      NORMALIZE(&q);                  // normalize sample if NORMALIZE_SAMPLES defined
       bits = encode(&q);              // quantize
       decode(&r, bits);               // dequantize
-      error_add(&q,&r,e);
+      ae = error_add(&q,&r,e);
+      
+      if (ae > maxe) {
+	maxe = ae;
+#if defined(TRACE_PEAK)	
+	printf("%08x: %f ",i, ae);
+	quat_print(&q);	 quat_print(&r);
+      //quat_printa(&q); quat_printa(&r);
+	printf("\n");
+#endif	
+      }
     }
-    
-    printf("%s ", xmaps[s].name);
   }
   ln();
 }
@@ -1774,38 +1495,37 @@ void rt_test(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
     vec3_t     b,rb;
     vec3_t     c,rc;
     uint64_t   bits;
+    double     maxe=0;
 
+    printf("\n%s\n", maps[s].name);
     reset_generators(s0,s1,len);
     quat_set(&mq,0,0,0,1);
 
-    if (0/*bc == &map_id_bc*/) {
-      for(uint32_t i=0; i<len; i++) {
-	gen(&q);
-	f(&b, &q);  
-	bits = vencode(&b);
-	vdecode(&rb, bits);
-	g(&r, &rb);
+    for(uint32_t i=0; i<len; i++) {
+      double ae;
+      gen(&q);
+      NORMALIZE(&q);
+      f(&b, &q);  
+      bc(&c, &b);
+      bits = vencode(&c);
+      vdecode(&rc, bits);
+      cb(&rb, &rc);
+      
+      g(&r, &rb);
       //g(&r, &b); // hack for no-quantization
-	error_add(&q,&r,e);
+      ae = error_add(&q,&r,e);
+      if (ae > maxe) {
+	maxe = ae;
+#if defined(TRACE_PEAK)	
+	printf("%08x: %f ",i, ae);
+	quat_print(&q);	 quat_print(&r);
+      //quat_printa(&q); quat_printa(&r);
+	printf("\n");
+#endif	
       }
     }
-    else {
-      for(uint32_t i=0; i<len; i++) {
-	gen(&q);
-	f(&b, &q);  
-	bc(&c, &b);
-	bits = vencode(&c);
-	vdecode(&rc, bits);
-	cb(&rb, &rc);
-	
-	g(&r, &rb);
-	//g(&r, &b); // hack for no-quantization
-	error_add(&q,&r,e);
-      }
-    }
-    
-    printf("%s ", maps[s].name);
   }
+  
   ln();
 }
 
@@ -1828,7 +1548,6 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
   
   reset_generators(s0,s1,TLEN);
 
-  //for(uint32_t x=0; x<TLEN; x++) { h[x]=0; }
   memset(h,  0,  4*HLEN);
 
   for(uint32_t i=0; i<TLEN; i++) {
@@ -1838,30 +1557,8 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
     // test generalize or explict
 #if !defined(TEX)
-    //quat_t X;
     fem(&v,&p);
     iem(&r,&v);
-    //quat_dup(&X,&p); quat_usqrt(&X); quat_dup(&r,&X); quat_upow2(&r);
-
-    //     if (fabs(v.y) >= 4.0 || fabs(v.z) >= 4.0) {
-    //      quat_print(&p); printf("  :: %f %f %f ::\n", v.x,v.y,v.z);
-    //     }
-    
-    //if (v.x > xmax) { xmax = v.x; } else if (v.x < xmin) { xmin = v.x; }
-    //if (v.y > ymax) { ymax = v.y; } else if (v.y < ymin) { ymin = v.y; }
-    //if (v.z > zmax) { zmax = v.z; } else if (v.z < zmin) { zmin = v.z; }
-    
-    //bar_(&v);
-#if 0
-    float r2 = vec3_norm(&v);
-    uint32_t id = (uint32_t)((HLEN-1)*r2);
-    if (id < HLEN)
-      h[id]++;
-    else
-      printf(".%d.",id);
-
-    if (r2 > rm) { rm = r2; /*printf("R(%f)\n", r2);*/ }
-#endif    
 #else
     uint64_t bits = fzxz(&p);
     izxz(&r,bits);
@@ -1888,209 +1585,22 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
 #if !defined(TEX)  
   printf("x:(%f,%f) y:(%f,%f) z:(%f,%f)\n", xmin,xmax,ymin,ymax,zmin,zmax);
-  //for(uint32_t i=0; i<HLEN; i++) { printf("%f, ", h[i]*(HLEN*1.0)/TLEN); }
 #endif  
 }
 
-
-#if 0
-// minimal test round-trip quant/dequant bit patterns
-void dq_rt()
-{
-  printf("dq_rt:\n");
-  for(uint32_t i=0; i<(1<<(3*BITS)); i++) {
-    vec3_t   v;
-    uint64_t r;
-
-    vdecode(&v,i);
-    r = vencode(&v);
-
-    if (i != r)
-      printf("%08x %08x\n", i,r);
-  }
-  printf("  done\n");
-}
-#endif
-
-
-#if 0
-#define TB 10
-void test()
-{
-  vec3_t v;
-
-  for(uint32_t s=0; s<NUM_FUNCS; s++) {
-    s3_to_b3   f  = maps[s].f;
-    b3_to_s3   g  = maps[s].g;
-    map_func_t bc = maps[s].c;
-    map_func_t cb = maps[s].s;
-    float      e  = 2.f;
-    float      t;
-    quat_t     q,r,mq;
-    vec3_t     b,rb,vec;
-    vec3_t     c,rc;
-    uint64_t   bits,bitsZ,bitsY;
-    double     rms = 0.0;
-
-    // walk positive
-    
-    for(uint32_t z=0; z<(1<<(TB-1)); z++) {
-      bitsZ = z<<(2*BITS);
-      
-      for(uint32_t y=0; y<(1<<(TB-1)); y++) {
-	bitsY = y<<BITS;
-	
-	for(uint32_t x=0; x<(1<<(TB-1)); x++) {
-	  uint32_t bits = (z<<(2*TB))|(y<<(TB))|x;
-	  
-	  bits |= (1<<(  TB-1));
-	  bits |= (1<<(2*TB-1));
-	  bits |= (1<<(3*TB-1));
-
-	  vdecode(&vec, bits);
-	  //cb(&ball, &vec);
-	  //g(&q, &ball);
-	  vec3_print(&vec); ln();
-	  
-	}
-	return;
-      }
-    }
-  }
-}
-#endif
-
-// s2->q wrt z
-void s2_rt_test(uint64_t s0, uint64_t s1)
-{
-  printf("s2_rt_test\n");
-  
-  reset_generators(s0,s1,TLEN);
-  float e = 1.f;
-
-  for(uint32_t i=0; i<TLEN; i++) {
-    vec3_t v,t,r;
-    float  s,d;
-
-    uniform_s2(&v);
-  //v.z = fabs(v.z);
-    d   = 1.f+v.z;   // degen as z -> -1
-    s   = rsqrt(d+d);
-    t.z = d*s;
-    t.x = v.x*s;
-    t.y = v.y*s;
-
-    d   = t.x*t.x+t.y*t.y;
-    s   = 2.f*sqrtf(1.f-d);
-    r.x = t.x*s;
-    r.y = t.y*s;
-    r.z = 1.f-2.f*(d);
-
-    d = vec3_dot(&v,&r);
-
-    if (d < e) {
-      e=d;
-      printf("%f ", e); vec3_print(&v); vec3_print(&r); ln();
-    }
-  }
-  
-  printf("s2_rt_test: done\n");
-}
-
-// sanity check: shells are function of distance cubed,
-// count # points of N points/dim uniform grid inside
-// H equal volume shells (and points outside ball)
-//  
-#define N 1024
-#define N3 1.f/(N*N*N)
-#define H 50
-  
-void shell_sanity()
-{
-  uint32_t h[H];
-  uint32_t o = 0;
-
-  for(uint32_t i=0; i<H; i++) h[i]=0;
-  
-  for(uint32_t iz=0; iz<N; iz++) {
-    float z = iz * (1.f/N);
-    for(uint32_t iy=0; iy<N; iy++) {
-      float y = iy * (1.f/N);
-      for(uint32_t ix=0; ix<N; ix++) {
-	float x = ix * (1.f/N);
-	float d = x*x+y*y+z*z;
-	if (d <= 1.f) {
-	  d *= sqrtf(d);
-	  h[(uint32_t)(H*d)]++;
-	}
-	else o++;
-      }
-    }
-  }
-  // after normalization:
-  // ball = 4/3 pi, box=8, outside = 1-pi/6 ~= 0.476401
-  // per shell = (pi/6)/H
-
-  printf("estimate: %f/shell and .476401 outside\n", 0.5235987756/H);
-  printf("ball: {");
-  for(uint32_t i=0; i<H; i++) printf("%f,", h[i]*N3);
-  printf("}\n x = %f\n", o*N3);
-}
-#undef N
-#undef N3
-#undef H
-
-#define P 4
-#define N (1<<P)
-#if 1
-#define QUANT   QUANT_S
-#define DEQUANT DEQUANT_S
-#else
-#define QUANT   QUANT_E
-#define DEQUANT DEQUANT_E
-#endif
-
-void foo()
-{
-  float x = DEQUANT(0,P);
-  float p = -1.f;
-  uint32_t t = 0;
-
-  float    i = 0x0.81p0f;
-  uint32_t z = QUANT_E(i,8);
-  float  r = DEQUANT_E(z,8);
-  printf("%f (%a) -> %f (%a) %08x\n",i,i,r,r,z); return;
-  
-  while (x <= 1.f) {
-    uint64_t bits = QUANT(x,P) & ((1<<P)-1);
-    float    r    = DEQUANT(bits,P);
-    t++;
-    if (r != p) {
-      printf("%3d: % f % f  (% f) %a\n", (uint32_t)bits,x,r,r-p,x);
-      p = r;
-      t = 0;
-    }
-    x += 2.f*ULP1;
-  }
-  printf("done\n");
-}
-
-#undef N
-#undef P
-#undef QUANT
-#undef DEQUANT
+// helpers to build histograms in specific bivector directions
+// choose the direction to compute the histogram
+#define MTYPE(T) T ## _quat_about_x
+//#define MTYPE(T) T ## _quat_about_xy
+//#define MTYPE(T) T ## _quat_about_diag
 
 void angle_histo_x(uint64_t s0, uint64_t s1)
 {
 #ifdef USE_SOBOL
-  //rt_test_x(s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
-  //rt_test_x(s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
-  rt_test_x(s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
+  rt_test_x(s0,s1, &MTYPE(sobol), SYM_TRIALS);
 #endif
 #ifdef USE_PRNG  
-  //rt_test_x(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
-  //rt_test_x(s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
-  rt_test_x(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+  rt_test_x(s0,s1, &MTYPE(uniform), SYM_TRIALS);
 #endif  
   error_dump();
 }
@@ -2098,46 +1608,14 @@ void angle_histo_x(uint64_t s0, uint64_t s1)
 void angle_histo(uint64_t s0, uint64_t s1)
 {
 #ifdef USE_SOBOL
-  //rt_test(s0,s1, &sobol_quat_about_x,    SYM_TRIALS);
-  //rt_test(s0,s1, &sobol_quat_about_xy,   SYM_TRIALS);
-  rt_test(s0,s1, &sobol_quat_about_diag, SYM_TRIALS);
+  rt_test(s0,s1, &MTYPE(sobol), SYM_TRIALS);
 #endif
 #ifdef USE_PRNG  
-  //rt_test(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
-  //rt_test(s0,s1, &uniform_quat_about_xy,   SYM_TRIALS);
-  //rt_test(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+  rt_test(s0,s1, &MTYPE(uniform), SYM_TRIALS);
 #endif  
   error_dump();
 }
-
-void ptest()
-{
-  quat_t q,r,d;
-
-  quat_set(&q, -0.5f, -0.5f, -0.5f, .5f);
-  //quat_set(&q, -0x1.6a118ep-13f, 0, 0, 0x1.fffffep-1f);
-  // {-0x1.276c2ep-13, -0x1.276c2ep-13, -0x1.276c2ep-13,  0x1p+0}
-  //quat_set(&q, 0.5f*SQRT2, 0.f, 0.f, 0.5f*SQRT2); 
-  //quat_set(&q, 1.f, 0.f, 0.f, 0.f);
-  //float x = rng_f32()+0.5f;
-  //quat_set(&q, sinf(x), 0.f, 0.f, cosf(x));
-#if 0
-  uint64_t bits = fsot(&q);
-  isot(&r,bits);
-#else
-  vec3_t v;
-  fypr(&v,&q);
-  iypr(&r,&v);
-  vec3_print(&v);
-#endif  
-  
-  quat_sub(&d, &q, &r);
-
-  double ae = a_error(&q,&r);
-  printf("%f:", ae);
-//printf(" (%08x) ", (uint32_t)bits);
-  quat_print(&q); quat_print(&r); quat_printa(&d); ln();
-}
+#undef MTYPE
 
 int main(int argc, char** argv)
 {
@@ -2158,10 +1636,9 @@ int main(int argc, char** argv)
 	 BITS_X,BITS_Y,BITS_Z,
 	 X2_BITS_X,X2_BITS_Y,X2_BITS_Z);
 
-  //foo(); return 0;
-  //ptest(); return 0;
-  //rt_xform_test(s0,s1); return 0;
-  //angle_histo(s0,s1); return 0;
+  // short-circuits for specialized testing
+  //rt_xform_test(s0,s1); return 0;   // method developement debug routine
+  //angle_histo(s0,s1); return 0;     // limited directional sampling 4 post plots
 
 #ifdef USE_SOBOL
   printf("sobol rt\n");
@@ -2189,7 +1666,6 @@ int main(int argc, char** argv)
 #endif
 
   error_dump();
-  printf("(%f,%f),(%f,%f),(%f,%f)\n", amin,amax,bmin,bmax,cmin,cmax);
 
   return 0;
 }
