@@ -21,8 +21,8 @@
 #define USE_PRNG
 
 // number of trials to run per test
-#define SYM_TRIALS 0x7FFFFFF
-//#define SYM_TRIALS 0xFFFFFF
+//#define SYM_TRIALS 0x7FFFFFF
+#define SYM_TRIALS 0xFFFFFF
 
 // if undef repeats same sequence each run
 //#define RANDOMIZE
@@ -35,7 +35,7 @@
 #endif
 
 #define CM_TESTS   // composed methods
-//#define EX_TESTS   // explicit methods
+#define EX_TESTS   // explicit methods
 
 // rotation angle buckets
 #define HLEN 80
@@ -50,7 +50,7 @@
 // end config
 
 // choose between atan or acos based error measuring
-#define ACOS_MEASURE
+//#define ACOS_MEASURE
 
 #define XSTR(X) STR(X)
 #define STR(X)  #X
@@ -423,14 +423,10 @@ float a_error(quat_t* a, quat_t* b)
   quatd_conj(&A);
   quatd_mul(&R,&B,&A);
 
-  double x = R.w;
+  double x = fabs(R.w);
   double y = sqrt(R.x*R.x+R.y*R.y+R.z*R.z);
-  double t = atan2(y,x);
-  float  r = (float)(TO_R3_DEGREES*t);
-
-  if (r <= 180.f) return r;
-
-  return 180.f-r;
+  double t = atan(y/x);
+  return (float)(TO_R3_DEGREES*t);
 #else
   quatd_t A,B;
   quat_to_d(&A,a);
@@ -954,7 +950,7 @@ typedef void (*map_func_t)(vec3_t*, vec3_t*);
 
 maps_t maps[] =
 {
-  DEF(dw,id),  // no transform (for post comp with sot)
+//DEF(dw,id),  // no transform (for post comp with smallest three)
 #if 0
   // nothing to see here. ;)
   DEF(em,vp),
@@ -976,7 +972,7 @@ maps_t maps[] =
   DEF(ct,rs),
 #endif
 
-#if 0
+#if 1
   DEF(em,id),  // exp-map
   DEF(hm,id),  // harmonic mean
   DEF(ha,id),  // half-angle
