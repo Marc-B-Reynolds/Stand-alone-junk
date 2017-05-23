@@ -5,7 +5,7 @@
 (* Stripped down quanterions over Reals package, has bugs oh well *)
 
 
-BeginPackage["RealQuat`"]
+BeginPackage["RealQuat`"];
 
 modifiyMessage[func_, extra_] := func::"usage" = MessageName[func, "usage"] <> " " <> extra;
 
@@ -16,62 +16,42 @@ RealQuat::"usage"    = "General forms:\n" <>
                        "\tRealQuat[b, s]      represents the bivector b + scalar s\n" <>
                        "Polar coordinate forms:\n" <>
                        "\tRealQuat[Sin[\[Theta]]b, Cos[\[Theta]]]\n" <>
-                       "\tRealQuat[Sin[\[Theta]]{x,y,z}, Cos[\[Theta]]]\n"
+                       "\tRealQuat[Sin[\[Theta]]{x,y,z}, Cos[\[Theta]]]\n";
 
-RealQuatQ::"usage"   = "RealQuatQ[x] test if 'x' is a RealQuat object."
-AssertUnitary::usage = "AssertUnitary[Q] creates an assumption defination that the L2 norm of RealQuat object 'Q' is one."
-AssertPure::usage    = "AssertPure[Q] creates an assumption defination that the scalar component of 'Q' is zero."
+RealQuatQ::"usage"   = "RealQuatQ[x] test if 'x' is a RealQuat object.";
+AssertUnitary::usage = "AssertUnitary[Q] creates an assumption defination that the L2 norm of RealQuat object 'Q' is one.";
+AssertPure::usage    = "AssertPure[Q] creates an assumption defination that the scalar component of 'Q' is zero.";
 
-NonCommutativeMultiply::usage = "A**B is the axiomic product, which is associative but not commutative."
-
-
-RealQuatPolar::usage  = "Set to 'True' or 'False' to enable/disable polar coordinate assumptions."
-
-RealQuatRandom::usage ="RealQuatRandom[m] generates a random quaternion of magnitude m, default is one."
+NonCommutativeMultiply::usage = "A**B is the axiomic product, which is associative but not commutative.";
 
 
-(*********************************************************)
-(* modify rules of vector analysis (very out-of-date)
-*)
+RealQuatPolar::usage  = "Set to 'True' or 'False' to enable/disable polar coordinate assumptions.";
+
+RealQuatRandom::usage ="RealQuatRandom[m] generates a random quaternion of magnitude m, default is one.";
 
 
-Unprotect[Cross,Dot]
+(***** Dealing with reducing vector operations *****)
 
-(* Enable/Disable reductions based on potential presences of Hadamard vector \
-products. *)
-NoHadamardProduct = True;
-NoHadamardProduct::"usage" := "Enables/Disables reductions based on the \
-assumption of presence of Hadamard products in an expression." 
+(* A container for marking symbols as bivectors and another for scalars *)
+If[Head[RealQuatB]==Symbol, RealQuatB=Alternatives[]];
+If[Head[RealQuatS]==Symbol, RealQuatS=Alternatives[]];
 
-(* 
-    By default GibbsQ is an alias for VectorQ. Its purpose is to allow the \
-user to 
-      mark a symbol :  "V /: GibbsQ[V]=True"
-  *)
-Unprotect[GibbsQ];
-ClearAll[GibbsQ];
-GibbsQ[v_] := VectorQ[v];
-GibbsQ[x_Cross] := True;
+(* functions to manage the containers *)
+DeclareBivector[x_] := If[!MemberQ[RealQuatB,x], AppendTo[RealQuatB,x];];
+DeclareScalar[x_] := If[!MemberQ[RealQuatS,x], AppendTo[RealQuatS,x];];
+SetAttributes[DeclareBivector, {Listable}]
+SetAttributes[DeclareScalar, {Listable}]
+DeclareBivector::"usage" := "marks a symbol or list of symbols as representing bivectors." ;
+DeclareScalar::"usage" := "marks a symbol or list of symbols as representing scalars." ;
 
-(* Protect the define to help prevent "GibbsQ[V] = True" instead of
-   "V /: GibbsQ[V]=True" *)
-Protect[GibbsQ]; 
-DeclareVector[v_] := v /: GibbsQ[v] = True;
-SetAttributes[DeclareVector, {Listable}]
+(* unmark symbols *)
+DeleteBivector[x_Symbol]:=RealQuatB=Complement[RealQuatB,Alternatives[x]];
+DeleteScalar[x_Symbol]  :=RealQuatS=Complement[RealQuatS,Alternatives[x]];
+DeleteBivector[x_List]  :=RealQuatB=Complement[RealQuatB, x /. List -> Alternatives];
+DeleteScalar[x_List]    :=RealQuatS=Complement[RealQuatS, x /. List -> Alternatives];
 
-(* 
-    By default ScalarQ is an alias for NumericQ. Its purpose is to 
-      allow the user to 
-      mark a symbol :  "x /: ScalarQ[x]=True"
-  *)
-Unprotect[ScalarQ];
-ClearAll[ScalarQ];
 
-ScalarQ[x_] := NumericQ[x] && Head[x] =!= Complex;
-ScalarQ[x_Dot] := True;
-
-Protect[ScalarQ]; 
-
+(*  Older version...clean this up
 DeclareScalar[x_] := x /: NumericQ[x] := True;
 DeclareScalar::usage = "Tags a symbol to be treated as a scalar value for \
 transformation rules.";
@@ -81,79 +61,30 @@ DeleteScalar[x_] := TagUnset[x, NumericQ[x]];
 DeleteScalar::usage = "
 Remove the tag to treat the symbol as a scalar value.";
 SetAttributes[DeleteScalar, {Listable}]
-
-
-(* zero out when contains any scalar or vector zero *)
-Dot[0, v__] := 0;
-Dot[v__, L_?VectorQ] := 0 /; Union[L] == {0}
-
-(* 'V' must be a bivector. *)
-(* bad rules - infinite recursion for (a V).(a V) - fix *)
-(*
-Dot[a___ V_ b___, c___ V_ d___] := a b c d V.V /; NoHadamardProduct
-Dot[V_, a___ V_ b___] := a b  V.V  /; NoHadamardProduct
-
-*)
-(*
-Dot[V_, a___ V_ b___] := a b V.V /; NoHadamardProduct
-Dot[a___ V_ b___, V_] := a b V.V /; NoHadamardProduct
 *)
 
 
-(* Pull out any negative signs *)
-Dot[a___, -b_, c___] := -Dot[a, b, c];
 
-(* Pull out scalars when known - weak *)
-Dot[(n_?ScalarQ) a_, b_] := n Dot[a, b]
-Dot[a_, (n_?ScalarQ) b_] := n Dot[a, b]
-Dot[n_?ScalarQ, v__] := n Dot[v]
-Dot[v__, n_?ScalarQ] := n Dot[v]
+(* Wrapper for TensorReduce using the containers *)
+RealQuat /: RealQuatReduce[RealQuat[Q_,q_]] := RealQuat[
+  TensorReduce[Q, Assumptions->Element[RealQuatB,Vectors[3,Reals]] && Element[RealQuatS,Reals]],	
+  TensorReduce[q, Assumptions->Element[RealQuatB,Vectors[3,Reals]] && Element[RealQuatS,Reals]]];
 
-(* Expand dot over sums *)
-Dot[a_, b_ + c_] := Dot[a, b] + Dot[a, c]
-Dot[a_ + b_, c_] := Dot[a, c] + Dot[b, c]
+(* reduction helper to ID scalar values *)
+ScalarQ[x_] := MemberQ[RealQuatS,x]||(NumericQ[x] && Head[x] =!= Complex);
+ScalarQ[x_Dot] := True;
 
-SetAttributes[Dot, {Flat, OneIdentity, Orderless}];
+(* reduction helper to ID bivector values *)
+BivectorQ[x_] := MemberQ[RealQuatB,x]||VectorQ[x];
+BiVectorQ[x_Cross] := True;
 
-(*** ***)
+(* Enable/Disable reductions based on potential presences of Hadamard vector \
+products. *)
+NoHadamardProduct = True;
+NoHadamardProduct::"usage" := "Enables/Disables reductions based on the \
+assumption of presence of Hadamard products in an expression."; 
 
-Cross[u_, v_] := -Cross[v, u] /; ! OrderedQ[{u, v}]
 
-(* simple zeroing out rules *)
-Cross[v_, v_] := 0;
-Cross[0, v__] := 0;
-
-(*
-Cross[L_?VectorQ, v__] := 0 /; Union[L] == {0}  (* is this needed? *)
-Cross[v__, L_?VectorQ] := 0 /; Union[L] == {0}
-*)
-
-Cross /: Cross[a_, b_]^2 := a.a b.b - (a.b)^2
-
-(* Pull out any known scalar values *)
-Cross[a_?ScalarQ u_, v_] := a Cross[u, v];
-Cross[u_, a_?ScalarQ v_] := a Cross[u, v];
-
-(* Expand cross over sums *)
-Cross[a_ + b_, c_] := Cross[a, c] + Cross[b, c]
-Cross[a_, b_ + c_] := Cross[a, b] + Cross[a, c]
-
-(* Expand the "Triple product" *)
-Cross[a_, Cross[b_, c_]] := (a.c)b - (a.b)c;
-
-(*** Interaction between Cross and Dot ***)
-
-Dot[a_, Cross[a_, b_]] := 0;
-Dot[b_, Cross[a_, b_]] := 0;
-
-(* Convert any scalar - triple - product into conical form *)
-Dot[a_, Cross[b_, c_]] := Dot[b, Cross[c, a]] /; ! OrderedQ[{a, b}];
-Dot[a_, Cross[b_, c_]] := Dot[c, Cross[a, b]] /; ! OrderedQ[{a, c}];
-
-(* Expand cross of two vectors in explict form *)
-Cross[{a_, b_, c_}, {d_, e_, f_}] := {b f - c e, c d - a f, a e - b d}
-
-Protect[Cross, Dot];
 
 (*********************************************************)
 
@@ -162,8 +93,12 @@ RealQuat /: bivectorAbs[RealQuat[Q_,q_]] := Sqrt[Dot[Q,Q]];
 bivectorAbs[v_]  := Sqrt[Dot[v,v]];
 
 
+(* Cayley transforms variants as per http://marc-b-reynolds.github.io/quaternions/2016/05/30/QuatHDAngleCayley.html *)
 RealQuat /: fct[RealQuat[Q_,q_]] := RealQuat[Q/(1+q),0];
 RealQuat /: ict[RealQuat[Q_,0]]  := RealQuat[2/(1+Dot[Q,Q]) Q, (2/(1+Dot[Q,Q]))-1];
+ict[v_]  := RealQuat[2/(1+Dot[v,v]) v, (2/(1+Dot[v,v]))-1];
+fct::"usage" := "special case Cayley transform: (Q-1)/(Q+1), unit quaterion (positive scalar) to bivector";
+ict::"usage" := "special case Cayley transform: bivector back to H";
 
 
 (*********************************************************)
@@ -174,24 +109,24 @@ RealQuat /: ict[RealQuat[Q_,0]]  := RealQuat[2/(1+Dot[Q,Q]) Q, (2/(1+Dot[Q,Q]))-
 
 (* Utility functions *)
 
-RealQuat /: UnitQ[RealQuat[Q_,q_]] := Sqrt[Dot[Q,Q]+q^2]===1;
+RealQuat /: UnitQ[RealQuat[Q_,q_]] := Dot[Q,Q]+q^2===1;
 RealQuat /: Element[RealQuat[Q_,q_],e_]   := Element[Insert[Q,q,4],e];
 
-AssertUnitary[RealQuat[Q_,q_]] := Dot[Q,Q]+t^2==1;(*Total[Insert[Q,q,4]^2]==1;*)
+AssertUnitary[RealQuat[Q_,q_]] := Dot[Q,Q]+t^2==1;
 AssertPure[RealQuat[Q_,q_]]    := q==0;
 RealQuat /: Arg[RealQuat[     Q_,     q_]] := ArcTan[q, Sqrt[Dot[Q,Q]]];
-
 
 (* extraction using GA grade notation *)
 Subscript[AngleBracket[RealQuat[Q_, q_]], 0] := q;
 Subscript[AngleBracket[RealQuat[Q_, q_]], 2] := RealQuat[Q, 0];
 
-(* addition *)
-RealQuat /: RealQuat[L_,l_] + RealQuat[R_,r_] := RealQuat[L+R,l+r];
-RealQuat /: RealQuat[L_,l_] - RealQuat[R_,r_] := RealQuat[L-R,l-r]; (* not needed *)
+
+
 RealQuat /: NonCommutativeMultiply[RealQuat[L_, l_], RealQuat[R_, r_]] := RealQuat[Cross[L,R] + l R + r L, r l - Dot[L,R]]
-RealQuat /: s_?ScalarQ ** RealQuat[Q_,q_]  := RealQuat[s Q, s q]; (* scalar product does commute *)
-RealQuat /: RealQuat[Q_,q_] ** s_?ScalarQ  := RealQuat[s Q, s q]; (* scalar product does commute *)
+
+(* handle left/right products which reduce to scalars (and do commute) *)
+RealQuat /: s_?ScalarQ ** RealQuat[Q_,q_]  := RealQuat[s Q, s q];
+RealQuat /: RealQuat[Q_,q_] ** s_?ScalarQ  := RealQuat[s Q, s q];
 
 
 (*********************************************************)
@@ -199,15 +134,16 @@ RealQuat /: RealQuat[Q_,q_] ** s_?ScalarQ  := RealQuat[s Q, s q]; (* scalar prod
   SPECIAL CASING: assume all symbols are scalars if the don't have RealQuat as a header
 *)
 
-(* if the bivector (basis) portion is zero: it is simply a scalar *)
+(* if the bivector portion is zero: it is simply a scalar *)
 RealQuat[{0,0,0},s_] := s;
 RealQuat[0, s_] := s;
 
-(* scalar interaction *)
-RealQuat /: s_ * RealQuat[Q_,q_] := RealQuat[s Q, s q]; /; Head[s] =!= RealQuat
-RealQuat /: s_ + RealQuat[Q_,q_] := RealQuat[Q,   s+q]; /; Head[s] =!= RealQuat
+(* addition *)
+RealQuat /: Plus[RealQuat[ L_,l_], RealQuat[R_,r_]] := RealQuat[L+R, l+r];
+RealQuat /: s_ * RealQuat[Q_,q_] := RealQuat[s Q, s q]; /; ScalarQ[s];
+RealQuat /: s_ + RealQuat[Q_,q_] := RealQuat[Q,   s+q]; /; ScalarQ[s];
 
-(* *)
+(* complex conjugate *)
 RealQuat /: SuperStar[RealQuat[Q_,q_]] := RealQuat[-Q, q];
 RealQuat /: Conjugate[Q:RealQuat[__]]  := SuperStar[Q];
 
@@ -254,30 +190,26 @@ RealQuat /: Sqrt[Q:RealQuat[__]] := RealQuat[Im[Q]/Sqrt[2(Re[Q]+Abs[Q])], Sqrt[2
 usqrt[RealQuat[B_,s_]]:= RealQuat[1/Sqrt[2+2s] B,(1+s)/Sqrt[2+2s]];
 
 (*************************************************
- * Additional products - direct from definations - should be reduced here.
+ * Additional products - direct from definations - should be reduced here..started commenting out some
  *************************************************)
-
-RealQuat /: Grassmann     [L:RealQuat[__],R:RealQuat[__]]     := (L**R);
-RealQuat /: GrassmannInner[RealQuat[L_, l_], RealQuat[R_,r_]] := RealQuat[(l R)+(r L), l r - Dot[L,R]];
-RealQuat /: GrassmannOuter[RealQuat[L_, l_], RealQuat[R_,r_]] := RealQuat[Cross[L,R], 0];
-
-RealQuat /: Euclidean     [RealQuat[L_, l_], RealQuat[R_,r_]] := RealQuat[(l R)-(r L)-Cross[L,R], l r + Dot[L,R]];
-RealQuat /: EuclideanInner[RealQuat[L_, l_], RealQuat[R_,r_]] := RealQuat[0, l r + Dot[L,R]];
-RealQuat /: EuclideanOuter[RealQuat[L_, l_], RealQuat[R_,r_]] := RealQuat[(l R)-(r L)-Cross[L,R], 0];
 
 (* Euclidean Inner (Dot) product *)
 RealQuat /: Dot[Q:RealQuat[__],Q:RealQuat[__]] := Norm[Q]; (* self dot is norm *)
+RealQuat /: Dot[RealQuat[L_,l_], RealQuat[R_,r_]] := (Dot[L,R]+l r);
 
-RealQuat /: Dot[RealQuat[     L_,     l_], RealQuat[     R_,     r_]] :=     (Dot[L,R]+l r);
+(*
 RealQuat /: Dot[RealQuat[(s__)L_,(s__)l_], RealQuat[(t__)R_,(t__)r_]] := s t (Dot[L,R]+l r);
 RealQuat /: Dot[RealQuat[     L_,     l_], RealQuat[(t__)R_,(t__)r_]] :=   t (Dot[L,R]+l r);
 RealQuat /: Dot[RealQuat[(s__)L_,(s__)l_], RealQuat[     R_,     r_]] := s   (Dot[L,R]+l r);
+*)
 
 (* Cross product = Same as GrassmanOuter - just directly defined *)
-RealQuat /: Cross[RealQuat[     L_,     l_], RealQuat[     R_,     r_]] :=     RealQuat[Cross[L,R], 0];
+RealQuat /: Cross[RealQuat[ L_,l_], RealQuat[R_,r_]] := RealQuat[Cross[L,R], 0];
+(*
 RealQuat /: Cross[RealQuat[(s__)L_,(s__)l_], RealQuat[(t__)R_,(t__)r_]] := s t RealQuat[Cross[L,R], 0];
 RealQuat /: Cross[RealQuat[     L_,     l_], RealQuat[(t__)R_,(t__)r_]] :=   t RealQuat[Cross[L,R], 0];
-RealQuat /: Cross[RealQuat[(s__)L_,(s__)l_], RealQuat[     R_,     r_]] := s   RealQuat[Cross[L,R], 0];
+RealQuat /: Cross[RealQuat[(s__)L_,(s__)l_], RealQuat[ \[AliasDelimiter]    R_,     r_]] := s   RealQuat[Cross[L,R], 0];
+*)
 
 (* GrassmanOuter - use wedge as well *)
 RealQuat /: Wedge[L:RealQuat[__],R:RealQuat[__]] := Cross[L, R];
@@ -297,7 +229,7 @@ RealQuat /: CircleTimes[A:RealQuat[__], B:RealQuat[__], C:__RealQuat] := CircleT
 
 
 (* 
-  Test if 'x' is a valid RealQuat object...this is far from bulletproof.
+  Test if 'x' is a valid RealQuat object...this is far from bulletproof. (this is borked)
   Should this maybe be changed to just checking the Head and number of components?
 
   RealQuat[Fv[t],Fs[t]]  <- this will return false, for example, 
@@ -432,6 +364,14 @@ RealQuat /: Power[RealQuat[V_,S_], n_] := Module[{s = S, v = V,
 RealQuat /: TrigReduce[RealQuat[Q_,q_]] := RealQuat[TrigReduce[Q], TrigReduce[q]]
 RealQuat /: TrigFactor[RealQuat[Q_,q_]] := RealQuat[TrigFactor[Q], TrigFactor[q]]
 RealQuat /: Collect[RealQuat[Q_,q_],p_] := RealQuat[Collect[Q,p], Collect[q,p]]
+
+(* uniform random unit quaternions. Lazy implementations *)
+RealQuatRandomXY[] := With[{p=RandomPoint[Sphere[]]},RealQuat[{p[[1]],p[[2]],0},p[[3]]]];
+RealQuatRandomZ[] := With[{p=RandomPoint[Circle[]]},RealQuat[{0,0,p[[2]]},p[[1]]]];
+RealQuatRandom[] := (RealQuatRandomXY[]**RealQuatRandomZ[]);
+RealQuatRandomZ::usage  ="Generates a uniform random unit quaterion about Z.";
+RealQuatRandomXY::usage ="Generates a uniform random unit quaterion with axis in XY-plane.";
+RealQuatRandom::usage   ="Generates a uniform random unit quaterion.";
 
 (** SHOULD BE SETTING MORE ATTRIBUTES **)
 
