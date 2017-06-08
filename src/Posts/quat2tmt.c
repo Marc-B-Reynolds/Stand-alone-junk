@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
-// http://marc-b-reynolds.github.io
+// http://marc-b-reynolds.github.io/quaternions/2017/05/12/HopfCoordConvert.html
 
 // ex. requirements:
 // * quaternion header
