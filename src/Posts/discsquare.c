@@ -246,6 +246,44 @@ void map_aea_ds(vec2_t* d, vec2_t* s)
 
 
 // square->disc
+void map_aea2_sd(vec2_t* d, vec2_t* s)
+{
+  float x  = s->x;
+  float y  = s->y;
+  float x2 = x*x;
+  float y2 = y*y;
+
+  if (x2 >= y2) {
+    float t = (2.f/3.f)*y;
+    d->x = mulsgn(x, sqrtf(x2-t*t));
+    d->y = t;
+  } else {
+    float t = (1.f/3.f)*(x/y);
+    d->x = x*sqrtf(2.f/3.f-t*t);
+    d->y = y-x*t;
+  }
+}
+
+// disc->square
+void map_aea2_ds(vec2_t* d, vec2_t* s)
+{
+  float x  = s->x;
+  float y  = s->y;
+  float x2 = x*x;
+  float y2 = y*y;
+  float t  = sqrtf(x2+y2);
+
+  if ((5.f/4.f)*y2 > x2) {
+    d->x = x*sqrtf(3.f*t/(t+fabsf(y)));
+    d->y = mulsgn(y,t);
+  } else {
+    d->x = mulsgn(x,t);
+    d->y = (3.f/2.f)*y;
+  }
+}
+
+
+// square->disc
 void map_fong_sd(vec2_t* D, vec2_t* S)
 {
   float x  = S->x;
@@ -321,6 +359,7 @@ maps_t maps[] =
   DEF(rs),
   DEF(con),
   DEF(aea),
+  DEF(aea2),
   DEF(fong),
   DEF(nowell)
 };
@@ -434,8 +473,8 @@ void test(uint64_t s0, uint64_t s1)
     p.y = rng_f32();
     p.x = 2.f*p.x-1.f;
     p.y = 2.f*p.y-1.f;
-    map_nowell_sd(&d,&p);
-    map_nowell_ds(&r,&d);
+    map_aea2_sd(&d,&p);
+    map_aea2_ds(&r,&d);
     vec2_sub(&diff, &p, &r);
 
     float t = fabs(diff.x)+fabs(diff.y);
