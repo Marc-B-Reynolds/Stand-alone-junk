@@ -7,7 +7,9 @@
 //   http://github.com/Marc-B-Reynolds/TestU01x
 //   http://simul.iro.umontreal.ca/testu01/tu01.html
 
-#define PRNS_SMALLCRUSH
+
+// if define test stream version, changing to a new stream
+// each battery run.
 //#define TEST_STREAM
 
 // inject this note at the top of the output...for custom
@@ -22,11 +24,10 @@
 
 // Setup whatever configuration to be tested
 
-//#define PRNS_MIX_13
 
 // if defined then the value is the number of time to run the
 // battery...otherwise will continue until stopped.
-#define NUMBER_OF_RUNS 100
+//#define NUMBER_OF_RUNS 100
 
 #define NAME "prns"
 
@@ -56,25 +57,6 @@ lprns_stream_t state;
 #else
 lprns_t state;
 #endif
-
-inline uint32_t pcg_output_rxs_m_xs_32_32(uint32_t state)
-{
-  uint32_t word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-  return (word >> 22u) ^ word;
-}
-
-uint32_t sstate;
-
-#define LCGS_MF 0xac564b05
-
-uint32_t lcgs_next()
-{
-  uint32_t i = sstate;
-  uint32_t r = pcg_output_rxs_m_xs_32_32(i);
-  sstate = LCGS_MF*i + 0x1234599;
-  return r;
-}
-
 
 static uint32_t next_u32(void* p, void* s)
 {
@@ -178,7 +160,7 @@ int main(void)
     // setting the raw state of the generator
     state.i = s;
 #ifdef TEST_STREAM
-    state.m = lprns_stream_next_k(state.m);
+    state.m = lprns_stream_next_k(state.m); // change streams each battery run
     printf("run %d -- state = 0x%08x, mix = 0x%08x\n", -(int32_t)c, state.i, state.m);
 #else
     printf("run %d -- state = 0x%08x\n", -(int32_t)c, state.i);

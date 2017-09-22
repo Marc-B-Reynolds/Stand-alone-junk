@@ -47,6 +47,7 @@ int main(int argc, char** argv)
 
   uint32_t i = 0;
 
+  
 #if defined(LCGS_64)
   uint64_t o = __rdtsc();
 
