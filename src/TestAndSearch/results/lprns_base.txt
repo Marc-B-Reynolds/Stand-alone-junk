@@ -1,0 +1,1311 @@
+PRNS with configuation options (default) 
+  WEYL: 0x3504f333
+  M0:   0x5f356495
+  M1:   0xac564b05
+run 1 -- state = 0x15ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+
+ All tests were passed
+
+
+
+run 2 -- state = 0x95ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 3 -- state = 0xb5ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 4 -- state = 0x35ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.10
+
+ All tests were passed
+
+
+
+run 5 -- state = 0x3dee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+
+ All tests were passed
+
+
+
+run 6 -- state = 0xbdee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 7 -- state = 0x9dee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 8 -- state = 0x1dee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 9 -- state = 0x1fee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.26
+
+ All tests were passed
+
+
+
+run 10 -- state = 0x9fee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.37
+
+ All tests were passed
+
+
+
+run 11 -- state = 0xbfee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 12 -- state = 0x3fee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 13 -- state = 0x37ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.01
+
+ All tests were passed
+
+
+
+run 14 -- state = 0xb7ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.06
+
+ All tests were passed
+
+
+
+run 15 -- state = 0x97ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 16 -- state = 0x17ee10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 17 -- state = 0x176e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+
+ All tests were passed
+
+
+
+run 18 -- state = 0x976e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.04
+
+ All tests were passed
+
+
+
+run 19 -- state = 0xb76e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 20 -- state = 0x376e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.00
+
+ All tests were passed
+
+
+
+run 21 -- state = 0x3f6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.93
+
+ All tests were passed
+
+
+
+run 22 -- state = 0xbf6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.01
+
+ All tests were passed
+
+
+
+run 23 -- state = 0x9f6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.96
+
+ All tests were passed
+
+
+
+run 24 -- state = 0x1f6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.48
+
+ All tests were passed
+
+
+
+run 25 -- state = 0x1d6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 26 -- state = 0x9d6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.14
+
+ All tests were passed
+
+
+
+run 27 -- state = 0xbd6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.28
+
+ All tests were passed
+
+
+
+run 28 -- state = 0x3d6e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.04
+
+ All tests were passed
+
+
+
+run 29 -- state = 0x356e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.10
+
+ All tests were passed
+
+
+
+run 30 -- state = 0xb56e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.26
+
+ All tests were passed
+
+
+
+run 31 -- state = 0x956e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.06
+
+ All tests were passed
+
+
+
+run 32 -- state = 0x156e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.10
+
+ All tests were passed
+
+
+
+run 33 -- state = 0x154e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 34 -- state = 0x954e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 35 -- state = 0xb54e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 36 -- state = 0x354e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.00
+
+ All tests were passed
+
+
+
+run 37 -- state = 0x3d4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.93
+
+ All tests were passed
+
+
+
+run 38 -- state = 0xbd4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.96
+
+ All tests were passed
+
+
+
+run 39 -- state = 0x9d4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.23
+
+ All tests were passed
+
+
+
+run 40 -- state = 0x1d4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.01
+
+ All tests were passed
+
+
+
+run 41 -- state = 0x1f4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.04
+
+ All tests were passed
+
+
+
+run 42 -- state = 0x9f4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.93
+
+ All tests were passed
+
+
+
+run 43 -- state = 0xbf4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.14
+
+ All tests were passed
+
+
+
+run 44 -- state = 0x3f4e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 45 -- state = 0x374e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.17
+
+ All tests were passed
+
+
+
+run 46 -- state = 0xb74e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 47 -- state = 0x974e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.31
+
+ All tests were passed
+
+
+
+run 48 -- state = 0x174e10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 49 -- state = 0x17ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.29
+
+ All tests were passed
+
+
+
+run 50 -- state = 0x97ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 51 -- state = 0xb7ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 52 -- state = 0x37ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+
+ All tests were passed
+
+
+
+run 53 -- state = 0x3fce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 54 -- state = 0xbfce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.20
+
+ All tests were passed
+
+
+
+run 55 -- state = 0x9fce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 56 -- state = 0x1fce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.10
+
+ All tests were passed
+
+
+
+run 57 -- state = 0x1dce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 58 -- state = 0x9dce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 59 -- state = 0xbdce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+ The following tests gave p-values outside [0.001, 0.9990]:
+ (eps  means a value < 1.0e-300):
+ (eps1 means a value < 1.0e-15):
+
+       Test                          p-value
+ ----------------------------------------------
+  6  MaxOft AD                       0.9993 
+ ----------------------------------------------
+ failed: 1 of 15
+
+
+
+run 60 -- state = 0x3dce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 61 -- state = 0x35ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.95
+
+ All tests were passed
+
+
+
+run 62 -- state = 0xb5ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.96
+
+ All tests were passed
+
+
+
+run 63 -- state = 0x95ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 64 -- state = 0x15ce10a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.25
+
+ All tests were passed
+
+
+
+run 65 -- state = 0x15c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.01
+
+ All tests were passed
+
+
+
+run 66 -- state = 0x95c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 67 -- state = 0xb5c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.29
+
+ All tests were passed
+
+
+
+run 68 -- state = 0x35c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 69 -- state = 0x3dc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.96
+
+ All tests were passed
+
+
+
+run 70 -- state = 0xbdc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.04
+
+ All tests were passed
+
+
+
+run 71 -- state = 0x9dc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:04.95
+
+ All tests were passed
+
+
+
+run 72 -- state = 0x1dc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 73 -- state = 0x1fc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 74 -- state = 0x9fc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 75 -- state = 0xbfc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 76 -- state = 0x3fc610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.39
+
+ All tests were passed
+
+
+
+run 77 -- state = 0x37c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.48
+
+ All tests were passed
+
+
+
+run 78 -- state = 0xb7c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 79 -- state = 0x97c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 80 -- state = 0x17c610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 81 -- state = 0x174610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 82 -- state = 0x974610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.23
+
+ All tests were passed
+
+
+
+run 83 -- state = 0xb74610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.12
+
+ All tests were passed
+
+
+
+run 84 -- state = 0x374610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 85 -- state = 0x3f4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.20
+
+ All tests were passed
+
+
+
+run 86 -- state = 0xbf4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 87 -- state = 0x9f4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.15
+
+ All tests were passed
+
+
+
+run 88 -- state = 0x1f4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.20
+
+ All tests were passed
+
+
+
+run 89 -- state = 0x1d4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.09
+
+ All tests were passed
+
+
+
+run 90 -- state = 0x9d4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 91 -- state = 0xbd4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.07
+
+ All tests were passed
+
+
+
+run 92 -- state = 0x3d4610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.26
+
+ All tests were passed
+
+
+
+run 93 -- state = 0x354610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.20
+
+ All tests were passed
+
+
+
+run 94 -- state = 0xb54610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.18
+
+ All tests were passed
+
+
+
+run 95 -- state = 0x954610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.45
+
+ All tests were passed
+
+
+
+run 96 -- state = 0x154610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.00
+
+ All tests were passed
+
+
+
+run 97 -- state = 0x156610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.21
+
+ All tests were passed
+
+
+
+run 98 -- state = 0x956610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.10
+
+ All tests were passed
+
+
+
+run 99 -- state = 0xb56610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.26
+
+ All tests were passed
+
+
+
+run 100 -- state = 0x356610a1
+
+========= Summary results of SmallCrush =========
+
+ Version:          TestU01 1.2.3
+ Generator:        prns
+ Number of statistics:  15
+ Total CPU time:   00:00:05.29
+
+ All tests were passed
+
+
+

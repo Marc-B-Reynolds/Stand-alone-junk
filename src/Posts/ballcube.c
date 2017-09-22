@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
-// http://marc-b-reynolds.github.io
+// http://marc-b-reynolds.github.io/math/2017/01/27/CubeBall.html
 // Scalar only, more toward clairty than performance
 // no deps unless USE_SOBOL is defined, then needs Sobol.h from SFH directory
 

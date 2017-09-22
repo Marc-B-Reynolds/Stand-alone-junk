@@ -34,20 +34,20 @@ static inline float rsqrtf_a(float x)
   return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x)));
 }
 
-static inline float rsqrt_nr(float x)
+static inline float rsqrtf_nr(float x)
 {
-  float x0 = rsqrtf_a(x);
-  return x0*(1.5f - x*0.5f*x0*x0);
+  float  x0 = rsqrtf_a(x);
+  return x0*(1.5f - 0.5f*x*x0*x0);
 }  
 
-static inline float rsqrt_nr2(float x)
+float rsqrtf_nr2(float x)
 {
   float x0;
   x0 = rsqrtf_a(x);
-  x0 = x0*(1.5f - x*0.5f*x0*x0);
-  x0 = x0*(1.5f - x*0.5f*x0*x0);
+  x0 = x0*(1.5f - 0.5f*x*x0*x0);
+  x0 = x0*(1.5f - 0.5f*x*x0*x0);
   return x0;
-}  
+}
 
 // for error computations of using native ~1/x without fixup
 static inline float rcp_a(float x) 
