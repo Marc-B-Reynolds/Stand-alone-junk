@@ -10,31 +10,68 @@ extern "C" {
 
 // comments after constants: prime factorization, population count
   
+// for overriding Weyl constant and its multiplicative inverse
 #ifndef LPRNS_WEYL  
 #define LPRNS_WEYL   0x3504f333   // 3*2309*128413, 15
 #define LPRNS_WEYL_I 0x02843ffb   // 151*279613,    16
+//#define LPRNS_WEYL   0x6a09e667   // 83*727*294833, 16
+//#define LPRNS_WEYL_I 0xb39d557    // 7*29*269*3449, 17
 #endif
 
+// for overriding default mixing function
 #ifndef LPRNS_MIX
 #define LPRNS_MIX lprns_mix
 #endif
 
+// for overriding default stream mixing function
 #ifndef LPRNS_STREAM_MIX
 #define LPRNS_STREAM_MIX lprns_stream_mix
 #endif
 
-static const uint32_t LPRNS_M0 = 0x5f356495;  // 929*1719413, 17
-static const uint32_t LPRNS_M1 = 0xac564b05;  // 29*99701257, 14
+// for overriding default values of standard mixing function:
+// cascade of two xorshift multiplies + xorshift
+#ifndef LPRNS_M0  
 
+// example: ad hoc (questionable p-value @ ~2.4%)
+//static const uint32_t LPRNS_M0 = 0x5f356495;  // 929*1719413, 17
+//static const uint32_t LPRNS_M1 = 0xac564b05;  // 29*99701257, 14
+//static const uint32_t LPRNS_S0 = 16;
+//static const uint32_t LPRNS_S1 = 16;
+//static const uint32_t LPRNS_S2 = 16;
+
+// example: ad hoc (questionable p-value @ ~3.8%)
+//static const uint32_t LPRNS_M0 = 0x5f356495;  // 929*1719413, 17
+//static const uint32_t LPRNS_M1 = 0xac564b05;  // 29*99701257, 14
+//static const uint32_t LPRNS_S0 = 15;
+//static const uint32_t LPRNS_S1 = 14;
+//static const uint32_t LPRNS_S2 = 16;
+
+// example: using xxhash's finalizer (questionable p-value @ ~2.2%)
+static const uint32_t LPRNS_M0 = 0x85ebca77;  // 2246822519, 19
+static const uint32_t LPRNS_M1 = 0xc2b2ae3d;  // 3266489917, 17
+static const uint32_t LPRNS_S0 = 15;
+static const uint32_t LPRNS_S1 = 13;
+static const uint32_t LPRNS_S2 = 16;
+
+// example: using murmur3's finalizer (questionable p-value @ ~3.1%)
+//static const uint32_t LPRNS_M0 = 0x85ebca6b;  // 15809*142123, 18
+//static const uint32_t LPRNS_M1 = 0xc2b2ae35;  // 1223*1483*1801, 16
+//static const uint32_t LPRNS_S0 = 16;
+//static const uint32_t LPRNS_S1 = 13;
+//static const uint32_t LPRNS_S2 = 16;
+  
+#endif
+
+// an example initial stream constant
 static const uint32_t LPRNS_STREAM_M = 0x24051d5;  // 3*5*113*22283, 10
 
 // raw structure-less routines
   
 static inline uint32_t lprns_mix(uint32_t x)
 {
-  x ^= x >> 16; x *= LPRNS_M0;
-  x ^= x >> 16; x *= LPRNS_M1;
-  x ^= x >> 16;
+  x ^= x >> LPRNS_S0; x *= LPRNS_M0;
+  x ^= x >> LPRNS_S1; x *= LPRNS_M1;
+  x ^= x >> LPRNS_S2;
   return x;
 }
 
@@ -42,6 +79,7 @@ static inline uint32_t lprns_at(uint32_t n)
 {
   return LPRNS_MIX(LPRNS_WEYL*n);
 }
+
 
 static inline uint32_t lprns_tell_raw(uint32_t i)
 {
@@ -113,6 +151,8 @@ static inline uint32_t lprns_next_pop(uint32_t x)
   return b | (c >> d);
 }
 
+#ifndef LPRNS_ALT_STREAMS  
+
 static inline uint32_t lprns_stream_next_k(uint32_t x)
 {
   return (lprns_next_pop(x>>3) << 3) | 5;
@@ -120,11 +160,39 @@ static inline uint32_t lprns_stream_next_k(uint32_t x)
 
 static inline uint32_t lprns_stream_mix(uint32_t x, uint32_t m)
 {
-  x ^= x >> 16; x *= m;
-  x ^= x >> 16; x *= LPRNS_M0;
-  x ^= x >> 16;
+  x ^= x >> LPRNS_S0; x *= m;
+  x ^= x >> LPRNS_S1; x *= LPRNS_M0;
+  x ^= x >> LPRNS_S2;
   
   return x;
+}
+
+#else
+
+static inline uint32_t lprns_stream_next_k(uint32_t x)
+{
+  return x+1;
+}  
+  
+static inline uint32_t lprns_stream_mix(uint32_t x, uint32_t m)
+{
+  x ^= m;
+  x ^= x >> LPRNS_S0; x *= LPRNS_M0;
+  x ^= x >> LPRNS_S1; x *= LPRNS_M1;
+  x ^= x >> LPRNS_S2;
+  return x;
+}
+#endif
+
+  
+static inline uint32_t lprns_stream_at_raw(uint32_t n, uint32_t m)
+{
+  return LPRNS_STREAM_MIX(LPRNS_WEYL*n, m);
+}
+
+  static inline uint32_t lprns_stream_at(lprns_stream_t* gen, uint32_t n)
+{
+  return LPRNS_STREAM_MIX(LPRNS_WEYL*n, gen->m);
 }
   
 static inline uint32_t lprns_stream_tell(lprns_stream_t* gen) { return lprns_tell_raw(gen->i); }

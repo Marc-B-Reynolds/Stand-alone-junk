@@ -12,15 +12,21 @@
 // each battery run.
 //#define TEST_STREAM
 
+// if defined uses top bits of the two uniform integers
+// instead of all of the first and remaining for the second.
+//#define SANE_DOUBLE_CONVERT
+
 // inject this note at the top of the output...for custom
 // mixing or whatever other note desired.
 #define NOTATION "default"
 
-// if defined run Smallcrush, otherwise Crush
-#define SMALLCRUSH
+// requires my hacked library
+//#define ADAPTIVE
+
+#define LPRNS_ALT_STREAMS
 
 // Run with specified inital state. Undefined uses __rdtsc()
-//#define INITAL_STATE 0x1L
+#define INITAL_STATE 0x9a6e9aa1
 
 // Setup whatever configuration to be tested
 
@@ -70,6 +76,19 @@ static uint32_t next_u32(void* p, void* s)
 // for double tests
 static double next_f64(void* p, void* s)
 {
+#ifdef SANE_DOUBLE_CONVERT
+#ifdef TEST_STREAM
+  uint64_t r0 = lprns_stream_next(&state);
+  uint64_t r1 = lprns_stream_next(&state);
+#else
+  uint64_t r0 = lprns_next(&state);
+  uint64_t r1 = lprns_next(&state);
+#endif
+  r0 >>= 6;
+  r1 >>= 6;
+
+  return ((r0<<26)|r1) * DBL_EPSILON;
+#else
 #ifdef TEST_STREAM
   uint64_t r = lprns_stream_next(&state);
 
@@ -80,7 +99,9 @@ static double next_f64(void* p, void* s)
   r = (r << 32) | lprns_next(&state);
 #endif
 
+
   return (r >> 12) * DBL_EPSILON;
+#endif
 }
 
 // dump start of test state: useful if one wanted to
@@ -97,7 +118,11 @@ unif01_Gen* createGenerator()
   unif01_Gen* gen = util_Malloc(sizeof(unif01_Gen));
 
 #ifdef TEST_STREAM
+#ifdef LPRNS_ALT_STREAMS
+  state.m = 0;
+#else
   state.m = LPRNS_STREAM_M;
+#endif
 #endif
 
   gen->state = 0;
@@ -139,18 +164,20 @@ int main(void)
   printf("  WEYL: 0x%08x\n", LPRNS_WEYL);
   printf("  M0:   0x%08x\n", LPRNS_M0);
   printf("  M1:   0x%08x\n", LPRNS_M1);
-#ifndef PRNS_NO_FINAL_XORSHIFT
-  //printf("  S2:   %d\n", PRNS_MIX_S2);
-#else
-  //printf("  drops last right-xorshift\n");
-#endif
-  //printf("  M0:   0x%0" PRIx64 "\n", PRNS_MIX_M0);
-  //printf("  M1:   0x%0" PRIx64 "\n", PRNS_MIX_M1);
+  printf("  S0:   %d\n",     LPRNS_S0);
+  printf("  S1:   %d\n",     LPRNS_S1);
+  printf("  S2:   %d\n",     LPRNS_S2);
+
 
 #ifdef TEST_STREAM
   printf("  streaming variant: stream param changed each battery test\n");
 #endif
 
+#ifdef   INITAL_STATE
+  state.i = INITAL_STATE;
+#else
+  state.i = s;
+#endif
 
   // the state is initialized to a sobol sequence in
   // an attempt to get as good a coverage of the state
@@ -158,7 +185,7 @@ int main(void)
   
   do {
     // setting the raw state of the generator
-    state.i = s;
+    
 #ifdef TEST_STREAM
     state.m = lprns_stream_next_k(state.m); // change streams each battery run
     printf("run %d -- state = 0x%08x, mix = 0x%08x\n", -(int32_t)c, state.i, state.m);
@@ -166,10 +193,10 @@ int main(void)
     printf("run %d -- state = 0x%08x\n", -(int32_t)c, state.i);
 #endif
 
-#if defined(SMALLCRUSH)
+#if !defined(ADAPTIVE)
     bbattery_SmallCrush(gen);
 #else
-    bbattery_Crush(gen);
+    bbattery_SmallCrushAdaptive(gen);
 #endif
 
 #if defined(NUMBER_OF_RUNS)
@@ -180,6 +207,8 @@ int main(void)
     t = lprns_ctz(c) * 2;
     s ^= 0x80000000 >> t;
     c -= 1;
+
+    state.i = s;
   } while (1);
 
   deleteGenerator(gen);
