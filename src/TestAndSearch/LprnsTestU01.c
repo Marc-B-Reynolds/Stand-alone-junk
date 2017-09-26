@@ -21,7 +21,7 @@
 #define NOTATION "default"
 
 // requires my hacked library
-//#define ADAPTIVE
+#define ADAPTIVE
 
 #define LPRNS_ALT_STREAMS
 
@@ -60,8 +60,10 @@
 // not really needed
 #ifdef TEST_STREAM
 lprns_stream_t state;
+lprns_stream_t state_backup;
 #else
 lprns_t state;
+lprns_t state_backup;
 #endif
 
 static uint32_t next_u32(void* p, void* s)
@@ -104,6 +106,20 @@ static double next_f64(void* p, void* s)
 #endif
 }
 
+// these are for the adapative smallcrush and don't really have
+// any real work to do at the moment.
+
+static void* get_state(void* p, void* s)
+{
+  return &state_backup;
+}
+
+static void set_state(void* p, void* s)
+{
+  state = state_backup;
+}
+
+
 // dump start of test state: useful if one wanted to
 // check questionable p-values (or to repeat failures
 // sanity checks)
@@ -131,6 +147,11 @@ unif01_Gen* createGenerator()
   gen->GetU01  = (void*)&next_f64;
   gen->GetBits = (void*)&next_u32;
   gen->Write = &print_state;
+
+#ifdef ADAPTIVE
+  gen->getCurrentState = (void*)&get_state;
+  gen->setCurrentState = (void*)&set_state;
+#endif
 
   return gen;
 }
