@@ -169,6 +169,7 @@ static inline uint32_t lprns_stream_mix(uint32_t x, uint32_t m)
 
 #else
 
+// just to be compatiable
 static inline uint32_t lprns_stream_next_k(uint32_t x)
 {
   return x+1;

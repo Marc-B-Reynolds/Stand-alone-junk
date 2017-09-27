@@ -10,7 +10,7 @@
 
 // if define test stream version, changing to a new stream
 // each battery run.
-//#define TEST_STREAM
+#define TEST_STREAM
 
 // if defined uses top bits of the two uniform integers
 // instead of all of the first and remaining for the second.
@@ -21,7 +21,7 @@
 #define NOTATION "default"
 
 // requires my hacked library
-#define ADAPTIVE
+//#define ADAPTIVE
 
 #define LPRNS_ALT_STREAMS
 
@@ -35,7 +35,7 @@
 // battery...otherwise will continue until stopped.
 //#define NUMBER_OF_RUNS 100
 
-#define NAME "prns"
+#define NAME "lprns"
 
 #include <inttypes.h>
 #include <stdio.h>
