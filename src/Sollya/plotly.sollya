@@ -130,10 +130,6 @@ procedure plotly_add_trace(l=...)
 };
 
 
-
-
-
-
 // attempt to figure out some shell commands
 procedure plotly_guess_environment()
 {
@@ -141,10 +137,10 @@ procedure plotly_guess_environment()
 
   t = parse(bashevaluate(_plotly_ostype_macro));
 
-  if (t == 1) then {
-    _plotly._open_html = "cygstart ";
-    } else if (t == 2) then {
-     _plotly._open_html = "open ";
+  // this is evil and assume Linux is WSL
+  if (t == 0) then { _plotly._open_html = "cmd.exe /c start "; } 
+  else if (t == 1) then { _plotly._open_html = "cygstart "; }
+  else if (t == 2) then { _plotly._open_html = "open ";
   };
 };
 
