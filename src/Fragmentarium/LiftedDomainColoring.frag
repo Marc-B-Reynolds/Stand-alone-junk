@@ -1,4 +1,7 @@
-// 
+// public domain (unlicence)
+
+// Pole (magnitude) indications is borked. Haven't
+// found anything super happy with. 
 
 #include "2D.frag"
 //#include "Progressive2D.frag"
@@ -31,9 +34,6 @@ const vec3 rg_color = vec3(1.0,1.0,1.0);
 // limit ouput to magnitude range [0,1]
 uniform bool UNIT_ONLY; checkbox[false]
 
-
-
-
 // blend value for radial lines (0,1) 0=strong, 1=none
 uniform float RADIAL_LINE_STR; slider[0.0,0.001,1.0]
 
@@ -50,8 +50,10 @@ uniform float RECT_GRID_STR; slider[0.0,0.55,1.0]
 
 #define RECT_GRID_S
 
+// concentric grid color
 const vec3 cg_color = vec3(0.0,0.0,0.0);
 
+// rotate hue angle (choose what's zero)
 uniform float HUE_ANGLE; slider[0.0,0.55,1.0]
 
 // if defined: darken as point approach zero (south pole)
@@ -71,13 +73,7 @@ vec2 epowz(vec2 c)
 // the map to visualize
 vec2 map(vec2 z)
 {
-//return vec2(z.y, z.x-z.y-z.x*z.x*z.x);
-  //return vec2(z.x*z.x-1+z.y, 1+z.x-z.y*z.y);
-
-  // identity.  For a vector field, the value at each point is the point's
-  // displacement from the origin as a vector.
- // return epowz(z);
-   return z;
+  return z;
 }
 
 
@@ -108,8 +104,6 @@ float grid_step(float t)
   return smoothstep(0.0, GRID_K, t);
 }
 
-
-
 // lifted domain plot color for point 'c'
 vec3 domainPlot(vec2 c)
 {
@@ -133,8 +127,8 @@ vec3 domainPlot(vec2 c)
   // saturation and value
   float sat = 1.0;
   float val = 1.0;
-    
-#if defined(POLE_SHADING)
+  
+  // magnitude indication: needs work
   if (d < 1.0) {
     val = 2.0/(1.0-log2(d));
     val = 1.0;
@@ -142,9 +136,8 @@ vec3 domainPlot(vec2 c)
   }
   else if (d > 2.0) {
     sat = 2.0/l2d;
-    //sat = sqrt(2.0*atan(1.0/sqrt(d)));
+  //sat = sqrt(2.0*atan(1.0/sqrt(d)));
   }
-#endif
   
   // rectangular grid
   if (RECT_GRID ){
