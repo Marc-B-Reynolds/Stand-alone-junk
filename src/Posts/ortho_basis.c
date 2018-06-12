@@ -9,7 +9,6 @@
 //
 // The noted number of issues is for x64 from gcc 6.3 -O3
 
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -22,6 +21,8 @@
 #endif
 
 // compile time configuration options
+
+#define HISTOGRAM
 
 // enable to test with both pseudo-random and Sobol sequences
 #define USE_SOBOL
@@ -168,27 +169,50 @@ void m33_print(m33_t* m)
   vec3_print(m->row+2); ln();
 }
 
-// NOTE: this is really for the positive-Z half sphere where
-// you'd loose the threashold testing
-// positive half sphere issues: 23 
+// no degenerate case handling: issues 28
+void ortho_frisvad(vec3_t* n, vec3_t* b1, vec3_t* b2)
+{
+  float a = 1.f / (1.f + n->z);
+  float b = -n->x*n->y*a;
+  vec3_set(b1, 1.f - n->x*n->x*a, b, -n->x);
+  vec3_set(b2, b, 1.f - n->y*n->y*a, -n->y);
+}
+
+
+// reworked (rot 180 degree in orthogonal complement)
+void ortho_frisvad_m1(vec3_t* n, vec3_t* b1, vec3_t* b2)
+{
+  float x = n->x, y = n->y, z = n->z;
+  float a = 1.f/(1.f+z);
+  float b = a*x*y;
+  vec3_set(b1, a*x*x-1.f, b, x);
+  vec3_set(b2, b, a*y*y-1.f, y);
+}
+
+// updated version issues: 21 (rot 180 degree in orthogonal complement)
 void ortho_basis_1(vec3_t* v, vec3_t* xp, vec3_t* yp)
 {
+  float x = v->x, y = v->y, z = v->z;
+  float a = y/(z+1.f);
+  float b = y*a;
+  float c = x*a;
+  
+  vec3_set(xp, -z-b, c,  x);
+  vec3_set(yp, c, b-1.f, y);
+}
+
+// original post version issues: 23
+void ortho_basis_1o(vec3_t* v, vec3_t* xp, vec3_t* yp)
+{
   float z =  v->z;
-
-  if (z > THRESHOLD) {
-    float x = -v->x;
-    float y =  v->y;
-    float a = y/(z+1.f); //   y/(z+1)
-    float b = y*a;       // y^2/(z+1)
-    float c = x*a;       // -xy/(z+1)
-    
-    vec3_set(xp, z+b, c,      x);  // {z+y/(z+1),   -xy/(z+1), -x}
-    vec3_set(yp, c,   1.f-b, -y);  // {-xy/(z+1), 1-y^2/(z+1), -y}
-    return;
-  }
-
-  vec3_set(xp, -1.f, 0.f, 0.f);
-  vec3_set(yp,  0.f, 1.f, 0.f);
+  float x = -v->x;
+  float y =  v->y;
+  float a = y/(z+1.f); //   y/(z+1)
+  float b = y*a;       // y^2/(z+1)
+  float c = x*a;       // -xy/(z+1)
+  
+  vec3_set(xp, z+b, c,      x);  // {z+y/(z+1),   -xy/(z+1), -x}
+  vec3_set(yp, c,   1.f-b, -y);  // {-xy/(z+1), 1-y^2/(z+1), -y}
 }
 
 // issues: 28
@@ -221,16 +245,6 @@ void ortho_basis_2a(vec3_t* v, vec3_t* xp, vec3_t* yp)
   vec3_set(xp, z+sz*b, sz*c, mx); 
   vec3_set(yp, c,   1.f-b, -sz*y); 
 }
-
-// hacked for half-sphere only: issues 28
-void ortho_frisvad(vec3_t* n, vec3_t* b1, vec3_t* b2)
-{
-  float a = 1.f / (1.f + n->z);
-  float b = -n->x*n->y*a;
-  vec3_set(b1, 1.f - n->x*n->x*a, b, -n->x);
-  vec3_set(b2, b, 1.f - n->y*n->y*a, -n->y);
-}
-
 
 // "Building an Orthonormal Basis, Revisited"
 // Tom Duff, James Burgess, Per Christensen, Christophe Hery,
@@ -346,15 +360,42 @@ void ortho_basis_r1(vec3_t* v, vec3_t* xp, vec3_t* yp)
   float a  = y/(z+sz);
   float b  = y*a;
   float c  = x*a;
-
-#if 0
-  vec3_set(xp, -sz*(z+b), sz*c, sz*x);
-  vec3_set(yp, c, b-sz, y);
-#else
-  // issues: 27
   vec3_set(xp, -z-b, c, x);
   vec3_set(yp, sz*c, sz*b-1, sz*y);
-#endif  
+}
+
+// for future post note
+void ortho_max_reviewer_7(vec3_t* n, vec3_t* b1, vec3_t* b2)
+{
+  double dthreshold = -0.9999999999776;
+  float rthreshold = -0.7f;
+  float x = n->x, y=n->y, z=-n->z;
+  
+  if (z >= rthreshold) {
+    const float a = 1.f/(1.f + z);
+    const float b = -x*y*a ;
+    vec3_set(b1, 1.0f - x*x*a , b , -x);
+    vec3_set(b2, b, 1.0f - y*y*a, -y);
+  }
+  else {
+    double dx = (double)x;
+    double dy = (double)y;
+    double dz = (double)z;
+    const double d = 1./sqrt(dx*dx + dy*dy + dz*dz);
+    dx *= d;
+    dy *= d;
+    dz *= d;
+    if(z >= dthreshold) {
+      const double a = 1.0 /(1.0 + dz);
+      const double b = -dx*dy*a ;
+      vec3_set(b1,  1.0f - (float)(dx*dx*a) , (float)b , (float)(-dx));
+      vec3_set(b2, (float)b , 1.0f - (float)(dy*dy*a) ,  (float)(-dy));
+    }
+    else {
+      vec3_set(b1,  0.f, -1.f, 0.f);
+      vec3_set(b2, -1.f,  0.f, 0.f);
+    }
+  }
 }
 
 typedef void(*ortho_gen_t)(vec3_t* v, vec3_t* xp, vec3_t* yp);
@@ -369,8 +410,13 @@ gens_t gens[] = {
 #if defined(HALF_SPHERE)
   {&ortho_basis_1,        "method1"},
   {&ortho_frisvad,        "frisvad"},
+  {&ortho_frisvad_m1,     "frisvad (m1)"},
   {&ortho_basis_pixar,    "pixar"}
 #else
+  {&ortho_frisvad,        "frisvad"},
+  {&ortho_frisvad_m1,     "frisvad (m1)"},
+#if 0  
+  {&ortho_basis_1,        "method1"},
   {&ortho_basis_2,        "method2"},
   {&ortho_basis_2a,       "method2a"},
   {&ortho_basis_pixar,    "pixar"},
@@ -380,6 +426,7 @@ gens_t gens[] = {
   {&ortho_basis_pixar_l2, "pixar_l2"},
   {&ortho_basis_l1,       "method_l1"},
   {&ortho_basis_r1,       "method_r1"}
+#endif  
 #endif  
 };
 
@@ -415,6 +462,10 @@ static inline double vec3_norm_d(vec3_t* a)
   return vec3_dot_d(a,a);
 }
 
+#if defined(HISTOGRAM)
+double histo[HLEN];
+#endif
+
 void ortho_check(ortho_error_t* e, vec3_t* v, vec3_t* x, vec3_t* y)
 {
   double d0,d1,d2;
@@ -448,6 +499,16 @@ void ortho_check(ortho_error_t* e, vec3_t* v, vec3_t* x, vec3_t* y)
 
   if (error > e->peak) e->peak = error;
 
+#if defined(HISTOGRAM)
+  float    hidf = 0.5f*(1.f-v->z);
+  if (hidf < 0) hidf = 0;
+  uint32_t hid = (uint32_t)(HLEN*hidf);
+  if (hid >= HLEN) hid=HLEN-1;
+
+  if (error > histo[hid]) histo[hid] = error;  
+#endif
+
+  
   e->rms += error;
   e->cnt++;
   
@@ -549,6 +610,14 @@ void ortho_test(uint64_t s0, uint64_t s1)
     
     rms[gi] = ortho_spew(f, &e0);
     ln();
+
+#if defined(HISTOGRAM)
+    printf("histogram { ");
+    for(uint32_t i=0; i<HLEN; i++) {
+      printf("%e, ", sqrt(histo[i]/6.f));
+    }
+    printf("}\n\n");
+#endif    
   }
 
   printf("method   RMS\n");
@@ -592,6 +661,7 @@ void foo(uint64_t s0, uint64_t s1)
 
   gen_reset(s0,s1);
   uniform_s2(b.row);
+  
   for(uint32_t c=0; c<COUNT; c++) {
     uniform_s2(b.row);
     printf("-----\n");
