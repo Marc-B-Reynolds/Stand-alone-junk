@@ -46,7 +46,7 @@ _inline uint32_t __builtin_ctz(uint32_t x) { unsigned long r; _BitScanForward(&r
 #ifndef SOBOL_NTZ
 // The input is only zero once at the last element of the sequence
 // CTZ being undefined for input zero has no meanful impact.
-#define SOBOL_NTZ(X) __builtin_ctz(X)
+#define SOBOL_NTZ(X) (uint32_t)__builtin_ctz(X)
 #endif
 
 #ifdef __cplusplus
