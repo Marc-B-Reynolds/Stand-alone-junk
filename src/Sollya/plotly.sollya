@@ -1,6 +1,6 @@
 /* -*- mode: c; -*- */
 
-// Marc B. Reynolds, 2016
+// Marc B. Reynolds, 2016-2020
 // Public Domain under http://unlicense.org, see link for details.
 
 // Create plot.ly plots including generating an html page which can be auto-displayed.
@@ -567,7 +567,7 @@ procedure _plotly_build_page(page)
     var ft;
     f  = page._figs[i];
     ft = "'" @ f._title @ "'"; //"'figure " @ (i+1) @ "'";
-    s  = s @ "var layout" @ i @ "= {title:  " @ ft @  "};\n";
+    s  = s @ "var layout" @ i @ "= {title:  " @ ft @  ", yaxis: { hoverformat: 'g', exponentformat: 'power' }};\n";
     s  = s @ "Plotly.newPlot('fig"    @ i @ "'," @ 
                             "data"   @ i @ ", " @ 
                             "layout" @ i @ ", {displaylogo: false, autosizable: true});\n";

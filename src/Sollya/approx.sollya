@@ -1,6 +1,6 @@
 /* -*- mode: c; -*- */
 
-// Marc B. Reynolds, 2016
+// Marc B. Reynolds, 2016-2020
 // Public Domain under http://unlicense.org, see link for details.
 
 // approx control structure:
@@ -66,7 +66,7 @@ a_env._rvar    = "r";   // computed result of approximation
 a_env._r_fp32  = true;  // in/out in binary32
 a_env._w_fp32  = true;  // working precision in binary32
 a_env._hexfp   = false; // generate fp constants in hex 
-a_env._compile = "gcc -Wall -o test";
+a_env._compile = "clang -Wall -march=haswell -o test";
 
 // returns field 'f' in 's' if exists, otherwise defaults to a_env.'f'
 procedure a_env_field(s,f)
@@ -170,6 +170,7 @@ procedure a_detect_sym_(f,dx,p,dom)
   return r;
 };
 
+// attempts to determine if the function is even or odd
 procedure a_detect_symmetry(s)
 {
   var dom,f;
@@ -254,8 +255,8 @@ procedure a_guessdegree(s)
   return r;
 };
 
-a_fp_format_f32 = [|24...|];
-a_fp_format_f64 = [|53...|];
+a_fp_format_f32 = [|24...|];  // all binary32 precision list
+a_fp_format_f64 = [|53...|];  // all binary64 precision list
 
 procedure a_bool_to_fp(is_single)
 {
@@ -350,14 +351,19 @@ procedure a_mock_ex_fake(s,p)
   return r;
 };
 
+// return an initialized structure with the desired function 'f'
+// and primary range 'r' and set default values for other fields.
 procedure a_setup(f,r)
 {
   var s;
   s._func     = f;           // the function to approx
   s._range    = r;           // input domain of approx
+
+  // default values
   s._min_type = relative;    // minimize relative error
   s._r_fp32   = true;        // in/out in binary32
   s._w_fp32   = true;        // work in binary32
+  s._fma      = true;        // evaluate using FMA instead of scalar (unused..fix me)
   s._name     = "" @ f;      // use function as default name
   return s;
 };

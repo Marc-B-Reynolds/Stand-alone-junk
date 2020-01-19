@@ -1,0 +1,70 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+//verbosity=10;
+
+// Using arctangent as an example
+// load the library
+execute("../util.sollya");
+execute("../struct.sollya");
+execute("../approx.sollya");
+execute("../plotly.sollya");
+
+// temp hack..html is too big for a gist
+_plotly._points = 200;
+
+// ***********************************************************************
+// Use the library to build some approximations
+
+print("creating approximations");
+
+// set up a template structure for full range min rel and abs error
+atan_r = a_setup(atan(x), [0;tan(pi/8)]);
+
+// build relative error 
+print("  rel error");
+atan_r2 = s_copy(atan_r);           // make a copy
+atan_r2._nterms   = 2;
+atan_r2._min_type = relative;
+atan_r2 = a_build_approx(atan_r2);
+atan_r3 = a_add_term(atan_r2);
+atan_r4 = a_add_term(atan_r3);
+atan_r5 = a_add_term(atan_r4);
+atan_r6 = a_add_term(atan_r5);
+
+// temp hack version of creating a listing
+atan_r5 = a_make_listing(atan_r5);
+write("atan_" @ atan_r5._nterms @ "(float x) {\n  float r;\n");
+atan_r5._listing;
+print("  return r;\n}\n");
+atan_r5._infnorm;
+atan_r5._poly;
+
+
+
+// ***********************************************************************
+// start building an html report
+print("building report");
+
+page.new("atan_pi8.html");
+
+// reports are associated with figures. start a new figure and
+// all "text" added appears above it.
+plotly_new_error_figure("figure 1");
+
+page.section("Example report using arctangent");
+//page.add_text("The error plot are are abs error because I'm lazy and haven't added relative error support to my goofy little tool.");
+
+page.subsection("polynomial relative error  \\(x \\in \\pm \\left( \\sqrt{2} - 1 \\right) \\)");
+page.add_trace(atan_r2);
+page.add_trace(atan_r3);
+page.add_trace(atan_r4);
+page.add_trace(atan_r5);
+page.add_trace(atan_r6);
+
+plotly_new_error_figure("figure 2");
+
+plotly_build_pages();
+plotly_show_html("atan_pi8.html");  // automatically open the result
