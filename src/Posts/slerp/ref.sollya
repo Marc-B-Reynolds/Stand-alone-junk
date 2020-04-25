@@ -1,8 +1,12 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
 
 // This is all very lazy and cut-and-paste
 //verbosity=0!;
 
-// generate a slerp impl based on the reference equation
+// Generate a slerp impl based on the reference equation
 // s(t) = (cos(ta) - d sin(ta)/sin(a)) A + sin(ta)/sin(a) B
 //   where d = A.B = cos(a)
 //         sin(a) = sqrt(1-a^2)
@@ -33,16 +37,16 @@ targetError = 2^-24; // temp hack - not working properly
 
 // which to eliminiate: one or zero of these
 elimSin      = false;
-elimCos      = false;
+elimCos      = true;
 
 // errors to minimize
 sin_a._min_type  = absolute;
 cos_a._min_type  = absolute;
 atan_a._min_type = absolute;
 
-hexFloats    = true;         // use hex-floats (otherwise decimal)
+hexFloats    = false;         // use hex-floats (otherwise decimal) - hack for shorter listing
 atanReduce   = false;        // reduce range of atan input - NOT SUPPORTED
-daSinCos     = true;         // double angle after sin/cos
+daSinCos     = false;        // double angle after sin/cos
 
 plotErrorEPS = true;         // emit an eps of t. error
 singleP      = true;         // working precision: float or double
@@ -139,7 +143,6 @@ sin_a  = a_setup(sin(x),  sinR);
 cos_a  = a_setup(cos(x),  cosR);
 atan_a = a_setup(atan(x), atanR);
 
-
 sin_a._symmetry  = A_SYMMETRY_ODD;
 cos_a._symmetry  = A_SYMMETRY_EVEN;
 atan_a._symmetry = A_SYMMETRY_ODD;
@@ -162,6 +165,7 @@ if (useTarget == false) then {
   cos_a._nterms  = cosP;
   atan_a._nterms = atanP;
 } else {
+  // TODO: nope!
   var e;
   e = 2^-24;
   sin_a._target_error  = e/2;
@@ -219,7 +223,11 @@ if (hexFloats == true) then { display=hexadecimal!; };
 
 // ****** atan approximation ******
 
-atanL = "\n    // compute the angle\n" @ "    " @ fptype @ " x  = y*rs;\n";
+atanL = "\n    // compute the angle\n    " @
+        fptype @ " a;\n    " @
+        fptype @ " x  = y*rs;\n";
+
+
 
 atanL = atanL @ atan_a._listing;
 
@@ -229,16 +237,20 @@ atanL = "    // atan setup\n"                         @
         "    " @ fptype @ " rs = " @ rsqrt @ "(s2);\n"     @
         atanL;
 
+// t needs to be doubled if we're not applying double angle xforms
+if (daSinCos == false) then {
+  atanL = "    t += t\n\n" @ atanL;
+};
+
 // ****** sin approximation ******
 
 if (elimSin == false) then {
   var p;
 
   p = sin_a._poly;
-
-  // manually generating the poly for the moment
   sinL = "";
 
+  // manually generating the poly for the moment
   for i from degree(p) to 2 by -2 do {
     sinL = "+a2*(" @ coeff(p, i) @ fpsuffix @ sinL @ ")";
   };
@@ -262,13 +274,12 @@ if (daSinCos == true) then {
 
 // ****** cos approximation ******
 
+
 if (elimCos == false) then {
   var p;
   p = cos_a._poly;
-
-  // manually generating the poly for the moment
   cosL = "";
-
+  // manually generating the poly for the moment
   for i from degree(p) to 2 by -2 do {
     cosL = "+a2*(" @ coeff(cos_a._poly, i) @ fpsuffix @ cosL @ ")";
   };
@@ -278,9 +289,9 @@ if (elimCos == false) then {
 } else {
   cosN = "x";
   if (daSinCos == true) then {
-    sinL = fsqrt @ "(" @ one @ "-hs*hs);\n";
+    cosL = fsqrt @ "(" @ one @ "-hs*hs);\n";
   } else {
-    sinL = fsqrt @ "(" @ one @ "-s*s);\n";
+    cosL = fsqrt @ "(" @ one @ "-s*s);\n";
   };
 };
 
@@ -376,11 +387,11 @@ display=decimal!;
 
 print(listing);
 
-targetError/2;
-atan_a._infnorm;
-cos_a._infnorm;
-sin_a._infnorm;
-atan_a;
+//targetError/2;
+//atan_a._infnorm;
+//cos_a._infnorm;
+//sin_a._infnorm;
+//atan_a;
 
 if (genCode == true) then {
   fname = name @ ".h";

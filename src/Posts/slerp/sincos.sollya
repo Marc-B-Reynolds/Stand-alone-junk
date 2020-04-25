@@ -19,7 +19,7 @@ procedure hack(f,d,r,name)
   var p,e,infn,z;
   p    = fpminimax(f, d, [|24...|], r, floating, E);
   e    = f-p;
-  infn = single(dirtyinfnorm(f-p, r));
+  infn = single(dirtyinfnorm(e, r));
   z    = list_to_f32(dirtyfindzeros(e, r));
   
   print("// error =", infn);
@@ -35,8 +35,8 @@ procedure hack(f,d,r,name)
   hack(sin(x), [|1,3,5,7|], [2^-24;pi/4], "sin_4_5");
   hack(cos(x), [|0,2,4,6,8|], [0;  pi/4], "cos_4_5");
 
-  hack(sin(x), [|1,3,5|],   [2^-24;pi/8], "sin_8_4");
-  hack(cos(x), [|0,2,4|],     [0;  pi/8], "cos_8_4");
+  hack(sin(x), [|1,3,5|],   [2^-24;pi/2], "sin_2_4");
+  hack(cos(x), [|0,2,4|],     [0;  pi/2], "cos_2_4");
   
-//hack(sin(x), [|1,3,5,7|], [2^-24;pi/8], "sin_8_5");
-//hack(cos(x), [|0,2,4,6|],   [0;  pi/8], "cos_8_5");
+//hack(sin(x), [|1,3,5,7|], [2^-24;pi/2], "sin_2_5");
+//hack(cos(x), [|0,2,4,6|],   [0;  pi/2], "cos_2_5");

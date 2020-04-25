@@ -1,16 +1,11 @@
-// Marc B. Reynolds, 2016-2019
 // Public Domain under http://unlicense.org, see link for details.
+// Marc B. Reynolds, 2016-2019
 
 #ifndef F32_UTIL_H
 #define F32_UTIL_H
 
 // NOTES:
 // u = round-off unit (2^-24) = ulp(1)/2
-
-#ifdef _MSC_VER
-nope..fma things are broken ATM
-#endif
-
 
 typedef struct { float h,l; } f32_pair_t;
 
@@ -24,6 +19,8 @@ inline float f32_from_bits(uint32_t x)
   float f; memcpy(&f, &x, 4); return f;
 }
 
+// x >=0 ? 1.0 : -1.f
+inline float f32_sgn(float x) { return copysignf(1.f,x); }
 
 /** exact transform functions **/
 
@@ -43,18 +40,6 @@ inline void f32_2sum(f3_pair_t* p, float a, float b)
   p->l = y;
 }
 
-// (a+b) exactly represented by unevaluated pair (h+l)
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow
-// * fastmath breaks me
-inline void f32_fast2sum(f32_pair_t* p, float a, float b)
-{
-  float x  = a+b;
-  float bp = x-a;
-  float y  = b-bp;
-  p->h = x;
-  p->l = y;
-}
 
 // (a*b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
@@ -170,6 +155,7 @@ inline uint32_t u32_abs(uint32_t x)
   return (int32_t)x >= 0 ? x : -x;
 }
 
+
 // ulp distance provided a & b are finite
 // and have the same sign
 inline uint32_t f32_ulp_dist_ss(float a, float b)
@@ -222,6 +208,35 @@ uint32_t f32_approx_eq(float a, float b, float absD, float relD)
   
   return 0;
 }
+
+#if defined(F32_WITH_FAST_MATH)
+
+// returns true if a >= b and neither are NaN
+bool fp32_ordered_ge(float a, float b) { return !(a < b); }
+
+// returns true if a > b and neither are NaN
+bool fp32_ordered_gt(float a, float b) { return !(a <= b); }
+
+// returns true if neither are NaN
+bool fp32_are_ordered(float a, float b) { return fpclassify(a+b) != FP_NAN; }
+
+// (a+b) exactly represented by unevaluated pair (h+l)
+// * |l| <= ulp(h)/2
+// * provided a+b does not overflow
+// * fastmath breaks me
+inline void f32_fast2sum(f32_pair_t* p, float a, float b)
+{
+  float x  = a+b;
+  float bp = x-a;
+  float y  = b-bp;
+  p->h = x;
+  p->l = y;
+}
+
+#endif
+
+
+
 
 
 #endif

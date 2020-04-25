@@ -1,10 +1,11 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
-// http://marc-b-reynolds.github.io
+// http://marc-b-reynolds.github.io/quaternions/2017/05/02/QuatQuantPart1.html
+// http://marc-b-reynolds.github.io/quaternions/
 
 // This performs sloppy empirical testing, the code is very likely to be broken
-// and is intended for hacking.
+// and is intended for hacking. AKA needs proper testing before any usage.
 
 #include <stdint.h>
 #include <stdio.h>
@@ -27,35 +28,44 @@
 // if undef repeats same sequence each run
 //#define RANDOMIZE
 
-// number of quant bits. hacky to give
-// impefect view of how errors drop given
+// number of quant bits. hack to give
+// imperfect view of how errors drop given
 // an arbitrary number of bits
 #ifndef BITS
 #define BITS 32
 #endif
 
-#define CM_TESTS   // composed methods
+// choose sub-set of test: see 'maps', 'xmaps'
+//#define CM_TESTS   // composed methods
 #define EX_TESTS   // explicit methods
 
 // rotation angle buckets
 #define HLEN 80
 
-// With standard sampling strategies, these will
-// return BS results: uniform is a minor strategy.
-//#define DUMP_RMS
+// Dump out average and/or RMS values. This auto-disables
+// most sampling strategies.
+#define DUMP_RMS
 //#define DUMP_AVE
 
+// report new peak errors as seen to console
 #define TRACE_PEAK
+
+// debug aid. normalize input prior to transform
 //#define NORMALIZE_SAMPLES
-// end config
 
 // choose between atan or acos based error measuring
 //#define ACOS_MEASURE
+
+// end config
 
 #define XSTR(X) STR(X)
 #define STR(X)  #X
 
 #include "../SFH/quat.h"
+
+#if defined(DUMP_RMS)||defined(DUMP_AVE)
+#define UNIFORM_ONLY
+#endif
 
 #if defined USE_SOBOL
 #define SOBOL_EXTRAS
@@ -113,7 +123,7 @@ static inline uint64_t rng_u64(void)
 
 #define EPS (F32_MIN_NORMAL)
 
-static inline float rng_f32(void)
+ inline float rng_f32(void)
 {
   return (rng_u64() >> 40)*TO_FP32;
 }
@@ -154,6 +164,13 @@ void reset_generators(uint64_t s0, uint64_t s1, uint32_t len)
   rng_state[1] = s1;
   rng_u64();
 }
+
+
+void vec2_print(vec2_t* v)
+{
+  printf("{% f, % f} ",v->x,v->y);
+}
+
 
 void vec3_printa(vec3_t* v)
 {
@@ -305,6 +322,18 @@ void uniform_s1_px(vec2_t* p)
 }
 
 
+vec3_t test_dir = {.x=1.f, .y=0.f, .z=0.f};
+
+void uniform_quat_about_dir(quat_t* q)
+{
+  vec2_t p;
+  uniform_s1_px(&p);
+  quat_set(q,
+	   p.y*test_dir.x,
+	   p.y*test_dir.y,
+	   p.y*test_dir.z, fabsf(p.x)); // silly...should direct half-circle instead
+}
+
 void uniform_quat_about_x(quat_t* q)
 {
   vec2_t p;
@@ -342,8 +371,6 @@ void sobol_quat_about_xy(quat_t* q)
   float b = t * 0.5f*SQRT2;
   quat_set(q, b, b, 0.f, sqrtf(1.f-t*t));
 }
-
-float maxw = 0;
 
 void sobol_quat_about_diag(quat_t* q)
 {
@@ -408,7 +435,7 @@ inline void quatd_mul(quatd_t* r, quatd_t* a, quatd_t* b)
   quatd_set(r,x,y,z,w);
 }
 
-// returned angle is in degrees and as R^3 and not H.
+// returned angle is in degrees and R^3 and not H.
 // use doubles to compute relative quaternion BA*,
 // and atan2 to determine angle between A & B.
 
@@ -487,7 +514,6 @@ void map_aeaz_bc(vec3_t* d, vec3_t* s)
 
 
 // radial stretch
-#if 1
 void map_rs_cb(vec3_t* D, vec3_t* S)
 {
   LOAD_XYZ2(S);
@@ -507,36 +533,6 @@ void map_rs_bc(vec3_t* D, vec3_t* S)
 
   vec3_set(D, s*x, s*y, s*z);
 }
-
-#else
-
-void map_rs_cb(vec3_t* D, vec3_t* S)
-{
-  LOAD_XYZ(S);
-
-  double m = fabsf(x) > fabsf(y) ? fabsf(x) : fabsf(y);
-  m = m > fabsf(z) ? m : fabsf(z);
-  double s;
-  s = m/sqrt(x*x+y*y+z*z + EPS);
-
-  vec3_set(D, (float)(s*x), (float)(s*y), (float)(s*z));
-}
-
-void map_rs_bc(vec3_t* D, vec3_t* S)
-{
-  LOAD_XYZ2(S);
-
-  float m = x2 > y2 ? x : y; m = m*m > z2 ? m : z;
-  float s;
-
-  if (m > 0.002)
-    s = sqrtf(x2+y2+z2)/(fabsf(m)+2.f*EPS);
-  else
-    s = 1.f;
-
-  vec3_set(D, s*x, s*y, s*z);
-}
-#endif
 
 // volume preserving: cylinder+concentric
 void map_vp_cb(vec3_t* D, vec3_t* S)
@@ -923,7 +919,6 @@ void iem(quat_t* q, vec3_t* v)
   q->w = cosf(a);
 }
 
-
 // proc pointer to quaternion generator
 typedef void (*qsrc)(quat_t*);
 
@@ -935,13 +930,12 @@ typedef void (*b3_to_s3)(quat_t*, vec3_t*);
 typedef void (*cb_map)(vec3_t*, vec3_t*);
 
 typedef struct {
-  s3_to_b3 f;   //
-  b3_to_s3 g;   //
-  cb_map   bc;  //
-  cb_map   cb;  //
+  s3_to_b3 f;
+  b3_to_s3 g;
+  cb_map   bc;
+  cb_map   cb;
   char*    name;
 } maps_t;
-
 
 // define maps
 typedef void (*map_func_t)(vec3_t*, vec3_t*);
@@ -969,13 +963,18 @@ maps_t maps[] =
   DEF(ct,rsc),
   
   DEF(em,rs),
+  DEF(hm,rs),
+  DEF(ha,rs),
   DEF(ct,rs),
 #endif
 
-#if 1
+  DEF(ha,rs),
+
+#if 0
   DEF(em,id),  // exp-map
   DEF(hm,id),  // harmonic mean
   DEF(ha,id),  // half-angle
+  DEF(ha,rs),  // half-angle + radial stretch
   DEF(ct,id)   // Cayley
 #endif  
 };
@@ -1066,6 +1065,7 @@ uint64_t vencode(vec3_t* v)
 #define DEQUANT_S(I,B) ((I)+0.5f)*(1.f/(1<<(B-1)))-1.f;
 #define DEQUANT_E(I,B) ((I)+1.0f)*(1.f/(1<<(B-1)))-1.f;
 
+// number of bits per component with 'n' sideline bits
 #define X1_BITS    (BITS-1)
 #define X1_BITS_X  (X1_BITS/3)
 #define X1_BITS_Y  ((X1_BITS-X1_BITS_X)/2)
@@ -1076,7 +1076,13 @@ uint64_t vencode(vec3_t* v)
 #define X2_BITS_Y  ((X2_BITS-X2_BITS_X)/2)
 #define X2_BITS_Z  (X2_BITS-X2_BITS_X-X2_BITS_Y)
 
-// smallest-of-three
+#define X3_BITS    (BITS-3)
+#define X3_BITS_X  (X3_BITS/3)
+#define X3_BITS_Y  ((X3_BITS-X3_BITS_X)/2)
+#define X3_BITS_Z  (X3_BITS-X3_BITS_X-X3_BITS_Y)
+
+
+// smallest-three
 uint64_t fsot(quat_t* q)
 {
   float    m  = fabsf(q->w);
@@ -1122,6 +1128,250 @@ void isot(quat_t* q, uint64_t b)
   q->f[2] = -q->f[2];
   q->f[3] = -q->f[3];
 }
+
+// peak error from 9-bit
+// 36.210361, 33.331524, 30.582666,
+// 18.190594, 16.793215, 15.458775,
+//  9.200575,  8.443863,  7.802176,
+//  4.568894,  4.204691,  3.887760,
+//  2.291203,  2.119163,  1.965465,
+//  1.155557,  1.053847,  0.985540,
+//  0.576990,  0.527061,  0.492343,
+//  0.288413,  0.263893,  0.244946,
+//  0.143265,  0.131212,  0.122809
+// expanded: half-angle + radial stretch, 0 side-line bits
+uint64_t fhars0(quat_t* q)
+{
+  vec3_t v;
+
+  // denom in & out of the root. can lose bias in
+  // this specific quant case (no zeroes)
+#if 0
+  float x  = q->x, y = q->y, z = q->z;
+  float x2 = x*x,  y2=y*y,   z2=z*z;
+  float m  = x2 > y2 ? x2 : y2; m = m > z2 ? m : z2;
+  float s  = sqrtf((1.f-q->w)/(m+2.f*EPS));
+#else
+  float x  = q->x,     y  = q->y,     z  = q->z;
+  float ax = fabsf(x), ay = fabsf(y), az = fabsf(q->z);
+  float m  = ax > ay ? ax : ay; m = m > az ? m : az;
+  float s  = sqrtf(1.f-q->w)/(m+2.f*EPS);
+#endif  
+  
+  vec3_set(&v, s*x, s*y, s*z);
+  
+  return vencode(&v);
+}
+
+void ihars0(quat_t* q, uint64_t b)
+{
+  vec3_t v;
+
+  vdecode(&v,b);
+
+  float x = v.x,y=v.y,z=v.z;
+  float x2=x*x,y2=y*y,z2=z*z;
+  float d = x2 > y2 ? x2 : y2; d = d > z2 ? d : z2;
+  float s = sqrtf(d*(2.f-d)/(x2+y2+z2+EPS));  // bias can be lost (see above)
+
+  q->x = s*x;
+  q->y = s*y;
+  q->z = s*z;
+  q->w = 1.f-d;
+}
+
+
+#define RK0 0x5.336f98p-4f // 1/sqrt(2(3+sqrt(3)))
+#define RK1 0xe.358cfp-4f  // sqrt((3+sqrt(3))/6)
+
+static quat_t rot1 = {.x=0,   .y=RK0, .z=RK0, .w=RK1 };
+static quat_t rot2 = {.x=RK0, .y=0,   .z=RK0, .w=RK1 };
+static quat_t rot3 = {.x=RK0, .y=RK0, .z=0,   .w=RK1 };
+
+
+// expanded: half-angle + radial stretch, 1 side-line bit (TODO)
+uint64_t fhars1(quat_t* q)
+{
+  vec3_t   v,r;
+  vec3_t   d0,d1;
+  uint64_t b0,b1;
+  float    e0,e1;
+
+  fha(&v,q);                 // map to ball
+  quat_rot(&r, &rot2, &v);   // rotated ball
+  map_rs_bc(&v,&v);          // ball2cube: unrotated
+  map_rs_bc(&r,&r);          // ball2cube: rotated
+
+  // unrotated radial-stretch
+  b0 = vencodex(&v, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+  vdecodex(&d0, b0, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+  e0 = vec3_dot(&v, &d0);
+
+  // rotated radial-stretch
+  b1 = vencodex(&r, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+  vdecodex(&d1, b1, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+  e1 = vec3_dot(&r, &d1);
+
+  if (e0 > e1) return b0;
+
+  return (1L<<62)|b1;
+}
+
+void ihars1(quat_t* q, uint64_t b)
+{
+  uint32_t id = (uint32_t)(b >> 62);
+  vec3_t v;
+
+  vdecodex(&v, b, X1_BITS_X, X1_BITS_Y, X1_BITS_Z);
+  map_rs_cb(&v,&v);
+
+  // temp hack
+  if (id) {
+    quat_t r;
+    vec3_t v0;
+    quat_dup(&r, &rot2);
+    quat_conj(&r);
+    quat_rot(&v0,&r,&v);
+    vec3_dup(&v,&v0);
+  }
+  
+  iha(q,&v);
+}
+
+#define K0 0x3.61963p-4f   // 1/(3+sqrt(3))
+#define K1 0x9.3cd3ap-4f   // 1/sqrt(3)
+#define K2 0x1.bb67aep0f   // sqrt(3)
+#define K3 0x2.bb67bp0f    // 1+sqrt(3)
+#define K4 0x3.bb67bp0f    // 2+sqrt(3) {plus one is correctly rounded}
+
+
+// expanded: half-angle + radial stretch, 2 side-line bits (TODO)
+uint64_t fhars2(quat_t* q)
+{
+  vec3_t   r0,r1,r2,r3,d;
+  uint64_t b,t;
+  float    e0,e1;
+  uint64_t id = 0;
+
+  fha(&r0,q);
+
+  quat_rot(&r1, &rot1, &r0);
+  quat_rot(&r2, &rot2, &r0);
+  quat_rot(&r3, &rot3, &r0);
+
+  map_rs_bc(&r0, &r0);
+  map_rs_bc(&r1, &r1);
+  map_rs_bc(&r2, &r2);
+  map_rs_bc(&r3, &r3);
+
+  // unrotated radial-stretch
+  b = vencodex(&r0, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  vdecodex(&d, b, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  e0 = vec3_dot(&r0, &d);
+
+  t = vencodex(&r1, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  vdecodex(&d, t, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  e1 = vec3_dot(&r1, &d);
+
+  if (e1 > e0) { b = t; e0 = e1; id=1; }
+
+  t = vencodex(&r2, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  vdecodex(&d, t, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  e1 = vec3_dot(&r2, &d);
+
+  if (e1 > e0) { b = t; e0 = e1; id=2; }
+
+  t = vencodex(&r3, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  vdecodex(&d, t, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  e1 = vec3_dot(&r3, &d);
+  
+  if (e1 > e0) { b = t; e0 = e1; id=3;}
+
+  return (id<<61)|b; // temp hack
+}
+
+void ihars2(quat_t* q, uint64_t b)
+{
+  uint32_t id = (uint32_t)(b >> 61);
+  vec3_t c,v;
+
+  vdecodex(&c, b, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+  map_rs_cb(&v,&c);
+
+  // temp hack
+  if (id != 0) {
+    quat_t r;
+    switch(id) {
+    case 1: quat_dup(&r, &rot1); break;
+    case 2: quat_dup(&r, &rot2); break;
+    case 3: quat_dup(&r, &rot3); break;
+    }
+
+    quat_conj(&r);
+    quat_rot(&v,&r,&v);
+  }
+  iha(q,&v);
+}
+
+#if 0
+
+// ordered-scaled (TODO: nope)
+//  0 000 {x, y, z}  
+//  1 001 {x, z, y}  {a,b,c} -> {a,c,b} : 1st bit = flip last two
+//  2 010 {y, x, z}  {a,b,c} -> {b,a,c} : 2nd bit = flip first two
+//  3 011 {y, z, x}
+//  4 100 {z, y, x}  {a,b,c} -> {c,b,a} : 3rd bit = flip first/last
+//  5 101 {z, x, y}
+//  6 110 --
+//  7 111 --
+uint64_t fos(quat_t* q)
+{
+  quat_t h;
+  quat_dup(&h,q);
+  quat_usqrt(&h);
+
+  // w in [sqrt(2)/2, 1]
+  float    a  = h.x, b = h.y, c = h.z;
+  uint32_t id = 0;
+
+  // ordering into: |a| >= |b| >= |c|
+  if (fabsf(b) > fabsf(c)) { float t=b; b=c; c=t; id =1; }
+  if (fabsf(a) > fabsf(b)) { float t=a; a=b; b=t; id|=2; }
+  if (fabsf(a) > fabsf(c)) { float t=a; a=c; c=t; id|=4; }
+
+  //------------------------------------------------------
+  float s = SQRT2*sgn(q->f[id]);
+
+  id = (id+1)&3; t.x = s*q->f[id];
+  id = (id+1)&3; t.y = s*q->f[id];
+  id = (id+1)&3; t.z = s*q->f[id];
+
+  return r|vencodex(&t, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+}
+
+void ios(quat_t* q, uint64_t b)
+{
+  uint32_t id = (uint32_t)(b >> 62);
+  vec3_t v;
+
+  vdecodex(&v, b, X2_BITS_X, X2_BITS_Y, X2_BITS_Z);
+
+  q->f[id] = sqrtf(1.f-0.5f*vec3_norm(&v));
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*v.x; 
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*v.y; 
+  id = (id+1)&3; q->f[id] = 0.5f*SQRT2*v.z;
+
+  // this is just for compat with other tests.
+  // insure that 'w' is positive
+  if (q->f[3] >= 0.f) return;
+  q->f[0] = -q->f[0];
+  q->f[1] = -q->f[1];
+  q->f[2] = -q->f[2];
+  q->f[3] = -q->f[3];
+}
+
+#endif
+
 
 // all temp hacks
 
@@ -1271,6 +1521,349 @@ void izxz(quat_t* q, uint64_t b)
   zxz_to_quat(q, &v);
 }
 
+// Hopf coordinates
+// http://marc-b-reynolds.github.io/quaternions/2017/05/12/HopfCoordConvert.html
+
+void quat_to_hopf(vec3_t* v, quat_t* q)
+{
+  float x=q->x, y=q->y, z=q->z, w=q->w;
+
+  float gamma = 2.f*atan2f(z, w);
+  float alpha = 2.f*atan2f(sqrtf(x*x+y*y), sqrtf(w*w+z*z));
+  float beta  = atan2f(y*z-w*x, w*y+x*z);
+
+  v->x = alpha;
+  v->y = beta;
+  v->z = gamma;
+}
+
+void hopf_to_quat(quat_t* q, vec3_t* v)
+{
+  float ha    = 0.5f*v->x;
+  float b     = v->y;
+  float hg    = 0.5f*v->z;
+  float sinHa = sinf(ha);
+  float cosHa = cosf(ha);
+  q->x = sinHa*sinf(hg-b);
+  q->y = sinHa*cosf(hg-b);
+  q->z = cosHa*sinf(hg);
+  q->w = cosHa*cosf(hg);
+}
+
+// hopf coordinate
+uint64_t fhopfc(quat_t* q)
+{
+  vec3_t v;
+  quat_to_hopf(&v, q);
+
+  v.x = v.x*RPI;
+  v.y = v.y*RPI/2.f+.5f;
+  v.z = v.z*RPI/2.f+.5f;
+
+  uint64_t b;
+
+  b  = quant(v.x, QSCALE(BITS_X));
+  b |= quant(v.y, QSCALE(BITS_Y)) << BITS_X;
+  b |= quant(v.z, QSCALE(BITS_Z)) << (BITS_Y+BITS_X);
+  
+  return b;
+}
+
+void ihopfc(quat_t* q, uint64_t b)
+{
+  vec3_t v;
+
+  v.x = dequant(b & BITS_MX, DSCALE(BITS_X)); b >>= BITS_X;
+  v.y = dequant(b & BITS_MY, DSCALE(BITS_Y)); b >>= BITS_Y;
+  v.z = dequant(b & BITS_MZ, DSCALE(BITS_Z));
+
+  v.x = PI*v.x;
+  v.y = 2.f*PI*(v.y-0.5f);
+  v.z = 2.f*PI*(v.z-0.5f);
+
+  hopf_to_quat(q, &v);
+}
+
+
+//============================================================
+
+// "normal" encoding routines
+
+// "On floating-point normal vectors" via "A Survey of Efficient Representations for Independent Unit Vectors"
+// 'oct' is full sphere, 'hoct' is half-sphere (positive Z)
+
+void oct_encode(vec2_t* p, vec3_t* v)
+{
+  float s = 1.f/(fabsf(v->x)+fabsf(v->y)+fabsf(v->z));
+  float x = s*v->x;
+  float y = s*v->y;
+  
+  if (v->z < 0.0f) {
+    p->x = (1.f - fabsf(y))*sgn(x);
+    p->y = (1.f - fabsf(x))*sgn(y);
+  } else {
+    p->x = x;
+    p->y = y;
+  }
+}
+
+void oct_decode(vec3_t* v, vec2_t* p)
+{
+  v->x = p->x;
+  v->y = p->y;
+  v->z = 1.f - (fabsf(v->x)+fabs(v->y));
+  
+  if (v->z <= 0.f) {
+    float x = v->x;
+    v->x = (1.f - fabsf(v->y)) * sgn(x);
+    v->y = (1.f - fabsf(x))    * sgn(v->y);
+  }
+
+  float s = 1.f/sqrtf(vec3_dot(v,v));
+  v->x *= s;
+  v->y *= s;
+  v->z *= s;
+}
+
+void hoct_encode(vec2_t* p, vec3_t* v)
+{
+  float s = 1.f/(fabsf(v->x)+fabsf(v->y)+fabsf(v->z));
+  float x = s*v->x;
+  float y = s*v->y;
+
+  p->x = x+y;
+  p->y = x-y;
+}
+
+void hoct_decode(vec3_t* v, vec2_t* p)
+{
+  float x = (p->x+p->y)*0.5f;
+  float y = (p->x-p->y)*0.5f;
+
+  v->x = x;
+  v->y = y;
+  v->z = 1.0-fabsf(x)-fabsf(y);
+  
+  float s = 1.f/sqrtf(vec3_dot(v,v));
+  
+  v->x *= s;
+  v->y *= s;
+  v->z *= s;
+}
+
+
+// Hopf map related factorization.
+// http://marc-b-reynolds.github.io/quaternions/2017/05/12/HopfCoordConvert.html
+typedef struct {
+  vec3_t m;   // about axis in 'xy'
+  vec2_t t;   // about 'z' twist
+} tmtwist_t;
+
+#define THRESHOLD (ULP1*ULP1)
+
+// factorize with respect to positive Z
+void quat_to_tmtwist(tmtwist_t* d, quat_t* q)
+{
+  float x=q->x, y=q->y, z=q->z, w=q->w;
+  float t=w*w+z*z;
+
+  if (t > THRESHOLD) {
+    float s = 1.f/sqrtf(t);
+    // point on 2-sphere
+    d->m.x = s*(w*x-y*z);
+    d->m.y = s*(w*y+x*z);
+    d->m.z = s*t;
+
+    // point on 1-sphere
+    d->t.x = s*z;
+    d->t.y = s*w;
+  }
+  else {
+    d->m.x = x;
+    d->m.y = y;
+    d->m.z = 0;
+    d->t.x = 0;
+    d->t.y = 1.f;
+  }
+}
+
+void tmtwist_to_quat(quat_t* q, tmtwist_t* s)
+{
+  q->x = s->m.x*s->t.y + s->m.y*s->t.x;
+  q->y = s->m.y*s->t.y - s->m.x*s->t.x;
+  q->z = s->m.z*s->t.x;
+  q->w = s->m.z*s->t.y;
+}
+
+#undef THRESHOLD
+
+
+uint64_t fhopf(quat_t* q)
+{
+  tmtwist_t qf;
+  vec2_t   s;
+  
+  quat_to_tmtwist(&qf, q);
+  hoct_encode(&s, &qf.m);
+  float a = RPI*atan2f(qf.t.x, qf.t.y)+0.5f;
+  uint64_t b;
+
+  b  = quant(0.5f*s.x+0.5f, QSCALE(BITS_X));
+  b |= quant(0.5f*s.y+0.5f, QSCALE(BITS_Y)) << BITS_X;
+  b |= quant(a, QSCALE(BITS_Z)) << (BITS_X+BITS_Y);
+  
+  return b;
+}
+
+void ihopf(quat_t* q, uint64_t b)
+{
+  tmtwist_t qf;
+  vec2_t    s;
+  float     a;
+  
+  s.x = 2.f*dequant(b & BITS_MX, DSCALE(BITS_X))-1.f; b >>= BITS_X;
+  s.y = 2.f*dequant(b & BITS_MY, DSCALE(BITS_Y))-1.f; b >>= BITS_Y;
+  a   = PI*(dequant(b & BITS_MZ, DSCALE(BITS_Z))-0.5f);
+  qf.t.x = sinf(a);
+  qf.t.y = sqrtf(1.f-qf.t.x*qf.t.x);
+  
+  hoct_decode(&qf.m, &s);
+  
+  tmtwist_to_quat(q, &qf);
+}
+
+#if 0
+uint64_t fhahopf(quat_t* q)
+{
+  tmtwist_t qf;
+  vec2_t   s;
+  quat_t m;
+  
+  quat_to_tmtwist(&qf, q);
+
+  m.x = qf.m.x;
+  m.y = qf.m.y;
+  m.z = 0.f;
+  m.w = qf.m.z;
+
+  float a = RPI*atan2f(qf.t.x, qf.t.y)+0.5f;
+  uint64_t b;
+
+  b  = quant(0.5f*s.x+0.5f, QSCALE(BITS_X));
+  b |= quant(0.5f*s.y+0.5f, QSCALE(BITS_Y)) << BITS_X;
+  b |= quant(a, QSCALE(BITS_Z)) << (BITS_X+BITS_Y);
+  
+  return b;
+}
+
+void ihahopf(quat_t* q, uint64_t b)
+{
+  tmtwist_t qf;
+  vec2_t    s;
+  float     a;
+  
+  s.x = 2.f*dequant(b & BITS_MX, DSCALE(BITS_X))-1.f; b >>= BITS_X;
+  s.y = 2.f*dequant(b & BITS_MY, DSCALE(BITS_Y))-1.f; b >>= BITS_Y;
+  a   = PI*(dequant(b & BITS_MZ, DSCALE(BITS_Z))-0.5f);
+  qf.t.x = sinf(a);
+  qf.t.y = sqrtf(1.f-qf.t.x*qf.t.x);
+  
+  hoct_decode(&qf.m, &s);
+  
+  tmtwist_to_quat(q, &qf);
+}
+#endif
+
+
+
+
+
+//***********************************************************
+
+// sanity test for roundtripping between a point on
+// unit sphere (3D) and point in 2D.
+void s2_xform_test(uint64_t s0, uint64_t s1)
+{
+  printf("performing S2 round-trip test\n");
+  double min = 1.f;
+  
+  reset_generators(s0,s1,SYM_TRIALS);
+
+  for(uint32_t i=0; i<SYM_TRIALS; i++) {
+    vec3_t p,r;
+    vec2_t c;
+
+    uniform_s2(&p);
+    oct_encode(&c,&p);
+    oct_decode(&r,&c);
+    float d = vec3_dot(&p,&r);
+    
+    if (d < min) {
+      min = d;
+      printf("%08x: %f ",i, (180.f*RPI)*acosf(min));
+      vec3_print(&p);
+      vec3_print(&r);
+      vec2_print(&c);
+      printf("\n");
+    }
+  }
+}
+
+
+void hf_xform_test(uint64_t s0, uint64_t s1)
+{
+  float min = 1.f;
+  printf("performing Hopf factorization round-trip test\n");
+
+  reset_generators(s0,s1,SYM_TRIALS);
+
+  for(uint32_t i=0; i<SYM_TRIALS; i++) {
+    quat_t    q,r;
+    tmtwist_t qf;
+    vec2_t    s;
+    float     d;
+
+    uniform_quat(&q);         // random unit quat
+    quat_to_tmtwist(&qf,&q);  // factorize
+    
+    hoct_encode(&s,    &qf.m);
+
+    uint64_t b;
+
+#if 1
+    b  = quant(0.5f*s.x+0.5f, QSCALE(BITS_X));
+    b |= quant(0.5f*s.y+0.5f, QSCALE(BITS_Y)) << BITS_X;
+
+    s.x = 2.f*dequant(b & BITS_MX, DSCALE(BITS_X))-1.f; b >>= BITS_X;
+    s.y = 2.f*dequant(b & BITS_MY, DSCALE(BITS_Y))-1.f; b >>= BITS_Y;
+#endif
+
+    qf.m.z = sqrtf(1.f-qf.m.x*qf.m.x-qf.m.y*qf.m.y);
+
+#if 1
+    float a = RPI*atan2f(qf.t.x, qf.t.y)+0.5f;
+    b = quant(a, QSCALE(BITS_X));
+    a = PI*(dequant(b & BITS_MX, DSCALE(BITS_X))-0.5f);
+    qf.t.x = sinf(a);
+#endif    
+    qf.t.y = sqrtf(1.f-qf.t.x*qf.t.x);
+    
+    hoct_decode(&qf.m, &s);
+
+    tmtwist_to_quat(&r, &qf);  // compose rotations
+
+    d = fabs(quat_dot(&q,&r));
+
+    if (d < min) {
+      min = d;
+      printf("%08x: %f ",i, (360.f*RPI)*acosf(min));
+      quat_print(&q);
+      quat_print(&r);
+      printf("\n");
+    }
+  }
+}
+
 
 // ** Explict quantization methods
 
@@ -1287,9 +1880,14 @@ typedef struct {
 
 x_maps_t xmaps[] =
 {
-  DEF(sot),
-  DEF(zyx),
-  DEF(zxz),
+  //DEF(sot),
+  //DEF(zyx),
+  //DEF(zxz),
+  //DEF(hopfc),
+  DEF(hopf),
+  //DEF(hars0),
+  //DEF(hars1),
+  //DEF(hars2),
 };
 
 #undef DEF
@@ -1373,7 +1971,10 @@ void error_dump()
 #if defined(DUMP_AVE)
     printf("ave: "); for(uint32_t i=0; i<HLEN; i++) { printf("%f, ", e->a[i].ave/e->a[i].cnt); } ln();
 #endif    
-  //printf("cnt: "); for(uint32_t i=0; i<HLEN; i++) { printf("%d, ", e->a[i].cnt); } ln();
+#if 0
+    printf("src: "); for(uint32_t i=0; i<HLEN; i++) { quat_print(&e->a[i].s); printf(", "); } ln();
+#endif    
+
 
     // dump out global max
     if (s < NUM_FUNCS) {
@@ -1527,7 +2128,7 @@ void rt_test(uint64_t s0, uint64_t s1, qsrc gen, uint32_t len)
 
 // a simple round-trip test for debugging dev of mapping function
 #define TLEN 0x7FFFFFF
-//#define TEX
+#define TEX
 
 void rt_xform_test(uint64_t s0, uint64_t s1)
 {
@@ -1553,11 +2154,11 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
     // test generalize or explict
 #if !defined(TEX)
-    fem(&v,&p);
-    iem(&r,&v);
+    q2os(&v,&p);
+    os2q(&r,&v);
 #else
-    uint64_t bits = fzxz(&p);
-    izxz(&r,bits);
+    uint64_t bits = fhopfc(&p);
+    ihopfc(&r,bits);
 #endif    
     
     quat_sub(&diff, &p, &r);
@@ -1586,9 +2187,9 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
 
 // helpers to build histograms in specific bivector directions
 // choose the direction to compute the histogram
-#define MTYPE(T) T ## _quat_about_x
+//#define MTYPE(T) T ## _quat_about_x
 //#define MTYPE(T) T ## _quat_about_xy
-//#define MTYPE(T) T ## _quat_about_diag
+#define MTYPE(T) T ## _quat_about_diag
 
 void angle_histo_x(uint64_t s0, uint64_t s1)
 {
@@ -1613,6 +2214,213 @@ void angle_histo(uint64_t s0, uint64_t s1)
 }
 #undef MTYPE
 
+#if 1
+#include <stdio.h>
+
+typedef struct {float v,r,g,b;} gradient_t;
+
+gradient_t tempmap[] = {
+  {0.0f,  .18f, .31f, .93f},
+  {0.5f,  .98f, .99f, .91f},
+  {0.75f, .96f, .86f, .28f},
+  {1.0f,  .82f, .13f, .16f},
+#if 0  
+  {0.0f,  0.f, 0.f, 0.f},
+  {0.25f, 1.f, 0.f, 0.f},
+  {0.75f, 0.f, 1.f, 0.f},
+  {1.0f,  0.f, 0.f, 1.f},
+#endif  
+};
+
+#define TEMPMAP_LEN (sizeof(tempmap)/sizeof(gradient_t))
+
+// plot a sphere with point being max error in that direction.
+// this is really quite dumb. Orthographic projection in an
+// axial direction ATM.
+
+// dimensions of plot to create
+#define DIM 256
+
+#define FIG_GMAP
+
+// scale density map to errors for this plot, otherwise
+// use macros EMIN & EMAX for range
+#define ERROR_TRACK
+
+// explict error range for density plot
+#define EMIN .23
+#define EMAX .46
+
+void fig_sphere(uint64_t s0, uint64_t s1)
+{
+  FILE* file;
+  char* name;
+
+#if defined(FIG_GMAP)
+  name = maps[FIG_GMAP].name;
+#else
+  name = "foo.ppm";
+#endif  
+
+  file = fopen(name, "r");
+  
+  // don't bother if file already exists
+  if (file == 0) {
+    uint8_t buffer[DIM*DIM*3];
+    float   data[DIM*DIM];
+    printf("making\n");
+
+    // build the error
+    float* eb = data;
+    float  emax = 0.f;
+    float  emin = 1.f;
+
+#if defined(FIG_GMAP)
+    // all the explict transforms
+    s3_to_b3 fx = maps[FIG_GMAP].f;
+    b3_to_s3 ix = maps[FIG_GMAP].g;
+    cb_map   fm = maps[FIG_GMAP].bc;
+    cb_map   im = maps[FIG_GMAP].cb;
+#endif    
+    
+    for(uint32_t j=0; j<DIM; j++) {
+      for(uint32_t i=0; i<DIM; i++) {
+	float x = i*(2.1f/DIM)-1.05f;
+	float y = j*(2.1f/DIM)-1.05f;
+	float z = sqrtf(1.f-(x*x+y*y));
+
+	if (x*x+y*y <= 1) {
+	  double e  = 0.f;
+	  vec3_set(&test_dir, z, x, y);
+	  reset_generators(s0,s1,TLEN);
+
+#if 1
+	  for(uint32_t k=0; k<1000; k++) {
+	    quat_t p,r;
+	    
+	    uniform_quat_about_dir(&p);
+
+#if 1
+	    vec3_t v,rv;
+	    fem(&v,&p);
+	    uint64_t bits = vencode(&v);
+	    vdecode(&rv, bits);
+	    iem(&r,&rv);
+#else
+	    //uint64_t bits = fsot(&p);
+	    //isot(&r,bits);
+	    //uint64_t bits = fhars0(&p);
+	    //ihars0(&r,bits);
+	    //uint64_t bits = fzxz(&p);
+	    //izxz(&r,bits);
+	    uint64_t bits = fhopfc(&p);
+	    ihopfc(&r,bits);
+	    //uint64_t bits = fhopf(&p);
+	    //ihopf(&r,bits);
+#endif    
+	    double ae = a_error(&p,&r);
+	    
+	    if (ae > e) { e = ae; }
+	  }
+#else
+	  e = 2.f*y+1.f;
+	  //e = z;
+#endif	  
+
+	  if (e > emax) { emax=e; }
+	  if (e < emin) { emin=e; }
+	  *eb = e;
+	}
+	else {
+	  *eb = -1000.f;
+	}
+	eb++;
+      }
+    }
+
+    printf("{%f,%f}\n",emin,emax);
+    
+#if !defined(ERROR_TRACK)	  
+    emax = EMAX;
+    emin = EMIN;
+#endif    
+ 
+    // convert to density map
+    uint8_t* p = buffer;
+    eb = data;
+    float erange = 1.f/(emax-emin);
+
+    printf("{%f,%f}\n",(emin-emin)*erange,(emax-emin)*erange);
+    
+    for(uint32_t j=0; j<DIM; j++) {
+      for(uint32_t i=0; i<DIM; i++) {
+	float r,g,b;
+	float x = i*(2.1f/DIM)-1.05f;
+	float y = j*(2.1f/DIM)-1.05f;
+	float z = sqrtf(1.f-(x*x+y*y));
+	float e = *eb++;
+
+	if (e > -1000.f) {
+	  e = (e-emin)*erange;
+
+	  if (e<0.f) e = 0.f;
+	  else if (e>1.f) e = 1.f;
+	  
+	  uint32_t gi;
+
+	  for(gi=0; gi<TEMPMAP_LEN; gi++) {
+	    if (tempmap[gi].v >= e) 
+	      break;
+	  }
+
+	  if (gi != 0) {
+	    float p0 = tempmap[gi-1].v;
+	    float p1 = tempmap[gi].v;
+	    float f  = (e-p0)/(p1-p0);
+	    
+	    r = f*tempmap[gi].r + (1.f-f)*tempmap[gi-1].r; 
+	    g = f*tempmap[gi].g + (1.f-f)*tempmap[gi-1].g; 
+	    b = f*tempmap[gi].b + (1.f-f)*tempmap[gi-1].b; 
+	  }
+	  else {
+	    r = tempmap[0].r;
+	    g = tempmap[0].g;
+	    b = tempmap[0].b;
+	  }
+
+	  r = r >= 0 ? r : 0;
+	  g = g >= 0 ? g : 0;
+	  b = b >= 0 ? b : 0;
+	  r = r <= 1 ? r : 1;
+	  g = g <= 1 ? g : 1;
+	  b = b <= 1 ? b : 1;
+
+#if 0	  
+	  float occ = 0.6f-0.4f*y;
+	  r = sqrtf(r*r*occ);
+	  g = sqrtf(g*g*occ);
+	  b = sqrtf(b*b*occ);
+#endif	  
+	  
+	} else { r=b=g=1;}
+
+	*p++ = (uint8_t)(255.f*r);
+	*p++ = (uint8_t)(255.f*g);
+	*p++ = (uint8_t)(255.f*b);
+      }
+    }
+    
+    file = fopen("foo.ppm", "w");
+
+    fprintf(file, "P6\n%d %d\n255\n",DIM,DIM);
+    fwrite(buffer, DIM*DIM*3, 1, file);
+    fclose(file);
+  }
+}
+
+#endif
+
+
 int main(int argc, char** argv)
 {
   uint64_t s0;
@@ -1632,9 +2440,14 @@ int main(int argc, char** argv)
 	 BITS_X,BITS_Y,BITS_Z,
 	 X2_BITS_X,X2_BITS_Y,X2_BITS_Z);
 
-  // short-circuits for specialized testing
+    
+  //short-circuits for specialized testing
+  //fig_sphere(s0,s1); return 0;        // max error per direction figure
+  //s2_xform_test(s0,s1); return 0;   // 
+  //hf_xform_test(s0,s1); return 0;   // 
   //rt_xform_test(s0,s1); return 0;   // method developement debug routine
   //angle_histo(s0,s1); return 0;     // limited directional sampling 4 post plots
+  //angle_histo_x(s0,s1); return 0;     // limited directional sampling 4 post plots
 
 #ifdef USE_SOBOL
   printf("sobol rt\n");
@@ -1648,17 +2461,21 @@ int main(int argc, char** argv)
   printf("prng rt\n");
 
 #if defined(CM_TESTS)
-  rt_test  (s0,s1, &uniform_quat_from_z,     SYM_TRIALS);
   rt_test  (s0,s1, &uniform_quat,            SYM_TRIALS);
+#if !defined(UNIFORM_ONLY)  
+  rt_test  (s0,s1, &uniform_quat_from_z,     SYM_TRIALS);
   rt_test  (s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
   rt_test  (s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+#endif  
 #endif
 
 #if defined(EX_TESTS)
-  rt_test_x(s0,s1, &uniform_quat_from_z,     SYM_TRIALS);
   rt_test_x(s0,s1, &uniform_quat,            SYM_TRIALS);
+#if !defined(UNIFORM_ONLY)  
+  rt_test_x(s0,s1, &uniform_quat_from_z,     SYM_TRIALS);
   rt_test_x(s0,s1, &uniform_quat_about_x,    SYM_TRIALS);
   rt_test_x(s0,s1, &uniform_quat_about_diag, SYM_TRIALS);
+#endif  
 #endif
 
   error_dump();

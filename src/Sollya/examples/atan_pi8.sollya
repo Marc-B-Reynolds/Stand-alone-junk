@@ -54,8 +54,7 @@ page.new("atan_pi8.html");
 // all "text" added appears above it.
 plotly_new_error_figure("figure 1");
 
-page.section("Example report using arctangent");
-//page.add_text("The error plot are are abs error because I'm lazy and haven't added relative error support to my goofy little tool.");
+page.section("arctangent");
 
 page.subsection("polynomial relative error  \\(x \\in \\pm \\left( \\sqrt{2} - 1 \\right) \\)");
 page.add_trace(atan_r2);

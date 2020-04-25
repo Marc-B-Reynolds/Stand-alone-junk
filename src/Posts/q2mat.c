@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
-// http://marc-b-reynolds.github.io/quaternions/XXX
+// http://marc-b-reynolds.github.io/quaternions/2017/08/08/QuatRotMatrix.html
 
 // NOTE: almost all of routines here are proof-of-concept junk
 // This is lazy...you gotta edit main to change the transforms
@@ -18,12 +18,13 @@
 
 // histogram size
 #define HLEN 80
+//#define HLEN 128
 
-#define TLEN 0x7FFFFFF
-// number of samples per axis of rotation
-#define DLEN 512
+// number of samples
+//#define TLEN 0x1FFFFFFF
+#define TLEN 0x07FFFFFF
 
-//static inline float sgn(float x) { return copysignf(1.f,x); }
+//inline float sgn(float x) { return copysignf(1.f,x); }
 
 // external code: xoroshiro128+
 
@@ -34,12 +35,13 @@ uint64_t rng_state[2];
 #define F32_MIN_NORMAL 1.17549435082228750796873653722224567781866555677209e-38f
 #define EPS (F32_MIN_NORMAL)
 
-static inline uint64_t rotl(const uint64_t v, int i)
+
+inline uint64_t rotl(const uint64_t v, int i)
 {
   return (v << i)|(v >> (64-i));
 }
 
-static inline uint64_t rng_u64(void)
+inline uint64_t rng_u64(void)
 {
   uint64_t s0 = rng_state[0];
   uint64_t s1 = rng_state[1];
@@ -53,7 +55,6 @@ static inline uint64_t rng_u64(void)
 }
 // end: xoroshiro128+
 
-inline float rsqrtf(float v) { return 1.f/sqrtf(v); }
 
 void reset_generators(uint64_t s0, uint64_t s1)
 {
@@ -70,9 +71,18 @@ typedef union  { struct{ float x,y,z,w; }; float f[4]; } quat_t;
 typedef struct { double x,y;    } vec2d_t;
 
 
-static inline void quat_set(quat_t* q, float x, float y, float z, float w)
+inline void quat_set(quat_t* q, float x, float y, float z, float w)
 {
   q->x=x; q->y=y; q->z=z; q->w=w;
+}
+
+
+inline void quat_set_from_f64(quat_t* q, double x, double y, double z, double w)
+{
+  q->x=(float)x;
+  q->y=(float)y;
+  q->z=(float)z;
+  q->w=(float)w;
 }
 
 typedef struct {
@@ -82,6 +92,8 @@ typedef struct {
   float m02,m12,m22;
 } mat33_t;
 
+
+inline float rsqrtf(float v) { return 1.f/sqrtf(v); }
 
 // for error computations of using native ~1/sqrt without fixup
 inline float rsqrtf_a(float x) 
@@ -114,10 +126,8 @@ void quat_print(quat_t* q)
 
 void quat_printa(quat_t* q)
 {
-  printf("(%+a,%+a,%+a,%+a) ",q->x,q->y,q->z,q->w);
+  printf("(%+14a,%+14a,%+14a,%+14a) ",q->x,q->y,q->z,q->w);
 }
-
-#define CBIAS (1.f/68719476736.f) // 0x1p-36f
 
 // uniform in postive-x half disc
 static float uniform_hdisc(vec2_t* p)
@@ -172,7 +182,8 @@ static double uniform_quat(quat_t* q)
   return acosf(p0.x);
 }
 
-static inline void quat_scale(quat_t* q, float s)
+
+inline void quat_scale(quat_t* q, float s)
 {
   q->x *= s; q->y *= s; q->z *= s; q->w *= s;
 }
@@ -183,6 +194,22 @@ inline void quat_dup(quat_t* d, quat_t* s)
   d->y = s->y;
   d->z = s->z;
   d->w = s->w;
+}
+
+// common conversion (diagonals are reduce using q.q=1)
+void quat_to_mat33_std(mat33_t* m, quat_t* q)
+{
+  float x  = q->x, y  = q->y, z  = q->z, w  = q->w;
+  float tx = 2 *x, ty = 2 *y, tz = 2 *z;  // 2x,  2y,  2z
+  float xx = tx*x, yy = ty*y, zz = tz*z;  // 2xx, 2yy, 2zz
+  float xy = ty*x, xz = tz*x, yz = ty*z;  // 2xy, 2xy, 2yz
+  float wx = tx*w, wy = ty*w, wz = tz*w;  // 2wx, 2wy, 2wz
+
+  m->m00 = 1.f-(yy+zz); m->m11 = 1.f-(xx+zz); m->m22 = 1.f-(xx+yy);
+
+  m->m10 = xy+wz; m->m01 = xy-wz;
+  m->m20 = xz-wy; m->m02 = xz+wy;
+  m->m21 = yz+wx; m->m12 = yz-wx;
 }
 
 
@@ -206,16 +233,33 @@ void quat_to_mat33_ndr(mat33_t* m, quat_t* q)
   m->m21 = yz+wx; m->m12 = yz-wx;
 }
 
-// common conversion (diagonals are reduce using q.q=1)
-void quat_to_mat33_std(mat33_t* m, quat_t* q)
+// alternate conversion w/o diagonal reduction (diagonal)
+void quat_to_mat33_ndr_3(mat33_t* m, quat_t* q)
 {
-  float x  = q->x, y  = q->y, z  = q->z, w  = q->w;
-  float tx = 2 *x, ty = 2 *y, tz = 2 *z;  // 2x,  2y,  2z
-  float xx = tx*x, yy = ty*y, zz = tz*z;  // 2xx, 2yy, 2zz
-  float xy = ty*x, xz = tz*x, yz = ty*z;  // 2xy, 2xy, 2yz
-  float wx = tx*w, wy = ty*w, wz = tz*w;  // 2wx, 2wy, 2wz
+  float x = q->x, y = q->y, z = q->z, w = q->w;
 
-  m->m00 = 1.f-(yy+zz); m->m11 = 1.f-(xx+zz); m->m22 = 1.f-(xx+yy);
+  float dwx = (w-x)*(w+x); // m11,m22
+  float dwy = (w-y)*(w+y); // m00,m22
+//float dwz = (w-z)*(w+z); // m00,m11
+
+//float dxy = (x-y)*(x+y); // m00,m11
+  float dxz = (x-z)*(x+z); // m00,m22
+  float dyz = (y-z)*(y+z); // m11,m22
+
+  m->m00 = dwy+dxz;
+  m->m11 = dwx+dyz;
+  m->m22 = dwx-dyz;
+  //m->m00 = dwz+dxy;
+  //m->m11 = dwz-dxy;
+  //m->m22 = dwy-dxz;
+  
+  //m->m00 = 0.5f*(dwy+dxz+dwz+dxy);
+  //m->m11 = 0.5f*(dwx+dyz+dwz-dxy);
+  //m->m22 = 0.5f*(dwx-dyz+dwy-dxz);
+
+  float tx = 2*x,  ty = 2*y,  tz = 2*z;
+  float xy = ty*x, xz = tz*x, yz = ty*z;
+  float wx = tx*w, wy = ty*w, wz = tz*w;
 
   m->m10 = xy+wz; m->m01 = xy-wz;
   m->m20 = xz-wy; m->m02 = xz+wy;
@@ -223,8 +267,124 @@ void quat_to_mat33_std(mat33_t* m, quat_t* q)
 }
 
 
+
+typedef struct { float h,l; } f32_pair_t;
+
+// (a*b) exactly represented by unevaluated pair (h+l)
+// * |l| <= ulp(h)/2
+// * provided a+b does not overflow. 
+inline void f32_2mul(f32_pair_t* p, float a, float b)
+{
+  float x = a*b;
+  float y = fmaf(a,b,-x);
+  p->h = x;
+  p->l = y;
+}
+
+inline float f32_mma(float a, float b, float c, float d)
+{
+  float t = c*d;
+  float e = fmaf(c,d,-t);
+  float f = fmaf(a,b, t);
+  return f+e;
+}
+
+inline float f32_mms(float a, float b, float c, float d)
+{
+  return f32_mma(a,b,c,-d); // temp hack
+}
+
+void quat_to_mat33_ndr_fma_(mat33_t* m, quat_t* q)
+{
+  float x = q->x, y = q->y, z = q->z, w = q->w;
+
+  float wx = (w-x)*(w+x);      // m11,m22
+  float wy = (w-y)*(w+y);      // m00,m22
+//float wz = (w-z)*(w+z);      // m00,m11
+//float xy = (x-y)*(x+y);      // m00,m11
+  float xz = (x-z)*(x+z);      // m00,m22
+  float yz = (y-z)*(y+z);      // m11,m22
+
+  m->m00 = wy+xz;
+  m->m11 = wx+yz;
+  m->m22 = wx-yz;
+  
+  float tx = 2*x,  ty = 2*y,  tz = 2*z;
+
+  m->m10 = f32_mma(tx,y,w,tz); // xy+wz;
+  m->m01 = f32_mms(tx,y,w,tz); // xy-wz;
+  m->m02 = f32_mma(tx,z,w,ty); // xz+wy;
+  m->m20 = f32_mms(tx,z,w,ty); // xz-wy;
+  m->m21 = f32_mma(ty,z,w,tx); // yz+wx;
+  m->m12 = f32_mms(ty,z,w,tx); // yz-wx;
+}
+
+// temp hack (hybrid)
+void quat_to_mat33_ndr_fma(mat33_t* m, quat_t* q)
+{
+  float x  = q->x, y = q->y, z  = q->z, w = q->w;
+  float tx = 2*x, ty = 2*y,  tz = 2*z;
+
+  if (w >= 0.5f) {
+    float wx = (w-x)*(w+x);      // m11,m22
+    float wy = (w-y)*(w+y);      // m00,m22
+  //float wz = (w-z)*(w+z);      // m00,m11
+  //float xy = (x-y)*(x+y);      // m00,m11
+    float xz = (x-z)*(x+z);      // m00,m22
+    float yz = (y-z)*(y+z);      // m11,m22
+    
+    m->m00 = wy+xz;
+    m->m11 = wx+yz;
+    m->m22 = wx-yz;
+  }
+  else {
+    m->m00 = 1.f-f32_mma(ty,y,tz,z);
+    m->m11 = 1.f-f32_mma(tx,x,tz,z);
+    m->m22 = 1.f-f32_mma(tx,x,ty,y);
+  }
+
+  m->m10 = f32_mma(tx,y,w,tz); // xy+wz;
+  m->m01 = f32_mms(tx,y,w,tz); // xy-wz;
+  m->m02 = f32_mma(tx,z,w,ty); // xz+wy;
+  m->m20 = f32_mms(tx,z,w,ty); // xz-wy;
+  m->m21 = f32_mma(ty,z,w,tx); // yz+wx;
+  m->m12 = f32_mms(ty,z,w,tx); // yz-wx;
+}
+
+
+void quat_to_mat33_foo(mat33_t* m, quat_t* q)
+{
+  float x = q->x,  y = q->y,  z = q->z, w = q->w;
+  float tx = 2*x,  ty = 2*y,  tz = 2*z;
+  float/*xy = ty*x,*/ xz = tz*x, yz = ty*z;
+  float wx = tx*w, wy = ty*w /*, wz = tz*w*/;
+
+  m->m02 = xz+wy;
+  m->m21 = yz+wx;
+  m->m12 = yz-wx;
+
+  m->m10 = f32_mma(tx,y,w,tz);
+  m->m01 = f32_mms(tx,y,w,tz);
+  m->m20 = f32_mms(tx,z,w,ty);
+  m->m02 = f32_mma(tx,z,w,ty);
+  m->m21 = f32_mma(ty,z,w,tx);
+  m->m12 = f32_mms(ty,z,w,tx);
+  
+  if (q->w >= 0.5) {
+    float t0 = (w-x)*(w+x);
+    float t1 = (z-y)*(z+y);
+    m->m00 = (x-z)*(x+z)+(w-y)*(w+y);
+    m->m11 = t0-t1;
+    m->m22 = t0+t1;
+  }
+  else {
+    float xx = tx*x, yy = ty*y, zz = tz*z;  // 2xx, 2yy, 2zz
+    m->m00 = 1.f-(yy+zz); m->m11 = 1.f-(xx+zz); m->m22 = 1.f-(xx+yy);
+  }
+}
+
 // remove scaling ex using recip
-static inline float recipf(float x) { return 1.f/x; } // -- stub for recip op + nr-step
+inline float recipf(float x) { return 1.f/x; }
 
 void quat_to_mat33_nu(mat33_t* m, quat_t* q)
 {
@@ -242,8 +402,6 @@ void quat_to_mat33_nu(mat33_t* m, quat_t* q)
   m->m21 = yz+wx; m->m12 = yz-wx;
 }
 
-
-uint32_t c0=0,c1=0,c2=0,c3=0;
 
 void mat33_to_quat_std(quat_t* q, mat33_t* m)
 {
@@ -335,10 +493,12 @@ void mat33_to_quat_day(quat_t* q, mat33_t* m)
   quat_scale(q, 0.5f*rsqrtf(d));
 }
 
-static inline uint32_t f2bits(float v)    { uint32_t r; memcpy(&r,&v,4); return r; }
-static inline float    bits2f(uint32_t v) { float    r; memcpy(&r,&v,4); return r; }
-static inline uint32_t sb(float f)        { return f2bits(f) & 0x80000000; }
-static inline float    fxor(float f, uint32_t b)
+
+
+inline uint32_t f2bits(float v)    { uint32_t r; memcpy(&r,&v,4); return r; }
+inline float    bits2f(uint32_t v) { float    r; memcpy(&r,&v,4); return r; }
+inline uint32_t sb(float f)        { return f2bits(f) & 0x80000000; }
+inline float    fxor(float f, uint32_t b)
 {
   return bits2f(f2bits(f)^b);
 }
@@ -405,6 +565,187 @@ void mat33_to_quat_bf0(quat_t* q, mat33_t* m)
   quat_set(q, x,y,z,w);
 }
 
+// signs go wanky as 'w' goes toward zero.
+void mat33_to_quat_ok(quat_t* q, mat33_t* m)
+{	
+  float m00=m->m00, m01=m->m01, m02=m->m02;
+  float m10=m->m10, m11=m->m11, m12=m->m12;
+  float m20=m->m20, m21=m->m21, m22=m->m22;
+
+  float t0 = m00+m11+m22, d0 = t0+1.f;
+  float t1 = m00-m11-m22, d1 = t1+1.f;
+  float t2 = m11-m00-m22, d2 = t2+1.f;
+  float t3 = m22-m00-m11, d3 = t3+1.f;
+  
+  float s1 = m21-m12, s2 = m02-m20, s3 = m10-m01;
+  float a1 = m21+m12, a2 = m02+m20, a3 = m10+m01;
+  
+  float w = 0.25f*sqrtf(d0*d0 + s1*s1 + s2*s2 + s3*s3);
+  float x = 0.25f*sqrtf(d1*d1 + s1*s1 + a2*a2 + a3*a3);
+  float y = 0.25f*sqrtf(d2*d2 + s2*s2 + a1*a1 + a3*a3);
+  float z = 0.25f*sqrtf(d3*d3 + s3*s3 + a1*a1 + a2*a2);
+
+  x = copysignf(x, s1);
+  y = copysignf(y, s2);
+  z = copysignf(z, s3);
+  
+  quat_set(q, x,y,z,w);
+}
+
+// minimal testing looks good to ~0x1.16p-4f (0.06787109375)
+// @ 0.1015625 reaches here 87.1%
+// @ 0.0678711 reaches here 91.3%
+
+// playin' it a bit safe. need to put a better empirical test
+// in this code.
+#define OKC_CUT 0.0678711f
+
+void mat33_to_quat_okc(quat_t* q, mat33_t* m)
+{	
+  float m00=m->m00, m01=m->m01, m02=m->m02;
+  float m10=m->m10, m11=m->m11, m12=m->m12;
+  float m20=m->m20, m21=m->m21, m22=m->m22;
+
+  float t0 = m00+m11+m22, d0 = t0+1.f;
+  float t1 = m00-m11-m22, d1 = t1+1.f;
+  float t2 = m11-m00-m22, d2 = t2+1.f;
+  float t3 = m22-m00-m11, d3 = t3+1.f;
+  
+  float s1 = m21-m12, s2 = m02-m20, s3 = m10-m01;
+  float a1 = m21+m12, a2 = m02+m20, a3 = m10+m01;
+  
+  float w = 0.25f*sqrtf(d0*d0 + s1*s1 + s2*s2 + s3*s3);
+  float x = 0.25f*sqrtf(d1*d1 + s1*s1 + a2*a2 + a3*a3);
+  float y = 0.25f*sqrtf(d2*d2 + s2*s2 + a1*a1 + a3*a3);
+  float z = 0.25f*sqrtf(d3*d3 + s3*s3 + a1*a1 + a2*a2);
+
+#if 1
+  if (w > OKC_CUT) {
+    x = copysignf(x, s1);
+    y = copysignf(y, s2);
+    z = copysignf(z, s3);
+  }
+  else {
+    if (x > 0.25f) {
+      y = copysignf(y,a3);
+      z = copysignf(z,a2);
+      w = copysignf(w,s1);
+    }
+    else if (y > 0.25f) {
+      x = copysignf(x, a3);
+      z = copysignf(z, a1);
+      w = copysignf(w, s2);
+    }
+    else {
+      x = copysignf(x, a2);
+      y = copysignf(y, a1);
+      w = copysignf(w, s3);
+    }
+  }
+#else
+  // this is only for testing
+  if (w >= x && w >= y && w >= z) {
+    x = copysignf(x, s1);
+    y = copysignf(y, s2);
+    z = copysignf(z, s3);
+  }
+  else if (x >= w && x >= y && x >= z) {
+    y = copysignf(y,a3);
+    z = copysignf(z,a2);
+    w = copysignf(w,s1);
+  }
+  else if (y >= w && y >= x && y >= z) {
+    x = copysignf(x, a3);
+    z = copysignf(z, a1);
+    w = copysignf(w, s2);
+  }
+  else {
+    x = copysignf(x, a2);
+    y = copysignf(y, a1);
+    w = copysignf(w, s3);
+  }
+#endif  
+  
+  quat_set(q, (float)x,(float)y,(float)z,(float)w);
+}
+
+// sign corrected version (promote to double computation)
+// the number of products makes using 'extended' precision
+// computations more expensive. Would need to go that way
+// for in/out in doubles to tighten the error bound
+void mat33_to_quat_okc_d(quat_t* q, mat33_t* m)
+{	
+  double m00=m->m00, m01=m->m01, m02=m->m02;
+  double m10=m->m10, m11=m->m11, m12=m->m12;
+  double m20=m->m20, m21=m->m21, m22=m->m22;
+
+  double t0 = m00+m11+m22, d0 = t0+1.f;
+  double t1 = m00-m11-m22, d1 = t1+1.f;
+  double t2 = m11-m00-m22, d2 = t2+1.f;
+  double t3 = m22-m00-m11, d3 = t3+1.f;
+  
+  double s1 = m21-m12, s2 = m02-m20, s3 = m10-m01;
+  double a1 = m21+m12, a2 = m02+m20, a3 = m10+m01;
+  
+  double w = 0.25*sqrt(d0*d0 + s1*s1 + s2*s2 + s3*s3);
+  double x = 0.25*sqrt(d1*d1 + s1*s1 + a2*a2 + a3*a3);
+  double y = 0.25*sqrt(d2*d2 + s2*s2 + a1*a1 + a3*a3);
+  double z = 0.25*sqrt(d3*d3 + s3*s3 + a1*a1 + a2*a2);
+
+#if 1
+  // see notes on compute in singles version
+  
+  if (w > (double)OKC_CUT) {
+    x = copysign(x,s1);
+    y = copysign(y,s2);
+    z = copysign(z,s3);
+  }
+  else {
+    if (x > 0.25) {
+      y = copysign(y,a3);
+      z = copysign(z,a2);
+      w = copysign(w,s1);
+    }
+    else if (y > 0.25) {
+      x = copysign(x,a3);
+      z = copysign(z,a1);
+      w = copysign(w,s2);
+    }
+    else {
+      x = copysign(x,a2);
+      y = copysign(y,a1);
+      w = copysign(w,s3);
+    }
+  }
+#else
+  // this is only for testing
+  if (w >= x && w >= y && w >= z) {
+    x = copysign(x, s1);
+    y = copysign(y, s2);
+    z = copysign(z, s3);
+  }
+  else if (x >= w && x >= y && x >= z) {
+    y = copysign(y,a3);
+    z = copysign(z,a2);
+    w = copysign(w,s1);
+  }
+  else if (y >= w && y >= x && y >= z) {
+    x = copysign(x, a3);
+    z = copysign(z, a1);
+    w = copysign(w, s2);
+  }
+  else {
+    x = copysign(x, a2);
+    y = copysign(y, a1);
+    w = copysign(w, s3);
+  }
+#endif  
+  
+  quat_set_from_f64(q, x,y,z,w);
+}
+
+
+
 #ifndef BF1_CUT
 #define BF1_CUT 0.02f
 #endif
@@ -430,69 +771,31 @@ void mat33_to_quat_bf1(quat_t* q, mat33_t* m)
   // 0.0512 0.000753 0.856216
   
   if (t > BF1_CUT) {
-    c0++;
     float s  = 0.5f*rsqrtf(t);
     quat_set(q, s*(m21-m12), s*(m02-m20), s*(m10-m01), s*t);
     return;
   }
-  c1++;
 
   // just using 'Day' for this toy version..lazy
   mat33_to_quat_day(q,m);
 }
-
-// naive use largest component...isn't worthwhile
-void mat33_to_quat_silly(quat_t* q, mat33_t* m)
-{
-  double m00=m->m00, m01=m->m01, m02=m->m02;
-  double m10=m->m10, m11=m->m11, m12=m->m12;
-  double m20=m->m20, m21=m->m21, m22=m->m22;
-
-  double w2  = 1 + m00 + m11 + m22;
-  double x2  = 1 + m00 - m11 - m22;
-  double y2  = 1 - m00 + m11 - m22;
-  double z2  = 1 - m00 - m11 + m22;
-
-  if (w2 >= x2 && w2 >= y2 && w2 >= z2) {
-    double s  = 0.5/sqrt(w2);
-    quat_set(q, s*(m21-m12), s*(m02-m20), s*(m10-m01), s*w2);
-    return;
-  }
-
-  if (z2 >= x2 && z2 >= y2) {
-    double s  = 0.5/sqrt(z2);
-    quat_set(q, s*(m02+m20), s*(m21+m12), s*z2, s*(m10-m01));
-    return;
-  }
-
-  if (y2 >= x2) {
-    double s  = 0.5/sqrt(y2);
-    quat_set(q, s*(m10+m01), s*y2, s*(m21+m12), s*(m02-m20));
-    return;
-  }
-
-  double s  = 0.5/sqrt(x2);
-  quat_set(q, s*x2, s*(m10+m01), s*(m02+m20), s*(m21-m12));
-}
-
-
 
 #define PI 3.1415927410125732421875f
 
 // H in binary64 for error measures
 typedef struct { double x,y,z,w; } quatd_t;
 
-static inline void quat_to_d(quatd_t* r, quat_t* q)
+inline void quat_to_d(quatd_t* r, quat_t* q)
 {
   r->x = q->x; r->y = q->y; r->z = q->z; r->w = q->w;
 }
 
-static inline void quatd_set(quatd_t* r, double x, double y, double z, double w)
+inline void quatd_set(quatd_t* r, double x, double y, double z, double w)
 {
   r->x=x; r->y=y; r->z=z; r->w=w;
 }
 
-static inline void quatd_conj(quatd_t* a)
+inline void quatd_conj(quatd_t* a)
 {
   a->x = -a->x;
   a->y = -a->y;
@@ -524,7 +827,110 @@ static float a_error(quat_t* a, quat_t* b)
   return (float)(TO_R3_DEGREES*t);
 }
 
-int main(int argc, char** argv)
+typedef void(*quat_to_mat33_t)(mat33_t*, quat_t*);
+
+typedef struct {
+  quat_to_mat33_t f;
+  char*           name;
+} q2m_t;
+
+q2m_t q2m[] =
+{
+ {.f=&quat_to_mat33_std,     .name="standard"},
+ {.f=&quat_to_mat33_ndr,     .name="no diagonal reduction"},
+ {.f=&quat_to_mat33_ndr_3,   .name="no diagonal reduction (factor 1)"},
+ {.f=&quat_to_mat33_ndr_fma, .name="no diagonal reduction (fma)"},
+ {.f=&quat_to_mat33_foo,     .name="hack"},
+};
+
+typedef void(*mat33_to_quat_t)(quat_t*, mat33_t*);
+
+typedef struct {
+  mat33_to_quat_t f;
+  char*           name;
+} m2q_t;
+
+m2q_t m2q[] =
+{
+ {.f=&mat33_to_quat_std,    .name="standard"},
+ {.f=&mat33_to_quat_small,  .name="small"},
+ {.f=&mat33_to_quat_day,    .name="day"},
+ {.f=&mat33_to_quat_day_bf, .name="day (branch free)"},
+ {.f=&mat33_to_quat_bf0,    .name="high eror branch free"},
+ {.f=&mat33_to_quat_bf1,    .name="small with cut"},
+ {.f=&mat33_to_quat_ok,     .name="overkill (bf)"},
+ {.f=&mat33_to_quat_okc,    .name="overkill"},
+ {.f=&mat33_to_quat_okc_d,  .name="overkill (double promote)"},
+};
+
+
+static void test(uint32_t fxi, uint32_t ixi)
+{
+  double e = 0.0;
+  double h[HLEN];
+  quat_t q;
+  quat_to_mat33_t fx = q2m[fxi].f;
+  mat33_to_quat_t ix = m2q[ixi].f;
+
+  memset(h, 0, sizeof(h[0])*HLEN);
+
+  for(uint32_t i=0; i<TLEN; i++) {
+    double   a   = uniform_quat(&q);
+    uint32_t hid = (uint32_t)(((2.f*HLEN)/PI)*fabs(a));
+    mat33_t  m;
+    quat_t   r;
+
+    // clamp to histogram length
+    if (hid >= HLEN) hid=HLEN-1;
+
+    fx(&m, &q);
+    ix(&r, &m);
+
+    double ae = a_error(&q,&r);
+
+    // track peak error per histogram slot
+    if (ae > h[hid]) { h[hid] = ae; /* quat_dup(&(hq[hid]),&q); */ }
+    
+    if (ae > e) {
+      e = ae;
+      printf("%08x %f ", i, e);
+#if 0
+      quat_print(&q);
+      quat_print(&r);
+#else
+      quat_printa(&q);
+      quat_printa(&r);
+#endif      
+
+      //vec3_printa(&d);
+      //printf("%e ", m.m10-m.m01);
+      //printf("%a %d", m.m00+m.m11+m.m22,method);
+      //printf("%f %d ", a, hid);
+      ln();
+    }
+  }
+
+  printf("\n %s:%s (peak=%e) \n{ ", q2m[fxi].name, m2q[ixi].name,e);
+
+   for(uint32_t i=0; i<HLEN-1; i++) {
+     printf("%e, ", h[i]);
+  }
+
+  printf("%e}\n", h[HLEN-1]);
+}
+
+void test_all_pairs(uint64_t s0, uint64_t s1)
+{
+  for(uint32_t i=0; i<sizeof(m2q)/sizeof(m2q_t); i++) {
+    for(uint32_t j=0; j<sizeof(q2m)/sizeof(q2m_t); j++) {
+      reset_generators(s0,s1);
+      test(j,i);
+    }
+  }
+}
+
+
+int main(void)
 {
   uint64_t s0;
   uint64_t s1;
@@ -536,80 +942,17 @@ int main(int argc, char** argv)
 #endif  
   s1 = 0x1234567;
 
-  double e = 0.0;
-  double h[HLEN];
-//quat_t hq[HLEN];
-  quat_t q;
-  uint32_t mc[2] = {0,0};
-
   reset_generators(s0,s1);
 
-  memset(h, 0, sizeof(h[0])*HLEN);
-
-  for(uint32_t i=0; i<TLEN; i++) {
-    double   a   = uniform_quat(&q);
-    uint32_t hid = (uint32_t)(((2.f*HLEN)/PI)*fabs(a));
-    mat33_t  m;
-    quat_t   r;
-    
-    if (hid >= HLEN) hid=HLEN-1;
-
-    quat_to_mat33_std(&m, &q);
-    //quat_to_mat33_ndr(&m, &q);
-
-    //quat_scale(&q, 0.8f+.4f*0x1p-64f*rng_u64());
-    //quat_to_mat33_nu(&m, &q);
-    
-    //mat33_to_quat_std(&r, &m);
-    //mat33_to_quat_day(&r, &m);
-    //mat33_to_quat_day_bf(&r, &m);
-    //mat33_to_quat_small(&r, &m);
-    //mat33_to_quat_bf0(&r, &m);
-    mat33_to_quat_bf1(&r, &m);
-    //mat33_to_quat_silly(&r, &m);
-
-    double ae = a_error(&q,&r);
-    
-    if (ae > h[hid]) { h[hid] = ae; /* quat_dup(&(hq[hid]),&q); */ }
-    
-    if (ae > e) {
-      e = ae;
-      printf("%08x %f ", i, e);
-      quat_print(&q);
-      quat_print(&r);
-      //vec3_printa(&d);
-      //printf("%e ", m.m10-m.m01);
-      //printf("%a %d", m.m00+m.m11+m.m22,method);
-      //printf("%f %d ", a, hid);
-      ln();
-    }
-  }
-  
-  printf("\n{ ");
-
-   for(uint32_t i=0; i<HLEN-1; i++) {
-     printf("%e, ", h[i]);
-  }
-
-  printf("%e}\n", h[HLEN-1]);
-
-  float scale = 1.f/(c0+c1+c2+c3+F32_MIN_NORMAL);
-  printf("{%f, %f, %f, %f}\n",scale*c0,scale*c1,scale*c2,scale*c3);
-
-  scale = 1.f/(mc[0]+mc[1]);
-  printf("{%f, %f}\n",mc[0]*scale, mc[1]*scale);
-
-
-#if 0  
-  for(uint32_t i=0; i<HLEN; i++) {
-    quat_t q0,q1;
-    mat33_t m;
-    quat_dup(&q0, &(hq[i]));
-    quat_to_mat33_std(&m, &q0);
-    mat33_to_quat_small(&q1, &m);
-    quat_print(&q0);
-    quat_print(&q1); ln();
-  }
-#endif
-  
+#if 0
+  test_all_pairs(s0,s1);
+#else  
+  reset_generators(s0,s1);
+  //test(1,2);
+  //test(0,6);
+  //test(1,6);
+  //test(0,7);
+  test(0,8);
+  test(1,8);
+#endif  
 }

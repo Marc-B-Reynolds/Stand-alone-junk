@@ -8,7 +8,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <intrin.h>
+//#include <intrin.h>
 //#include "x86intrin.h
 
 
@@ -152,8 +152,8 @@ prime_t prime[] = {                // drop rate cumlative
   { 113, 0x0fdbc091, 0x0243f6f0 }  // 0.000339  1.000000
 };
 
-// returns zero if prime factorization of 'x' has two or more
-// of any primes in the table.
+// Returns 0 if (within limits of the table) 'x' is determined to be not
+// square-free (prime factorization contains the same prime more than once)
 uint32_t prime_filter(uint32_t x)
 {
   for (uint32_t i = 0; i<sizeof(prime) / sizeof(prime_t); i++) {

@@ -193,7 +193,7 @@ void test_vector(quat_t* q)
 }
 
 // reset state data of PRNG & Sobol
-void reset_generators(uint64_t s0, uint64_t s1, uint32_t len)
+void reset_generators(uint64_t s0, uint64_t s1)
 {
 #ifdef USE_SOBOL
   sobol_2d_init(&qrng, (uint32_t)s0, (uint32_t)(s0>>32));
@@ -535,6 +535,26 @@ double m_error(quat_t* a)
   return sqrt(ax*ax+ay*ay+az*az+aw*aw);
 }
 
+// ab+cd
+inline float f32_mma(float a, float b, float c, float d)
+{
+  float t = c*d;
+  float e = fmaf(c,d,-t);
+  float f = fmaf(a,b, t);
+  return f+e;
+}
+
+// ab-cd
+inline float f32_mms(float a, float b, float c, float d)
+{
+  float t = c*d;
+  float e = fmaf(c,d,-t);
+  float f = fmaf(a,b,-t);
+  return f-e;
+}
+
+
+
 // Tait-Bryan: yaw-pitch-roll (zyx)
 // pitch = theta = asin(-2(m11-wy))
 // yaw   = psi   = atan2(xy+wz, 1/2-(yy+zz))
@@ -564,6 +584,34 @@ uint32_t original(vec3_t* v, quat_t* q)
   return r;
 }
 
+uint32_t original_fma(vec3_t* v, quat_t* q)
+{
+  LOAD_Q(q);
+  uint32_t r = 0;
+  
+  // half z-component of x' (negated)
+  float xz = f32_mms(w,y,x,z);              // wy-xz
+  float t0 = f32_mma(x,y,w,z);              // xy+wz
+  float t1 = f32_mma(y,y,z,z);              // yy+zz
+
+  v->z = atan2f(t0, .5f-t1);                // yaw
+  v->y = atanf(xz/sqrtf(0.25f-xz*xz));      // pitch
+  
+  if (fabsf(xz) < YPR_GIMBAL_LOCK) {
+    float t2 = f32_mma(y,z,w,x);
+    float t3 = f32_mma(x,x,y,y);
+    v->x = atan2f(t2, 0.5f-t3);
+  }
+  else {
+    v->x = 2.f*atan2f(x,w) + sgn(xz)*v->z;
+    r = 1;
+  }
+  
+  return r;
+}
+
+
+
 // to show just promoting doesn't help
 uint32_t original_d(vec3_t* v, quat_t* q)
 {
@@ -573,13 +621,13 @@ uint32_t original_d(vec3_t* v, quat_t* q)
   double xz = w*y-x*z;
 
   v->z = (float)atan2(x*y+w*z, .5-(y*y+z*z)); 
-  v->y = (float)atan(xz/sqrtf(0.25-xz*xz));
+  v->y = (float)atan(xz/sqrt(0.25-xz*xz));
   
   if (fabs(xz) < YPR_GIMBAL_LOCK) {
     v->x = (float)atan2(y*z+w*x, .5-(x*x+y*y));
   }
   else {
-    v->x = (float)2.0*atan2(x,w) - sgnd(xz)*v->z;
+    v->x = (float)(2.0*atan2(x,w) - sgnd(xz)*v->z);
     r = 1;
   }
   
@@ -615,6 +663,74 @@ uint32_t revision_1(vec3_t* v, quat_t* q)
   v->x = (float)(2.0*atan2(x,w) - sgnd(xz)*v->z);
   return 1;
 }    
+
+// ab-cd
+inline double f64_mms(double a, double b, double c, double d)
+{
+  double t = c*d;
+  double e = fma(c,d,-t);
+  double f = fma(a,b,-t);
+  return f-e;
+}
+
+inline double f64_mma(double a, double b, double c, double d)
+{
+  double t = c*d;
+  double e = fma(c,d,-t);
+  double f = fma(a,b, t);
+  return f+e;
+}
+
+// xformed to use fma
+uint32_t revision_1_fma(vec3_t* v, quat_t* q)
+{
+  double x=q->x, y=q->y, z=q->z, w=q->w;
+  
+  double t0 = f64_mms(x,x,z,z);
+  double t1 = f64_mms(w,w,y,y);
+  double xx = 0.5*(t0+t1);
+  double xy = f64_mma(x,y,w,z);
+  double xz = f64_mms(w,y,x,z);
+  double yz = 2.0*(f64_mma(y,z,w,x));
+  double t  = f64_mma(xx,xx,xy,xy);
+
+  v->z = (float)atan2(xy, xx);
+  v->y = (float)atan(xz/sqrt(t));
+
+  if (t != 0) {
+    v->x = (float)atan2(yz, t1-t0);
+    return 0;
+  }
+
+  v->x = (float)(2.0*atan2(x,w) - sgnd(xz)*v->z);
+  return 1;
+}    
+
+
+uint32_t revision_1_fma_s(vec3_t* v, quat_t* q)
+{
+  float x=q->x, y=q->y, z=q->z, w=q->w;
+  
+  float t0 = f32_mms(x,x,z,z);
+  float t1 = f32_mms(w,w,y,y);
+  float xx = 0.5f*(t0+t1);
+  float xy = f32_mma(x,y,w,z);
+  float xz = f32_mms(w,y,x,z);
+  float yz = 2.f*(f32_mma(y,z,w,x));
+  float t  = f32_mma(xx,xx,xy,xy);
+
+  v->z = atan2f(xy, xx);
+  v->y = atanf(xz/sqrtf(t));
+
+  if (t != 0) {
+    v->x = atan2f(yz, t1-t0);
+    return 0;
+  }
+
+  v->x = 2.f*atan2f(x,w) - sgn(xz)*v->z;
+  return 1;
+}    
+
 
 // could trade some products/additions
 uint32_t revision_1x(vec3_t* v, quat_t* q)
@@ -671,7 +787,7 @@ uint32_t revision_1s(vec3_t* v, quat_t* q)
   float t  = xx*xx+xy*xy;
 
   v->z = atan2f(xy, xx);
-  v->y = atanf(xz/sqrt(t));
+  v->y = atanf(xz/sqrtf(t));
   
   if (fabsf(t) >= 5000.f*ULP1) {
     float yz = 2.f*(y*z+w*x);
@@ -701,7 +817,7 @@ uint32_t revision_2s(vec3_t* v, quat_t* q)
     if (fabsf(t) >= 250000.f*ULP1) {
       float yz = 2.f*(y*z+w*x);
       v->z = atan2f(xy, xx);
-      v->y = atanf(xz/sqrt(t));
+      v->y = atanf(xz/sqrtf(t));
       v->x = atan2f(yz, t1-t0);
       return 0;
     }
@@ -740,11 +856,11 @@ uint32_t quat_to_zxz(vec3_t* v, quat_t* q)
   double c2 = w*w+z*z;      // cos(beta)^2
   double s  = atan(z/w);    // (gamma+alpha)/2
   double d  = atan2(y,x);   // (gamma-alpha)/2
-  v->x = s-d;               // alpha
-  v->z = s+d;               // gamma
+  v->x = (float)(s-d);      // alpha
+  v->z = (float)(s+d);      // gamma
 
   if (c2 != 0.0) {
-    v->y = 2.0*atan(sqrt(s2/c2));
+    v->y = (float)(2.0*atan(sqrt(s2/c2)));
     return 0;
   }
 
@@ -814,7 +930,10 @@ maps_t maps[] =
 #if !defined(ZXZ)
   //DEF(original)
   //DEF(original_d)
-    DEF(revision_1)
+  //DEF(original_fma)
+  //DEF(revision_1),
+  //DEF(revision_1_fma)
+  DEF(revision_1_fma_s)
   //DEF(revision_1x)
   //DEF(revision_1s)
   //DEF(revision_2s)
@@ -1035,7 +1154,7 @@ void rt_test(uint64_t s0, uint64_t s1)
       uint32_t s;
       double   e,me = 0;
       
-      reset_generators(s0,s1,len);
+      reset_generators(s0,s1);
       printf("  %s\n", gens[gi].name);
       
       // generate 'len' test values
@@ -1122,7 +1241,7 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
   float xmin= 1.f,ymin= 1.f,zmin= 1.f;
   float xmax=-1.f,ymax=-1.f,zmax=-1.f;
   
-  reset_generators(s0,s1,TLEN);
+  reset_generators(s0,s1);
 
   for(uint32_t i=0; i<TLEN; i++) {
     //uniform_quat_about_diag(&p);
@@ -1161,7 +1280,7 @@ void rt_xform_test(uint64_t s0, uint64_t s1)
   printf("x:(%f,%f) y:(%f,%f) z:(%f,%f)\n", xmin,xmax,ymin,ymax,zmin,zmax);
 }
 
-int main(int argc, char** argv)
+int main()
 {
   uint64_t s0;
   uint64_t s1;
@@ -1175,7 +1294,7 @@ int main(int argc, char** argv)
 #endif  
   s1 = 0x1234567;
 
-  reset_generators(s0,s1,SYM_TRIALS);
+  reset_generators(s0,s1);
     
   rt_test(s0,s1);
   error_dump();

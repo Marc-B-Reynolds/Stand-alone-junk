@@ -223,6 +223,7 @@ static inline void quat_dup(quat_t* r, quat_t* a)
   quat_set(r, a->x,a->y,a->z,a->w);
 }
 
+// in-place conjugation: a^*
 static inline void quat_conj(quat_t* a)
 {
   a->x = -a->x;
@@ -230,6 +231,11 @@ static inline void quat_conj(quat_t* a)
   a->z = -a->z;
 }
 
+static inline void quat_nconj(quat_t* a)
+{
+  a->w = -a->w;
+}
+  
 static inline float quat_bdot(quat_t* a, quat_t* b)
 {
   return vec3_dot(&(a->b), &(b->b));

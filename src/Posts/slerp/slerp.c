@@ -16,7 +16,7 @@
 
 #define SANITY_CHECKS
 
-#define SYM_TRIALS 0xFFFF
+#define SYM_TRIALS 0xFFFFF
 
 #define TRIALS 10 // very temp hack
 
@@ -31,7 +31,8 @@
 
 #if 1 // LAZY HERE
 #include <x86intrin.h>
-#include "xmmintrin.h"
+//#include <x86intrin.h>
+//#include "xmmintrin.h"
 
 static inline float rsqrtf_a(float x) 
 {
@@ -46,6 +47,13 @@ static inline float recip_a(float x)
 static inline float rsqrt_nr(float x)
 {
   float x0 = rsqrtf_a(x);
+  return x0*(1.5f - x*0.5f*x0*x0);
+}
+
+static inline float rsqrt_nr2(float x)
+{
+  float x0 = rsqrtf_a(x);
+  x0 = x0*(1.5f - x*0.5f*x0*x0);
   return x0*(1.5f - x*0.5f*x0*x0);
 }
 
@@ -102,8 +110,7 @@ static inline float rng_f32(void)
   return (rng_u64() >> 40)*TO_FP32;
 }
 
-// uniform on disk
-float uniform_disk(vec2_t* p)
+float uniform_disc(vec2_t* p)
 {
   float d,x,y;
   uint64_t v;
@@ -122,8 +129,30 @@ float uniform_disk(vec2_t* p)
   return d;
 }
 
-// uniform on quarter disk {x,y}>=0
-float uniform_qdisk(vec2_t* p)
+// positive in 'x' half disc
+float uniform_hdisc(vec2_t* p)
+{
+  float d,x,y;
+  uint64_t v;
+
+  do {
+    v = rng_u64();
+    x = (v >> 40)*TO_FP32;
+    y = (v & 0xFFFFFF)*TO_FP32;
+    d = x*x;
+    y = 2.f*y-1.f; d += y*y;
+  } while(d >= 1.f);
+
+  p->x = x;
+  p->y = y;
+
+  return d;
+}
+
+static inline float sgn(float x) { return x >= 0.f ? 1.f : -1.f; }
+
+// uniform on quarter disc {x,y}>=0
+float uniform_qdisc(vec2_t* p)
 {
   float d,x,y;
   uint64_t v;
@@ -142,12 +171,37 @@ float uniform_qdisk(vec2_t* p)
   return d;
 }
 
+// uniform dist on s3
+void uniform_quat(quat_t* q)
+{
+  vec2_t p0,p1;
+  float  d1 = uniform_disc(&p1) + EPS;
+  float  s1 = rsqrt(d1);
+  float  d0 = uniform_hdisc(&p0);
+  float  s0 = sqrtf(1.f-d0);
+  float  s  = s0*s1;
+
+  quat_set(q, p0.y, s*p1.x, s*p1.y, p0.x);
+}
+
+// uniform dist with all positive components
+void uniform_quat_p(quat_t* q)
+{
+  vec2_t p0,p1;
+  float  d0 = uniform_qdisc(&p0);
+  float  d1 = uniform_qdisc(&p1);
+  float  s  = sqrtf((1.f-d0)/d1);
+  
+  quat_set(q, p0.x, p0.y, s*p1.x, s*p1.y);
+}
+
+
 void uniform_s1(vec2_t* p)
 {
   float d,s,tx;
   vec2_t v;
 
-  d  = uniform_disk(&v);
+  d  = uniform_disc(&v);
   s  = rsqrt_nr(d);
   tx = v.x + v.x;
   p->x = s*(tx*v.x-d);
@@ -159,23 +213,14 @@ void uniform_s2(vec3_t* p)
   float d,s;
   vec2_t v;
 
-  d = uniform_disk(&v);  
+  d = uniform_disc(&v);  
   s = 2.f*sqrtf(1.f-d);
   p->x = s*v.x;
   p->y = s*v.y;
   p->z = 1.f-2.f*d;
 }
 
-// uniform dist with all positive components (pseudo-random)
-void quat_pr_p(quat_t* q)
-{
-  vec2_t p0,p1;
-  float  d0 = uniform_qdisk(&p0);
-  float  d1 = uniform_qdisk(&p1);
-  float  s  = sqrtf((1.f-d0)/d1);
-  
-  quat_set(q, p0.x, p0.y, s*p1.x, s*p1.y);
-}
+
 
 // uniform dist with all positive components (LDS)
 void quat_qr_p(quat_t* q)
@@ -455,6 +500,23 @@ static inline double quatd_dot(quatd_t* a, quatd_t* b)
   return a->x*b->x + a->y*b->y + a->z*b->z+ a->w*b->w;
 }
 
+static inline void quatd_conj(quatd_t* a)
+{
+  a->x = -a->x;
+  a->y = -a->y;
+  a->z = -a->z;
+}
+static inline void quatd_mul(quatd_t* r, quatd_t* a, quatd_t* b)
+{
+  double x = a->w*b->x + a->x*b->w + a->y*b->z - a->z*b->y;  
+  double y = a->w*b->y - a->x*b->z + a->y*b->w + a->z*b->x;
+  double z = a->w*b->z + a->x*b->y - a->y*b->x + a->z*b->w;
+  double w = a->w*b->w - a->x*b->x - a->y*b->y - a->z*b->z;
+  quatd_set(r,x,y,z,w);
+}
+
+
+
 void quatd_print(quatd_t* q)
 {
   printf("%f+(%f,%f,%f) ",q->w,q->x,q->y,q->z);
@@ -548,14 +610,50 @@ void slerp_ref_ref(quat_t* R, quat_t* A, quat_t* B, float t)
     d = B->x*ax + B->y*ay + B->z*az + B->w*aw;
   }
 
-  double ad = fabsf(d);
+  double ad = fabs(d);
   double s0, s1;
   
   if (ad < SLERP_CUT) {
-    double a  = acos(ad);  // this is bad and should be change
+    double a  = acos(ad);
     double sa = sin(a);
     s0 = sin((1-t) * a)/sa;
     s1 = sin((  t) * a)/sa;
+  }
+  else {
+    s0 = 1 - t;
+    s1 = t;
+  }
+
+  s1 = d >= 0 ? s1 : -s1;
+
+  R->x = (float)(s0*A->x + s1*B->x);
+  R->y = (float)(s0*A->y + s1*B->y);
+  R->z = (float)(s0*A->z + s1*B->z);
+  R->w = (float)(s0*A->w + s1*B->w);
+}
+
+// alegebraic form using doubles
+void slerp_ref_ref_(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  double d;
+  {
+    double ax = A->x;
+    double ay = A->y;
+    double az = A->z;
+    double aw = A->w;
+    d = B->x*ax + B->y*ay + B->z*az + B->w*aw;
+  }
+
+  double ad = fabs(d);
+  double s0, s1;
+  
+  if (ad < SLERP_CUT) {
+    double s  = sqrt(1-d*d);
+    double a  = atan2(s,ad);
+    double ta = t*a;
+    double sa = sin(ta);
+    s1 = sa/s;
+    s0 = cos(ta)-ad*s1;
   }
   else {
     s0 = 1 - t;
@@ -584,7 +682,7 @@ void slerp_ref_0(quat_t* R, quat_t* A, quat_t* B, float t)
     float s = sqrtf(1-d*d);
     float a = atan2f(s,d);
     float c = cosf(t*a);
-    s1 = sqrtf(1-c*c)/s;
+    s1 = sin(t*a)/s;//sqrtf(1-c*c)/s;
     s0 = c-d*s1;
   } else {
     s0 = 1.0f - t;
@@ -605,7 +703,7 @@ void slerp_ref_1(quat_t* R, quat_t* A, quat_t* B, float t)
 
   if (d < SLERP_CUT) {
     t += t;                      // account for half-angle atan
-    float s2 = 1.0-d*d;
+    float s2 = 1.f-d*d;
     float rs = rsqrt_nr(s2);     // ~x^-.5 to at least 12-bit, 1 NR step
     float y  = 1-d;
     float a  = atanf(y*rs);      // still range reduction
@@ -634,21 +732,11 @@ void slerp_ref_2(quat_t* R, quat_t* A, quat_t* B, float t)
     float rs = rsqrt_nr(s2);   
     float y  = 1-d;
     float a  = atanf(y*rs);      // still range reduction
-
-    // both elim variants
-#if 0
-    float hs = sinf(t*a);
+    float hs = sin_4_5(t*a);
     float hc = sqrtf(1.f-hs*hs);
     float th = 2.f*hs;
     float c  = 1.f-hs*th;  // hc*hc-hs*hs;
     float s  = th*hc;
-#else
-    float hc = cosf(t*a);
-    float hs = sqrtf(1.f-hc*hc);
-    float th = 2.f*hc;
-    float c  = hc*th-1.f;  // hc*hc-hs*hs;
-    float s  = th*hs;
-#endif
     s1 = s*rs;
     s0 = c-d*s1;
   } else {
@@ -757,7 +845,7 @@ void slerp_ref_5(quat_t* R, quat_t* A, quat_t* B, float t)
     float a  = atan_9(y*rs);
     float ta = t*a;
     float hc = cos_4_5(ta);
-    float hs = sin_4_5(ta);
+    float hs = sqrtf(1.f-hc*hc);
     float th = 2.f*hc;
     float c  = hc*th-1.f;
     float s  = th*hs;
@@ -773,52 +861,79 @@ void slerp_ref_5(quat_t* R, quat_t* A, quat_t* B, float t)
 
 
 
+static inline float cos_2_4(float x) {
+  float x2 = x*x;
+  float c;
+  c  = x2*( +3.679168224334716796875e-2f);
+  c  = x2*(c-0.495580852031707763671875f);
+  c  =    (c+0.9994032382965087890625f);
 
-void slerp_4_4_x(quat_t* R, quat_t* A, quat_t* B, float t)
+  return c;
+}
+
+
+
+// error = 6.77119023748673498630523681640625e-5
+// zero  = [|0.678780257701873779296875, 1.22571027278900146484375, 1.531032562255859375|]
+static inline float sin_2_4(float x) {
+  float x2 = x*x;
+  float s;
+  s  = x2*( +7.5143859721720218658447265625e-3f);
+  s  = x2*(s-0.1656731069087982177734375f);
+  s  = x *(s+0.999696791172027587890625f);
+  return s;
+}
+
+static inline float p47(float x)
 {
-  float ax  = A->x, ay=A->y, az=A->z, aw=A->w;
-  float bx  = B->x, by=B->y, bz=B->z, bw=B->w;
-  float d   = ax*bx+ay*by+az*bz+aw*bw;
+  float x2 = x*x;
+  float t;
+  t = x2 * (-2793121  * 0x1p-23f + 
+      x2 * ( 13098501 * 0x1p-26f +
+      x2 * (-4020455  * 0x1p-25f +
+      x2 * ( 14980357 * 0x1p-28f +
+      x2 * (-13750363 * 0x1p-30f)))));
+  return x+x*t;
+}
+
+static inline float p48(float x)
+{
+  float x2 = x*x;
+  float t;
+  t = x2 * ( 8388417  * 0x1p-23f + 
+      x2 * (-697561   * 0x1p-26f +
+      x2 * ( 12988331 * 0x1p-27f +
+      x2 * (-7066423  * 0x1p-27f +
+      x2 * (-13750363 * 0x1p-30f)))));
+  return x+x*t;
+}
+
+
+void slerp_ref_6(quat_t* R, quat_t* A, quat_t* B, float t)
+{
+  float d   = quat_dot(A,B);
+  float sgn = d >= 0 ? 1 : -1;
   float s0,s1;
 
-  float sgn = d >= 0 ? 1 : -1;
   d = fabsf(d);
-
-  // d on ~[0,1]
+  
   if (d < SLERP_CUT) {
-    // atan setup
-    float y  = 1.f-d;
+    t += t;
     float s2 = 1.f-d*d;
     float rs = rsqrt_nr(s2);
-    // compute the angle
-    float x  = y*rs;
-    float x2 = x*x;
-
-    float a  = x*(0xf.ffff5p-4f+x2*(-0x5.553128p-4f+x2*(0x3.3104fp-4f+x2*(-0x2.39bafp-4f+x2*(0x1.8b0442p-4f+x2*(-0xe.51acp-8f+x2*(0x5.99b138p-8f+x2*(-0x1.09f1d8p-8f))))))));
-    // forward trig
+    float y  = 1-d;
+    float a  = p47(y*rs);
     float ta = t*a;
-    float a2 = ta*ta;
-    float hc = 0x1.p0f+a2*(-0x8.p-4f+a2*(0xa.aaaa5p-8f+a2*(-0x5.b030b8p-12f+a2*(0x1.99eadp-16f))));
-    float hs = sqrtf(1.f-hc*hc);
-    // double angle of sin/cos
-    float th = hc+hc;
-    float c  = th*hc-1.f;
-    float s  = th*hs;
-    // weights
+    float s  = sin_2_4(ta);
+    float c  = sqrtf(1.f-s*s);
     s1 = s*rs;
     s0 = c-d*s1;
-    s1 *= sgn;
+  } else {
+    s0 = 1.0f - t;
+    s1 = t;
   }
-  else {
-    s0  = 1.f-t;
-    s1  = t;
-    s1 *= sgn;
-  }
-  // weight sum
-  R->x = (s0*ax + s1*bx);
-  R->y = (s0*ay + s1*by);
-  R->z = (s0*az + s1*bz);
-  R->w = (s0*aw + s1*bw);
+
+  quat_wsum(R, A, B, s0, sgn*s1);
 }
 
 // ****************
@@ -976,6 +1091,44 @@ void slerp_nlerp_1(quat_t* r, quat_t* a, quat_t* b, float t)
 {
   float s0 = 1.0f-t;
   float s1 = t;
+  quat_wsum(r, a, b, s0, s1);
+  quat_normalize(r);
+}
+
+// temp hack
+
+// scale function
+static inline float rrp_s_2(float d) { return 0.0450414f + d*(-0.0611203f + d*(0.0163106f)); }
+static inline float rrp_s_3(float d) { return 0.0452436f + d*(-0.0650588f + d*(0.0272054f - 0.00741959*d)); }
+
+// shape function
+static inline float rrp_r_2(float t) { return -4.6476f  + t*(-2.54039f + 23.3009*t); }
+static inline float rrp_r_3(float t) { return -4.75907f + t*( 1.06188f + t*(5.10996f + 23.4539f*t)); }
+
+void slerp_rrp_2_2(quat_t* r, quat_t* a, quat_t* b, float t)
+{
+  float d  = quat_dot(a,b);
+  float ad = fabsf(d);
+  float k  = rrp_s_2(ad);
+  float tp = t-0.5f;
+  float s  = tp*rrp_r_2(fabsf(tp));
+  float tt = t+k*s;
+  float s0 = 1 - tt;
+  float s1 = d > 0 ? tt : -tt;
+  quat_wsum(r, a, b, s0, s1);
+  quat_normalize(r);
+}
+
+void slerp_rrp_3_3(quat_t* r, quat_t* a, quat_t* b, float t)
+{
+  float d  = quat_dot(a,b);
+  float ad = fabsf(d);
+  float k  = rrp_s_3(ad);
+  float tp = t-0.5f;
+  float s  = tp*rrp_r_3(fabsf(tp));
+  float tt = t+k*s;
+  float s0 = 1 - tt;
+  float s1 = d > 0 ? tt : -tt;
   quat_wsum(r, a, b, s0, s1);
   quat_normalize(r);
 }
@@ -1167,7 +1320,7 @@ void slerp_eberly_4g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(
 void slerp_eberly_5g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(R, A, B, t, 5); }
 void slerp_eberly_6g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(R, A, B, t, 6); }
 void slerp_eberly_7g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(R, A, B, t, 7); }
-void slerp_eberly_8g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(R, A, B, t, 7); }
+void slerp_eberly_8g(quat_t* R, quat_t* A, quat_t* B, float t) { slerp_eberly_g(R, A, B, t, 8); }
 
 
 // slerp_eberly_8, u8 and u7 directly cut-paste-modified from paper
@@ -1222,6 +1375,7 @@ void slerp_zeux_1(quat_t* r, quat_t* a, quat_t* b, float t)
   quat_wsum(r, a, b, s0, s1);
   quat_normalize(r);
 }
+
 
 // A1,B1,K1 variant: sample as n2 except constants. see post.
 
@@ -1285,19 +1439,22 @@ typedef struct {
 slerp_name_t funcs[] =
 {
   //SF(slerp_nutsy_ref),
-  SF(slerp_ref_ref),
-#if 1
+  //SF(slerp_ref_ref_),
+
   SF(slerp_ref_0),
   SF(slerp_ref_1),
   SF(slerp_ref_2),
   SF(slerp_ref_3),
   SF(slerp_ref_4),
-  //SF(slerp_id_ref_0),
-  //SF(slerp_id_ref_1),
-#endif
   SF(slerp_ref_5),
-  SF(slerp_4_4_x),
-#if 0
+  SF(slerp_ref_6),
+
+  SF(slerp_id_ref_0),
+  SF(slerp_id_ref_1),
+
+  SF(slerp_rrp_2_2),
+  SF(slerp_rrp_3_3),
+#if 0  
   SF(slerp_eberly_1g),
   SF(slerp_eberly_2g),
   SF(slerp_eberly_3g),
@@ -1306,19 +1463,19 @@ slerp_name_t funcs[] =
   SF(slerp_eberly_6g),
   SF(slerp_eberly_7g),
   SF(slerp_eberly_8g),
-  SF(slerp_eberly_8),
 #endif  
-#if 0
+  SF(slerp_eberly_8),
+
   SF(slerp_zeux_1),
   SF(slerp_zeux_2),
-  SF(slerp_nlerp),
-#endif
+
+  //SF(slerp_nlerp),
 
   // 
   //SF(slerp_pc_wrap_0),
 };
 
-#define NUM_WRAP  1
+#define NUM_WRAP  0
 #define SLERP_REF slerp_ref_ref
 
 #define NUM_FUNCS (sizeof(funcs)/sizeof(funcs[0]))
@@ -1341,44 +1498,21 @@ void quat_canonical(quat_t* q)
   quat_neg(q,q);
 }
 
-// too lazy to do a proper scalarproduct
 float a_error(quat_t* a, quat_t* b)
 {
-  double ax = a->x, ay = a->y, az = a->z, aw = a->w;
-  double bx = b->x, by = b->y, bz = b->z, bw = b->w;
+  quatd_t R,A,B;
+  quat_to_d(&A,a);
+  quat_to_d(&B,b);
+  quatd_conj(&A);
+  quatd_mul(&R,&B,&A);
 
-  if (ax != bx || ay != by || az != bz || aw != bw) {
-    double mx = ax*bx, my = ay*by, mz = az*bz, mw = aw*bw;
-  //double nd = mw+mz+my+mx;
-    double d;
-    
-    // sort into smallest to largest
-    double x = fabs(mx);
-    double y = fabs(my);
-    double z = fabs(mz);
-    double w = fabs(mw);
-    double t;
-    
-    if (x < y) { t=x; x=y; y=t; t=mx; mx=my; my=t; }
-    if (x < z) { t=x; x=z; z=t; t=mx; mx=mz; mz=t; }
-    if (x < w) { t=x; x=w; w=t; t=mx; mx=mw; mw=t; }
-    if (y < z) { t=y; y=z; z=t; t=my; my=mz; mz=t; }
-    if (y < w) { t=y; y=w; w=t; t=my; my=mw; mw=t; }
-    if (z < w) { t=z; z=w; w=t; t=mz; mz=mw; mw=t; }
-    
-    d = mw+mz+my+mx;
-    
-    // no reason to prefer slightly too large over slightly too small
-    float dot = fabs((float)d);
-    if (dot > 1.f) dot = 2.f-d;
+  double x = R.w;
+  double y = sqrt(R.x*R.x+R.y*R.y+R.z*R.z);
+  double t = atan2(y,x);
 
-    //printf(" {%f, %f} ", dot, (float)nd);
-    
-    return 1.1459156036376953125e2f*acosf(dot);
-  }
-  
-  return 0.f;
+  return (float)(1.1459156036376953125e2*t);
 }
+
 
 #define D(X) printf("(" #X ") ")
 
@@ -1410,7 +1544,7 @@ void ortho_test(uint64_t s0, uint64_t s1)
   printf("* ortho test\n");
 
   reset_generators(s0,s1);
-  t = (rng_f32()-0.5f)*0.2;
+  t = (rng_f32()-0.5f)*0.2; // huh..me thinking what here?
   
   quat_set(&A,0,0,0,1);
   quat_set(&B,0,0,1,0);
@@ -1459,7 +1593,7 @@ void sym_test(uint64_t s0, uint64_t s1)
     uint32_t r = 0;
 
     reset_generators(s0,s1);
-    t = (rng_f32()-0.5f)*0.2;
+    t = rng_f32();
     
     quat_qr_p(&A);
     quat_qr_p(&B);
@@ -1502,6 +1636,26 @@ void inc_test(uint64_t s0, uint64_t s1)
 {
 }
 
+void error_line(quat_t* E, quat_t* A, quat_t* B, float t, uint32_t s)
+{
+  quat_t R,D;
+  
+  printf("%15s: ", funcs[s].name);
+  funcs[s].f(&R, A, B, t);
+  float  a = a_error(&R, E);
+
+  quat_print(&R);
+  quat_print(A);
+  quat_print(B);
+  printf(" : %f\n%17s", a,": ");
+  
+  quat_sub(&D,E,&R);
+  quat_print(E);
+  quat_printa(&D);
+  printf("[ %f ]\n",t);
+}
+
+
 void spot_dump(uint64_t s0, uint64_t s1)
 {
   quat_t A,B,E;
@@ -1522,7 +1676,7 @@ void spot_dump(uint64_t s0, uint64_t s1)
     slerp_func_t slerp = funcs[s].f;
     quat_t R,D;
 
-    printf("%15s : ", funcs[s].name);
+    printf("%15s: ", funcs[s].name);
     quat_set(&R,0,0,0,0);  // make macro
     slerp(&R, &A,  &B,  t);
     float  a = a_error(&R,&E);
@@ -1541,33 +1695,48 @@ static inline float dot_flatten(float d)
   d = (d <= 1.f) ? d : 2.f-d;
   d = d/sqrtf((1-d)*(1+d));
 }
+#endif
 
 void brute_force_error(uint64_t s0, uint64_t s1)
 {
   quat_t A,B,NA,NB;
-  float  t;
+  quat_t R0,R1;
+  float  t,mt;
 
   printf("* brute_force\n");
-
-  for(uint32_t s=0; s<NUM_FUNCS_NW; s++) {
+  mt = 0.f;
+  
+  for(uint32_t s=0; s<NUM_FUNCS; s++) {
     slerp_func_t slerp = funcs[s].f;
-    uint32_t r = 0;
+  //uint32_t r = 0;
+    float  e = 0.f;
 
     reset_generators(s0,s1);
     
     for(uint32_t i=0; i<SYM_TRIALS; i++) {
-      quat_t R0,R1,R2,R3;      
+      float  d;
 
-      t = (rng_f32()-0.5f)*0.2;
+      t = rng_f32();
       quat_qr_p(&A);
       quat_qr_p(&B);
+      slerp_ref_ref(&R0, &A, &B, t);
+      slerp(&R1, &A, &B, t);
 
-      
-      slerp(&R0, &A,  &B,  t);
+      d = a_error(&R0, &R1);
+
+      if (d > e) {
+	mt = t;
+	quat_dup(&NA,&A);
+	quat_dup(&NB,&B);
+	e = d;
+      }
     }
+
+    slerp_ref_ref(&R0, &NA, &NB, mt);
+    error_line(&R0, &NA, &NB, mt, s);
   }
 }
-#endif
+
 
 int main()
 {
@@ -1575,14 +1744,15 @@ int main()
   uint64_t s1;
   
   {
-    s0 = __rdtsc();
+    s0 = _rdtsc();
     s1 = 0x1234567;
   }
 
   printf("SANITY TESTS\n");
   //sym_test(s0,s1); 
   //ortho_test(s0,s1); 
-  spot_dump(s0,s1);
+  //spot_dump(s0,s1);
+  brute_force_error(s0,s1);
 
   return 0;
 }

@@ -140,3 +140,9 @@ procedure scale_list_to_f32(l,s)
   return r;
 };
 };
+
+// for error testing
+
+procedure fma(a,b,c)  { double(a*b+c); };
+procedure fmaf(a,b,c) { single(a*b+c); };
+
