@@ -223,7 +223,7 @@ procedure plotly_abs_error_trace(s, tname)
 
 procedure plotly_rel_error_trace(s, tname)
 {
-  return plotly_make_trace(1-s._poly(x)/s._func(x), s._range, _plotly._points, tname, "lines");
+  return plotly_make_trace(s._poly(x)/s._func(x)-1, s._range, _plotly._points, tname, "lines");
 };
 
 // add an error trace to current figure
@@ -518,10 +518,14 @@ procedure _plotly_build_page(page)
     // place the figure
     t = s_get_string_field(f, "_fig_width", _plotly._fig_width);
     s = s @ "\n<div id='fig" @ i @ "' style='width:" @ t @ "'></div>\n";
+    
+    // foo
+    for j from 0 to nt do {
+    };
   };
 
   
-   plotly_debug_print("  plot.ly:");
+  plotly_debug_print("  plot.ly:");
 
 
   s = s @ "\n\n<script>\n";
@@ -532,11 +536,14 @@ procedure _plotly_build_page(page)
     var bt,a;
     var func;
 
-    func = plotly_abs_error_trace;
-
     f  = page._figs[i];
     nt = length(f._approx)-1;
-    //bt = 
+
+    if (f._approx[0]._min_type == relative) then {
+      func = plotly_rel_error_trace;
+    } else {
+      func = plotly_abs_error_trace;
+    };
 
     for j from 0 to nt do {
       a = f._approx[j];
