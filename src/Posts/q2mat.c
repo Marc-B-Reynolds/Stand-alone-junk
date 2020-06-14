@@ -233,6 +233,28 @@ void quat_to_mat33_ndr(mat33_t* m, quat_t* q)
   m->m21 = yz+wx; m->m12 = yz-wx;
 }
 
+
+// alternate conversion w/o diagonal reduction (double promote)
+void quat_to_mat33_ndr_d(mat33_t* m, quat_t* q)
+{
+  double x  = q->x, y  = q->y, z  = q->z, w  = q->w;
+  double xx = x*x,  yy = y*y,  zz = z*z,  ww = w*w;   // error free
+  double tx = 2*x,  ty = 2*y,  tz = 2*z;              // error free
+  double xy = ty*x, xz = tz*x, yz = ty*z;
+  double wx = tx*w, wy = ty*w, wz = tz*w;
+  double t0 = ww-zz;
+  double t1 = xx-yy;
+  
+  m->m00 = (float)(t0+t1);
+  m->m11 = (float)(t0-t1);
+  m->m22 = (float)(ww-xx-yy+zz);
+
+  m->m10 = (float)(xy+wz); m->m01 = (float)(xy-wz);
+  m->m20 = (float)(xz-wy); m->m02 = (float)(xz+wy);
+  m->m21 = (float)(yz+wx); m->m12 = (float)(yz-wx);
+}
+
+
 // alternate conversion w/o diagonal reduction (diagonal)
 void quat_to_mat33_ndr_3(mat33_t* m, quat_t* q)
 {
@@ -838,9 +860,9 @@ q2m_t q2m[] =
 {
  {.f=&quat_to_mat33_std,     .name="standard"},
  {.f=&quat_to_mat33_ndr,     .name="no diagonal reduction"},
+ {.f=&quat_to_mat33_ndr_d,   .name="no diagonal reduction (dp)"},
  {.f=&quat_to_mat33_ndr_3,   .name="no diagonal reduction (factor 1)"},
  {.f=&quat_to_mat33_ndr_fma, .name="no diagonal reduction (fma)"},
- {.f=&quat_to_mat33_foo,     .name="hack"},
 };
 
 typedef void(*mat33_to_quat_t)(quat_t*, mat33_t*);
@@ -952,7 +974,8 @@ int main(void)
   //test(0,6);
   //test(1,6);
   //test(0,7);
-  test(0,8);
+  //test(0,8);
   test(1,8);
+  test(2,8);
 #endif  
 }
