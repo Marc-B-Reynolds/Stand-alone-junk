@@ -19,6 +19,13 @@ inline float f32_from_bits(uint32_t x)
   float f; memcpy(&f, &x, 4); return f;
 }
 
+// converts input to IEEE bit pattern and XOR's them
+inline uint32_t f32_xor(float a, float b)
+{
+  return f32_to_bits(a)^f32_to_bits(b);
+}
+
+
 // x >=0 ? 1.0 : -1.f
 inline float f32_sgn(float x) { return copysignf(1.f,x); }
 
@@ -40,6 +47,12 @@ inline void f32_2sum(f3_pair_t* p, float a, float b)
   p->l = y;
 }
 
+// (1-t)a + tb
+// should be two fma ops
+inline float f32_lerp(float t, float a, float b)
+{
+  return fmaf(t,b,-fmaf(t,a,-a));
+}
 
 // (a*b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
