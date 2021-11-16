@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // Toy code for:
-// http://marc-b-reynolds.github.io
+// http://marc-b-reynolds.github.io/math/2017/04/18/TaitEuler.html
 
 // ex. requirements:
 // * quaternion header
@@ -17,6 +17,10 @@
 //    * ONLY_METHOD_0 for common case
 //    * ONLY_NOT_METHOD_0 for other case(s)
 //    * neither ONLY_* defined for overall
+//
+// As a part of error testing the conversion routines which
+// follow multiple paths return a number to indicate the
+// computation performed for the result.
 
 #include <stdint.h>
 #include <stdio.h>
@@ -31,8 +35,8 @@
 
 // number of trials to run per test
 //#define SYM_TRIALS (0x07FFFFFF<<2)
-#define SYM_TRIALS 0x07FFFFFF
-//#define SYM_TRIALS 0x00FFFFFF
+//#define SYM_TRIALS 0x07FFFFFF
+#define SYM_TRIALS 0x00FFFFFF
 
 // if undef repeats same sequence each run
 //#define RANDOMIZE
@@ -643,9 +647,9 @@ uint32_t original_d(vec3_t* v, quat_t* q)
 uint32_t revision_1(vec3_t* v, quat_t* q)
 {
   double x=q->x, y=q->y, z=q->z, w=q->w;
-  
-  double t0 = x*x-z*z;
-  double t1 = w*w-y*y;
+
+  double t0 = (x+z)*(x-z);
+  double t1 = (w+y)*(w-y);
   double xx = 0.5*(t0+t1);
   double xy = x*y+w*z;
   double xz = w*y-x*z;
@@ -685,9 +689,8 @@ inline double f64_mma(double a, double b, double c, double d)
 uint32_t revision_1_fma(vec3_t* v, quat_t* q)
 {
   double x=q->x, y=q->y, z=q->z, w=q->w;
-  
-  double t0 = f64_mms(x,x,z,z);
-  double t1 = f64_mms(w,w,y,y);
+  double t0 = (x+z)*(x-z);
+  double t1 = (w+y)*(w-y);
   double xx = 0.5*(t0+t1);
   double xy = f64_mma(x,y,w,z);
   double xz = f64_mms(w,y,x,z);
@@ -707,17 +710,18 @@ uint32_t revision_1_fma(vec3_t* v, quat_t* q)
 }    
 
 
+// dropped down to binary32
 uint32_t revision_1_fma_s(vec3_t* v, quat_t* q)
 {
   float x=q->x, y=q->y, z=q->z, w=q->w;
   
-  float t0 = f32_mms(x,x,z,z);
-  float t1 = f32_mms(w,w,y,y);
+  float t0 = (x+z)*(x-z);
+  float t1 = (w+y)*(w-y);
   float xx = 0.5f*(t0+t1);
   float xy = f32_mma(x,y,w,z);
   float xz = f32_mms(w,y,x,z);
   float yz = 2.f*(f32_mma(y,z,w,x));
-  float t  = f32_mma(xx,xx,xy,xy);
+  float t  = xx*xx+xy*xy;
 
   v->z = atan2f(xy, xx);
   v->y = atanf(xz/sqrtf(t));
@@ -739,8 +743,8 @@ uint32_t revision_1x(vec3_t* v, quat_t* q)
 
   double a = x-z, b = x+z;
   double c = w-y, d = w+y;
-  double t0 = a*b;
-  double t1 = c*d;
+  double t0 = a*b;              // x^2-z^2
+  double t1 = c*d;              // w^2-y^2
   double xx = 0.5*(t0+t1);
   double xy = x*y+w*z;
   double xz = w*y-x*z;
@@ -775,27 +779,30 @@ uint32_t revision_1x(vec3_t* v, quat_t* q)
 //   10000 : 0.000089 : 0.999367
 //  100000 : 0.000049 : 0.990194
 // 1000000 : 0.000039 : 0.888527
+
 uint32_t revision_1s(vec3_t* v, quat_t* q)
 {
   float x=q->x, y=q->y, z=q->z, w=q->w;
 
-  float t0 = x*x-z*z;
-  float t1 = w*w-y*y;
-  float xx = 0.5f*(t0+t1);  //     x'_x
-  float xy = x*y+w*z;       // 1/2 x'_y
-  float xz = w*y-x*z;       // 1/2 x'_z
+  float t0 = (x+z)*(x-z);
+  float t1 = (w+y)*(w-y);
+  float xx = 0.5f*(t0+t1);
+  float xy = x*y+w*z;
+  float xz = w*y-x*z;
+  float yz = 2.f*(y*z+w*x);
   float t  = xx*xx+xy*xy;
 
   v->z = atan2f(xy, xx);
   v->y = atanf(xz/sqrtf(t));
-  
-  if (fabsf(t) >= 5000.f*ULP1) {
-    float yz = 2.f*(y*z+w*x);
+
+  // result is only good as per table above
+  if (fabsf(t) >= 1000.f*ULP1) {
     v->x = atan2f(yz, t1-t0);
     return 0;
   }
-  
-  v->x = (float)(2.0*atan2(x,w));
+
+  // this is a garbage result in binary32
+  v->x = 2.f*atan2f(x,w) - sgn(xz)*v->z;
   return 1;
 }    
 
@@ -807,8 +814,8 @@ uint32_t revision_2s(vec3_t* v, quat_t* q)
   {
     float x=q->x, y=q->y, z=q->z, w=q->w;
     
-    float t0 = x*x-z*z;
-    float t1 = w*w-y*y;
+    float t0 = (x+z)*(x-z);   // x^2-z^2
+    float t1 = (w+y)*(w-y);   // w^2-y^2
     float xx = 0.5f*(t0+t1);  //     x'_x
     float xy = x*y+w*z;       // 1/2 x'_y
     float xz = w*y-x*z;       // 1/2 x'_z
@@ -846,7 +853,58 @@ uint32_t revision_2s(vec3_t* v, quat_t* q)
   return 2;
 }    
 
+
+// goofying with "fast path" version that attempts
+// to avoid using fma.
+uint32_t revision_3s(vec3_t* v, quat_t* q)
+{
+  float x=q->x, y=q->y, z=q->z, w=q->w;
+  
+  float t0 = (x+z)*(x-z);   // x^2-z^2
+  float t1 = (w+y)*(w-y);   // w^2-y^2
+  float xx = 0.5f*(t0+t1);  //     x'_x
+  float xy = x*y+w*z;       // 1/2 x'_y
+  float xz = w*y-x*z;       // 1/2 x'_z
+  float t  = xx*xx+xy*xy;
+  float yz;
+  
+  if (fabsf(t) >= 0x1p-6f) {
+    // taken: ~72,79.6,83.9%  (1/16,1/32,1/64)
+    yz = 2.f*(y*z+w*x);
+    v->z = atan2f(xy, xx);
+    v->y = atanf(xz/sqrtf(t));
+    v->x = atan2f(yz, t1-t0);
+    return 0;
+  }
+
+  // repeating the above computation using fma.
+  // need to check compiler is reusing the subexpressions
+  xy = f32_mma(x,y,w,z);
+  xz = f32_mms(w,y,x,z);
+  yz = 2.f*(f32_mma(y,z,w,x));
+  t  = xx*xx+xy*xy;
+
+  v->z = atan2f(xy, xx);
+  v->y = atanf(xz/sqrtf(t));
+
+  if (t != 0) {
+    // taken: ~27.9,20.1,16.7% (1/16,1/32,1/64)
+    v->x = atan2f(yz, t1-t0);
+    return 1;
+  }
+
+  v->x = 2.f*atan2f(x,w) - sgn(xz)*v->z;
+  return 2;
+}    
+
+
+
+
+
+
 //**** ZXZ
+// can't be bothered to play with this since it's a
+// very uncommon format
 
 uint32_t quat_to_zxz(vec3_t* v, quat_t* q)
 {
@@ -868,6 +926,7 @@ uint32_t quat_to_zxz(vec3_t* v, quat_t* q)
 
   return 1; 
 }
+
 
 // pointer to quaternion generator
 typedef void (*qgen_t)(quat_t*);
@@ -933,10 +992,11 @@ maps_t maps[] =
   //DEF(original_fma)
   //DEF(revision_1),
   //DEF(revision_1_fma)
-  DEF(revision_1_fma_s)
+  //DEF(revision_1_fma_s)
   //DEF(revision_1x)
   //DEF(revision_1s)
   //DEF(revision_2s)
+  DEF(revision_3s)
 #else
    DEF(quat_to_zxz)
 #endif  
@@ -1120,7 +1180,7 @@ void error_dump()
     f(&v, q);
     DECODE(&r, &v);
 
-    printf("global max: %f, mag-error: %e ",m, fabs(1.0-m_error(q)));
+    printf("global max: %e, mag-error: %e ",m, fabs(1.0-m_error(q)));
     
     printf("\n  orig   roll/pitch/yaw  recon\n");
     quat_print(q); vec3_print(&v); quat_print(&r);
@@ -1214,9 +1274,9 @@ void rt_test(uint64_t s0, uint64_t s1)
 	  vec3_print(&zyx);
 	  quat_print(&r);
 
-	  vec3_t xp;
-	  quat_local_x(&xp,&q);
-	  vec3_print(&xp);
+	  //vec3_t xp;
+	  //quat_local_x(&xp,&q);
+	  //vec3_print(&xp);
 	  printf("\n");
 	}
       }

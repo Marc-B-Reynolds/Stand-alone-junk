@@ -237,14 +237,14 @@ void map_con_sd(vec2_t* d, vec2_t* s)
   if (fabsf(x) > fabsf(y)) {
     float r = recip(x);
     t = sinf(0.25f*PI*(y*r));
-    d->x = x*sqrtf(1.f-t*t); // longer dep-chain this way (showing correctness)
+    d->x = x*sqrtf((1.f+t)*(1.f-t)); // longer dep-chain this way (showing correctness)
     d->y = x*t;
   }
   else {
     float r = recip(y+EPS);
     t = sinf(0.25f*PI*(x*r));
     d->x = y*t;
-    d->y = y*sqrtf(1.f-t*t);   // ditto
+    d->y = y*sqrtf((1.f+t)*(1.f-t));   // ditto
   }
 }
 

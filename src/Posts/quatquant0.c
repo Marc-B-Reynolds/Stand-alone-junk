@@ -1383,8 +1383,8 @@ void quat_to_zyx(vec3_t* v, quat_t* q)
 {
   double x=q->x, y=q->y, z=q->z, w=q->w;
   
-  double t0 = x*x-z*z;
-  double t1 = w*w-y*y;
+  double t0 = (x+z)*(x-z);
+  double t1 = (w+y)*(w-y);
   double xx = 0.5*(t0+t1);
   double xy = x*y+w*z;
   double xz = w*y-x*z;
