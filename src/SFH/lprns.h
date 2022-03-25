@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2017
+// Marc B. Reynolds, 2017-2022
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef LPRNS_H
@@ -6,6 +6,9 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifdef __emacs_hack
+}  
+#endif  
 #endif
 
 // comments after constants: prime factorization, population count

@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2021
+// Marc B. Reynolds, 2016-2022
 // Public Domain under http://unlicense.org, see link for details.
 //
 // This is utter junk example code for some posts.
@@ -9,38 +9,46 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifdef __emacs_hack
+}  
+#endif  
 #endif
+
+#include "vec3.h"  
 
 #ifndef QUAT_ATAN2
 #define QUAT_ATAN2(Y,X) atan2f(Y,X)
 #endif
 
 #ifndef QUAT_SQRT
-#define QUAT_SQRT(X) sqrtf(X)
+#define QUAT_SQRT(X) __builtin_sqrtf(X)
 #endif
 
 #ifndef QUAT_RSQRT
 #define QUAT_RSQRT(X) (1.f/QUAT_SQRT(X))
+#define QURT_RSQRT_VIA_SQRT
 #endif
 
   
+static inline float quat_util_sgn_f32(float x) { return copysignf(1.f,x); }  
+
 // temp hack
 #if 0
 #include "xmmintrin.h"
 
 // for error computations of using native ~1/sqrt without fixup
-inline float rsqrtf_a(float x) 
+static inline float rsqrtf_a(float x) 
 {
   return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x)));
 }
 
-inline float rsqrtf_nr(float x)
+static inline float rsqrtf_nr(float x)
 {
   float  x0 = rsqrtf_a(x);
   return x0*(1.5f - 0.5f*x*x0*x0);
 }  
 
-inline float rsqrtf_nr2(float x)
+static inline float rsqrtf_nr2(float x)
 {
   float x0;
   x0 = rsqrtf_a(x);
@@ -50,18 +58,18 @@ inline float rsqrtf_nr2(float x)
 }
 
 // for error computations of using native ~1/x without fixup
-inline float rcp_a(float x) 
+static inline float rcp_a(float x) 
 {
   return _mm_cvtss_f32(_mm_rcp_ss(_mm_set_ss(x)));
 }
 
-inline float rcp_nr(float x) 
+static inline float rcp_nr(float x) 
 {
   float x0 = rcp_a(x);
   return x0*(2.f - x*x0);
 }
 
-inline float rsqrt_nr2(float x)
+static inline float rsqrt_nr2(float x)
 {
   float x0;
   x0 = rcp_a(x);
@@ -72,6 +80,8 @@ inline float rsqrt_nr2(float x)
 
 #endif
 
+
+  
 // another temp hack
 #define AX a->x
 #define AY a->y
@@ -82,25 +92,6 @@ inline float rsqrt_nr2(float x)
 #define BZ b->z
 #define BW b->w
 
-#include "vec2.h"
-  
-
-// SEE: marc-b-reynolds.github.io/quaternions/2016/07/06/Orthonormal.html
-// for math and other versions
-inline void vec3_ortho_basis(vec3_t* v, vec3_t* xp, vec3_t* yp)
-{
-  // this assumes v->z not approaching -z
-  float x = -v->x;
-  float y =  v->y;
-  float z =  v->z;
-  
-  float a = y/(1.f + z);
-  float b = y*a;
-  float c = x*a;
-  
-  vec3_set(xp, z+b, c,      x);
-  vec3_set(yp, c,   1.f-b, -y);
-}
   
 
 //------------------
@@ -112,69 +103,79 @@ typedef union {
 } quat_t;
 
 
-#define QUAT_BO(OP)    \
-  r->x = a->x OP b->x; \
-  r->y = a->y OP b->y; \
-  r->z = a->z OP b->z; \
-  r->w = a->w OP b->w;
-
-#define QUAT_UO(OP) \
-  r->x = OP a->x;   \
-  r->y = OP a->y;   \
-  r->z = OP a->z;   \
-  r->w = OP a->w;
-
-inline void quat_bv_zero(quat_t* r)
-{
-  vec3_zero(&(r->b));
-}
-
-inline void quat_one(quat_t* r)
-{
-  quat_bv_zero(r); r->w = 1.f;
-}
-
-inline void quat_add(quat_t* r, quat_t* a, quat_t* b) { QUAT_BO(+) }
-inline void quat_sub(quat_t* r, quat_t* a, quat_t* b) { QUAT_BO(-) }
-
-inline void quat_neg(quat_t* r, quat_t* a)            { QUAT_UO(-) }
-
-inline void quat_set(quat_t* r, float x, float y, float z, float w)
+static inline void quat_set(quat_t* r, float x, float y, float z, float w)
 {
   r->x=x; r->y=y; r->z=z; r->w=w;
 }
 
-inline void quat_dup(quat_t* r, quat_t* a)
+#define QUAT_DEF_SET(V,X,Y,Z,W) quat_t V = {.x=(X),.y=(Y),.z=(Z),.w=(W)}
+
+  
+#define QUAT_BO(OP) \
+  r->x = AX OP BX;  \
+  r->y = AY OP BY;  \
+  r->z = AZ OP BZ;  \
+  r->w = AW OP BW;
+
+#define QUAT_UO(OP) \
+  r->x = OP AX;     \
+  r->y = OP AY;     \
+  r->z = OP AZ;     \
+  r->w = OP AW;
+
+static inline void quat_bv_zero(quat_t* r)
 {
-  quat_set(r, a->x,a->y,a->z,a->w);
+  vec3_zero(&(r->b));
+}
+
+static inline void quat_one(quat_t* r)
+{
+  quat_bv_zero(r); r->w = 1.f;
+}
+
+static inline void quat_add(quat_t* r, quat_t* a, quat_t* b) { QUAT_BO(+) }
+static inline void quat_sub(quat_t* r, quat_t* a, quat_t* b) { QUAT_BO(-) }
+
+static inline void quat_neg(quat_t* r, quat_t* a)            { QUAT_UO(-) }
+
+
+static inline void quat_set_id(quat_t* r)
+{
+  quat_set(r,0.f,0.f,0.f,1.f);
+}  
+
+static inline void quat_dup(quat_t* r, quat_t* a)
+{
+  quat_set(r, AX,AY,AZ,AW);
 }
 
 // in-place conjugation: a^*
-inline void quat_conj(quat_t* a)
+static inline void quat_conj(quat_t* a)
 {
-  a->x = -a->x;
-  a->y = -a->y;
-  a->z = -a->z;
+  AX = -AX;
+  AY = -AY;
+  AZ = -AZ;
 }
 
-inline void quat_nconj(quat_t* a)
+// in-place -a^*
+static inline void quat_nconj(quat_t* a)
 {
-  a->w = -a->w;
+  AW = -AW;
 }
   
-inline float quat_bdot(quat_t* a, quat_t* b)
+static inline float quat_bdot(quat_t* a, quat_t* b)
 {
   return vec3_dot(&(a->b), &(b->b));
 }
 
-inline float quat_bnorm(quat_t* a)
+static inline float quat_bnorm(quat_t* a)
 {
   return vec3_norm(&(a->b));
 }
 
-inline float quat_dot(quat_t* a, quat_t* b)
+static inline float quat_dot(quat_t* a, quat_t* b)
 {
-  return quat_bdot(a,b)+a->w*b->w;
+  return quat_bdot(a,b)+AW*BW;
 }
 
 // angle in H wrt positive real. quite different
@@ -184,18 +185,20 @@ float quat_angle(quat_t* q)
   return QUAT_ATAN2(QUAT_SQRT(quat_bnorm(q)), q->w);
 }
 
+  // TODO: mma/mms mul/bac variants
+  
 // AB
-inline void quat_mul(quat_t* r, quat_t* a, quat_t* b)
+static inline void quat_mul(quat_t* r, quat_t* a, quat_t* b)
 {
-  float x = a->w*b->x + a->x*b->w + a->y*b->z - a->z*b->y;  
-  float y = a->w*b->y - a->x*b->z + a->y*b->w + a->z*b->x;
-  float z = a->w*b->z + a->x*b->y - a->y*b->x + a->z*b->w;
-  float w = a->w*b->w - a->x*b->x - a->y*b->y - a->z*b->z;
+  float x = AW*BX + AX*BW + AY*BZ - AZ*BY;  
+  float y = AW*BY - AX*BZ + AY*BW + AZ*BX;
+  float z = AW*BZ + AX*BY - AY*BX + AZ*BW;
+  float w = AW*BW - AX*BX - AY*BY - AZ*BZ;
   quat_set(r,x,y,z,w);
 }
 
 // BA^*
-inline void quat_bac(quat_t* r, quat_t* a, quat_t* b)
+static inline void quat_bac(quat_t* r, quat_t* a, quat_t* b)
 {
   float x = -AX*BW + AW*BX - AZ*BY + AY*BZ;
   float y = -AY*BW + AZ*BX + AW*BY - AX*BZ;
@@ -205,40 +208,50 @@ inline void quat_bac(quat_t* r, quat_t* a, quat_t* b)
 }
 
 // R = sa A + ab B
-inline void quat_wsum(quat_t* r, quat_t* a, quat_t* b, float sa, float sb)
+static inline void quat_wsum(quat_t* r, quat_t* a, quat_t* b, float sa, float sb)
 {
-  float x = sa*a->x + sb*b->x;
-  float y = sa*a->y + sb*b->y;
-  float z = sa*a->z + sb*b->z;
-  float w = sa*a->w + sb*b->w;
+  float x = sa*AX + sb*BX;
+  float y = sa*AY + sb*BY;
+  float z = sa*AZ + sb*BZ;
+  float w = sa*AW + sb*BW;
   quat_set(r,x,y,z,w);
 }
-  
-inline float quat_bv_norm(quat_t* r) { return quat_bdot(r,r); }
-inline float quat_norm(quat_t* r)  { return quat_dot(r,r); }
 
-inline void quat_bv_scale(quat_t* r, float s)
+static inline void quat_wsum_hq(quat_t* r, quat_t* a, quat_t* b, float sa, float sb)
+{
+  float x = f32_mma(sa,AX, sb,BX);
+  float y = f32_mma(sa,AY, sb,BY);
+  float z = f32_mma(sa,AZ, sb,BZ);
+  float w = f32_mma(sa,AW, sb,BW);
+  quat_set(r,x,y,z,w);
+}
+
+  
+static inline float quat_bv_norm(quat_t* r) { return quat_bdot(r,r); }
+static inline float quat_norm(quat_t* r)    { return quat_dot(r,r); }
+
+static inline void quat_bv_scale(quat_t* r, float s)
 {
   vec3_scale(&(r->b), s);
 }
 
-inline void quat_scale(quat_t* r, float s)
+static inline void quat_scale(quat_t* r, float s)
 {
   vec3_scale(&(r->b), s);
   r->w *= s;
 }
 
-inline void quat_bv_set_scale(quat_t* r, vec3_t* v, float s)
+static inline void quat_bv_set_scale(quat_t* r, vec3_t* v, float s)
 {
   vec3_set_scale(&(r->b), v, s);
 }
 
-inline void quat_put_bv(vec3_t* v, quat_t* q, float s)
+static inline void quat_put_bv(vec3_t* v, quat_t* q, float s)
 {
   vec3_set_scale(v, &(q->b), s);
 }  
 
-inline void quat_sq(quat_t* q)
+static inline void quat_sq(quat_t* q)
 {
   float w = q->w;
   float d = quat_bv_norm(q);
@@ -246,7 +259,7 @@ inline void quat_sq(quat_t* q)
   q->w = w*w-d;
 }
 
-inline void quat_upow2(quat_t* q)
+static inline void quat_upow2(quat_t* q)
 {
   float w = q->w;
   float t = 2.f*w;
@@ -256,7 +269,7 @@ inline void quat_upow2(quat_t* q)
   
 // Q = cos(t)+sin(t)U, |Q|=1
 // sqrt(Q) = cos(t/2) + sin(t/2)U
-inline void quat_usqrt(quat_t* q)
+static inline void quat_usqrt(quat_t* q)
 {
   float d = 1.f + q->w;
   float s = QUAT_RSQRT(d+d);
@@ -264,9 +277,18 @@ inline void quat_usqrt(quat_t* q)
   q->w = d*s;
 }
 
+// slerp(a,b,1/2)
+static inline void quat_bisect(quat_t* r, quat_t* a, quat_t* b)
+{
+  float d  = quat_dot(a,b);
+  float sa = QUAT_RSQRT(2.f+2.f*fabsf(d));
+  float sb = quat_util_sgn_f32(d)*sa;
+  quat_wsum(r,a,b,sa,sb);
+}  
+
 // SEE: marc-b-reynolds.github.io/XX
 // Q = sqrt(ba^*)
-inline void quat_from_normals(quat_t* q, vec3_t* a, vec3_t* b)
+static inline void quat_from_normals(quat_t* q, vec3_t* a, vec3_t* b)
 {
   // this assumes b not approaching -a
   vec3_t v;
@@ -277,8 +299,10 @@ inline void quat_from_normals(quat_t* q, vec3_t* a, vec3_t* b)
   q->w = s*d;
 }
 
+// TODO: fma version
+  
 // QvQ^*
-inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
+static inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
 {
   float k0 = q->w*q->w - 0.5f;
   float k1 = vec3_dot(v, &q->b);
@@ -296,7 +320,7 @@ inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
 }
 
 // sqrt(Q), |Q|=1, Q.1 >= 0, return bivector part
-inline void quat_fha(vec3_t* v, quat_t* q)
+static inline void quat_fha(vec3_t* v, quat_t* q)
 {
   float d = 1.f + q->w;
   float s = QUAT_RSQRT(d+d);
@@ -304,7 +328,7 @@ inline void quat_fha(vec3_t* v, quat_t* q)
 }
 
 // inverse half-angle from bivector part
-inline void quat_iha(quat_t* q, vec3_t* v)
+static inline void quat_iha(quat_t* q, vec3_t* v)
 {
   float d = vec3_norm(v);
   float s = QUAT_SQRT(1.f-d);
@@ -313,26 +337,30 @@ inline void quat_iha(quat_t* q, vec3_t* v)
 }
 
 // forward Cayley: |Q|=1, Q.1 >= 0
-inline void quat_fct(vec3_t* v, quat_t* q)
+static inline void quat_fct(vec3_t* v, quat_t* q)
 {
   float s = 1.f/(1.f+q->w);
   quat_put_bv(v,q,s);
 }
 
 // inverse Cayley: Q.1 = 0
-inline void quat_ict(quat_t* q, vec3_t* v)
+static inline void quat_ict(quat_t* q, vec3_t* v)
 {
   float s = 2.f/(1.f+vec3_norm(v));
   quat_bv_set_scale(q,v,s);
   q->w = s-1.f;
 }
 
-inline int quat_in_cos_delta(quat_t* a, quat_t* b, float cosd) 
+static inline int quat_in_cos_delta(quat_t* a, quat_t* b, float cosd) 
 {
   return quat_dot(a,b) >= cosd;
 }
 
-inline void quat_local_x(vec3_t* v, quat_t* q)
+// TODO: fma 
+// sigh: change 1-(a^2+b^2) terms to opposite set?
+//   except that requires w^2 term
+
+static inline void quat_local_x(vec3_t* v, quat_t* q)
 {
   float ty = 2.f * q->y;
   float tz = 2.f * q->z;
@@ -346,7 +374,7 @@ inline void quat_local_x(vec3_t* v, quat_t* q)
   vec3_set(v, 1.f-(yy+zz), xy+wz, xz-wy);
 }
 
-inline void quat_local_y(vec3_t* v, quat_t* q)
+static inline void quat_local_y(vec3_t* v, quat_t* q)
 {
   float tx = 2.f * q->x;
   float tz = 2.f * q->z;
@@ -360,7 +388,7 @@ inline void quat_local_y(vec3_t* v, quat_t* q)
   vec3_set(v, xy-wz, 1.f-(xx+zz), wx+yz);
 }
 
-inline void quat_local_z(vec3_t* v, quat_t* q)
+static inline void quat_local_z(vec3_t* v, quat_t* q)
 {
   float tx = 2.f*q->x, ty = 2.f*q->y;
   float xx = tx *q->x, yy = ty *q->y, xz = tx*q->z;
@@ -368,7 +396,7 @@ inline void quat_local_z(vec3_t* v, quat_t* q)
   vec3_set(v, wy+xz, yz-wx, 1.f-(xx+yy));
 }
 
-inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
+static inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
 {
   float tx = 2.f*q->x, ty = 2.f*q->y, tz = 2.f*q->z;
   float xx = tx *q->x, yy = ty *q->y, zz = tz *q->z;
@@ -379,8 +407,17 @@ inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
   vec3_set(Y, xy-wz, 1.f-(xx+zz), wx+yz);
   vec3_set(Z, wy+xz, yz-wx, 1.f-(xx+yy));
 }
-  
-  
+
+// quat_map_{a}to{b} rotates bivector part a to b:  let t=sqrt(ba^*) q=tat^*
+//   this is for variable rename. implement WRT to one and expand other variants.
+static inline void quat_map_x2y(quat_t* q, quat_t* a) { quat_set(q,-AY, AX, AZ, AW); }
+static inline void quat_map_x2z(quat_t* q, quat_t* a) { quat_set(q,-AZ, AY, AX, AW); }
+static inline void quat_map_y2x(quat_t* q, quat_t* a) { quat_set(q, AY,-AX, AZ, AW); }
+static inline void quat_map_y2z(quat_t* q, quat_t* a) { quat_set(q, AX,-AZ, AY, AW); }
+static inline void quat_map_z2x(quat_t* q, quat_t* a) { quat_set(q, AZ, AY,-AX, AW); }
+static inline void quat_map_z2y(quat_t* q, quat_t* a) { quat_set(q, AX, AZ,-AY, AW); }
+
+
 #if defined(QUAT_IMPLEMENTATION)
 #else
 #endif
@@ -397,6 +434,5 @@ inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
 #ifdef __cplusplus
 extern }
 #endif
-
 
 #endif

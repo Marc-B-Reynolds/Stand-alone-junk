@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016
+// Marc B. Reynolds, 2016-2022
 // Public Domain under http://unlicense.org, see link for details.
 //
 // SEE: http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html
@@ -8,6 +8,9 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifdef __emacs_hack
+}  
+#endif  
 #endif
 
 #if defined(LCGS_64)
@@ -15,12 +18,12 @@ extern "C" {
 #define LCGS_SINT int64_t
 #if !defined(LCGS_MF)
 #if defined(LCGS_MLCG)
-#define LCGS_MF 0x106689d45497fdb5L 
-#define LCGS_MR 0xbb91f78bdac4c89dL
+#define LCGS_MF UINT64_C(0x106689d45497fdb5)
+#define LCGS_MR UINT64_C(0xbb91f78bdac4c89d)
 #else
-#define LCGS_MF 0x27bb2ee687b0b0fdL
-#define LCGS_MR 0xdfe66807999cec55L
-#define LCGS_AF 0x1234567L
+#define LCGS_MF UINT64_C(0x27bb2ee687b0b0fd)
+#define LCGS_MR UINT64_C(0xdfe66807999cec55)
+#define LCGS_AF UINT64_C(0x1234567)
 #endif
 #endif
 #else  

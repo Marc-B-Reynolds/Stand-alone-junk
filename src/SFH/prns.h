@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2013-2016
+// Marc B. Reynolds, 2013-2022
 // Public Domain under http://unlicense.org, see link for details.
 //
 // Documentation: http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html
@@ -8,6 +8,9 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifdef __emacs_hack
+}  
+#endif  
 #endif
 
 
@@ -15,12 +18,12 @@ typedef struct { uint64_t i; } prns_t;
 
 
 #ifndef PRNS_WEYL
-#define PRNS_WEYL   0x61c8864680b583ebL
-#define PRNS_WEYL_I 0x0e217c1e66c88cc3L
+#define PRNS_WEYL   UINT64_C(0x61c8864680b583eb)
+#define PRNS_WEYL_I UINT64_C(0x0e217c1e66c88cc3)
 #endif
 
 #ifndef PRNS_WEYL_D
-#define PRNS_WEYL_D 0x4f1bbcdcbfa54001L
+#define PRNS_WEYL_D UINT64_C(0x4f1bbcdcbfa54001)
 #endif
 
 #ifndef PRNS_MIX_S0
@@ -28,14 +31,14 @@ typedef struct { uint64_t i; } prns_t;
 #define PRNS_MIX_S0 30
 #define PRNS_MIX_S1 27
 #define PRNS_MIX_S2 31
-#define PRNS_MIX_M0 0xbf58476d1ce4e5b9L
-#define PRNS_MIX_M1 0x94d049bb133111ebL
+#define PRNS_MIX_M0 UINT64_C(0xbf58476d1ce4e5b9)
+#define PRNS_MIX_M1 UINT64_C(0x94d049bb133111eb)
 #else
 #define PRNS_MIX_S0 31
 #define PRNS_MIX_S1 27
 #define PRNS_MIX_S2 33
-#define PRNS_MIX_M0 0x7fb5d329728ea185L
-#define PRNS_MIX_M1 0x81dadef4bc2dd44dL
+#define PRNS_MIX_M0 UINT64_C(0x7fb5d329728ea185)
+#define PRNS_MIX_M1 UINT64_C(0x81dadef4bc2dd44d)
 #endif
 #endif
 
@@ -88,7 +91,7 @@ static inline uint64_t prns_mix(uint64_t x)
 static inline uint64_t prns_min_mix(uint64_t x)
 {
   x ^= (x >> 33);
-  x *= 0xbf58476d1ce4e5b9L;
+  x *= UINT64_C(0xbf58476d1ce4e5b9);
 
   return x;
 }  
