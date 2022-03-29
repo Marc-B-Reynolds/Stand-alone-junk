@@ -45,7 +45,7 @@ static inline double f64_from_bits(uint64_t x)
   double f; memcpy(&f, &x, 8); return f;
 }
 
-// converts input to IEEE bit pattern and XOR's them
+// convert inputs to IEEE bit pattern and XOR's them
 static inline uint64_t f64_xor(double a, double b)
 {
   return f64_to_bits(a)^f64_to_bits(b);

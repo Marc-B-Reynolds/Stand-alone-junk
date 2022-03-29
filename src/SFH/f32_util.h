@@ -43,7 +43,7 @@ static inline float f32_from_bits(uint32_t x)
   float f; memcpy(&f, &x, 4); return f;
 }
 
-// converts input to IEEE bit pattern and XOR's them
+// convert inputs to IEEE bit pattern and XOR's them
 static inline uint32_t f32_xor(float a, float b)
 {
   return f32_to_bits(a)^f32_to_bits(b);
