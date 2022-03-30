@@ -10,10 +10,8 @@
 //   swing_twist = swing then twist 
 //   twist_swing = twist then swing
 //   a  = axis of twist
-//   hq = uses Kahan's ab+cd (1 mul, 2 fma, 1 add)
+//   hq = uses Kahan's ab+cd (1 mul, 2 fma, 1 add) - minimal number of funcs, unlikely to be needed
 //   n  = normalize 'w' variant
-//
-// not all varients are expanded..should be enough if figure out if needed
 //
 // https://marc-b-reynolds.github.io/quaternions/2017/05/12/HopfCoordConvert.html
 // https://marc-b-reynolds.github.io/quaternions/2022/01/31/QuatAxisFactor.html
@@ -33,10 +31,12 @@ typedef struct {
   float tc,ts;      // twist: cos & sin about
 } swing_twist_t;
 
-// factor Q into swing then twist with respect to Z
+
+//**********************************************************
+// factor Q into swing then twist with respect to Z (Q = Qs Qt)
 // 
 // All the other variants just expand this. At least
-// the current clang/gcc fully expand.
+// the current clang/gcc (13.0.1/11.2) versions fully expand.
 
 static inline void quat_to_swing_twist_z(swing_twist_t* d, quat_t* q)
 {
@@ -121,15 +121,9 @@ static inline void quat_to_swing_twist_z_hq(swing_twist_t* d, quat_t* q)
   }
 }
 
-static inline void swing_twist_z_to_quat(quat_t* q, swing_twist_t* s)
-{
-  float sx=s->sx, sy=s->sy, sc=s->sc;
-  float ts=s->ts, tc=s->tc;
+//**********************************************************
+// twist about 'z' inverse transforms
 
-  quat_set(q, sx*tc+sy*ts, sy*tc-sx*ts, sc*ts, sc*tc);
-}
-
-// for restoring the sign of Q variant
 static inline void swing_twist_z_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
 {
   float sx=s->sx, sy=s->sy, sc=s->sc;
@@ -139,6 +133,12 @@ static inline void swing_twist_z_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t
   ts = f32_from_bits(f32_to_bits(ts) ^ sw);
 
   quat_set(q, sx*tc+sy*ts, sy*tc-sx*ts, sc*ts, sc*tc);
+}
+
+static inline void swing_twist_z_to_quat(quat_t* q, swing_twist_t* s)
+{
+  // clang/gcc eliminate so just expand
+  swing_twist_z_to_quat_n(q,s,0);
 }
 
 static inline void swing_twist_z_to_quat_hq(quat_t* q, swing_twist_t* s)
@@ -154,20 +154,7 @@ static inline void swing_twist_z_to_quat_hq(quat_t* q, swing_twist_t* s)
 
 
 //**********************************************************
-
-#define QX q->x
-#define QY q->y
-#define QZ q->z
-#define QW q->w
-
-#define QUAT_DEF_X2Z(V) QUAT_DEF_SET(V,-QZ, QY, QX, QW)
-#define QUAT_DEF_Y2Z(V) QUAT_DEF_SET(V, QX,-QZ, QY, QW)
-
-// should be using quat_map_ instead
-static inline void swing_twist_rev_X2Z(quat_t* r, quat_t* q) { quat_set(r, QZ, QY,-QX, QW); }
-static inline void swing_twist_rev_Y2Z(quat_t* r, quat_t* q) { quat_set(r, QX, QZ,-QY, QW); }
-
-//**********************************************************
+// expand forward transforms for 'x' & 'y'.
 
 static inline void quat_to_swing_twist_x(swing_twist_t* d, quat_t* q)
 {
@@ -199,6 +186,7 @@ static inline void quat_to_swing_twist_y_n(swing_twist_t* d, quat_t* q, uint32_t
 
 
 //**********************************************************
+// expand inverse transforms for 'x' & 'y'.
 
 static inline void swing_twist_x_to_quat(quat_t* q, swing_twist_t* s)
 {
@@ -212,12 +200,33 @@ static inline void swing_twist_y_to_quat(quat_t* q, swing_twist_t* s)
   quat_map_z2y(q,q);
 }
 
+static inline void swing_twist_x_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
+{
+  swing_twist_z_to_quat_n(q,s,sw);
+  quat_map_z2x(q,q);
+}
+
+static inline void swing_twist_y_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
+{
+  swing_twist_z_to_quat_n(q,s,sw);
+  quat_map_z2y(q,q);
+}
+
+
 //**********************************************************
+// forward "reverse order" transforms (Q = Qt Qs)
 
 static inline void quat_to_twist_swing_z(swing_twist_t* d, quat_t* q)
 {
   QUAT_DEF_SET(t, q->x, q->y, -q->z, q->w);
   quat_to_swing_twist_z(d, &t);
+  d->ts = -d->ts;
+}  
+
+static inline void quat_to_twist_swing_z_n(swing_twist_t* d, quat_t* q, uint32_t* sw)
+{
+  QUAT_DEF_SET(t, q->x, q->y, -q->z, q->w);
+  quat_to_swing_twist_z_n(d, &t, sw);
   d->ts = -d->ts;
 }  
 
@@ -235,15 +244,39 @@ static inline void quat_to_twist_swing_y(swing_twist_t* d, quat_t* q)
   quat_to_twist_swing_z(d, &t);
 }  
 
+static inline void quat_to_twist_swing_x_n(swing_twist_t* d, quat_t* q, uint32_t* sw)
+{
+  quat_t t;
+  quat_map_x2z(&t,q);
+  quat_to_twist_swing_z_n(d, &t, sw);
+}  
+
+static inline void quat_to_twist_swing_y_n(swing_twist_t* d, quat_t* q, uint32_t* sw)
+{
+  quat_t t;
+  quat_map_y2z(&t,q);
+  quat_to_twist_swing_z_n(d, &t, sw);
+}  
+
 
 //**********************************************************
+// inverse "reverse order" transforms (Q = Qt Qs)
 
-static inline void twist_swing_z_to_quat(quat_t* q, swing_twist_t* s)
+static inline void twist_swing_z_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
 {
   float sx=s->sx, sy=s->sy, sc=s->sc;
   float ts=s->ts, tc=s->tc;
 
+  tc = f32_from_bits(f32_to_bits(tc) | sw);
+  ts = f32_from_bits(f32_to_bits(ts) ^ sw);
+
   quat_set(q, sx*tc-sy*ts, sy*tc+sx*ts, sc*ts, sc*tc);
+}
+
+static inline void twist_swing_z_to_quat(quat_t* q, swing_twist_t* s)
+{
+  // clang/gcc eliminate so just expand
+  twist_swing_z_to_quat_n(q,s,0);
 }
 
 static inline void twist_swing_x_to_quat(quat_t* q, swing_twist_t* s)
@@ -258,11 +291,18 @@ static inline void twist_swing_y_to_quat(quat_t* q, swing_twist_t* s)
   quat_map_z2y(q,q);
 }
 
-#undef QX
-#undef QY
-#undef QZ
-#undef QW
-  
+static inline void twist_swing_x_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
+{
+  twist_swing_z_to_quat_n(q,s,sw);
+  quat_map_z2x(q,q);
+}
+
+static inline void twist_swing_y_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
+{
+  twist_swing_z_to_quat_n(q,s,sw);
+  quat_map_z2y(q,q);
+}
+
 #ifdef __cplusplus
 extern }
 #endif
