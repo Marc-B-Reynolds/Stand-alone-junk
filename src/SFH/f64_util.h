@@ -27,7 +27,9 @@ extern "C" {
 #define FP_REASSOCIATE_OFF
 #endif
 
-static const double f64_ulp1 = error no purpose
+static const double   f64_ulp1 = 0x1.0p-52;
+
+static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
 
 // NOTES:
@@ -53,7 +55,7 @@ static inline uint64_t f64_xor(double a, double b)
 
 static inline uint64_t f64_sign_bit(float a)
 {
-  return f64_to_bits(a) & (UINT64_C(1)<<63);
+  return f64_to_bits(a) & f64_sign_bit_k;
 }
 
 // to cut some of the pain stupid math errno not being disabled (groan..please do)
@@ -107,11 +109,14 @@ static inline double f64_pred(double a)
   return f64_from_bits(f64_to_bits(a)-1);
 }
 
+// rounding unit + lowest bit set
+static const double f64_succ_pred_k = 0x1.0000000000001p-53;
+
 // next representable FP away from zero
 // * a is normal and not zero
 static inline double f64_nnz_succ(double a)
 {
-  const double s = 0x1.000002p-24f;
+  const double s = f64_succ_pred_k; 
   return fma(a,s,a);
 }
 
@@ -119,7 +124,7 @@ static inline double f64_nnz_succ(double a)
 // * a is normal and not zero
 static inline double f64_nnz_pred(double a)
 {
-  const double s = -0x1.000002p-24f;
+  const double s = -f64_succ_pred_k;
   return fma(a,s,a);
 }
 
@@ -127,7 +132,7 @@ static inline double f64_nnz_pred(double a)
 // * a is normal and not zero
 static inline double f64_nnz_next(double a)
 {
-  const double s = 0x1.000002p-24f;
+  const double s = f64_succ_pred_k; 
   return fma(fabsf(a),s,a);
 }
 
@@ -135,7 +140,7 @@ static inline double f64_nnz_next(double a)
 // * a is normal and not zero
 static inline double f64_nnz_prev(double a)
 {
-  const double s = -0x1.000002p-24f;
+  const double s = -f64_succ_pred_k;
   return fma(fabsf(a),s,a);
 }
 
@@ -227,7 +232,7 @@ static inline uint64_t f64_ulp_dist(double a, double b)
   if ((int64_t)(ub^ua) >= 0)
     return u64_abs(ua-ub);
   
-  return ua+ub+0x80000000; //nope
+  return ua+ub+f64_sign_bit;
 }
 
 // a & b are within 'd' ulp of each other
@@ -239,7 +244,7 @@ uint64_t f64_within_ulp(double a, double b, uint64_t d)
   if ((int64_t)(ub^ua) >= 0)
     return ua-ub+d <= d+d;
   
-  return ua+ub+0x80000000+d <= d+d;
+  return ua+ub+f64_sign_bit+d <= d+d;
 }
 
 // filtered approximately equal:
@@ -293,6 +298,7 @@ static inline void f64_2sum(f64_pair_t* p, double a, double b)
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
+// * requires |a| >= |b|
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me

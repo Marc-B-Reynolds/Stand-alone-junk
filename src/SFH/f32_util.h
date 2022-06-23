@@ -25,8 +25,9 @@ extern "C" {
 #define FP_REASSOCIATE_OFF
 #endif
 
-static const float f32_ulp1 = (1.f/16777216.f); // 0x1.0p-24f
+static const float f32_ulp1 = 0x1.0p-23f;
 
+static const uint32_t f32_sign_bit_k = 0x80000000;
 
 // NOTES:
 // u = round-off unit (2^-24) = ulp(1)/2
@@ -51,7 +52,7 @@ static inline uint32_t f32_xor(float a, float b)
 
 static inline uint32_t f32_sign_bit(float a)
 {
-  return f32_to_bits(a) & 0x80000000;
+  return f32_to_bits(a) & f32_sign_bit_k;
 }
 
 // to cut some of the pain stupid math errno not being disabled (groan..please do)
@@ -105,11 +106,14 @@ static inline float f32_pred(float a)
   return f32_from_bits(f32_to_bits(a)-1);
 }
 
+// rounding unit + lowest bit set
+static const float f32_succ_pred_k = 0x1.000002p-24f;
+
 // next representable FP away from zero
 // * a is normal and not zero
 static inline float f32_nnz_succ(float a)
 {
-  const float s = 0x1.000002p-24f;
+  const float s = f32_succ_pred_k;
   return fmaf(a,s,a);
 }
 
@@ -117,7 +121,7 @@ static inline float f32_nnz_succ(float a)
 // * a is normal and not zero
 static inline float f32_nnz_pred(float a)
 {
-  const float s = -0x1.000002p-24f;
+  const float s = -f32_succ_pred_k;
   return fmaf(a,s,a);
 }
 
@@ -125,7 +129,7 @@ static inline float f32_nnz_pred(float a)
 // * a is normal and not zero
 static inline float f32_nnz_next(float a)
 {
-  const float s = 0x1.000002p-24f;
+  const float s = f32_succ_pred_k;
   return fmaf(fabsf(a),s,a);
 }
 
@@ -133,7 +137,7 @@ static inline float f32_nnz_next(float a)
 // * a is normal and not zero
 static inline float f32_nnz_prev(float a)
 {
-  const float s = -0x1.000002p-24f;
+  const float s = -f32_succ_pred_k;
   return fmaf(fabsf(a),s,a);
 }
 
@@ -225,7 +229,7 @@ static inline uint32_t f32_ulp_dist(float a, float b)
   if ((int32_t)(ub^ua) >= 0)
     return u32_abs(ua-ub);
   
-  return ua+ub+0x80000000;
+  return ua+ub+f32_sign_bit_k;
 }
 
 // a & b are within 'd' ulp of each other
@@ -237,7 +241,7 @@ uint32_t f32_within_ulp(float a, float b, uint32_t d)
   if ((int32_t)(ub^ua) >= 0)
     return ua-ub+d <= d+d;
   
-  return ua+ub+0x80000000+d <= d+d;
+  return ua+ub+f32_sign_bit_k+d <= d+d;
 }
 
 // filtered approximately equal:
@@ -291,6 +295,7 @@ static inline void f32_2sum(f32_pair_t* p, float a, float b)
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
+// * requires |a| >= |b|
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me
