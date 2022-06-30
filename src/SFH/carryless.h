@@ -80,7 +80,7 @@ static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
 // that requires moving between xmm and standard
 // reg set and inflates code footprint.
 
-uint32_t cl_mul_inv_32(uint32_t v)
+static inline uint32_t cl_mul_inv_32(uint32_t v)
 {
   __m128i x = _mm_cvtsi32_si128((int32_t)v);
   __m128i r = x;
@@ -92,7 +92,7 @@ uint32_t cl_mul_inv_32(uint32_t v)
   return (uint32_t)_mm_cvtsi128_si32(r);
 }
 
-uint64_t cl_mul_inv_64(uint64_t v)
+static inline uint64_t cl_mul_inv_64(uint64_t v)
 {
   __m128i x = _mm_cvtsi64_si128((int64_t)v);
   __m128i r = x;
@@ -161,6 +161,18 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 }
 
 
+// inverse of crc32c(x,0):
+//   crc32c_inv(crc32c(x,0)) == crc32c(crc32c_inv(x),0) == x
+//   note: crc32c(a,b) == crc32c(a,0)^crc32c(b,0)
+static inline uint32_t crc32c_inv(uint32_t x)
+{
+  x = cr_mul_32(x, 0x82febcde);
+  x = cl_mul_32(x, 0x05ec76f1); 
+  return x;
+}
+
+
+
 //-----------------------------------------------------------
 
 #if !defined(CARRYLESS_IMPLEMENTATION)
@@ -168,10 +180,10 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 extern uint32_t cl_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cl_gcd_64(uint64_t u, uint64_t v);
 
-extern uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r)
-extern uint64_t cl_divrem_64(uint64_t a, uint64_t b, uint64_t* r)
-extern uint32_t cl_rem_32(uint32_t a, uint32_t b)
-extern uint64_t cl_rem_64(uint64_t a, uint64_t b)
+extern uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r);
+extern uint64_t cl_divrem_64(uint64_t a, uint64_t b, uint64_t* r);
+extern uint32_t cl_rem_32(uint32_t a, uint32_t b);
+extern uint64_t cl_rem_64(uint64_t a, uint64_t b);
   
 #else
 
