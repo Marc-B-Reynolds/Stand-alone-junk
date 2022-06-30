@@ -83,6 +83,7 @@ static inline uint32_t pop_32(uint32_t x) { return (uint32_t)__popcnt(x);   }
 static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 #endif
 
+// inverse function in "carryless.h"
 static inline uint32_t crc32c(uint32_t x, uint32_t k) { return _mm_crc32_u32(x,k); }
 
 
