@@ -12,6 +12,7 @@
 #include <intrin.h>
 #endif
 
+// NOTE: there are additional bitops in carryless.h
 
 #if !defined(_MSC_VER)
 static inline uint32_t byteswap_32(uint32_t x) { return __builtin_bswap32(x); }
@@ -228,6 +229,25 @@ static inline uint32_t bit_set_nth_clear_32(uint32_t x, uint32_t n)
 static inline uint64_t bit_set_nth_clear_64(uint64_t x, uint32_t n)
 {
   return ~bit_clear_nth_set_64(~x,n);
+}
+
+
+static inline uint32_t pop_next_32(uint32_t x)
+{
+  uint32_t a = x & -x;
+  uint32_t b = x + a;
+  uint32_t c = x ^ b;
+  uint32_t d = (2 + ctz_32(x));
+  return b | (c >> d);
+}
+
+static inline uint64_t pop_next_64(uint64_t x)
+{
+  uint64_t a = x & -x;
+  uint64_t b = x + a;
+  uint64_t c = x ^ b;
+  uint32_t d = (2 + ctz_64(x));
+  return b | (c >> d);
 }
 
 
