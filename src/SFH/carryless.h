@@ -19,12 +19,17 @@
 
 typedef __m128i cl_128_t;
 
-// move two 64-bit input to SIMD, perform
-// the carryless product & SIMD (128-bit) result
-
+// wrap the actual carryless product hardware op: 64x64 -> 128
+// only handles inputs in lower 64-bit
 static inline cl_128_t cl_mul_base(cl_128_t a, cl_128_t b)
 {
   return _mm_clmulepi64_si128(a,b, 0);
+}
+
+// load 32/64 input into 128 bit register
+static inline cl_128_t cl_load_32(uint32_t a)
+{
+  return _mm_cvtsi32_si128((int32_t)a);
 }
 
 static inline cl_128_t cl_load_64(uint64_t a)
@@ -32,21 +37,18 @@ static inline cl_128_t cl_load_64(uint64_t a)
   return _mm_cvtsi64_si128((int64_t)a);
 }
 
-static inline cl_128_t cl_load_32(uint32_t a)
-{
-  return _mm_cvtsi32_si128((int32_t)a);
-}
-
-static inline cl_128_t cl_mul_64_(uint64_t a, uint64_t b)
+// untruncated products
+static inline cl_128_t cl_mul_full_64(uint64_t a, uint64_t b)
 {
   return cl_mul_base(cl_load_64(a),cl_load_64(b));
 }
 
-static inline cl_128_t cl_mul_32_(uint32_t a, uint32_t b)
+static inline cl_128_t cl_mul_full_32(uint32_t a, uint32_t b)
 {
   return cl_mul_base(cl_load_32(a),cl_load_32(b));
 }
 
+// extract
 static inline uint32_t cl_lo_32(cl_128_t x)
 {
   return (uint32_t)_mm_cvtsi128_si32(x);
@@ -70,6 +72,8 @@ static inline uint64_t cl_hi_64(cl_128_t x)
 
 //-----------------------------------------------------------
 
+// standard notion of carryless products 32x32->32 and 64x64->64
+
 static inline uint32_t cl_mul_32(uint32_t a, uint32_t b)
 {
   return cl_lo_32(cl_mul_32_(a,b));
@@ -82,7 +86,7 @@ static inline uint64_t cl_mul_64(uint64_t a, uint64_t b)
 
 // hi results of standard carryless products
 
-// NOTE: b is intentionally defined as 64-bit as is called product
+// NOTE: b is intentionally defined as 64-bit as is the used product
 static inline uint32_t cl_mul_hi_32(uint32_t a, uint64_t b)
 {
   return cl_hi_32(cl_mul_64_(a,b));
@@ -99,8 +103,6 @@ static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
 // does not use special case squaring since
 // that requires moving between xmm and standard
 // reg set and inflates code footprint.
-
-// --change to the wrappers
 
 static inline uint32_t cl_mul_inv_32(uint32_t v)
 {
@@ -136,6 +138,7 @@ static inline uint64_t cl_sqrt_64(uint64_t x) { return bit_gather_64(x, bit_set_
 
 
 //-----------------------------------------------------------
+// right/reflect/reversed carryless product (cr_ prefix)
 
 static inline uint32_t cr_mul_32(uint32_t a, uint32_t b)
 {
@@ -164,6 +167,7 @@ static inline uint64_t cr_pow2_64(uint64_t x)
 
 
 //-----------------------------------------------------------
+// circular carryless product (cc_ prefix)
 
 static inline uint32_t cc_mul_32(uint32_t a, uint32_t b)
 {
@@ -182,7 +186,6 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 
   return r^l;
 }
-
 
 //-----------------------------------------------------------
 
