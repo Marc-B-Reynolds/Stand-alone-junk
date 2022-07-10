@@ -214,7 +214,20 @@ extern uint32_t cl_rem_32(uint32_t a, uint32_t b);
 extern uint64_t cl_rem_64(uint64_t a, uint64_t b);
 
 extern uint32_t cl_mul_order_32(uint32_t x);
-extern uint32_t cl_mul_order_64(uint32_t x);
+extern uint32_t cl_mul_order_64(uint64_t x);
+
+extern uint32_t cl_pow_k_32(uint32_t v, uint32_t p);
+extern uint64_t cl_pow_K_64(uint64_t v, uint32_t p);
+
+extern uint32_t cl_pow_32(uint32_t v, uint32_t p);
+extern uint64_t cl_pow_64(uint64_t v, uint32_t p);
+
+extern uint32_t cr_pow_32(uint32_t v, uint32_t p);
+extern uint64_t cr_pow_64(uint64_t v, uint32_t p);
+extern uint32_t cr_gcd_32(uint32_t u, uint32_t v);
+extern uint64_t cr_gcd_64(uint64_t u, uint64_t v);
+extern uint32_t cr_mul_order_32(uint32_t x);
+extern uint32_t cr_mul_order_64(uint64_t x);
 
 #else
 
@@ -360,6 +373,96 @@ uint64_t cl_mul_order_64(uint64_t x)
   return 64 >> log2_64(ctz_64(x));
 }
 
+// assumes that at least one of these is true:
+// * v is odd
+// * p is less than 32
+uint32_t cl_pow_k_32(uint32_t v, uint32_t p)
+{
+  // move the 32-bit inputs to the top 32-bits of
+  // 64 so product sequences truncate for free.
+  cl_128_t r = cl_load_64(UINT64_C(1)   << 32);
+  cl_128_t x = cl_load_32(v);
+
+  do {
+    if (p & 1) r = cl_mul_base(r,x);
+    p >>= 1;
+    if (!p) break;
+    x = cl_mul_base(x,x);
+  } while(1);
+  
+  return cl_hi_32(r);
+}
+
+// same input restricts as 32-bit version
+uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
+{
+  cl_128_t r = cl_load_64(UINT64_C(1));
+  cl_128_t x = cl_load_64(v);
+
+  do {
+    if (p & 1) r = cl_mul_base(r,x);
+    p >>= 1;
+    if (!p) break;
+    x = cl_mul_base(x,x);
+  } while(1);
+  
+  return cl_lo_64(r);
+}
+
+
+uint32_t cl_pow_32(uint32_t v, uint32_t p)
+{
+  // if the input is unit or power is less than 32
+  if ((v & 1) || (p < 32))
+    return cl_pow_k_32(v, p & 0x1f);
+
+  return 0;
+}
+
+uint64_t cl_pow_64(uint64_t v, uint32_t p)
+{
+  // if the input is unit or power is less than 64
+  if ((v & 1) || (p < 64))
+    return cl_pow_k_64(v, p & 0x3f);
+
+  return 0;
+}
+
+// lazy versions of CR just forwarding to CL
+uint32_t cr_pow_32(uint32_t v, uint32_t p)
+{
+  return bit_reverse_32(cl_pow_32(bit_reverse_32(v),p));
+}
+
+uint64_t cr_pow_64(uint64_t v, uint32_t p)
+{
+  return bit_reverse_64(cl_pow_64(bit_reverse_64(v),p));
+}
+
+uint32_t cr_gcd_32(uint32_t u, uint32_t v)
+{
+  u = bit_reverse_32(u);
+  v = bit_reverse_32(v);
+  return bit_reverse_32(cl_gcd_32(u,v));
+}
+
+uint64_t cr_gcd_64(uint64_t u, uint64_t v)
+{
+  u = bit_reverse_64(u);
+  v = bit_reverse_64(v);
+  return bit_reverse_64(cl_gcd_64(u,v));
+}
+
+uint32_t cr_mul_order_32(uint32_t x)
+{
+  return cl_mul_order_32(bit_reverse_32(x));
+}
+
+uint64_t cr_mul_order_64(uint64_t x)
+{
+  return cl_mul_order_64(bit_reverse_64(x));
+}
+
 #endif
 
 static inline uint32_t cl_div_32(uint32_t a, uint32_t b)
@@ -372,23 +475,6 @@ static inline uint64_t cl_div_64(uint64_t a, uint64_t b)
 {
   uint64_t t;
   return cl_divrem_64(a,b,&t);
-}
-
-
-static inline uint32_t cr_gcd_32(uint32_t u, uint32_t v)
-{
-  // lazy version
-  u = bit_reverse_32(u);
-  v = bit_reverse_32(v);
-  return bit_reverse_32(cl_gcd_32(u,v));
-}
-
-static inline uint64_t cr_gcd_64(uint64_t u, uint64_t v)
-{
-  // lazy version
-  u = bit_reverse_64(u);
-  v = bit_reverse_64(v);
-  return bit_reverse_64(cl_gcd_64(u,v));
 }
 
 
