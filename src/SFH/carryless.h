@@ -76,12 +76,12 @@ static inline uint64_t cl_hi_64(cl_128_t x)
 
 static inline uint32_t cl_mul_32(uint32_t a, uint32_t b)
 {
-  return cl_lo_32(cl_mul_32_(a,b));
+  return cl_lo_32(cl_mul_full_32(a,b));
 }
 
 static inline uint64_t cl_mul_64(uint64_t a, uint64_t b)
 {
-  return cl_lo_64(cl_mul_64_(a,b));
+  return cl_lo_64(cl_mul_full_64(a,b));
 }
 
 // hi results of standard carryless products
@@ -89,12 +89,12 @@ static inline uint64_t cl_mul_64(uint64_t a, uint64_t b)
 // NOTE: b is intentionally defined as 64-bit as is the used product
 static inline uint32_t cl_mul_hi_32(uint32_t a, uint64_t b)
 {
-  return cl_hi_32(cl_mul_64_(a,b));
+  return cl_hi_32(cl_mul_full_64(a,b));
 }
 
 static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
 {
-  return cl_hi_64(cl_mul_64_(a,b));
+  return cl_hi_64(cl_mul_full_64(a,b));
 }
 
 
@@ -171,7 +171,7 @@ static inline uint64_t cr_pow2_64(uint64_t x)
 
 static inline uint32_t cc_mul_32(uint32_t a, uint32_t b)
 {
-  cl_128_t p = cl_mul_32_(a,b);
+  cl_128_t p = cl_mul_full_32(a,b);
   uint32_t r = cl_hi_32(p);
   uint32_t l = cl_lo_32(p);
 
@@ -180,7 +180,7 @@ static inline uint32_t cc_mul_32(uint32_t a, uint32_t b)
 
 static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 {
-  cl_128_t p = cl_mul_64_(a,b);
+  cl_128_t p = cl_mul_full_64(a,b);
   uint64_t r = cl_hi_64(p);
   uint64_t l = cl_lo_64(p);
 
