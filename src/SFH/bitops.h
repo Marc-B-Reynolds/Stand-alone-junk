@@ -14,6 +14,7 @@
 
 // NOTE: there are additional bitops in carryless.h
 
+
 #if !defined(_MSC_VER)
 static inline uint32_t byteswap_32(uint32_t x) { return __builtin_bswap32(x); }
 static inline uint64_t byteswap_64(uint64_t x) { return __builtin_bswap64(x); }
@@ -84,9 +85,10 @@ static inline uint32_t pop_32(uint32_t x) { return (uint32_t)__popcnt(x);   }
 static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 #endif
 
-// inverse function in "carryless.h"
-static inline uint32_t crc32c(uint32_t x, uint32_t k) { return _mm_crc32_u32(x,k); }
-
+// inverse function in "carryless.h" (move to approp place)
+// add arm __crc32cw
+static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return _mm_crc32_u32(x,k); }
+static inline uint32_t crc32c_64(uint64_t x, uint32_t k) { return (uint32_t)_mm_crc32_u64(k,x); }
 
 #if !defined(BITOPS_MISSING_POPCOUNT)
 
@@ -231,6 +233,21 @@ static inline uint64_t bit_set_nth_clear_64(uint64_t x, uint32_t n)
   return ~bit_clear_nth_set_64(~x,n);
 }
 
+static inline uint32_t bit_zip_32(uint32_t x)
+{
+  const uint32_t m = bit_set_even_1_32;
+  uint32_t L = bit_scatter_32(x,       m);
+  uint32_t R = bit_scatter_32(x >> 16, m);
+  return (R<<1)^L;
+}
+
+static inline uint64_t bit_zip_64(uint64_t x)
+{
+  const uint64_t m = bit_set_even_1_64;
+  uint64_t L = bit_scatter_64(x,       m);
+  uint64_t R = bit_scatter_64(x >> 32, m);
+  return (R<<1)^L;
+}
 
 static inline uint32_t pop_next_32(uint32_t x)
 {
