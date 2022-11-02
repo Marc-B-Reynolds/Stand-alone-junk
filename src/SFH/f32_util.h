@@ -15,16 +15,42 @@ extern "C" {
 
 #define F32_PRAGMA(X) _Pragma(X)
 
+#if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
+#define F32_INTEL
+#endif
+
+// MSC: expects /Gv
+// https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros
+// _M_FP_FAST
+// _M_FP_CONTRACT
+// _M_FP_PRECISE
+// _M_FP_STRICT 
+// GCC macros:
+// __NO_MATH_ERRNO__
+// __RECIPROCAL_MATH__
+// __ASSOCIATIVE_MATH__
+
+#if 0
+// this doesn't help
+static inline __m128 f32_to_m128(float x)
+{
+  __m128 t0 = _mm_undefined_ps();    // |???|???|???|???| (all undefined)
+  __m128 t1 = _mm_set_ss(x);         // | 0 | 0 | 0 | x | (move 'x' to low lane, remaining zeroed)
+  return _mm_move_ss(t0,t1);         // |???|???|???| x | (move 'x' to low lane, remaining undefined)
+}
+#endif
+
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 
-#define FP_REASSOCIATE_ON  F32_PRAGMA("clang fp reassociate(on)")
-#define FP_REASSOCIATE_OFF F32_PRAGMA("clang fp reassociate(off)")
+#define FP_REASSOCIATE_ON()  F32_PRAGMA("clang fp reassociate(on)")
+#define FP_REASSOCIATE_OFF() F32_PRAGMA("clang fp reassociate(off)")
 #else
-#define FP_REASSOCIATE_ON
-#define FP_REASSOCIATE_OFF
+#define FP_REASSOCIATE_ON()
+#define FP_REASSOCIATE_OFF()
 #endif
 
+// ulp(1.f)
 static const float f32_ulp1 = 0x1.0p-23f;
 
 static const uint32_t f32_sign_bit_k = 0x80000000;
@@ -50,15 +76,27 @@ static inline uint32_t f32_xor(float a, float b)
   return f32_to_bits(a)^f32_to_bits(b);
 }
 
+// if 'v' is float and 's' is all clear (except sign bit)
+static inline float f32_mulsign(float v, uint32_t s)
+{
+  return f32_from_bits(f32_to_bits(v)^s);
+}
+
 static inline uint32_t f32_sign_bit(float a)
 {
   return f32_to_bits(a) & f32_sign_bit_k;
 }
 
-// to cut some of the pain stupid math errno not being disabled (groan..please do)
+// to cut some of the pain of math errno not being disabled
+// (-fno-math-errno). But you really should do that. Unless
+// your using visual-c. Then: I feel your pain.
 static inline float f32_sqrt(float a)
 {
-  return __builtin_sqrtf(a);
+#if defined(__NO_MATH_ERRNO__) || defined(_M_FP_FAST)
+  return sqrtf(a);
+#else  
+  return _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(a)));
+#endif  
 }
 
 // x >=0 ? 1.0 : -1.f
@@ -73,6 +111,26 @@ static inline float f32_lerp(float t, float a, float b)
 {
   return fmaf(t,b,-fmaf(t,a,-a));
 }
+
+static const f32_pair_t f32_up_pi = {.h=0x1.921fb6p1, .l=-0x1.777a5cp-24};
+
+// return RN(x*p) where p is unevaluated pair
+static inline float f32_up_mul(const f32_pair_t* const p, float x) 
+{
+  return fmaf(x, p->h, x*p->l);
+}
+
+// compute a*b+c
+static inline float f32_up_madd(const f32_pair_t* const a, float b, float c)
+{
+  return fmaf(a->h, b, fmaf(a->l, b, c));
+}
+
+static inline float f32_mul_pi(float x)
+{
+  return f32_up_mul(&f32_up_pi,x);
+}
+
 
 // (a*b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
@@ -105,6 +163,14 @@ static inline float f32_pred(float a)
 {
   return f32_from_bits(f32_to_bits(a)-1);
 }
+
+// walks 'd' ULP away from zero
+// * blindly walks past +/-zero to NaN
+static inline float f32_walk(float a, int32_t d)
+{
+  return f32_from_bits(f32_to_bits(a)+d);
+}
+
 
 // rounding unit + lowest bit set
 static const float f32_succ_pred_k = 0x1.000002p-24f;
@@ -192,9 +258,9 @@ static inline float f32_mms_e(float a, float b, float c, float d, float* e)
 
 // ab+cd: this version returns same results if {a,b} and {c,d} are swapped. It
 // does not improve the error bound.
-FP_REASSOCIATE_OFF
 static inline float f32_mma_c(float a, float b, float c, float d)
 {
+  FP_REASSOCIATE_OFF()
   float p0 = a*b;
   float p1 = c*d;
   float e0 = fmaf(a,b,-p0);
@@ -265,12 +331,11 @@ uint32_t f32_approx_eq(float a, float b, float absD, float relD)
 
 
 // returns true if a >= b and neither are NaN
-FP_REASSOCIATE_OFF
-static inline bool f32_ordered_ge(float a, float b) { return !(a < b); }
+
+static inline bool f32_ordered_ge(float a, float b) { FP_REASSOCIATE_OFF(); return !(a < b); }
 
 // returns true if a > b and neither are NaN
-FP_REASSOCIATE_OFF
-static inline bool f32_ordered_gt(float a, float b) { return !(a <= b); }
+static inline bool f32_ordered_gt(float a, float b) { FP_REASSOCIATE_OFF(); return !(a <= b); }
 
 // returns true if neither are NaN
 static inline bool f32_are_ordered(float a, float b) { return fpclassify(a+b) != FP_NAN; }
@@ -281,9 +346,9 @@ static inline bool f32_are_ordered(float a, float b) { return fpclassify(a+b) !=
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me
-FP_REASSOCIATE_OFF
 static inline void f32_2sum(f32_pair_t* p, float a, float b)
 {
+  FP_REASSOCIATE_OFF();
   float x  = a+b;
   float bp = x-a;
   float ap = x-bp;
@@ -299,9 +364,9 @@ static inline void f32_2sum(f32_pair_t* p, float a, float b)
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me
-FP_REASSOCIATE_OFF
 static inline void f32_fast2sum(f32_pair_t* p, float a, float b)
 {
+  FP_REASSOCIATE_OFF();
   float x  = a+b;
   float bp = x-a;
   float y  = b-bp;
