@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2017-2022
 // Public Domain under http://unlicense.org, see link for details.
 
-// put link here
+// put links here
 
 // NOTES:
 // * no real effort at portability
@@ -98,37 +98,6 @@ static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
 }
 
 
-// inverses return either 0 or 1<<(bits-1) if
-// the input is a divisor (not-invertiable)
-// does not use special case squaring since
-// that requires moving between xmm and standard
-// reg set and inflates code footprint.
-
-static inline uint32_t cl_mul_inv_32(uint32_t v)
-{
-  cl_128_t x = cl_load_32(v);
-  cl_128_t r = x;
-  
-  for(int i=0; i<4; i++) {
-    x = cl_mul_base(x,x);
-    r = cl_mul_base(r,x);
-  }
-  return cl_lo_32(r);
-}
-
-static inline uint64_t cl_mul_inv_64(uint64_t v)
-{
-  cl_128_t x = cl_load_64(v);
-  cl_128_t r = x;
-
-  for(int i=0; i<5; i++) {
-    x = cl_mul_base(x,x);
-    r = cl_mul_base(r,x);
-  }
-  return cl_lo_64(r);
-}
-
-
 static inline uint32_t cl_pow2_32(uint32_t x) { return bit_scatter_32(x, bit_set_even_1_32); }
 static inline uint64_t cl_pow2_64(uint64_t x) { return bit_scatter_64(x, bit_set_even_1_64); }
 
@@ -192,18 +161,20 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 // inverse of crc32c(x,0):
 //   crc32c_inv(crc32c(x,0)) == crc32c(crc32c_inv(x),0) == x
 //   note: crc32c(a,b) == crc32c(a,0)^crc32c(b,0)
+
 static inline uint32_t crc32c_inv(uint32_t x)
 {
-  x = cr_mul_32(x, 0x82febcde);
-  x = cl_mul_32(x, 0x05ec76f1); 
-  return x;
+  return crc32c_64(cl_mul_64(x,0xc915ea3b),0);
 }
-
 
 
 //-----------------------------------------------------------
 
 #if !defined(CARRYLESS_IMPLEMENTATION)
+
+extern uint32_t cl_mul_inv_32(uint32_t v);
+extern uint64_t cl_mul_inv_64(uint64_t v);
+extern cl_128_t cl_mul_inv_k(cl_128_t v, uint32_t e);
 
 extern uint32_t cl_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cl_gcd_64(uint64_t u, uint64_t v);
@@ -226,10 +197,56 @@ extern uint32_t cr_pow_32(uint32_t v, uint32_t p);
 extern uint64_t cr_pow_64(uint64_t v, uint32_t p);
 extern uint32_t cr_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cr_gcd_64(uint64_t u, uint64_t v);
+extern uint32_t cr_mul_inv_32(uint32_t x);
+extern uint32_t cr_mul_inv_64(uint64_t x);
 extern uint32_t cr_mul_order_32(uint32_t x);
 extern uint32_t cr_mul_order_64(uint64_t x);
 
+
 #else
+
+// inverses return either 0 or 1<<(bits-1) if
+// the input is a divisor (not-invertiable)
+// does not use special case squaring since
+// that requires moving between xmm and standard
+// reg set and inflates code footprint.
+
+cl_128_t cl_mul_inv_k(cl_128_t x, uint32_t e)
+{
+  cl_128_t r = x;
+  
+  for(uint32_t i=0; i<e; i++) {
+    x = cl_mul_base(x,x);
+    r = cl_mul_base(r,x);
+  }
+  return r;
+}
+
+uint32_t cl_mul_inv_32(uint32_t v)
+{
+  cl_128_t x = cl_load_32(v);
+  cl_128_t r = x;
+  
+  for(int i=0; i<4; i++) {
+    x = cl_mul_base(x,x);
+    r = cl_mul_base(r,x);
+  }
+  return cl_lo_32(r);
+}
+
+uint64_t cl_mul_inv_64(uint64_t v)
+{
+  cl_128_t x = cl_load_64(v);
+  cl_128_t r = x;
+
+  for(int i=0; i<5; i++) {
+    x = cl_mul_base(x,x);
+    r = cl_mul_base(r,x);
+  }
+  return cl_lo_64(r);
+}
+
+
 
 #define CL_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
 
@@ -284,8 +301,8 @@ uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r)
     uint32_t t  = lb - clz_32(a);
     
     while ((int32_t)t >= 0) {
-      a ^= b << t;
-      q ^= 1 << t;
+      a ^= b  << t;
+      q ^= 1u << t;
       t  = lb - clz_32(a);
     }
   }
@@ -364,13 +381,13 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
 uint32_t cl_mul_order_32(uint32_t x)
 {
   x = (x & UINT32_C(~1));
-  return 32 >> log2_32(ctz_32(x));
+  return 32u >> log2_32(ctz_32(x));
 }
 
 uint64_t cl_mul_order_64(uint64_t x)
 {
   x = (x & UINT64_C(~1));
-  return 64 >> log2_64(ctz_64(x));
+  return 64u >> log2_64(ctz_64(x));
 }
 
 // assumes that at least one of these is true:
@@ -393,7 +410,7 @@ uint32_t cl_pow_k_32(uint32_t v, uint32_t p)
   return cl_hi_32(r);
 }
 
-// same input restricts as 32-bit version
+// same input restrictions as 32-bit version
 uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
 {
   cl_128_t r = cl_load_64(UINT64_C(1));
@@ -461,6 +478,16 @@ uint32_t cr_mul_order_32(uint32_t x)
 uint64_t cr_mul_order_64(uint64_t x)
 {
   return cl_mul_order_64(bit_reverse_64(x));
+}
+
+uint32_t cr_mul_inv_32(uint32_t x)
+{
+  return bit_reverse_32(cl_mul_inv_32(bit_reverse_32(x)));
+}
+
+uint64_t cr_mul_inv_64(uint64_t x)
+{
+  return bit_reverse_64(cl_mul_inv_64(bit_reverse_64(x)));
 }
 
 #endif
