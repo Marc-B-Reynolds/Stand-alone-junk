@@ -17,6 +17,8 @@ extern "C" {
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
 #define F32_INTEL
+#elif defined(__ARM_ARCH)
+#define F32_ARM
 #endif
 
 // MSC: expects /Gv
@@ -30,16 +32,6 @@ extern "C" {
 // __RECIPROCAL_MATH__
 // __ASSOCIATIVE_MATH__
 
-#if 0
-// this doesn't help
-static inline __m128 f32_to_m128(float x)
-{
-  __m128 t0 = _mm_undefined_ps();    // |???|???|???|???| (all undefined)
-  __m128 t1 = _mm_set_ss(x);         // | 0 | 0 | 0 | x | (move 'x' to low lane, remaining zeroed)
-  return _mm_move_ss(t0,t1);         // |???|???|???| x | (move 'x' to low lane, remaining undefined)
-}
-#endif
-
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 
@@ -49,6 +41,9 @@ static inline __m128 f32_to_m128(float x)
 #define FP_REASSOCIATE_ON()
 #define FP_REASSOCIATE_OFF()
 #endif
+
+// wrap an intel intrinsic
+#define F32_SSE_WRAP(F,X) _mm_cvtss_f32(F(_mm_set_ss(X)))
 
 // ulp(1.f)
 static const float f32_ulp1 = 0x1.0p-23f;
@@ -94,10 +89,47 @@ static inline float f32_sqrt(float a)
 {
 #if defined(__NO_MATH_ERRNO__) || defined(_M_FP_FAST)
   return sqrtf(a);
-#else  
-  return _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(a)));
+#elif defined(F32_INTEL)
+  return F32_SSE_WRAP(_mm_sqrt_ss, x);
+#elif defined(F32_ARM)
+  return __sqrtf(a);
+#else
+  // do nothing for warning
 #endif  
 }
+
+
+// round to nearest (ties to even) (doesn't modify sticky flags)
+static inline float f32_round(float x)
+{
+#if defined(F32_INTEL)
+  __m128 v = _mm_set_ss(x);
+  __m128 r = _mm_round_ss(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
+  
+  return _mm_cvtss_f32(r);
+#elif defined(F32_ARM)
+  // sticky flags modified?
+  return __rintnf(x);
+#else
+  // do nothing for warning
+#endif  
+}
+
+
+#if defined(F32_INTEL)
+
+// round toward zero (doesn't modify sticky flags)
+static inline float f32_round_tz(float x)
+{
+  __m128 v = _mm_set_ss(x);
+  __m128 r = _mm_round_ss(v,v, _MM_FROUND_TO_ZERO|_MM_FROUND_NO_EXC);
+  
+  return _mm_cvtss_f32(r);
+}
+
+#else
+// error ATM
+#endif
 
 // x >=0 ? 1.0 : -1.f
 static inline float f32_sgn(float x) { return copysignf(1.f,x); }
