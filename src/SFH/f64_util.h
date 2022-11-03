@@ -319,7 +319,7 @@ static inline uint64_t f64_ulp_dist(double a, double b)
 }
 
 // a & b are within 'd' ulp of each other
-uint64_t f64_within_ulp(double a, double b, uint64_t d)
+static inline uint64_t f64_within_ulp(double a, double b, uint64_t d)
 {
   uint64_t ua = f64_to_bits(a);
   uint64_t ub = f64_to_bits(b);
@@ -331,7 +331,7 @@ uint64_t f64_within_ulp(double a, double b, uint64_t d)
 }
 
 // filtered approximately equal:
-uint64_t f64_approx_eq(double a, double b, double absD, double relD)
+static inline uint64_t f64_approx_eq(double a, double b, double absD, double relD)
 {
   double d = fabs(a-b);
   
