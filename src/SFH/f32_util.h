@@ -90,7 +90,7 @@ static inline float f32_sqrt(float a)
 #if defined(__NO_MATH_ERRNO__) || defined(_M_FP_FAST)
   return sqrtf(a);
 #elif defined(F32_INTEL)
-  return F32_SSE_WRAP(_mm_sqrt_ss, x);
+  return F32_SSE_WRAP(_mm_sqrt_ss, a);
 #elif defined(F32_ARM)
   return __sqrtf(a);
 #else
