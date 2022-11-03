@@ -109,7 +109,7 @@ static inline float f32_round(float x)
   return _mm_cvtss_f32(r);
 #elif defined(F32_ARM)
   // sticky flags modified?
-  return __rintnf(x);
+  return __rintf(x);
 #else
   // do nothing for warning
 #endif  
@@ -331,7 +331,7 @@ static inline uint32_t f32_ulp_dist(float a, float b)
 }
 
 // a & b are within 'd' ulp of each other
-uint32_t f32_within_ulp(float a, float b, uint32_t d)
+static inline uint32_t f32_within_ulp(float a, float b, uint32_t d)
 {
   uint32_t ua = f32_to_bits(a);
   uint32_t ub = f32_to_bits(b);
@@ -343,7 +343,7 @@ uint32_t f32_within_ulp(float a, float b, uint32_t d)
 }
 
 // filtered approximately equal:
-uint32_t f32_approx_eq(float a, float b, float absD, float relD)
+static inline uint32_t f32_approx_eq(float a, float b, float absD, float relD)
 {
   float d = fabsf(a-b);
   
