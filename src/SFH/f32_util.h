@@ -35,11 +35,11 @@ extern "C" {
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 
-#define FP_REASSOCIATE_ON()  F32_PRAGMA("clang fp reassociate(on)")
-#define FP_REASSOCIATE_OFF() F32_PRAGMA("clang fp reassociate(off)")
+#define FP32_REASSOCIATE_ON()  F32_PRAGMA("clang fp reassociate(on)")
+#define FP32_REASSOCIATE_OFF() F32_PRAGMA("clang fp reassociate(off)")
 #else
-#define FP_REASSOCIATE_ON()
-#define FP_REASSOCIATE_OFF()
+#define FP32_REASSOCIATE_ON()
+#define FP32_REASSOCIATE_OFF()
 #endif
 
 // wrap an intel intrinsic
@@ -292,7 +292,7 @@ static inline float f32_mms_e(float a, float b, float c, float d, float* e)
 // does not improve the error bound.
 static inline float f32_mma_c(float a, float b, float c, float d)
 {
-  FP_REASSOCIATE_OFF()
+  FP32_REASSOCIATE_OFF()
   float p0 = a*b;
   float p1 = c*d;
   float e0 = fmaf(a,b,-p0);
@@ -364,10 +364,10 @@ uint32_t f32_approx_eq(float a, float b, float absD, float relD)
 
 // returns true if a >= b and neither are NaN
 
-static inline bool f32_ordered_ge(float a, float b) { FP_REASSOCIATE_OFF(); return !(a < b); }
+static inline bool f32_ordered_ge(float a, float b) { FP32_REASSOCIATE_OFF(); return !(a < b); }
 
 // returns true if a > b and neither are NaN
-static inline bool f32_ordered_gt(float a, float b) { FP_REASSOCIATE_OFF(); return !(a <= b); }
+static inline bool f32_ordered_gt(float a, float b) { FP32_REASSOCIATE_OFF(); return !(a <= b); }
 
 // returns true if neither are NaN
 static inline bool f32_are_ordered(float a, float b) { return fpclassify(a+b) != FP_NAN; }
@@ -380,7 +380,7 @@ static inline bool f32_are_ordered(float a, float b) { return fpclassify(a+b) !=
 // * fastmath breaks me
 static inline void f32_2sum(f32_pair_t* p, float a, float b)
 {
-  FP_REASSOCIATE_OFF();
+  FP32_REASSOCIATE_OFF();
   float x  = a+b;
   float bp = x-a;
   float ap = x-bp;
@@ -398,7 +398,7 @@ static inline void f32_2sum(f32_pair_t* p, float a, float b)
 // * fastmath breaks me
 static inline void f32_fast2sum(f32_pair_t* p, float a, float b)
 {
-  FP_REASSOCIATE_OFF();
+  FP32_REASSOCIATE_OFF();
   float x  = a+b;
   float bp = x-a;
   float y  = b-bp;
