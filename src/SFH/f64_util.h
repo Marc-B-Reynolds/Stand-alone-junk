@@ -26,11 +26,11 @@ extern "C" {
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 
-#define FP_REASSOCIATE_ON()  F64_PRAGMA("clang fp reassociate(on)")
-#define FP_REASSOCIATE_OFF() F64_PRAGMA("clang fp reassociate(off)")
+#define FP64_REASSOCIATE_ON()  F64_PRAGMA("clang fp reassociate(on)")
+#define FP64_REASSOCIATE_OFF() F64_PRAGMA("clang fp reassociate(off)")
 #else
-#define FP_REASSOCIATE_ON()
-#define FP_REASSOCIATE_OFF()
+#define FP64_REASSOCIATE_ON()
+#define FP64_REASSOCIATE_OFF()
 #endif
 
 // wrap an intel intrinsic
@@ -280,7 +280,7 @@ static inline double f64_mms_e(double a, double b, double c, double d, double* e
 // does not improve the error bound.
 static inline double f64_mma_c(double a, double b, double c, double d)
 {
-  FP_REASSOCIATE_OFF();
+  FP64_REASSOCIATE_OFF();
   double p0 = a*b;
   double p1 = c*d;
   double e0 = fma(a,b,-p0);
@@ -351,11 +351,11 @@ uint64_t f64_approx_eq(double a, double b, double absD, double relD)
 
 
 // returns true if a >= b and neither are NaN
-static inline bool f64_ordered_ge(double a, double b) { FP_REASSOCIATE_OFF(); return !(a < b); }
+static inline bool f64_ordered_ge(double a, double b) { FP64_REASSOCIATE_OFF(); return !(a < b); }
 
 // returns true if a > b and neither are NaN
 
-static inline bool f64_ordered_gt(double a, double b) { FP_REASSOCIATE_OFF(); return !(a <= b); }
+static inline bool f64_ordered_gt(double a, double b) { FP64_REASSOCIATE_OFF(); return !(a <= b); }
 
 // returns true if neither are NaN
 static inline bool f64_are_ordered(double a, double b) { return fpclassify(a+b) != FP_NAN; }
@@ -368,7 +368,7 @@ static inline bool f64_are_ordered(double a, double b) { return fpclassify(a+b) 
 // * fastmath breaks me
 static inline void f64_2sum(f64_pair_t* p, double a, double b)
 {
-  FP_REASSOCIATE_OFF();
+  FP64_REASSOCIATE_OFF();
   double x  = a+b;
   double bp = x-a;
   double ap = x-bp;
@@ -386,7 +386,7 @@ static inline void f64_2sum(f64_pair_t* p, double a, double b)
 // * fastmath breaks me
 static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
 {
-  FP_REASSOCIATE_OFF();
+  FP64_REASSOCIATE_OFF();
   double x  = a+b;
   double bp = x-a;
   double y  = b-bp;
