@@ -17,6 +17,12 @@ extern "C" {
 
 #define F64_PRAGMA(X) _Pragma(X)
 
+#if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
+#define F64_INTEL
+#elif defined(__ARM_ARCH)
+#define F64_ARM
+#endif
+
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 
@@ -26,6 +32,10 @@ extern "C" {
 #define FP_REASSOCIATE_ON()
 #define FP_REASSOCIATE_OFF()
 #endif
+
+// wrap an intel intrinsic
+#define F64_SSE_WRAP(F,X) _mm_cvtsd_f64(F(_mm_set_sd(X)))
+
 
 // ulp(1.0)
 static const double   f64_ulp1 = 0x1.0p-52;
@@ -71,10 +81,44 @@ static inline double f64_sqrt(double a)
 {
 #if defined(__NO_MATH_ERRNO__) || defined(_M_FP_FAST)
   return sqrt(a);
-#else  
+#elif defined(F64_INTEL)
   return _mm_cvtsd_f64(_mm_sqrt_sd(_mm_undefined_pd(),_mm_set_sd(a)));
+#elif defined(F64_ARM)
+  return __sqrt(a);
+#else
+  // do nothing for warning
 #endif  
 }
+
+
+// round to nearest (ties to even) (doesn't modify sticky flags)
+static inline double f64_round(double x)
+{
+#if defined(F32_INTEL)
+  __m128d v = _mm_set_sd(x);
+  __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
+  
+  return _mm_cvtsd_f64(r);
+#else
+  return __rintn(x);
+#endif
+}
+
+
+#if defined(F64_INTEL)
+
+// round toward zero (doesn't modify sticky flags)
+static inline double f64_round_tz(double x)
+{
+  __m128d v = _mm_set_sd(x);
+  __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_ZERO|_MM_FROUND_NO_EXC);
+  
+  return _mm_cvtsd_f64(r);
+}
+
+#else
+// error ATM
+#endif
 
 // x >=0 ? 1.0 : -1.f
 static inline double f64_sgn(double x) { return copysign(1.0,x); }
