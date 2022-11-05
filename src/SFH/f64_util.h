@@ -86,12 +86,12 @@ static inline double f64_sqrt(double a)
 #elif defined(F64_ARM)
   return __sqrt(a);
 #else
-  // do nothing for warning
+  // do nothing for warning ATM
 #endif  
 }
 
 
-// round to nearest (ties to even) (doesn't modify sticky flags)
+// round to nearest (ties to even)
 static inline double f64_round(double x)
 {
 #if defined(F32_INTEL)
@@ -99,8 +99,10 @@ static inline double f64_round(double x)
   __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
   
   return _mm_cvtsd_f64(r);
-#else
+#elif defined(defined(__ARM_FEATURE_DIRECTED_ROUNDING))
   return __rintn(x);
+#else  
+  // do nothing for warning ATM
 #endif
 }
 
