@@ -94,12 +94,12 @@ static inline float f32_sqrt(float a)
 #elif defined(F32_ARM)
   return __sqrtf(a);
 #else
-  // do nothing for warning
+  // do nothing for warning ATM
 #endif  
 }
 
 
-// round to nearest (ties to even) (doesn't modify sticky flags)
+// round to nearest (ties to even)
 static inline float f32_round(float x)
 {
 #if defined(F32_INTEL)
@@ -107,11 +107,10 @@ static inline float f32_round(float x)
   __m128 r = _mm_round_ss(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
   
   return _mm_cvtss_f32(r);
-#elif defined(F32_ARM)
-  // sticky flags modified?
-  return __rintf(x);
+#elif defined(defined(__ARM_FEATURE_DIRECTED_ROUNDING))
+  return __rintnf(x);
 #else
-  // do nothing for warning
+  // do nothing for warning ATM
 #endif  
 }
 
