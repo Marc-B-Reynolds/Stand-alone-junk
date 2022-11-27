@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 #ifndef QUAT_RSQRT
-#define QUAT_RSQRT(X) (1.f/QUAT_SQRT(X))
+#define QUAT_RSQRT(X) QUAT_SQRT(1.f/X)
 #define QURT_RSQRT_VIA_SQRT
 #endif
 
