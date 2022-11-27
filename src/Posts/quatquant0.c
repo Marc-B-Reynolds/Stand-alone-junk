@@ -133,7 +133,7 @@ static inline uint64_t rng_u64(void)
 //        actually does the 1/x and product...sigh.
  inline float sgn(float x) { return copysignf(1.f,x); }
  inline float mulsgn(float x, float v) { return sgn(x)*v; }
- inline float rsqrt(float v) { return 1.f/sqrtf(v); }
+ inline float rsqrt(float v) { return sqrtf(1.f/v); }
  inline float recip(float v) { return 1.f/v; }
  inline float rnd(float v)   { return floorf(v+0.5f); }
  inline double sgnd(double x) { return copysign(1.0,x); }
