@@ -93,7 +93,7 @@ typedef struct {
 } mat33_t;
 
 
-inline float rsqrtf(float v) { return 1.f/sqrtf(v); }
+inline float rsqrtf(float v) { return sqrtf(1.f/v); }
 
 // for error computations of using native ~1/sqrt without fixup
 inline float rsqrtf_a(float x) 
@@ -217,16 +217,15 @@ void quat_to_mat33_std(mat33_t* m, quat_t* q)
 void quat_to_mat33_ndr(mat33_t* m, quat_t* q)
 {
   float x  = q->x, y  = q->y, z  = q->z, w  = q->w;
-  float xx = x*x,  yy = y*y,  zz = z*z,  ww = w*w;
   float tx = 2*x,  ty = 2*y,  tz = 2*z;
   float xy = ty*x, xz = tz*x, yz = ty*z;
   float wx = tx*w, wy = ty*w, wz = tz*w;
-  float t0 = ww-zz;
-  float t1 = xx-yy;
+  float t0 = (w+y)*(w-y), t1 = (x+z)*(x-z);
+  float t2 = (w+x)*(w-x), t3 = (y+z)*(y-z);
   
   m->m00 = t0+t1;
-  m->m11 = t0-t1;
-  m->m22 = ww-xx-yy+zz;
+  m->m11 = t2+t3;
+  m->m22 = t2-t3;
 
   m->m10 = xy+wz; m->m01 = xy-wz;
   m->m20 = xz-wy; m->m02 = xz+wy;
@@ -976,6 +975,6 @@ int main(void)
   //test(0,7);
   //test(0,8);
   test(1,8);
-  test(2,8);
+  //test(2,8);
 #endif  
 }
