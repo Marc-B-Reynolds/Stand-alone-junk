@@ -50,6 +50,7 @@
 //#define ANGLE_LIMIT 0.92388f   // ~pi/4 
 //#define ANGLE_LIMIT 0.980785f  // ~pi/8
 //#define ANGLE_LIMIT 0.995185f  // ~pi/16
+//#define ANGLE_LIMIT 0.999999701976776123046875f // ~pi/2048 (~0.175781 degrees)
 
 
 
@@ -94,7 +95,7 @@ inline uint64_t rng_u64(void)
 }
 // end: xoroshiro128+
 
-inline float rsqrtf(float v) { return 1.f/sqrtf(v); }
+inline float rsqrtf(float v) { return sqrtf(1.f/v); }
 
 void reset_generators(uint64_t s0, uint64_t s1)
 {
@@ -657,12 +658,13 @@ void mat33_to_quat(quat_t* q, mat33_t* m)
 // track min/max determinates
 float det_min = 1.0;
 float det_max = 1.0;
+float od_sum  = 0.0;
 #endif
 
 // short chain test sampling schemes.
-//void sample_2(quat_t* a, quat_t* b) { uniform_quat(a); uniform_quat(b); }
+void sample_2(quat_t* a, quat_t* b) { uniform_quat(a); uniform_quat(b); }
 //void sample_2(quat_t* a, quat_t* b) { quat_near_max_ortho(a,b); }
-void sample_2(quat_t* a, quat_t* b) { quat_near_max_near(a,b); }
+//void sample_2(quat_t* a, quat_t* b) { quat_near_max_near(a,b); }
 
 
 void check_test()
@@ -802,8 +804,8 @@ void test(quat_t* q, const uint32_t n)
   for(uint32_t i=0; i<n; i++) {
     sample_2(&a,&b);
 #if !defined(MAT_TEST)    
-    quat_mul(&r, &r, &a);
-    quat_mul(&r, &r, &b);
+    quat_mul_pd(&r, &r, &a);
+    quat_mul_pd(&r, &r, &b);
 #else
     quat_to_mat33(&ma, &a);
     quat_to_mat33(&mb, &b);
@@ -815,8 +817,8 @@ void test(quat_t* q, const uint32_t n)
     quat_conj(&b);
     
 #if !defined(MAT_TEST)    
-    quat_mul(&r, &r, &b);
-    quat_mul(&r, &r, &a);
+    quat_mul_pd(&r, &r, &b);
+    quat_mul_pd(&r, &r, &a);
 #else
     quat_to_mat33(&ma,&a);
     quat_to_mat33(&mb,&b);
@@ -844,7 +846,7 @@ double error_m[MAX_POW+1];
 double error_a[MAX_POW+1];
 double error_det_lo[MAX_POW+1];
 double error_det_hi[MAX_POW+1];
-
+double error_od_sum[MAX_POW+1];
 
 #ifdef FAST_TEST
 #define BASE_I 0x0001ffff
@@ -856,7 +858,7 @@ double error_det_hi[MAX_POW+1];
 
 void rt_test()
 {
-  for(uint32_t p=0;p<=MAX_POW;p++) {
+  for(uint32_t p=1;p<=MAX_POW;p++) {
     quat_t q;
     double maxe = 0.0;
     double maxa = 0.0;
@@ -912,6 +914,34 @@ void rt_test()
   printf(" ae: "); for(uint32_t p=0;p<=MAX_POW;p++) { printf("%e,", error_a[p]); } printf("\n");
 }
 
+
+void bar()
+{
+  for(uint32_t n=3; n<=128; n++) {
+    quat_t q;
+    double maxe = 0.0;
+    double maxa = 0.0;
+    uint32_t i = 0x003fffff;
+
+    fflush(stdout);
+    
+    do {
+      i--;
+      test(&q,n);
+      double bn = bv_norm(&q);
+      double w  = q.w;
+      double w2 = w*w;
+      double ae = bn/w2;
+      double me = fabs(1.0-sqrt(bn + w*w));
+      if (me > maxe) { maxe = me; i += ADJ_I; }
+      if (ae > maxa) { maxa = ae; i += ADJ_I; }
+    } while(i != 0);
+    
+    printf("%e,", ascale*atan(sqrt(maxa)));
+  }
+  printf("\n");
+}
+
 // for quick checking sampling strategies
 void foo()
 {
@@ -943,12 +973,48 @@ void foo()
   } while (1);
 }
 
+// the fma isn't needed
+int f(float x) { return fmaf(-2.f,x, 3.f*x) == x; }
+
+inline float f32_from_bits(uint32_t x)
+{
+  float f; memcpy(&f, &x, 4); return f;
+}
+
+// 11.110
+//  1.1110
+//  
+
+
+void test_x()
+{
+  uint32_t c = 0;
+  uint32_t c2 = 0;
+  uint32_t c3 = 0;
+
+  // from [0.5, 1)
+  for (uint32_t i=0x3f000000; i<0x3f800000; i++) {
+    float x  = f32_from_bits(i);
+    int   t  = f(x);
+
+    if ((uint32_t)t != (i & 1)^1) { printf("%a %08x %d %d\n",x,i,i&1,t); return; }
+  }
+}
+
+uint64_t r_u64() { return ((uint64_t)INT64_C(-1))>>0; }
+
+inline float  rng_f32_i()  { return (float) (r_u64() >> (64-24)); }
+inline float  rng_f32_si() { return (float) ((int64_t)rng_u64() >> (64-25)); }
+
+inline float  rng_f32_ez() { return fmaf(rng_f32_i(), 0x1p-24f, 0x1p-24f); }
+inline float  rng_f32_s()  { return rng_f32_i() * 0x1p-24f; }
 
 int main(void)
 {
   uint64_t s0;
   uint64_t s1;
 
+  printf("%a\n", rng_f32_sez()); return 0;
   
 #ifdef RANDOMIZE
   s0 = _rdtsc();
@@ -959,6 +1025,8 @@ int main(void)
   
   reset_generators(s0,s1);
 
+  test_x(); return 0;
+  //bar(); return 0;
   rt_test();
   
   return 0;
