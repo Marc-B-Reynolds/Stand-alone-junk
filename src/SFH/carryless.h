@@ -206,7 +206,7 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 
 static inline uint32_t crc32c_inv(uint32_t x)
 {
-  return crc32c_64(cl_mul_64(x,0xc915ea3b),0);
+  return (uint32_t)crc32c_64(cl_mul_64(x,0xc915ea3b),0);
 }
 
 
