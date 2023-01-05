@@ -5,7 +5,7 @@
 
 // NOTES:
 // * no real effort at portability
-
+// * Intel only ATM
 #ifndef __CARRYLESS_H__
 #define __CARRYLESS_H__
 
@@ -16,6 +16,10 @@
 
 //-----------------------------------------------------------
 // helper for building scalar functions:
+
+#if defined(BITOPS_INTEL)
+
+#define CL_USE_WIDENED
 
 typedef __m128i cl_128_t;
 
@@ -36,6 +40,32 @@ static inline cl_128_t cl_load_64(uint64_t a)
 {
   return _mm_cvtsi64_si128((int64_t)a);
 }
+
+#elif defined(BITOPS_ARM)
+
+static_assert(0, "add ARM support");
+
+// this whole file probably needs to be reworked to not
+// be sucky on ARM. It was written assuming 64x64->128
+// operations. (or a bunch of conditional compile defs)
+
+static inline cl_128_t cl_mul_base(cl_128_t a, cl_128_t b)
+{
+}
+
+// load 32/64 input into 128 bit register
+static inline cl_128_t cl_load_32(uint32_t a)
+{
+}
+
+static inline cl_128_t cl_load_64(uint64_t a)
+{
+}
+
+#else
+// bitops.h should be handling this case
+static_assert(0, "oh no! dumb things in other header");
+#endif
 
 // untruncated products
 static inline cl_128_t cl_mul_full_64(uint64_t a, uint64_t b)
@@ -138,6 +168,7 @@ static inline uint64_t cr_pow2_64(uint64_t x)
 //-----------------------------------------------------------
 // circular carryless product (cc_ prefix)
 
+#if 1
 static inline uint32_t cc_mul_32(uint32_t a, uint32_t b)
 {
   cl_128_t p = cl_mul_full_32(a,b);
@@ -155,6 +186,17 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 
   return r^l;
 }
+#else
+static inline uint32_t cc_mul_32(uint32_t a, uint32_t b)
+{
+  return cl_mul_32(a,b)^cl_mul_hi_32(a,b);
+}
+
+static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
+{
+  return cl_mul_64(a,b)^cl_mul_hi_64(a,b);
+}
+#endif
 
 //-----------------------------------------------------------
 
@@ -170,11 +212,30 @@ static inline uint32_t crc32c_inv(uint32_t x)
 
 //-----------------------------------------------------------
 
+// worker for different bit-widths
+// inverses return either 0 or 1<<(bits-1) if
+// the input is a divisor (not-invertiable)
+// does not use special case squaring since
+// that requires moving between xmm and standard
+// reg set and inflates code footprint.
+
+static inline cl_128_t cl_mul_inv_k(cl_128_t x, uint32_t e)
+{
+  cl_128_t r = x;
+  
+  for(uint32_t i=0; i<e; i++) {
+    x = cl_mul_base(x,x);
+    r = cl_mul_base(r,x);
+  }
+  return r;
+}
+
 #if !defined(CARRYLESS_IMPLEMENTATION)
 
 extern uint32_t cl_mul_inv_32(uint32_t v);
 extern uint64_t cl_mul_inv_64(uint64_t v);
-extern cl_128_t cl_mul_inv_k(cl_128_t v, uint32_t e);
+extern void     cl_mul_inv_x2_32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib);
+extern void     cl_mul_inv_x2_64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib);
 
 extern uint32_t cl_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cl_gcd_64(uint64_t u, uint64_t v);
@@ -205,48 +266,15 @@ extern uint32_t cr_mul_order_64(uint64_t x);
 
 #else
 
-// inverses return either 0 or 1<<(bits-1) if
-// the input is a divisor (not-invertiable)
-// does not use special case squaring since
-// that requires moving between xmm and standard
-// reg set and inflates code footprint.
-
-cl_128_t cl_mul_inv_k(cl_128_t x, uint32_t e)
-{
-  cl_128_t r = x;
-  
-  for(uint32_t i=0; i<e; i++) {
-    x = cl_mul_base(x,x);
-    r = cl_mul_base(r,x);
-  }
-  return r;
-}
-
 uint32_t cl_mul_inv_32(uint32_t v)
 {
-  cl_128_t x = cl_load_32(v);
-  cl_128_t r = x;
-  
-  for(int i=0; i<4; i++) {
-    x = cl_mul_base(x,x);
-    r = cl_mul_base(r,x);
-  }
-  return cl_lo_32(r);
+  return cl_lo_32(cl_mul_inv_k(cl_load_32(v),4));
 }
 
 uint64_t cl_mul_inv_64(uint64_t v)
 {
-  cl_128_t x = cl_load_64(v);
-  cl_128_t r = x;
-
-  for(int i=0; i<5; i++) {
-    x = cl_mul_base(x,x);
-    r = cl_mul_base(r,x);
-  }
-  return cl_lo_64(r);
+  return cl_lo_64(cl_mul_inv_k(cl_load_64(v),5));
 }
-
-
 
 #define CL_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
 
@@ -390,6 +418,8 @@ uint64_t cl_mul_order_64(uint64_t x)
   return 64u >> log2_64(ctz_64(x));
 }
 
+#if 1
+
 // assumes that at least one of these is true:
 // * v is odd
 // * p is less than 32
@@ -410,7 +440,9 @@ uint32_t cl_pow_k_32(uint32_t v, uint32_t p)
   return cl_hi_32(r);
 }
 
-// same input restrictions as 32-bit version
+// assumes that at least one of these is true:
+// * v is odd
+// * p is less than 64
 uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
 {
   cl_128_t r = cl_load_64(UINT64_C(1));
@@ -425,6 +457,43 @@ uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
   
   return cl_lo_64(r);
 }
+
+#else
+
+// assumes that at least one of these is true:
+// * v is odd
+// * p is less than 32
+uint32_t cl_pow_k_32(uint32_t x, uint32_t p)
+{
+  uint32_t r = 1;
+
+  do {
+    if (p & 1) r = cl_mul_32(r,x);
+    p >>= 1;
+    if (!p) break;
+    x = cl_mul_32(x,x);
+  } while(1);
+  
+  return r;
+}
+
+// assumes that at least one of these is true:
+// * v is odd
+// * p is less than 64
+uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
+{
+  uint64_t r = 1;
+
+  do {
+    if (p & 1) r = cl_mul_64(r,x);
+    p >>= 1;
+    if (!p) break;
+    x = cl_mul_64(x,x);
+  } while(1);
+  
+  return r;
+}
+#endif
 
 
 uint32_t cl_pow_32(uint32_t v, uint32_t p)
@@ -443,6 +512,40 @@ uint64_t cl_pow_64(uint64_t v, uint32_t p)
     return cl_pow_k_64(v, p & 0x3f);
 
   return 0;
+}
+
+// 2 for 1 trick: removes 1 cl_mul
+void cl_mul_inv_x2_32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib)
+{
+#if !defined(CL_USE_WIDENED)
+  uint32_t r = cl_mul_inv_32(cl_mul_32(a,b));
+  *ia = cl_mul_32(r,b);
+  *ib = cl_mul_32(r,a);
+#else  
+  cl_128_t x  = cl_load_32(a);
+  cl_128_t y  = cl_load_32(b);
+  cl_128_t c  = cl_mul_base(x,y);
+  cl_128_t ic = cl_mul_inv_k(c,4);
+  *ia = cl_lo_32(cl_mul_base(ic,y));
+  *ib = cl_lo_32(cl_mul_base(ic,x));
+#endif  
+}
+
+// 2 for 1 trick: removes 2 cl_mul
+void cl_mul_inv_x2_64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib)
+{
+#if !defined(CL_USE_WIDENED)
+  uint64_t r = cl_mul_inv_64(cl_mul_64(a,b));
+  *ia = cl_mul_64(r,b);
+  *ib = cl_mul_64(r,a);
+#else  
+  cl_128_t x  = cl_load_64(a);
+  cl_128_t y  = cl_load_64(b);
+  cl_128_t c  = cl_mul_base(x,y);
+  cl_128_t ic = cl_mul_inv_k(c,5);
+  *ia = cl_lo_64(cl_mul_base(ic,y));
+  *ib = cl_lo_64(cl_mul_base(ic,x));
+#endif  
 }
 
 // lazy versions of CR just forwarding to CL
@@ -490,6 +593,8 @@ uint64_t cr_mul_inv_64(uint64_t x)
   return bit_reverse_64(cl_mul_inv_64(bit_reverse_64(x)));
 }
 
+
+
 #endif
 
 static inline uint32_t cl_div_32(uint32_t a, uint32_t b)
@@ -504,14 +609,14 @@ static inline uint64_t cl_div_64(uint64_t a, uint64_t b)
   return cl_divrem_64(a,b,&t);
 }
 
-
-
 //-----------------------------------------------------------
 // bit operation built on carryless ops
 
 // TODO: switch for software carryless impl (not really planning on doing that)
 #if 1
  // TODO: (wait! are these named backward?...need covind)
+
+// OEIS: A006068 
 static inline uint32_t bit_prefix_sum_32(uint32_t a) { return cr_mul_32(a, UINT32_C(~0)); }
 static inline uint32_t bit_suffix_sum_32(uint32_t a) { return cl_mul_32(a, UINT32_C(~0)); }
 
@@ -520,6 +625,7 @@ static inline uint64_t bit_suffix_sum_64(uint64_t a) { return cl_mul_64(a, UINT6
 
 #else
 
+// OEIS: A006068 
 static inline uint32_t bit_prefix_sum_32(uint32_t a)
 {
   a ^= a >>  1;
