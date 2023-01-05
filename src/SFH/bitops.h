@@ -6,10 +6,16 @@
 
 //  name_(u|s)?(d+)
 
-#if !defined(_MSC_VER)
+// what? nope
+#if     defined(__ARM_ARCH)
+#include <arm_acle.h>
+#define BITOPS_ARM
+#elif  !defined(_MSC_VER)
 #include <x86intrin.h>
+#define BITOPS_INTEL
 #else
 #include <intrin.h>
+#define BITOPS_INTEL
 #endif
 
 // NOTE: there are additional bitops in carryless.h
@@ -86,9 +92,15 @@ static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 #endif
 
 // inverse function in "carryless.h" (move to approp place)
-// add arm __crc32cw
+#if defined(__ARM_ARCH)
+#if defined(__ARM_FEATURE_CRC32)
+uint32_t crc32c(uint32_t x, uint32_t k)    { return __crc32cw(x,k); }
+uint64_t crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
+#endif
+#else
 static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return _mm_crc32_u32(x,k); }
-static inline uint32_t crc32c_64(uint64_t x, uint32_t k) { return (uint32_t)_mm_crc32_u64(k,x); }
+static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return _mm_crc32_u64(k,x); }
+#endif
 
 #if !defined(BITOPS_MISSING_POPCOUNT)
 
