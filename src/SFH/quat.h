@@ -180,7 +180,7 @@ static inline float quat_dot(quat_t* a, quat_t* b)
 
 // angle in H wrt positive real. quite different
 // result than acos(q->w).
-float quat_angle(quat_t* q)
+static inline float quat_angle(quat_t* q)
 {
   return QUAT_ATAN2(QUAT_SQRT(quat_bnorm(q)), q->w);
 }
@@ -408,7 +408,7 @@ static inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
   vec3_set(Z, wy+xz, yz-wx, 1.f-(xx+yy));
 }
 
-// quat_map_{a}to{b} rotates bivector part a to b:  let t=sqrt(ba^*) q=tat^*
+// quat_map_{a}2{b} rotates bivector part a to b:  let t=sqrt(ba^*) q=tat^*
 //   this is for variable rename. implement WRT to one and expand other variants.
 static inline void quat_map_x2y(quat_t* q, quat_t* a) { quat_set(q,-AY, AX, AZ, AW); }
 static inline void quat_map_x2z(quat_t* q, quat_t* a) { quat_set(q,-AZ, AY, AX, AW); }
