@@ -32,56 +32,6 @@ extern "C" {
   
 static inline float quat_util_sgn_f32(float x) { return copysignf(1.f,x); }  
 
-// temp hack
-#if 0
-#include "xmmintrin.h"
-
-// for error computations of using native ~1/sqrt without fixup
-static inline float rsqrtf_a(float x) 
-{
-  return _mm_cvtss_f32(_mm_rsqrt_ss(_mm_set_ss(x)));
-}
-
-static inline float rsqrtf_nr(float x)
-{
-  float  x0 = rsqrtf_a(x);
-  return x0*(1.5f - 0.5f*x*x0*x0);
-}  
-
-static inline float rsqrtf_nr2(float x)
-{
-  float x0;
-  x0 = rsqrtf_a(x);
-  x0 = x0*(1.5f - 0.5f*x*x0*x0);
-  x0 = x0*(1.5f - 0.5f*x*x0*x0);
-  return x0;
-}
-
-// for error computations of using native ~1/x without fixup
-static inline float rcp_a(float x) 
-{
-  return _mm_cvtss_f32(_mm_rcp_ss(_mm_set_ss(x)));
-}
-
-static inline float rcp_nr(float x) 
-{
-  float x0 = rcp_a(x);
-  return x0*(2.f - x*x0);
-}
-
-static inline float rsqrt_nr2(float x)
-{
-  float x0;
-  x0 = rcp_a(x);
-  x0 = x0*(2.f - x*x0);
-  x0 = x0*(2.f - x*x0);
-  return x0;
-}  
-
-#endif
-
-
-  
 // another temp hack
 #define AX a->x
 #define AY a->y
@@ -91,8 +41,6 @@ static inline float rsqrt_nr2(float x)
 #define BY b->y
 #define BZ b->z
 #define BW b->w
-
-  
 
 //------------------
 
