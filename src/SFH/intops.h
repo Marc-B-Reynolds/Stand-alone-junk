@@ -78,7 +78,7 @@ static inline uint64_t neg_mod_n_u64(uint64_t x, uint64_t n)
 
 //-------------------------------------------------------------------------------
 
-// multiplicative inverse
+// multiplicative inverse: find i such that i*a = 1 (requires odd 'a')
 // SEE: https://marc-b-reynolds.github.io/math/2017/09/18/ModInverse.html
 
 static inline uint32_t mod_inverse_u32(uint32_t a)
@@ -100,6 +100,23 @@ static inline uint64_t mod_inverse_u64(uint64_t a)
   x = x*(1+y); y *= y;
   x = x*(1+y);
   return x;
+}
+
+// two for one trick: mod inverse of a & b
+static inline void mod_inverse_x2_u32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib)
+{
+  uint32_t c  = a*b;
+  uint32_t ic = mod_inverse_u32(c);
+  *ia = ic * b;
+  *ib = ic * a;
+}
+
+static inline void mod_inverse_x2_u64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib)
+{
+  uint64_t c  = a*b;
+  uint64_t ic = mod_inverse_u64(c);
+  *ia = ic * b;
+  *ib = ic * a;
 }
 
 // 128-bit result of 64-bit product
