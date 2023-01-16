@@ -263,6 +263,8 @@ extern uint32_t cr_mul_inv_64(uint64_t x);
 extern uint32_t cr_mul_order_32(uint32_t x);
 extern uint32_t cr_mul_order_64(uint64_t x);
 
+extern uint32_t cc_mul_inv_32(uint32_t x);
+extern uint32_t cc_mul_inv_64(uint64_t x);
 
 #else
 
@@ -399,7 +401,7 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
 // cl/cr/cc (32-bit) all have:
 //
 // card of units by 'n' (same counts for divisors)
-// x^n = 1 (smallest n)
+// x^n =  1 (smallest n)
 //   n =  2 00010000 (     65536)
 //   n =  4 00ff0000 (  16711680)
 //   n =  8 0f000000 ( 251658240)
@@ -593,7 +595,27 @@ uint64_t cr_mul_inv_64(uint64_t x)
   return bit_reverse_64(cl_mul_inv_64(bit_reverse_64(x)));
 }
 
+uint32_t cc_mul_inv_32(uint32_t x)
+{
+  uint32_t r = x;
+  
+  for(uint32_t i=0; i<5; i++) {
+    x = cc_mul_32(x,x);
+    r = cc_mul_32(r,x);
+  }
+  return r;
+}
 
+uint64_t cc_mul_inv_64(uint64_t x)
+{
+  uint64_t r = x;
+  
+  for(uint32_t i=0; i<6; i++) {
+    x = cc_mul_64(x,x);
+    r = cc_mul_64(r,x);
+  }
+  return r;
+}
 
 #endif
 
