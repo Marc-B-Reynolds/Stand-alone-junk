@@ -139,10 +139,21 @@ procedure scale_list_to_f32(l,s)
 
   return r;
 };
-};
 
 // for error testing
-
 procedure fma(a,b,c)  { double(a*b+c); };
 procedure fmaf(a,b,c) { single(a*b+c); };
+
+procedure f64_ufp(v)  { v = double(v); return 2^(exponent(v)+precision(v)- 1); };
+procedure f64_ulp(v)  { v = double(v); return 2^(exponent(v)+precision(v)-53); };
+procedure f64_succ(v) { v = double(v); return single(v+f64_ulp(v)); };
+procedure f64_pred(v) { v = double(v); return single(v-f64_ulp(v)); };
+
+procedure f32_ufp(v)  { v = single(v); return 2^(exponent(v)+precision(v)- 1); };
+procedure f32_ulp(v)  { v = single(v); return 2^(exponent(v)+precision(v)-24); };
+procedure f32_succ(v) { v = single(v); return single(v+f32_ulp(v)); };
+procedure f32_pred(v) { v = single(v); return single(v-f32_ulp(v)); };
+
+ 
+};
 
