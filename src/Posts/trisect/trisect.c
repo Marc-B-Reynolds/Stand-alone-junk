@@ -57,6 +57,12 @@ float naive(float x)
   return cosf(acosf(x)/3.f);
 }
 
+float naive_r(float x)
+{
+  return cosf(acosf(x)*(1.f/3.f));
+}
+
+
 // IQ's approximations
 float ha(float x)  { return sqrtf(0.5f+0.5f*x); }
 
@@ -84,7 +90,10 @@ float g5f(float x)
 }
 
 
- 
+// yeah, yeah. it shouldn't work
+#define result_barrier(X) __asm__ __volatile__("" : "+r"(X) : "r"(X));
+
+
 // Full range weighted function approximations
 
 // approx abs error: 0x1.253ff2p-14 (~6.9916e-5)
@@ -144,40 +153,45 @@ float a6(float x)
 
 float c3(float x)
 {
-  const float cut  = -0.5f;
+  const float cut  = -2674669.f/4194304.f;
 
-  const float A2[2][2] = {{ 0x1.ec4dc6p-8f, 0x1.a7e32p-2f}, { 0x1.ec4dc6p-8f, 0x1.a7e32p-2f}};
-  const float B2[2][2] = {{-0x1.8961dp-5f,  0x1.cee61ap-2f},{-0x1.8961dp-5f,  0x1.cee61ap-2f}};
+  const float A2[2][2] = {{ 11019427.f/2147483648.f, 6809093.f/16777216.f}, { 12876879.f/1073741824.f,  3523121.f/8388608.f}};
+  const float B2[2][2] = {{-11111149.f/ 268435456.f, 7720477.f/16777216.f}, {-14304849.f/ 268435456.f, 14989259.f/33554432.f}};
+  
+  float t = sqrtf(1.f+x);
+
+  result_barrier(t);
 
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
   const float* B = B2[i];
   
-  float t = sqrtf(1.f+x);
   float a = fmaf(x, A[0], A[1]);
   float b = fmaf(x, B[0], B[1]);
   
   return fmaf(t,a,b);
 }
 
-
 float c4(float x)
 {  
-  static const float cut  = -0.5f;
+  static const float cut  = -712791.f/1048576.f;
 
   static const float A2[2][3] = {
-    {-0x1.4c1aaap-11f, 0x1.3e560ap-7f, 0x1.ac0d48p-2f},
-    {-0x1.4c1aaap-11f, 0x1.3e560ap-7f, 0x1.ac0d48p-2f}};
-
-  static const float B2[2][2] = {
-    {-0x1.aa284p-5f,   0x1.cabef8p-2f },
-    {-0x1.aa284p-5f,   0x1.cabef8p-2f }};
+    {-291589.f/1073741824.f, 15888243.f/2147483648.f, 6917253.f/16777216.f},
+    {-13609969/4294967296.f,  1176223.f/134217728.f,  7048603.f/16777216.f}};
   
+  static const float B2[2][2] = {
+    {-12585691.f/268435456.f, 15224481.f/33554432.f},
+    {  -919635.f/ 16777216.f, 14937965.f/33554432.f}};  
+
+  float t = sqrtf(1.f+x);
+
+  result_barrier(t);
+
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
   const float* B = B2[i];
   
-  float t = sqrtf(1.f+x);
   float a = fmaf(x, fmaf(x, A[0], A[1]), A[2]);
   float b = fmaf(x, B[0], B[1]);
   
@@ -186,50 +200,59 @@ float c4(float x)
 
 float c5(float x)
 {
-  const float cut  = -0.5f;
+  const float cut  = -674283.f/1048576.f;
 
   static const float A2[2][3] = {
-    { 0x1.8b53dcp-11f, 0x1.2e7fep-6f,  0x1.b41e68p-2f},
-    { 0x1.8b53dcp-11f, 0x1.2e7fep-6f,  0x1.b41e68p-2f}};
-    
+    {12985339.f/34359738368.f, 15982721.f/1073741824.f, 7076693.f/16777216.f},
+    { 7632049.f/ 4294967296.f, 11869557.f/ 536870912.f,  898793.f/2097152.f}};
+
   static const float B2[2][3] = {
-    {-0x1.3f41fap-8f, -0x1.09305ep-4f, 0x1.c2b138p-2f},
-    {-0x1.3f41fap-8f, -0x1.09305ep-4f, 0x1.c2b138p-2f}};
+    { -6887113.f/2147483648.f, -3967495.f/67108864.f, 3726401.f/ 8388608.f},
+    {-15007067.f/2147483648.f,  -291449.f/4194304.f,  7340055.f/16777216.f}};
+
+  float t = sqrtf(1.f+x);
   
+  result_barrier(t);
+
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
   const float* B = B2[i];
 
-  float t = sqrtf(1.f+x);
   float a = fmaf(x, fmaf(x, A[0], A[1]), A[2]);
   float b = fmaf(x, fmaf(x, B[0], B[1]), B[2]);
   
   return fmaf(t,a,b);
 }
 
-float c6(float x)
+// looks faithfully rounded. just a hack though: c5 promoted to doubles only
+float fr(float v)
 {
-  const float cut  = -0.5f;
+  const float cut  = -674283.f/1048576.f;
+
+  static const double A2[2][3] = {
+    {12985339.f/34359738368.f, 15982721.f/1073741824.f, 7076693.f/16777216.f},
+    { 7632049.f/ 4294967296.f, 11869557.f/ 536870912.f,  898793.f/2097152.f}};
+
+  static const double B2[2][3] = {
+    { -6887113.f/2147483648.f, -3967495.f/67108864.f, 3726401.f/ 8388608.f},
+    {-15007067.f/2147483648.f,  -291449.f/4194304.f,  7340055.f/16777216.f}};
+
+  double x = (double)v;
+  double t = sqrt(1.f+x);
   
-  const float A2[2][4] = {
-    {-0x1.cd2fe2p-15f, 0x1.3b19fap-10f, 0x1.50eb3ep-6f, 0x1.b5cccap-2f},
-    {-0x1.cd2fe2p-15f, 0x1.3b19fap-10f, 0x1.50eb3ep-6f, 0x1.b5cccap-2f}};
+  result_barrier(t);
+
+  const int    i = (v >= cut) ? 0 : 1;
+  const double* A = A2[i];
+  const double* B = B2[i];
+
+  double a = fma(x, fma(x, A[0], A[1]), A[2]);
+  double b = fma(x, fma(x, B[0], B[1]), B[2]);
   
-  const float B2[2][3] = {
-    {-0x1.935072p-8f, -0x1.152af2p-4f, 0x1.c10294p-2f},
-    {-0x1.935072p-8f, -0x1.152af2p-4f, 0x1.c10294p-2f}};
-  
-  const int    i = (x >= cut) ? 0 : 1;
-  const float* A = A2[i];
-  const float* B = B2[i];
-  
-  float t = sqrtf(1.f+x);
-  float a = fmaf(x, fmaf(x, fmaf(x, A[0], A[1]), A[2]), A[3]);
-  float b = fmaf(x, fmaf(x, B[0], B[1]), B[2]);
-  
-  return fmaf(t,a,b);
+  return (float)fma(t,a,b);
 }
 
+  
 //**********************************************************************
 
 #if defined(USE_CORE_MATH)
@@ -536,6 +559,7 @@ typedef struct {
 func_entry_t func_table[] =
 {
   ENTRY(naive),
+  ENTRY(naive_r),
 #if defined(USE_CORE_MATH)
   ENTRY(cr3),
 #endif  
@@ -551,6 +575,10 @@ func_entry_t func_table[] =
   ENTRY(a4),
   ENTRY(a5),
   ENTRY(a6),
+  ENTRY(c3),
+  ENTRY(c4),
+  ENTRY(c5),
+  ENTRY(fr),
 };
 
 //********************************************************
@@ -589,12 +617,12 @@ void vector_test_func(func_entry_t* entry)
 
   float ae = fabsf(max_cr-max_r);
   
-  printf("%5s: %8d  %14.6a %14.6a %14.6a %14.6a %e\n", entry->name, max, max_x, max_cr, max_r, ae, ae);
+  printf("%10s: %8d  %14.6a %14.6a %14.6a %14.6a %e\n", entry->name, max, max_x, max_cr, max_r, ae, ae);
 }
 
 void vector_test()
 {
-  printf("%5s: %8s  %14s %14s %14s %14s\n", "func", "ULP", "x", "cr", "f", "|f-cr|");
+  printf("%10s: %8s  %14s %14s %14s %14s\n", "func", "ULP", "x   ", "cr   ", "f   ", "|f-cr|   ");
 
   for(uint32_t i=0; i<LENGTHOF(func_table); i++) {
     vector_test_func(func_table+i);
