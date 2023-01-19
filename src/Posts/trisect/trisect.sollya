@@ -13,9 +13,9 @@ f32_min_normal   = 2^-126;
 cos_off = 0;
 
 F  = cos(acos(x)/3)-cos_off;
-G  = sin(asin(x)/3);
 hc = sqrt(1+x);
 hs = sqrt(1-x);
+sx = sqrt(x);
 c0 = -1 + f32_min_normal;
 //c0 = -1 + 2^-50;
 
@@ -113,9 +113,9 @@ procedure cos_make(basis, r)
   
   approx = fpminimax(F,basis,B,r,T,E) + cos_off;
 
-  //display=powers!;      write("  "); approx;  // for perverted languages without hex float
+  display=powers!;      write("  "); approx;  // for perverted languages without hex float
   display=hexadecimal!; write("  "); approx;  // for happy languages
-  //display=decimal!;     write("  "); approx;  // for happy humans
+  display=decimal!;     write("  "); approx;  // for happy humans
 
   p0;
   
@@ -126,87 +126,42 @@ procedure cos_make(basis, r)
   write(" (", e, ")\n\n");
 };
 
-procedure cos_make2(basis, x0,x1) { cos_make(basis, [x0;x1]); };
-
 procedure cos_make_cut(basis, cut)
 {
+  display=hexadecimal!;
+  write("cut =", cut);
+  display=powers!;
+  print(" ", cut);
   cos_make(basis, [c0; cut]);
   cos_make(basis, [cut;1]);
 };
 
 
-// nope: WIP
-procedure sin_make(basis, r)
-{
-  var e,approx,p0,p1;
-
-  print("sin(asin(x)/3 on: " @ r);
-  f = sin(asin(x)/3);
-  
-  approx = fpminimax(G,basis,B,r,T,E);
-
-  //display=powers!;      write("  "); approx;  // for perverted languages without hex float
-  //dissplay=hexadecimal!; write("  "); approx;  // for happy languages
-  display=decimal!;     write("  "); approx;  // for happy humans
-
-  p0;
-  
-  display=hexadecimal!;
-  e = single(dirtyinfnorm(approx-G, r));
-  write("  approx abs error: ", e);
-  display=decimal!;
-  write(" (", e, ")\n\n");
-};
-
-
 // for cos(acos(x)/3)
-cbasis3 = [|1,x,         hc,hc*x       |];
-cbasis4 = [|1,x,         hc,hc*x,hc*x^2|];
-cbasis5 = [|1,x,x^2,     hc,hc*x,hc*x^2|];
-cbasis6 = [|1,x,x^2,     hc,hc*x,hc*x^2,hc*x^3|];
+cbasis3 = [|1,x,      hc,hc*x       |];
+cbasis4 = [|1,x,      hc,hc*x,hc*x^2|];
+cbasis5 = [|1,x,x^2,  hc,hc*x,hc*x^2|];
+cbasis6 = [|1,x,x^2,  hc,hc*x,hc*x^2,hc*x^3|];
 
-cbasis_cut_guess = -0.643046; // was: single(-sqrt(2)/2)
+
+cbasis_cut_guess = single(-sqrt(2)/2);
 
 //cbasis3_cut = cos_find_cut(cbasis3, c0,1, cbasis_cut_guess);
 //cbasis4_cut = cos_find_cut(cbasis4, c0,1, cbasis_cut_guess);
 //cbasis5_cut = cos_find_cut(cbasis5, c0,1, cbasis_cut_guess);
-//cbasis6_cut = cos_find_cut(cbasis6, c0,1, cbasis_cut_guess);
-quit;
-
 
 // not optimal...but close enough
 cbasis3_cut = -0x1.467f68p-1;
 cbasis4_cut = -0x1.5c0aep-1;
 cbasis5_cut = -0x1.493d6p-1;
-//cbasis6_cut = -0x1.502aap-1;
-cbasis6_cut = -0x1.493d6p-1;
-
-// for sin(asin(x)/3)
-if (false) then {
-sbasis3 = [|1,hs,hs*x            |];              // 0x1.316b22p-11
-sbasis4 = [|1,hs,hs*x,hs*x^2     |];              // 0x1.0309d6p-11
-sbasis5 = [|1,hs,hs*x,hs*x^2,hs*x^3   |];         // 0x1.d8e7ep-13
-sbasis6 = [|1,hs,hs*x,hs*x^2,hs*x^3,hs*x^4  |];   // 0x1.2bep-13
-} else if (false) then {
-sbasis3 = [|1, x,    hs,hs*x  |]; 
-sbasis4 = [|x,    hs,hs*x,hs*x^2|]; 
-sbasis5 = [|1,x,x^2,hs,hs*x,hs*x^2|]; 
-sbasis6 = [|x,x^2,hs,hs*x,hs*x^2,hs*x^3|]; 
-} else {
-sbasis3 = [|x,    hs,hs*x       |];               // 0x1.422acp-7
-sbasis4 = [|x,    hs,hs*x,hs*x^2|];               // 0x1.ce2fp-9
-sbasis5 = [|x,x^2,hs,hs*x,hs*x^2|];               // 0x1.3a2398p-12
-sbasis6 = [|x,x^2,hs,hs*x,hs*x^2,hs*x^3|];        // 0x1.2790c6p-14
-};
 
 if (false) then {
-  // full range approximations
-  print("\n----------------------------\nsin(asin(x)/3) - full-range versions:\n");
-  R = [f32_min_denormal;1];
-  sin_make(sbasis3, R);
-  sin_make(sbasis4, R);
-  sin_make(sbasis5, R);
-  sin_make(sbasis6, R);
+  // goofying hack
+  B   = [|53...|];
+  cut = cos_find_cut(cbasis3, c0,1, cbasis_cut_guess);
+  cos_make_cut(cbasis3, cut);
+  B  = [|24...|];
+  quit;
 };
 
 
@@ -218,15 +173,21 @@ if (true) then {
   cos_make(cbasis4, R); // 0x1.00315ap-16
   cos_make(cbasis5, R); // 0x1.1e6202p-20
   cos_make(cbasis6, R); // 0x1.e67234p-23
-  cos_make(cbasis7, R); // 0x1.62444p-26
-  quit;
 };
 
-if (false) then {
+if (true) then {
   print("\n-----------------------------\ncos(acos(x)/3) - cut point versions:\n");
   cos_make_cut(cbasis3, cbasis3_cut);  // 0x1.2a3fdep-18, 0x1.2b2a48p-18
   cos_make_cut(cbasis4, cbasis4_cut);  // 0x1.30fbaap-21, 0x1.32224cp-21
   cos_make_cut(cbasis5, cbasis5_cut);  // 0x1.29fa24p-26, 0x1.29454cp-26
-  cos_make_cut(cbasis6, cbasis6_cut);  // 0x1.3fff9ap-29, 0x1.f67c0ep-27 { bad cut! }
 };
 
+// sanity hack: flip back to sqrt(1/2+x/2)
+//  yields estimate of : 0x1.28p-26, 0x1.280024p-26
+if (false) then {
+  var r,basis,b,cut;
+  b     = sqrt(1/2+x/2);
+  basis = [|1,x,x^2,     b,b*x,b*x^2|];
+  cut   = cos_find_cut(basis, c0,1, cbasis_cut_guess);
+  cos_make_cut(basis, cut);
+};
