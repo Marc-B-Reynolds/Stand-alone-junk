@@ -1,5 +1,10 @@
 /* -*- mode: c; -*- */
 
+// NOTES:
+// because to codmain is [1/2,1] and I wasn't really thinking about hitting
+// small ULP error I optimized for abs instead of relative error. Can be
+// bothered to change.
+
 // set up some globals
 T  = floating;
 E  = absolute;
@@ -85,6 +90,7 @@ procedure cos_find_cut(basis,x0,x1,cut)
   return cut;
 };
 
+// classic polynomial approx. just hardcoded to full range
 procedure cos_poly()
 {
   var b,p,f,e;
