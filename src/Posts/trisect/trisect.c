@@ -224,7 +224,8 @@ float c5(float x)
   return fmaf(t,a,b);
 }
 
-// looks faithfully rounded. just a hack though: c5 promoted to doubles only
+// looks faithfully rounded. just a hack though: c5 promoted to doubles w/o
+// anything else
 float fr(float v)
 {
   const float cut  = -674283.f/1048576.f;
