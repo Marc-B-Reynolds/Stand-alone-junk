@@ -120,7 +120,7 @@ uint32_t inv_32(reduce_t* r, uint32_t x)
   return x;
 }
 
-// for testing
+
 uint64_t inv_64(reduce_t* r, uint64_t x)
 {
   if (r->c != 0) x = rot64(x,r->c);
