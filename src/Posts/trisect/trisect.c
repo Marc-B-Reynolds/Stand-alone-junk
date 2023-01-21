@@ -66,11 +66,11 @@ float naive_r(float x)
 // IQ's approximations
 float ha(float x)  { return sqrtf(0.5f+0.5f*x); }
 
-float g2(float x) { x = ha(x); return x*0.5f+0.5f; }
-float g3(float x) { x = ha(x); return x*(-0.064913f*x+0.564913f)+0.5f; }
-float g4(float x) { x = ha(x); return x*(x*(x*0.021338f-0.096562f)+0.575223f)+0.5f; }
+float g1(float x) { x = ha(x); return x*0.5f+0.5f; }
+float g2(float x) { x = ha(x); return x*(-0.064913f*x+0.564913f)+0.5f; }
+float g3(float x) { x = ha(x); return x*(x*(x*0.021338f-0.096562f)+0.575223f)+0.5f; }
 
-float g5(float x)
+float g4(float x)
 {
   x = ha(x);
   return x*(x*(x*(x*-0.008978f+0.039075f)-0.107071f)+0.576974f)+0.5f; 
@@ -79,20 +79,15 @@ float g5(float x)
 // IQ's approximations (w FMA)
 float haf(float x) { return sqrtf(fmaf(0.5f,x,0.5f)); }
     
-float g2f(float x) { x = haf(x); return fmaf(0.5f,x,0.5f); }
-float g3f(float x) { x = haf(x); return fmaf(x, (-0.064913f*x+0.564913f), 0.5f); }
-float g4f(float x) { x = haf(x); return fmaf(x, (x*(x*0.021338f-0.096562f)+0.575223f), 0.5f); }
+float g1f(float x) { x = haf(x); return fmaf(0.5f,x,0.5f); }
+float g2f(float x) { x = haf(x); return fmaf(x, (-0.064913f*x+0.564913f), 0.5f); }
+float g3f(float x) { x = haf(x); return fmaf(x, (x*(x*0.021338f-0.096562f)+0.575223f), 0.5f); }
 
-float g5f(float x)
+float g4f(float x)
 {
   x = haf(x);
   return fmaf(x,(x*(x*(x*-0.008978f+0.039075f)-0.107071f)+0.576974f),0.5f); 
 }
-
-
-// yeah, yeah. it shouldn't work
-#define result_barrier(X) __asm__ __volatile__("" : "+r"(X) : "r"(X));
-
 
 // Full range weighted function approximations
 
@@ -160,8 +155,6 @@ float c3(float x)
   
   float t = sqrtf(1.f+x);
 
-  result_barrier(t);
-
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
   const float* B = B2[i];
@@ -186,8 +179,6 @@ float c4(float x)
 
   float t = sqrtf(1.f+x);
 
-  result_barrier(t);
-
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
   const float* B = B2[i];
@@ -211,8 +202,6 @@ float c5(float x)
     {-15007067.f/2147483648.f,  -291449.f/4194304.f,  7340055.f/16777216.f}};
 
   float t = sqrtf(1.f+x);
-  
-  result_barrier(t);
 
   const int    i = (x >= cut) ? 0 : 1;
   const float* A = A2[i];
@@ -241,8 +230,6 @@ float fr(float v)
   double x = (double)v;
   double t = sqrt(1.f+x);
   
-  result_barrier(t);
-
   const int    i = (v >= cut) ? 0 : 1;
   const double* A = A2[i];
   const double* B = B2[i];
