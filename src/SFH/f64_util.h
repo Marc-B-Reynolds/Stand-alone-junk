@@ -102,15 +102,53 @@ static inline double f64_rsqrt(double a)
   return f64_sqrt(1.0/a);
 }
 
-// round to nearest (ties to even)
-static inline double f64_round(double x)
+
+#if defined(F32_INTEL)
+// on Intel minsd/maxsd if either input is NaN then the second source
+// is returned so it can be either input.
+static inline double f64_fast_min(double a, double b)
+{
+  return !(a > b) ? a : b;
+}
+
+static inline double f64_fast_max(double a, double b)
+{
+  return !(a < b) ? a : b;
+}
+#else
+static inline double f64_fast_min(double a, double b) { return fmin(a,b); }
+static inline double f64_fast_max(double a, double b) { return fmax(a,b); }
+#endif
+
+
+// all seem fine on all modernish targets/compilers
+static inline double f64_ceil(double x)     { return ceil(x);  }
+static inline double f64_floor(double x)    { return floor(x); }
+static inline double f64_trunc(double x)    { return trunc(x); }
+static inline double f64_fract(double x)    { return x - f64_trunc(x); }
+
+// intel doesn't have as a op. computed as
+//   trunc(x + copysign(0.5-ulp(0.5), x))
+static inline double f64_round(double x)    { return round(x); }
+
+// directed rounding aliases
+// cm=current mode, tz=toward zero, pi=positive inf, ni=negative inf
+static inline double f64_round_cm(double x)  { return nearbyint(x);  }
+static inline double f64_round_tz(double x)  { return f64_trunc(x);  }
+static inline double f64_round_pi(double x)  { return f64_ceil(x);   }
+static inline double f64_round_ni(double x)  { return f64_floor(x);  }
+static inline double f64_round_na(double x)  { return f64_round(x);  }
+
+// round to nearest (ties to even) aka banker's rounding. default mode
+// so 'f32_round_cm' produces same if mode hasn't been changed.
+static inline double f64_round_ne(double x)
 {
 #if defined(F32_INTEL)
   __m128d v = _mm_set_sd(x);
   __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
   
   return _mm_cvtsd_f64(r);
-#elif defined(defined(__ARM_FEATURE_DIRECTED_ROUNDING))
+#elif defined(__ARM_FEATURE_DIRECTED_ROUNDING)
   return __rintn(x);
 #else  
   // do nothing for warning ATM
@@ -118,20 +156,6 @@ static inline double f64_round(double x)
 }
 
 
-#if defined(F64_INTEL)
-
-// round toward zero (doesn't modify sticky flags)
-static inline double f64_round_tz(double x)
-{
-  __m128d v = _mm_set_sd(x);
-  __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_ZERO|_MM_FROUND_NO_EXC);
-  
-  return _mm_cvtsd_f64(r);
-}
-
-#else
-// error ATM
-#endif
 
 // x >=0 ? 1.0 : -1.f
 static inline double f64_sgn(double x) { return copysign(1.0,x); }
