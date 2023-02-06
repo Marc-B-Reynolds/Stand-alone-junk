@@ -130,6 +130,26 @@ static inline float f32_rsqrt(float a)
   return f32_sqrt(1.f/a);
 }
 
+
+#if defined(F32_INTEL)
+// on Intel minss/maxss if either input is NaN then the second source
+// is returned so it can be either input.
+static inline float f32_fast_min(float a, float b)
+{
+  return !(a > b) ? a : b;
+}
+
+static inline float f32_fast_max(float a, float b)
+{
+  return !(a < b) ? a : b;
+}
+#else
+static inline float f32_fast_min(float a, float b) { return fminf(a,b); }
+static inline float f32_fast_max(float a, float b) { return fmaxf(a,b); }
+#endif
+
+
+
 // all seem fine on all modernish targets/compilers
 static inline float f32_ceil(float x)     { return ceilf(x);  }
 static inline float f32_floor(float x)    { return floorf(x); }
