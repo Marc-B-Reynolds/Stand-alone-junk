@@ -139,7 +139,12 @@ static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x)
 
 // scatter/gather ops generically...skipping that ATM.
 #if defined(__ARM_ARCH)
-// fill in the blanks
+// fill in the blanks: temp hack. w/o hardware scatter/gather stuff needs to be
+// reworked.  Note Zen 2 has but is microcoded. :(
+extern uint32_t bit_scatter_32(uint32_t x, uint32_t m);
+extern uint64_t bit_scatter_64(uint64_t x, uint64_t m);
+extern uint32_t bit_gather_32(uint32_t x, uint32_t m);
+extern uint64_t bit_gather_64(uint64_t x, uint64_t m);
 #else
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
