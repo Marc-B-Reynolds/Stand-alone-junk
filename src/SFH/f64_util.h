@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2016-2022
+// Marc B. Reynolds, 2016-2023
 
 // WIP: loaded with unconverted constants, etc
 
@@ -25,12 +25,18 @@ extern "C" {
 
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
-
 #define FP64_REASSOCIATE_ON()  F64_PRAGMA("clang fp reassociate(on)")
 #define FP64_REASSOCIATE_OFF() F64_PRAGMA("clang fp reassociate(off)")
-#else
+#define FP64_ASSOC_BARRIER(X)  (X)
+#elif defined(__GNUC__) &&  (__GNUC__ >= 12)
 #define FP64_REASSOCIATE_ON()
 #define FP64_REASSOCIATE_OFF()
+#define FP64_ASSOC_BARRIER(X)   __builtin_assoc_barrier(X)
+#endif
+
+// just say no
+#if !(defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
+#define FP64_LOL_NO
 #endif
 
 // wrap an intel intrinsic
@@ -40,7 +46,7 @@ extern "C" {
 // ulp(1.0)
 static const double   f64_ulp1 = 0x1.0p-52;
 
-static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
+static const uint64_t f64_sign_mask = UINT64_C(1)<<63;
 
 
 // NOTES:
@@ -71,7 +77,7 @@ static inline double f64_mulsign(double v, uint64_t s)
 
 static inline uint64_t f64_sign_bit(float a)
 {
-  return f64_to_bits(a) & f64_sign_bit_k;
+  return f64_to_bits(a) & f64_sign_mask;
 }
 
 // to cut some of the pain of math errno not being disabled
@@ -90,6 +96,11 @@ static inline double f64_sqrt(double a)
 #endif  
 }
 
+// 1/sqrt(a) : lowest error "naive" version
+static inline double f64_rsqrt(double a)
+{
+  return f64_sqrt(1.0/a);
+}
 
 // round to nearest (ties to even)
 static inline double f64_round(double x)
@@ -136,6 +147,17 @@ static inline double f64_lerp(double t, double a, double b)
 }
 
 static const f64_pair_t f64_up_pi = {.h=0x1.921fb54442d18p1, .l= 0x1.1a62633145c07p-53};
+
+
+// exact product: ab (provided no over/underflow)
+// h = RN(ab), l=RN(ab-RN(ab) -> ab = (h+l)
+static inline void f64_2mul(f64_pair_t* r, double a, double b)
+{
+  double t = a*b;
+  double e = fma(a,b,-t);
+  r->h = t;
+  r->l = e;
+}
 
 // return RN(x*p) where p is unevaluated pair
 static inline double f64_up_mul(const f64_pair_t* const p, double x) 
@@ -317,7 +339,7 @@ static inline uint64_t f64_ulp_dist(double a, double b)
   if ((int64_t)(ub^ua) >= 0)
     return u64_abs(ua-ub);
   
-  return ua+ub+f64_sign_bit_k;
+  return ua+ub+f64_sign_mask;
 }
 
 // a & b are within 'd' ulp of each other
@@ -329,7 +351,7 @@ static inline uint64_t f64_within_ulp(double a, double b, uint64_t d)
   if ((int64_t)(ub^ua) >= 0)
     return ua-ub+d <= d+d;
   
-  return ua+ub+f64_sign_bit_k <= d+d;
+  return ua+ub+f64_sign_mask <= d+d;
 }
 
 // filtered approximately equal:
@@ -351,18 +373,28 @@ static inline uint64_t f64_approx_eq(double a, double b, double absD, double rel
   return 0;
 }
 
-
-// returns true if a >= b and neither are NaN
-static inline bool f64_ordered_ge(double a, double b) { FP64_REASSOCIATE_OFF(); return !(a < b); }
-
-// returns true if a > b and neither are NaN
-
-static inline bool f64_ordered_gt(double a, double b) { FP64_REASSOCIATE_OFF(); return !(a <= b); }
-
 // returns true if neither are NaN
-static inline bool f64_are_ordered(double a, double b) { return fpclassify(a+b) != FP_NAN; }
+static inline bool f64_are_ordered(double a, double b)
+{ 
+#if !(defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
+  return (a==a) && (b==b);
+#else
+#endif
+}
 
+// returns true if a >= b or neither are NaN
+static inline bool f64_ge_or_unordered(double a, double b)
+{
+  FP64_REASSOCIATE_OFF();
+  return !(a < b);
+}
 
+// returns true if a > b or neither are NaN
+static inline bool f64_gt_or_unordered(double a, double b)
+{
+  FP64_REASSOCIATE_OFF();
+  return !(a <= b);
+}
 
 // (a+b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
@@ -371,12 +403,12 @@ static inline bool f64_are_ordered(double a, double b) { return fpclassify(a+b) 
 static inline void f64_2sum(f64_pair_t* p, double a, double b)
 {
   FP64_REASSOCIATE_OFF();
-  double x  = a+b;
-  double bp = x-a;
-  double ap = x-bp;
-  double eb = b-bp;
-  double ea = a-ap;
-  double y  = ea+eb;
+  double x  = (a+b);
+  double bp = (x-a);
+  double ap = (x-bp);
+  double eb = (b-bp);
+  double ea = (a-ap);
+  double y  = (ea+eb);
   p->h = x;
   p->l = y;
 }
@@ -389,12 +421,13 @@ static inline void f64_2sum(f64_pair_t* p, double a, double b)
 static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
 {
   FP64_REASSOCIATE_OFF();
-  double x  = a+b;
-  double bp = x-a;
-  double y  = b-bp;
+  double x  = (a+b);
+  double bp = (x-a);
+  double y  = (b-bp);
   p->h = x;
   p->l = y;
 }
+
 
 #ifdef __cplusplus
 extern "C" {
