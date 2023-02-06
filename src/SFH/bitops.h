@@ -138,10 +138,15 @@ static inline uint32_t bit_parity_mask_32(uint32_t x) { return -bit_parity_32(x)
 static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x); }
 
 // scatter/gather ops generically...skipping that ATM.
+#if defined(__ARM_ARCH)
+// fill in the blanks
+#else
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
 static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32(x, m); } 
-static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64(x, m); } 
+static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64(x, m); }
+#endif
+
 
 // Jasper Neumann : https://programming.sirrida.de/perm_fn.html#bit_permute_step_simple
 
@@ -261,6 +266,9 @@ static inline uint64_t bit_zip_64(uint64_t x)
   return (R<<1)^L;
 }
 
+// pop_next_{32/64}: next number greater than 'x' with the
+// same population count.
+
 static inline uint32_t pop_next_32(uint32_t x)
 {
   uint32_t a = x & -x;
@@ -279,5 +287,33 @@ static inline uint64_t pop_next_64(uint64_t x)
   return b | (c >> d);
 }
 
+// pop_next_{32/64}_inc: pop_next but increments
+// the pop count when moving past largest
+
+static inline uint32_t pop_next_inc_32(uint32_t x)
+{
+  uint32_t a = x & -x;
+  uint32_t b = x + a;
+  uint32_t c = x ^ b;
+  uint32_t t = ctz_32(x);
+  uint32_t d = (2 + t);
+  uint32_t r = b | (c >> d);
+  uint32_t n = 1 | (x >> (t-1));
+
+  return r > x ? r : n;
+}
+
+static inline uint64_t pop_next_inc_64(uint64_t x)
+{
+  uint64_t a = x & -x;
+  uint64_t b = x + a;
+  uint64_t c = x ^ b;
+  uint32_t t = ctz_64(x);
+  uint32_t d = (2 + t);
+  uint64_t r = b | (c >> d);
+  uint64_t n = 1 | (x >> (t-1));
+
+  return r > x ? r : n;
+}
 
 #endif
