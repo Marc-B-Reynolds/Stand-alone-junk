@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2022
+// Marc B. Reynolds, 2016-2023
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef __BITOPS_H__
