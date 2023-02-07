@@ -1,7 +1,8 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2023
 
-// WIP: loaded with unconverted constants, etc
+// WIP: loaded with unconverted constants from f32_util. probably everything
+// is even more broken.
 
 #ifndef F64_UTIL_H
 #define F64_UTIL_H
@@ -102,24 +103,29 @@ static inline double f64_rsqrt(double a)
   return f64_sqrt(1.0/a);
 }
 
+// min/max : NaN if either
+static inline double f64_min(double a, double b)  { return fmin(a,b); }
+static inline double f64_max(double a, double b)  { return fmax(a,b); }
 
-#if defined(F32_INTEL)
-// on Intel minsd/maxsd if either input is NaN then the second source
-// is returned so it can be either input.
-static inline double f64_fast_min(double a, double b)
-{
-  return !(a > b) ? a : b;
-}
+// Intel min/max ops returns second source if either are NaN so the
+// previous defs are 3 op sequences and the following are 1 op:
 
-static inline double f64_fast_max(double a, double b)
+// min/max : returns first if either are NaN
+static inline double f64_min1(double a, double b) { return !(a > b) ? a : b; }
+static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
+
+// min/max : returns second if either are NaN
+static inline double f64_min2(double a, double b) { return !(a < b) ? b : a; }
+static inline double f64_max2(double a, double b) { return !(a > b) ? b : a; }
+
+static inline double f64_clamp(double x, double lo, double hi)
 {
-  return !(a < b) ? a : b;
-}
+#if defined(F64_INTEL)
+  return f64_min1(f64_max1(x,lo),hi);
 #else
-static inline double f64_fast_min(double a, double b) { return fmin(a,b); }
-static inline double f64_fast_max(double a, double b) { return fmax(a,b); }
-#endif
-
+  return f64_min(f64_max(x,lo),hi);
+#endif  
+}
 
 // all seem fine on all modernish targets/compilers
 static inline double f64_ceil(double x)     { return ceil(x);  }
@@ -140,10 +146,10 @@ static inline double f64_round_ni(double x)  { return f64_floor(x);  }
 static inline double f64_round_na(double x)  { return f64_round(x);  }
 
 // round to nearest (ties to even) aka banker's rounding. default mode
-// so 'f32_round_cm' produces same if mode hasn't been changed.
+// so 'f64_round_cm' produces same if mode hasn't been changed.
 static inline double f64_round_ne(double x)
 {
-#if defined(F32_INTEL)
+#if defined(F64_INTEL)
   __m128d v = _mm_set_sd(x);
   __m128d r = _mm_round_sd(v,v, _MM_FROUND_TO_NEAREST_INT|_MM_FROUND_NO_EXC);
   
