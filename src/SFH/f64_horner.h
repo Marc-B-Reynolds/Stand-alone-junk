@@ -3,8 +3,8 @@
 
 // evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low.
 
-#ifndef __F64_LIBM__
-#define __F64_LIBM__
+#ifndef __F64_HORNER__
+#define __F64_HORNER__
 
 #ifdef __cplusplus
 extern "C" {
