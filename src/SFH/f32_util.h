@@ -125,29 +125,31 @@ static inline float f32_sqrt(float a)
 // SEE: https://gist.github.com/Marc-B-Reynolds/9fb24a7a4ee915e6e973bf9f4d08c404
 // correctly:   86.991060% (14594678)
 // faithfully:  13.008940% (2182538)
-static inline float f32_rsqrt(float a)
+static inline float f32_rsqrt(float a) { return f32_sqrt(1.f/a); }
+
+// min/max : NaN if either
+static inline float f32_min(float a, float b)  { return fminf(a,b); }
+static inline float f32_max(float a, float b)  { return fmaxf(a,b); }
+
+// Intel min/max ops returns second source if either are NaN so the
+// previous defs are 3 op sequences and the following are 1 op:
+
+// min/max : returns first if either are NaN
+static inline float f32_min1(float a, float b) { return !(a > b) ? a : b; }
+static inline float f32_max1(float a, float b) { return !(a < b) ? a : b; }
+
+// min/max : returns second if either are NaN
+static inline float f32_min2(float a, float b) { return !(a < b) ? b : a; }
+static inline float f32_max2(float a, float b) { return !(a > b) ? b : a; }
+
+static inline float f32_clamp(float x, float lo, float hi)
 {
-  return f32_sqrt(1.f/a);
-}
-
-
 #if defined(F32_INTEL)
-// on Intel minss/maxss if either input is NaN then the second source
-// is returned so it can be either input.
-static inline float f32_fast_min(float a, float b)
-{
-  return !(a > b) ? a : b;
-}
-
-static inline float f32_fast_max(float a, float b)
-{
-  return !(a < b) ? a : b;
-}
+  return f32_min1(f32_max1(x,lo),hi);
 #else
-static inline float f32_fast_min(float a, float b) { return fminf(a,b); }
-static inline float f32_fast_max(float a, float b) { return fmaxf(a,b); }
-#endif
-
+  return f32_min(f32_max(x,lo),hi);
+#endif  
+}
 
 
 // all seem fine on all modernish targets/compilers
