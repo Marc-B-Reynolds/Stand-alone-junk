@@ -139,13 +139,9 @@ static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x)
 
 // scatter/gather ops generically...skipping that ATM.
 #if defined(__ARM_ARCH)
-// fill in the blanks: temp hack. w/o hardware scatter/gather stuff needs to be
-// reworked.  Note Zen 2 has but is microcoded. :(
-extern uint32_t bit_scatter_32(uint32_t x, uint32_t m);
-extern uint64_t bit_scatter_64(uint64_t x, uint64_t m);
-extern uint32_t bit_gather_32(uint32_t x, uint32_t m);
-extern uint64_t bit_gather_64(uint64_t x, uint64_t m);
+// fill in the blanks:
 #else
+#define BITOPS_HAS_SCATTER_GATHER
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
 static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32(x, m); } 
@@ -227,6 +223,9 @@ static inline uint64_t bit_str_lo_64(uint64_t x)
   return x & (~t);
 }
 
+// temp hack
+#if defined(BITOPS_HAS_SCATTER_GATHER)
+
 // clears the 'n^th' set bit in x
 static inline uint32_t bit_clear_nth_set_32(uint32_t x, uint32_t n)
 {
@@ -270,6 +269,9 @@ static inline uint64_t bit_zip_64(uint64_t x)
   uint64_t R = bit_scatter_64(x >> 32, m);
   return (R<<1)^L;
 }
+
+#endif
+
 
 // pop_next_{32/64}: next number greater than 'x' with the
 // same population count.
