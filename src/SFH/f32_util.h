@@ -127,7 +127,7 @@ static inline float f32_sqrt(float a)
 // faithfully:  13.008940% (2182538)
 static inline float f32_rsqrt(float a) { return f32_sqrt(1.f/a); }
 
-// min/max : NaN if either
+// min/max : returns non-NaN result if one is NaN
 static inline float f32_min(float a, float b)  { return fminf(a,b); }
 static inline float f32_max(float a, float b)  { return fmaxf(a,b); }
 
@@ -138,9 +138,6 @@ static inline float f32_max(float a, float b)  { return fmaxf(a,b); }
 static inline float f32_min1(float a, float b) { return !(a > b) ? a : b; }
 static inline float f32_max1(float a, float b) { return !(a < b) ? a : b; }
 
-// min/max : returns second if either are NaN
-static inline float f32_min2(float a, float b) { return !(a < b) ? b : a; }
-static inline float f32_max2(float a, float b) { return !(a > b) ? b : a; }
 
 static inline float f32_clamp(float x, float lo, float hi)
 {
