@@ -103,7 +103,7 @@ static inline double f64_rsqrt(double a)
   return f64_sqrt(1.0/a);
 }
 
-// min/max : NaN if either
+// min/max : returns non-NaN result if one is NaN
 static inline double f64_min(double a, double b)  { return fmin(a,b); }
 static inline double f64_max(double a, double b)  { return fmax(a,b); }
 
@@ -113,10 +113,6 @@ static inline double f64_max(double a, double b)  { return fmax(a,b); }
 // min/max : returns first if either are NaN
 static inline double f64_min1(double a, double b) { return !(a > b) ? a : b; }
 static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
-
-// min/max : returns second if either are NaN
-static inline double f64_min2(double a, double b) { return !(a < b) ? b : a; }
-static inline double f64_max2(double a, double b) { return !(a > b) ? b : a; }
 
 static inline double f64_clamp(double x, double lo, double hi)
 {
