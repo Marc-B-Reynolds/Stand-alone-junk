@@ -4,8 +4,8 @@
 // WIP: loaded with unconverted constants from f32_util. probably everything
 // is even more broken.
 
-#ifndef F64_UTIL_H
-#define F64_UTIL_H
+#ifndef __F64_UTIL_H__
+#define __F64_UTIL_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,13 +58,27 @@ extern "C" {
 // ulp(1.0)
 static const double   f64_ulp1 = 0x1.0p-52;
 
-static const uint64_t f64_sign_mask = UINT64_C(1)<<63;
+static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
 
 // NOTES:
 // u = round-off unit (2^-) = ulp(1)/2
 
 typedef struct { double h,l; } f64_pair_t;
+
+// extended precision constants section
+// SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)
+
+// extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}
+// product: Kx = fma(H,x,L*x) -> f64_up_mul(K,x)
+const f64_pair_t f64_mul_k_pi      = {.h = 0x1.921fb54442d18p1,  .l= 0x1.1a62633145c07p-53};
+const f64_pair_t f64_mul_k_pi_i    = {.h = 0x1.45f306dc9c883p-2, .l=-0x1.6b01ec5417056p-56};
+const f64_pair_t f64_mul_k_log2    = {.h = 0x1.62e42fefa39efp-1, .l= 0x1.abc9e3b39803fp-56};
+const f64_pair_t f64_mul_k_log2_i  = {.h = 0x1.71547652b82fep0,  .l= 0x1.777d0ffda0d24p-56};
+const f64_pair_t f64_mul_k_log10   = {.h = 0x1.26bb1bbb55516p1,  .l=-0x1.f48ad494ea3e9p-53};
+const f64_pair_t f64_mul_k_log10_i = {.h = 0x1.bcb7b1526e50ep-2, .l= 0x1.95355baaafad3p-57};
+const f64_pair_t f64_mul_k_e       = {.h = 0x1.5bf0a8b145769p1,  .l= 0x1.4d57ee2b1013ap-53};
+const f64_pair_t f64_mul_k_e_i     = {.h = 0x1.78b56362cef38p-2, .l=-0x1.ca8a4270fadf5p-57};
 
 static inline uint64_t f64_to_bits(double x)
 {
@@ -89,7 +103,7 @@ static inline double f64_mulsign(double v, uint64_t s)
 
 static inline uint64_t f64_sign_bit(float a)
 {
-  return f64_to_bits(a) & f64_sign_mask;
+  return f64_to_bits(a) & f64_sign_bit_k;
 }
 
 // to cut some of the pain of math errno not being disabled
@@ -125,6 +139,7 @@ static inline double f64_max(double a, double b)  { return fmax(a,b); }
 static inline double f64_min1(double a, double b) { return !(a > b) ? a : b; }
 static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
 
+// 2 ops on ARM & Intel. Returns x if both are NaN
 static inline double f64_clamp(double x, double lo, double hi)
 {
 #if defined(F64_INTEL)
@@ -366,7 +381,7 @@ static inline uint64_t f64_ulp_dist(double a, double b)
   if ((int64_t)(ub^ua) >= 0)
     return u64_abs(ua-ub);
   
-  return ua+ub+f64_sign_mask;
+  return ua+ub+f64_sign_bit_k;
 }
 
 // a & b are within 'd' ulp of each other
@@ -378,7 +393,7 @@ static inline uint64_t f64_within_ulp(double a, double b, uint64_t d)
   if ((int64_t)(ub^ua) >= 0)
     return ua-ub+d <= d+d;
   
-  return ua+ub+f64_sign_mask <= d+d;
+  return ua+ub+f64_sign_bit_k <= d+d;
 }
 
 // filtered approximately equal:
