@@ -1,0 +1,46 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016-2023
+// Public Domain under http://unlicense.org, see link for details.
+
+// given a constant 'x' factor into unevaluated part x ~= (h+l)
+
+procedure f32_mul_k(name,x)
+{
+  var h,l,e;
+  h = single(x);
+  l = single(x-h);
+  print("const f32_pair_t f32_mul_k_" @ name @
+    " = {.h = " @ h @ "f, .l=" @ l @ "f};");
+};
+
+procedure f64_mul_k(name,x)
+{
+  var h,l;
+  h = double(x);
+  l = double(x-h);
+  print("const f64_pair_t f64_mul_k_" @ name @
+    " = {.h = " @ h @ ", .l=" @ l @ "};");  
+};
+
+display = hexadecimal!;
+
+print("// extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}");
+f32_mul_k("pi     ", Pi);
+f32_mul_k("pi_i   ", 1/Pi);
+f32_mul_k("log2   ", log(2));
+f32_mul_k("log2_i ", 1/log(2));
+f32_mul_k("log10  ", log(10));
+f32_mul_k("log10_i", 1/log(10));
+f32_mul_k("e      ", exp(1));
+f32_mul_k("e_i    ", 1/exp(1));
+
+print("\n// extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}");
+f64_mul_k("pi     ", Pi);
+f64_mul_k("pi_i   ", 1/Pi);
+f64_mul_k("log2   ", log(2));
+f64_mul_k("log2_i ", 1/log(2));
+f64_mul_k("log10  ", log(10));
+f64_mul_k("log10_i", 1/log(10));
+f64_mul_k("e      ", exp(1));
+f64_mul_k("e_i    ", 1/exp(1));

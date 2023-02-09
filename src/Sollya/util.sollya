@@ -1,5 +1,8 @@
 /* -*- mode: c; -*- */
 
+// Marc B. Reynolds, 2016-2023
+// Public Domain under http://unlicense.org, see link for details.
+
 if (!isbound(_util_library_loaded)) then {
 
 _util_library_loaded = true;

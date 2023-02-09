@@ -1,0 +1,33 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016-2023
+// Public Domain under http://unlicense.org, see link for details.
+
+// for first step of splitting a constant K into a multiplicative pair {H,L}
+// so K ~= H*L.  For adding K to 'x': x+K ~= fma(H,L,x)
+// SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html
+
+procedure add_k(k,bits)
+{
+  var f,d,p,e,m,t;
+  f = round(k,bits,RN);
+  d = mantissa(round(k,bits,RU)-f);
+  m = mantissa(f);
+  e = exponent(f);
+  p = precision(m);
+  m = m*2^(bits-p);
+  e = e-bits+p;
+
+  return [|f,m,e,d|];
+};
+
+procedure add_k_q(k,w) { var f; f=round(k,w,RN); return [|mantissa(f),exponent(f)|]; };
+
+procedure f32_add_k(x) { add_k(x, 48); };
+procedure f64_add_k(x) { add_k(x,106); };
+
+f32_add_k(Pi);
+f64_add_k(Pi);
+f32_add_k(2/(sqrt(5)+1));
+add_k_q(2/(sqrt(5)+1),48);
+

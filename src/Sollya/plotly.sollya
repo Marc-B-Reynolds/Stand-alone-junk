@@ -1,6 +1,6 @@
 /* -*- mode: c; -*- */
 
-// Marc B. Reynolds, 2016-2020
+// Marc B. Reynolds, 2016-2023
 // Public Domain under http://unlicense.org, see link for details.
 
 // Create plot.ly plots including generating an html page which can be auto-displayed.

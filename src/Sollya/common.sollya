@@ -1,0 +1,114 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016-2023
+// Public Domain under http://unlicense.org, see link for details.
+
+// make a copy of list with f applied
+procedure list_apply(l,f)
+{
+  var r,v,i;
+  
+  r = [||];
+
+  for i from 0 to length(l)-1 do {
+   v = f(l[i]);
+   r = r :. v;
+  };
+
+  return r;
+};
+
+u_round_f32 = proc(n) { return single(n); };
+
+// make a copy of list with elements rounded to binary32
+procedure list_to_f32(l) { return list_apply(l, u_round_f32); };
+
+// name  prefix of name to use
+// a     approximation of 'f'
+// f     function
+// r     range
+procedure a_error(name,a,f,r)
+{
+  var e,z,d,l,i;
+  
+  // create a debug list of values of 'x' where the approximation
+  // error is max.
+  z = list_to_f32(dirtyfindzeros(diff(a-f), r));
+  l = length(z);
+
+  write("const float " @ name @ "_emax[] = {");
+
+  write(z[0] @ "f");
+  
+  for i from 1 to l-1 do {
+    write("," @ z[i] @ "f");
+  };
+
+  z = list_to_f32(dirtyfindzeros(a-f, r));
+  l = length(z);
+
+
+  write("};\nconst float " @ name @ "_emin[] = {");
+
+  if (l > 0) then {
+    write(z[0] @ "f");
+    for i from 1 to l-1 do { write("," @ z[i] @ "f"); };
+  };
+  
+  e = single(dirtyinfnorm(a-f, r));
+  print("};\n\n// peak-error: " @ e);
+};
+
+// dump-out copy-n-pastable list of coefficients, peak-error
+// and locations of peak-error.
+procedure print_source(name,p)
+{
+  var e,i,c;
+
+  e = degree(p);
+
+  display=powers!;
+  print("// " @ name @ "[x_] = " @ p @ ";");
+  display=decimal!;
+  
+  write("inline float " @ name @ "(float x)\n{\n  const float c[] = {\n    ");
+
+  write(coeff(p,0) @ "f");
+
+  for i from 1 to e do {
+    write(",\n    " @ coeff(p,i) @ "f");
+  };
+
+  print(" };\n\n  return f32_poly_p" @ e @ "(x,c);\n}\n");
+};
+
+procedure s_get_field(s,f,d)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: ("@ d @ ") ;";
+  return parse(t);
+};
+
+procedure s_get_string_field(s,f,d)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (s."@ f @") default: (\""@ d @ "\") ;";
+  return parse(t);
+};
+ 
+ 
+// returns true if 's' is a structure with field named 'f'
+procedure s_has_field(s,f)
+{
+  var t;
+  t = "match s with { ." @ f @ " = default } : (true) default: (false) ;";
+  return parse(t);
+};
+
+// returns a copy of 's'
+procedure s_copy(s)
+{
+  var t,S;
+  t = "" @ s;
+  return parse(t);
+};

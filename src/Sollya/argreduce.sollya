@@ -1,0 +1,88 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016-2023
+// Public Domain under http://unlicense.org, see link for details.
+
+// Formally Verified Argument Reduction with a Fused Multiply-Add
+// https://hal.archives-ouvertes.fr/hal-00168401
+
+procedure log2_ulp_p(v,p) { return exponent(v)-p+1; };
+
+procedure arg_reduce_p(c,p)
+{
+  var r,c1,c2,t;
+
+  r   = round(1/c,p,  RN);
+  c1  = round(1/r,p-2,RN);
+  t   = log2_ulp_p(c1,p)-p+4;
+  c2  = nearestint((c-c1)*2^-t)*2^t;
+  c2  = round(c2,p,RN);
+
+  // add checks
+
+  //if (abs()) then { };
+  
+  return [|r,c1,c2,t|];
+};
+
+procedure arg_reduce_p_(c,p)
+{
+  var r,c1,c2,t;
+
+  r   = round(1/c,p,  RN);
+  c1  = round(1/r,p-2,RN);
+  t   = log2_ulp_p(c1,p)-p+4;
+  c2  = nearestint((c-c1)*2^-t)*2^t;
+  c2  = round(c2,p,RN);
+
+  // add checks
+
+  //if (abs()) then { };
+  
+  return [|r,c1,c2,t|];
+};
+
+
+// two constant Cody-Waite
+procedure arg_reduce_cw2(c,p,b)
+{
+  var c1,c2;
+  c1 = round(c,b,RN);
+  c2 = round(c-c1,p,RN);
+
+  return [|c1,c2|];
+};
+
+// split constant K into h+l where each
+// is a p-bit number.
+procedure split_to_pair(K,p)
+{
+  var h,l;
+  h = round(K,  p, RN);
+  l = round(K-h,p, RN);
+  return [|h,l|];
+};
+
+
+procedure f32_arg_reduce(C) { arg_reduce_p(C,24); };
+procedure f64_arg_reduce(C) { arg_reduce_p(C,53); };
+
+//t = exponent(1.0)-24+1;
+//single(1+2^(t-1));
+
+display=dyadic!;
+//display=powers!;
+//[|10680707*2^(-25), 13176796*2^(-22), -11464520*2^-45|];
+//f32_arg_reduce(Pi);
+//f64_arg_reduce(Pi);
+//f32_arg_reduce(log(2));
+//f64_arg_reduce(log(2));
+//log2_ulp_p(1,24);
+
+//arg_reduce_cw2(pi,24,8);
+arg_reduce_p_(pi,24);
+arg_reduce_p_(pi,53);
+
+display=hexadecimal!;
+split_to_pair(pi,24);
+split_to_pair(pi,53);
