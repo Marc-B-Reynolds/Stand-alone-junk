@@ -126,7 +126,7 @@ float f32_cbrt(float x)
 
   y = a*fmaf(a*y,y,-4.f);
   y = fmaf(y, -one_third, y*(-one_third_l));
-  y = sqrtf(y);
+  y = f32_sqrt(y);
 
   return f32_mulsign(y,sx);
 }
@@ -150,7 +150,7 @@ float f32_cbrt_fr(float x)
   // c = RN(c/3) : correctly rounded
   c = fmaf(c, -one_third, c*(-one_third_l));
   y = y*fmaf(x,c,x);  
-  y = sqrtf(y);
+  y = f32_sqrt(y);
 
   return f32_mulsign(y,sx);
 }
