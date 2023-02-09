@@ -53,7 +53,10 @@ extern "C" {
 #define FP32_ASSOC_BARRIER(X)   __builtin_assoc_barrier(X)
 #define FP32_STRICT_FUNC()      // nope...think 
 #else
-"burn baby burn"
+#define FP32_REASSOCIATE_ON()
+#define FP32_REASSOCIATE_OFF()
+#define FP32_ASSOC_BARRIER(X)
+#define FP32_STRICT_FUNC()
 #endif
 
 
@@ -69,18 +72,28 @@ extern "C" {
 #define F32_SSE_WRAP_BI(F,A,B) _mm_cvtsi128_si32(F(_mm_set_ss(A),_mm_set_ss(B)))
 
 
-// ulp(1.f)
-static const float f32_ulp1 = 0x1.0p-23f;
-
-static const uint32_t f32_sign_mask = UINT32_C(0x80000000);
-static const uint32_t f32_mag_mask  = UINT32_C(0x007fffff);
-static const uint32_t f32_exp_mask  = UINT32_C(0x7F800000);
-
-// NOTES:
-// u = round-off unit (2^-24) = ulp(1)/2
-
 typedef struct { float h,l; } f32_pair_t;
 typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
+
+
+// ulp(1.f)
+const float f32_ulp1 = 0x1.0p-23f;
+
+const uint32_t f32_sign_mask = UINT32_C(0x80000000);
+const uint32_t f32_mag_mask  = UINT32_C(0x007fffff);
+const uint32_t f32_exp_mask  = UINT32_C(0x7F800000);
+
+// rounding unit + lowest bit set
+const float f32_succ_pred_k = 0x1.000002p-24f;
+
+
+// additive pair constants. value = (h+l).
+// value * x = 
+const f32_pair_t f32_up_pi = {.h=0x1.921fb6p1, .l=-0x1.777a5cp-24};
+
+// multiplicative pair constants. value = (h*l). used for FMA add by constant
+// value + x = fma(h,l,x)
+const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
 
 
 static inline uint32_t f32_to_bits(float x)
@@ -204,7 +217,6 @@ static inline float f32_lerp(float t, float a, float b)
   return fmaf(t,b,-fmaf(t,a,-a));
 }
 
-static const f32_pair_t f32_up_pi = {.h=0x1.921fb6p1, .l=-0x1.777a5cp-24};
 
 // exact product: ab (provided no over/underflow)
 // h = RN(ab), l=RN(ab-RN(ab) -> ab = (h+l)
@@ -228,10 +240,30 @@ static inline float f32_up_madd(const f32_pair_t* const a, float b, float c)
   return fmaf(a->h, b, fmaf(a->l, b, c));
 }
 
+// pi*x (extended precision)
 static inline float f32_mul_pi(float x)
 {
   return f32_up_mul(&f32_up_pi,x);
 }
+
+// x + pi  (FMA variant)
+static inline float f32_add_pi(float x)
+{
+  const float pi_a = f32_mk_pi.h;
+  const float pi_b = f32_mk_pi.l;
+
+  return fmaf(pi_a, pi_b, x);
+}
+
+// x + pi/2  (FMA variant)
+static inline float f32_add_half_pi(float x)
+{
+  const float pi_a = f32_mk_pi.h;
+  const float pi_b = 0.5f*f32_mk_pi.l;
+
+  return fmaf(pi_a, pi_b, x);
+}
+
 
 // checks if LSB is clear.
 static inline uint32_t f32_is_even(float a)
@@ -260,10 +292,6 @@ static inline float f32_walk(float a, int32_t d)
 {
   return f32_from_bits(f32_to_bits(a)+(uint32_t)d);
 }
-
-
-// rounding unit + lowest bit set
-static const float f32_succ_pred_k = 0x1.000002p-24f;
 
 // next representable FP away from zero
 // * a is normal and not zero
