@@ -1,8 +1,8 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2023
 
-#ifndef F32_UTIL_H
-#define F32_UTIL_H
+#ifndef __F32_UTIL_H__
+#define __F32_UTIL_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,24 +75,34 @@ extern "C" {
 typedef struct { float h,l; } f32_pair_t;
 typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 
-
+// u = round-off unit = ulp(1)/2
 // ulp(1.f)
 const float f32_ulp1 = 0x1.0p-23f;
 
-const uint32_t f32_sign_mask = UINT32_C(0x80000000);
-const uint32_t f32_mag_mask  = UINT32_C(0x007fffff);
-const uint32_t f32_exp_mask  = UINT32_C(0x7F800000);
+const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
+const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
+const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
 
 // rounding unit + lowest bit set
 const float f32_succ_pred_k = 0x1.000002p-24f;
 
+// extended precision constants section
+// SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)
 
-// additive pair constants. value = (h+l).
-// value * x = 
-const f32_pair_t f32_up_pi = {.h=0x1.921fb6p1, .l=-0x1.777a5cp-24};
+// extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}
+// product: Kx = fmaf(H,x,L*x) -> f32_up_mul(K,x)
+// sollya script: src/Sollya/mulk.sollya
+const f32_pair_t f32_mul_k_pi      = {.h = 0x1.921fb6p1f,  .l=-0x1.777a5cp-24f};
+const f32_pair_t f32_mul_k_pi_i    = {.h = 0x1.45f306p-2f, .l= 0x1.b9391p-27f};
+const f32_pair_t f32_mul_k_log2    = {.h = 0x1.62e43p-1f,  .l=-0x1.05c61p-29f};
+const f32_pair_t f32_mul_k_log2_i  = {.h = 0x1.715476p0f,  .l= 0x1.4ae0cp-26f};
+const f32_pair_t f32_mul_k_log10   = {.h = 0x1.26bb1cp1f,  .l=-0x1.12aabap-25f};
+const f32_pair_t f32_mul_k_log10_i = {.h = 0x1.bcb7b2p-2f, .l=-0x1.5b235ep-27f};
+const f32_pair_t f32_mul_k_e       = {.h = 0x1.5bf0a8p1f,  .l= 0x1.628aeep-24f};
+const f32_pair_t f32_mul_k_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
 
-// multiplicative pair constants. value = (h*l). used for FMA add by constant
-// value + x = fma(h,l,x)
+// extended precision additive constants as unevaluate pairs:
+// K + x = fma(H,L,x)
 const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
 
 
@@ -120,8 +130,16 @@ static inline float f32_mulsign(float v, uint32_t s)
 
 static inline uint32_t f32_sign_bit(float a)
 {
-  return f32_to_bits(a) & f32_sign_mask;
+  return f32_to_bits(a) & f32_sign_bit_k;
 }
+
+//static inline uint32_t f32_sign_mask(float x)
+//{
+//  uint32_t m = (uint32_t)(((int32_t)f32_to_bits(x))>>31);
+//
+//  return m;
+//}
+
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
@@ -157,7 +175,7 @@ static inline float f32_max(float a, float b)  { return fmaxf(a,b); }
 static inline float f32_min1(float a, float b) { return !(a > b) ? a : b; }
 static inline float f32_max1(float a, float b) { return !(a < b) ? a : b; }
 
-
+// 2 ops on ARM & Intel. Returns x if both are NaN
 static inline float f32_clamp(float x, float lo, float hi)
 {
 #if defined(F32_INTEL)
@@ -243,7 +261,7 @@ static inline float f32_up_madd(const f32_pair_t* const a, float b, float c)
 // pi*x (extended precision)
 static inline float f32_mul_pi(float x)
 {
-  return f32_up_mul(&f32_up_pi,x);
+  return f32_up_mul(&f32_mul_k_pi,x);
 }
 
 // x + pi  (FMA variant)
@@ -412,7 +430,7 @@ static inline uint32_t f32_ulp_dist(float a, float b)
   if ((int32_t)(ub^ua) >= 0)
     return u32_abs(ua-ub);
   
-  return ua+ub+f32_sign_mask;
+  return ua+ub+f32_sign_bit_k;
 }
 
 // a & b are within 'd' ulp of each other
@@ -424,7 +442,7 @@ static inline uint32_t f32_within_ulp(float a, float b, uint32_t d)
   if ((int32_t)(ub^ua) >= 0)
     return ua-ub+d <= d+d;
   
-  return ua+ub+f32_sign_mask+d <= d+d;
+  return ua+ub+f32_sign_bit_k+d <= d+d;
 }
 
 // filtered approximately equal:
