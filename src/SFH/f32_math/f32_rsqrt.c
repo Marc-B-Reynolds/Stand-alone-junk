@@ -25,7 +25,7 @@
 // Newton-Raphson step for 1/sqrt(x) using FMA when
 //   x = input to function
 //   h = -x/2
-//   r = ~1/x
+//   r = RN(1/x)
 inline float f32_rsqrt_nr_step(float x, float h, float r)
 {
   float s = fmaf(h,r,0.5f);
@@ -37,7 +37,7 @@ inline float f32_rsqrt_nr_step(float x, float h, float r)
 // Halley method step for 1/sqrt(x)
 //   x = input to function
 //   h = -x/2
-//   r = ~1/x
+//   r = RN(1/x)
 inline float f32_rsqrt_hm_step(float x, float h, float r)
 {
   float s = fmaf(r,h,0.5f);
