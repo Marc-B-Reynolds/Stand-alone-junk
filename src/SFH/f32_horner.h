@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2015-2023
 
-// evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low.
+// evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low (c_n,... c_0)
 
 #ifndef __F32_HORNER__
 #define __F32_HORNER__
@@ -32,6 +32,7 @@ static inline float f32_horner_12(float x, const float C[static 13]) { return fm
 static inline float f32_horner_13(float x, const float C[static 14]) { return fmaf(x,f32_horner_12(x,C),C[13]); }
 static inline float f32_horner_14(float x, const float C[static 15]) { return fmaf(x,f32_horner_13(x,C),C[14]); }
 static inline float f32_horner_15(float x, const float C[static 16]) { return fmaf(x,f32_horner_14(x,C),C[15]); }
+
 
 #ifdef __cplusplus
 }
