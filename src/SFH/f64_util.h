@@ -20,10 +20,17 @@ extern "C" {
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
 #define F64_INTEL
+
+// evil temp hack
+#if !defined(__X86INTRIN_H)
+#include <x86intrin.h>
+#endif
+
 #elif defined(__ARM_ARCH)
 #define F64_ARM
 #endif
 
+// all a temp hack
 #if defined(__clang__) && (__clang_major__ >= 13)
 // future me note: GCC 12 is adding: __builtin_assoc_barrier
 #define FP64_REASSOCIATE_ON()  F64_PRAGMA("clang fp reassociate(on)")
@@ -33,6 +40,10 @@ extern "C" {
 #define FP64_REASSOCIATE_ON()
 #define FP64_REASSOCIATE_OFF()
 #define FP64_ASSOC_BARRIER(X)   __builtin_assoc_barrier(X)
+#else
+#define FP64_REASSOCIATE_ON()
+#define FP64_REASSOCIATE_OFF()
+#define FP64_ASSOC_BARRIER(X)
 #endif
 
 // just say no
@@ -174,16 +185,6 @@ static inline double f64_lerp(double t, double a, double b)
 
 static const f64_pair_t f64_up_pi = {.h=0x1.921fb54442d18p1, .l= 0x1.1a62633145c07p-53};
 
-
-// exact product: ab (provided no over/underflow)
-// h = RN(ab), l=RN(ab-RN(ab) -> ab = (h+l)
-static inline void f64_2mul(f64_pair_t* r, double a, double b)
-{
-  double t = a*b;
-  double e = fma(a,b,-t);
-  r->h = t;
-  r->l = e;
-}
 
 // return RN(x*p) where p is unevaluated pair
 static inline double f64_up_mul(const f64_pair_t* const p, double x) 
