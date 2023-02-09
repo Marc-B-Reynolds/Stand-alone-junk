@@ -17,6 +17,12 @@ extern "C" {
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
 #define F32_INTEL
+
+// evil temp hack
+#if !defined(__X86INTRIN_H)
+#include <x86intrin.h>
+#endif
+
 #elif defined(__ARM_ARCH)
 #define F32_ARM
 #endif
