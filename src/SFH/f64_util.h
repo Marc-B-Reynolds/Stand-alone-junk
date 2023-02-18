@@ -4,15 +4,8 @@
 // WIP: loaded with unconverted constants from f32_util. probably everything
 // is even more broken.
 
-#ifndef __F64_UTIL_H__
-#define __F64_UTIL_H__
-
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
+#ifndef F64_UTIL_H
+#define F64_UTIL_H
 
 #include <stdbool.h>
 
@@ -80,6 +73,11 @@ const f64_pair_t f64_mul_k_log10_i = {.h = 0x1.bcb7b1526e50ep-2, .l= 0x1.95355ba
 const f64_pair_t f64_mul_k_e       = {.h = 0x1.5bf0a8b145769p1,  .l= 0x1.4d57ee2b1013ap-53};
 const f64_pair_t f64_mul_k_e_i     = {.h = 0x1.78b56362cef38p-2, .l=-0x1.ca8a4270fadf5p-57};
 
+// single word precision "helpers"
+const double f64_pi      = f64_mul_k_pi.h;
+const double f64_half_pi = 0.5*f64_mul_k_pi.h;
+
+
 static inline uint64_t f64_to_bits(double x)
 {
   uint64_t u; memcpy(&u, &x, 8); return u;
@@ -91,9 +89,14 @@ static inline double f64_from_bits(uint64_t x)
 }
 
 // convert inputs to IEEE bit pattern and XOR's them
-static inline uint64_t f64_xor(double a, double b)
+static inline uint64_t f64_xor_to_bits(double a, double b)
 {
   return f64_to_bits(a)^f64_to_bits(b);
+}
+
+static inline double f64_xor(double a, double b)
+{
+  return f64_from_bits(f64_xor_to_bits(a,b));
 }
 
 static inline double f64_mulsign(double v, uint64_t s)
@@ -198,8 +201,6 @@ static inline double f64_lerp(double t, double a, double b)
   return fma(t,b,-fma(t,a,-a));
 }
 
-static const f64_pair_t f64_up_pi = {.h=0x1.921fb54442d18p1, .l= 0x1.1a62633145c07p-53};
-
 
 // return RN(x*p) where p is unevaluated pair
 static inline double f64_up_mul(const f64_pair_t* const p, double x) 
@@ -215,7 +216,7 @@ static inline double f64_up_madd(const f64_pair_t* const a, double b, double c)
 
 static inline double f64_mul_pi(double x)
 {
-  return f64_up_mul(&f64_up_pi,x);
+  return f64_up_mul(&f64_mul_k_pi,x);
 }
 				
 
@@ -470,9 +471,5 @@ static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
   p->l = y;
 }
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 #endif
 
