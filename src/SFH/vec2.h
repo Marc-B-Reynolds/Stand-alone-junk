@@ -4,17 +4,12 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef VEC2_H
-#define VEC2_H
+#ifndef   VEC2_H
+#define   VEC2_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
+#ifndef   F32_UTIL_H
 #include "f32_util.h"
+#endif
   
 typedef union {
   struct { float x, y; };
@@ -107,9 +102,4 @@ static inline void vec2_usqrt(vec2_t* d, vec2_t* a)
 #undef BX
 #undef BY
   
-#ifdef __cplusplus
-extern }
-#endif
-
-
 #endif
