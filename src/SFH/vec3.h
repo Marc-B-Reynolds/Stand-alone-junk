@@ -4,15 +4,8 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef VEC3_H
-#define VEC3_H
-
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
+#ifndef   VEC3_H
+#define   VEC3_H
 
 #include "f32_util.h"
   
@@ -108,9 +101,4 @@ static inline void vec3_ortho_basis(vec3_t* v, vec3_t* xp, vec3_t* yp)
 #undef BY
 #undef BZ
   
-#ifdef __cplusplus
-extern }
-#endif
-
-
 #endif
