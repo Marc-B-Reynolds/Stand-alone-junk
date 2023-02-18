@@ -4,32 +4,17 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef QUAT_H
-#define QUAT_H
+#ifndef   QUAT_H
+#define   QUAT_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
+#ifndef   VEC3_H
 #include "vec3.h"  
+#endif
 
 #ifndef QUAT_ATAN2
 #define QUAT_ATAN2(Y,X) atan2f(Y,X)
 #endif
 
-#ifndef QUAT_SQRT
-#define QUAT_SQRT(X) __builtin_sqrtf(X)
-#endif
-
-#ifndef QUAT_RSQRT
-#define QUAT_RSQRT(X) QUAT_SQRT(1.f/X)
-#define QURT_RSQRT_VIA_SQRT
-#endif
-
-  
 static inline float quat_util_sgn_f32(float x) { return copysignf(1.f,x); }  
 
 // another temp hack
@@ -130,7 +115,7 @@ static inline float quat_dot(quat_t* a, quat_t* b)
 // result than acos(q->w).
 static inline float quat_angle(quat_t* q)
 {
-  return QUAT_ATAN2(QUAT_SQRT(quat_bnorm(q)), q->w);
+  return QUAT_ATAN2(f32_sqrt(quat_bnorm(q)), q->w);
 }
 
   // TODO: mma/mms mul/bac variants
@@ -220,7 +205,7 @@ static inline void quat_upow2(quat_t* q)
 static inline void quat_usqrt(quat_t* q)
 {
   float d = 1.f + q->w;
-  float s = QUAT_RSQRT(d+d);
+  float s = f32_rsqrt(d+d);
   quat_bv_scale(q, s);
   q->w = d*s;
 }
@@ -229,7 +214,7 @@ static inline void quat_usqrt(quat_t* q)
 static inline void quat_bisect(quat_t* r, quat_t* a, quat_t* b)
 {
   float d  = quat_dot(a,b);
-  float sa = QUAT_RSQRT(2.f+2.f*fabsf(d));
+  float sa = f32_rsqrt(2.f+2.f*fabsf(d));
   float sb = quat_util_sgn_f32(d)*sa;
   quat_wsum(r,a,b,sa,sb);
 }  
@@ -241,7 +226,7 @@ static inline void quat_from_normals(quat_t* q, vec3_t* a, vec3_t* b)
   // this assumes b not approaching -a
   vec3_t v;
   float d = 1.f+vec3_dot(a,b);
-  float s = QUAT_RSQRT(d+d);
+  float s = f32_rsqrt(d+d);
   vec3_cross(&v,a,b);
   quat_bv_set_scale(q,&v,s);
   q->w = s*d;
@@ -271,7 +256,7 @@ static inline void quat_rot(vec3_t* r, quat_t* q, vec3_t* v)
 static inline void quat_fha(vec3_t* v, quat_t* q)
 {
   float d = 1.f + q->w;
-  float s = QUAT_RSQRT(d+d);
+  float s = f32_rsqrt(d+d);
   quat_put_bv(v,q,s);
 }
 
@@ -279,7 +264,7 @@ static inline void quat_fha(vec3_t* v, quat_t* q)
 static inline void quat_iha(quat_t* q, vec3_t* v)
 {
   float d = vec3_norm(v);
-  float s = QUAT_SQRT(1.f-d);
+  float s = f32_sqrt(1.f-d);
   quat_bv_set_scale(q,v,s+s);
   q->w = 1.f-(d+d);
 }
@@ -304,7 +289,7 @@ static inline int quat_in_cos_delta(quat_t* a, quat_t* b, float cosd)
   return quat_dot(a,b) >= cosd;
 }
 
-// TODO: fma 
+// TODO: fma and non reduced expression form (that should be the default)
 // sigh: change 1-(a^2+b^2) terms to opposite set?
 //   except that requires w^2 term
 
@@ -358,6 +343,7 @@ static inline void quat_to_local(vec3_t* X, vec3_t* Y, vec3_t* Z, quat_t* q)
 
 // quat_map_{a}2{b} rotates bivector part a to b:  let t=sqrt(ba^*) q=tat^*
 //   this is for variable rename. implement WRT to one and expand other variants.
+//   (I point to an example since that's only clear to me)
 static inline void quat_map_x2y(quat_t* q, quat_t* a) { quat_set(q,-AY, AX, AZ, AW); }
 static inline void quat_map_x2z(quat_t* q, quat_t* a) { quat_set(q,-AZ, AY, AX, AW); }
 static inline void quat_map_y2x(quat_t* q, quat_t* a) { quat_set(q, AY,-AX, AZ, AW); }
@@ -379,8 +365,4 @@ static inline void quat_map_z2y(quat_t* q, quat_t* a) { quat_set(q, AX, AZ,-AY, 
 #undef BZ
 #undef BW
   
-#ifdef __cplusplus
-extern }
-#endif
-
 #endif
