@@ -4,12 +4,6 @@
 #ifndef WELFORD_H
 #define WELFORD_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
 
 // Welford's method for streaming mean/variance/stdev
 typedef struct { double n,m,s; } seq_stats_t;
@@ -30,7 +24,7 @@ static inline void seq_stats_add(seq_stats_t* d, float v)
   double dm = x-m;
   
   d->m = m + dm/d->n;
-  d->s = s + dm*(x-d->m);
+  d->s = s + dm*(x-d->m);  // why I'm I not doing FMA here?
 }
 
 static inline double seq_stats_mean(seq_stats_t* d)     { return d->m; }
@@ -46,10 +40,5 @@ static inline void seq_stats_print(seq_stats_t* d)
 	 (uint32_t)d->n
 	 );
 }
-
-#ifdef __cplusplus
-extern }
-#endif
-
 
 #endif
