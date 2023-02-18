@@ -6,13 +6,6 @@
 #ifndef LCGS_H
 #define LCGS_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
 #if defined(LCGS_64)
 #define LCGS_UINT uint64_t
 #define LCGS_SINT int64_t
@@ -226,9 +219,4 @@ static inline LCGS_UINT lcgs_prev(lcgs_t* gen)
 #undef LCGS_UINT
 #undef LCGS_SINT
   
-#ifdef __cplusplus
-extern }
-#endif
-
-
 #endif
