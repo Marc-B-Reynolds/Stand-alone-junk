@@ -1,21 +1,14 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2015-2023
 
-#ifndef __F64_LIBM__
-#define __F64_LIBM__
+#ifndef F64_LIBM
+#define F64_LIBM
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
-#ifndef __BITOPS_H__
+#ifndef   BITOPS_H
 #include "bitops.h"
 #endif
 
-#ifndef __F64_UTIL_H__
+#ifndef   F64_UTIL_H
 #include "f64_util.h"
 #endif
 
@@ -48,12 +41,6 @@ static inline void f64_quadratic(f64_pair_t* r, double a, double b, double c)
   r->h = t1/(-2.0*a);
   r->l = (-2.0*c)/t1;
 }
-
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 
