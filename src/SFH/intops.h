@@ -1,8 +1,8 @@
 // Marc B. Reynolds, 2016-2023
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef __INTOPS_H__
-#define __INTOPS_H__
+#ifndef INTOPS_H
+#define INTOPS_H
 
 //  name_(u|s)?(d+)
 
