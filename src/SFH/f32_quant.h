@@ -1,15 +1,8 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2023
 
-#ifndef __F32_QUANT_H__
-#define __F32_QUANT_H__
-
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
+#ifndef F32_QUANT_H
+#define F32_QUANT_H
 
 //**** helper functions:
 
@@ -127,9 +120,5 @@ static inline float suq_decode_w_cr(uint32_t u, uint32_t n)
   return r;
 }
 
-
-#ifdef __cplusplus
-}
-#endif
 #endif
 
