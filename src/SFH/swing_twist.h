@@ -19,13 +19,6 @@
 #ifndef SWING_TWIST_H
 #define SWING_TWIST_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
 typedef struct {
   float sx,sy,sc;   // swing: sin*(x,y) in plane & cos
   float tc,ts;      // twist: cos & sin about
@@ -302,9 +295,5 @@ static inline void twist_swing_y_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t
   twist_swing_z_to_quat_n(q,s,sw);
   quat_map_z2y(q,q);
 }
-
-#ifdef __cplusplus
-extern }
-#endif
 
 #endif
