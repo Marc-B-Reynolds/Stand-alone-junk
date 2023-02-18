@@ -23,6 +23,9 @@ procedure f64_mul_k(name,x)
     " = {.h = " @ h @ ", .l=" @ l @ "};");  
 };
 
+
+
+if (false) then {
 display = hexadecimal!;
 
 print("// extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}");
@@ -44,3 +47,4 @@ f64_mul_k("log10  ", log(10));
 f64_mul_k("log10_i", 1/log(10));
 f64_mul_k("e      ", exp(1));
 f64_mul_k("e_i    ", 1/exp(1));
+};
