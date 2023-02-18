@@ -1,15 +1,8 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2023
 
-#ifndef __F32_UTIL_H__
-#define __F32_UTIL_H__
-
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
+#ifndef F32_UTIL_H
+#define F32_UTIL_H
 
 #include <stdbool.h>
 
@@ -104,6 +97,12 @@ const f32_pair_t f32_mul_k_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
 
 const f32_pair_t f32_mul_k_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
 
+
+// single word precision "helpers"
+const float f32_pi      = f32_mul_k_pi.h;
+const float f32_half_pi = 0.5f*f32_mul_k_pi.h;
+
+
 // extended precision additive constants as unevaluate pairs:
 // K + x = fma(H,L,x)
 const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
@@ -120,10 +119,16 @@ static inline float f32_from_bits(uint32_t x)
 }
 
 // convert inputs to IEEE bit pattern and XOR's them
-static inline uint32_t f32_xor(float a, float b)
+static inline uint32_t f32_xor_to_bits(float a, float b)
 {
   return f32_to_bits(a)^f32_to_bits(b);
 }
+
+static inline float f32_xor(float a, float b)
+{
+  return f32_from_bits(f32_xor_to_bits(a,b));
+}
+
 
 // if 'v' is float and 's' is all clear (except sign bit)
 static inline float f32_mulsign(float v, uint32_t s)
@@ -520,9 +525,5 @@ static inline void f32_fast2sum(f32_pair_t* p, float a, float b)
   p->l = y;
 }
 
-
-#ifdef __cplusplus
-}
-#endif
 #endif
 
