@@ -4,13 +4,6 @@
 #ifndef LPRNS_H
 #define LPRNS_H
 
-#ifdef __cplusplus
-extern "C" {
-#ifdef __emacs_hack
-}  
-#endif  
-#endif
-
 // comments after constants: prime factorization, population count
   
 // for overriding Weyl constant and its multiplicative inverse
@@ -231,10 +224,5 @@ static inline uint32_t lprns_stream_prev(lprns_stream_t* gen)
   gen->i = i - LPRNS_WEYL;
   return r;
 }
-
-#ifdef __cplusplus
-extern }
-#endif
-
 
 #endif
