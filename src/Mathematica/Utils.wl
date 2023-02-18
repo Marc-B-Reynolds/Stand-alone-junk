@@ -3,7 +3,7 @@
 (* Marc B. Reynolds, 2017 *)
 (* Public Domain under http://unlicense.org, see link for details. *)
 
-BeginPackage["dumbUtils`"]
+BeginPackage["Utils`"]
 
 (* printf %e output to a list *)
 fromPrintfE[a_ b_ + c_] := a 10^c;
