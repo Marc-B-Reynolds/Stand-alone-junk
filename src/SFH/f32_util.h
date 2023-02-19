@@ -6,6 +6,10 @@
 
 #include <stdbool.h>
 
+#ifndef   INTOPS_H
+#include "intops.h"
+#endif
+
 #define F32_PRAGMA(X) _Pragma(X)
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
@@ -70,11 +74,15 @@ typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 
 // u = round-off unit = ulp(1)/2
 // ulp(1.f)
-const float f32_ulp1 = 0x1.0p-23f;
+const float f32_ulp1         = 0x1.0p-23f;
+const float f32_min_normal   = 0x1.0p-126f;
+const float f32_min_denormal = 0x1.0p-149f;
 
 const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
 const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
+
+
 
 // rounding unit + lowest bit set
 const float f32_succ_pred_k = 0x1.000002p-24f;
@@ -141,12 +149,12 @@ static inline uint32_t f32_sign_bit(float a)
   return f32_to_bits(a) & f32_sign_bit_k;
 }
 
-//static inline uint32_t f32_sign_mask(float x)
-//{
-//  uint32_t m = (uint32_t)(((int32_t)f32_to_bits(x))>>31);
-//
-//  return m;
-//}
+// returns 'c' if 'sx' is negative. otherwise zero
+static inline float f32_sign_select(float c, float sx)
+{
+  uint32_t m = sgn_mask_u32(f32_to_bits(sx));
+  return f32_from_bits(m & f32_to_bits(c));
+}
 
 
 // to cut some of the pain of math errno not being disabled
