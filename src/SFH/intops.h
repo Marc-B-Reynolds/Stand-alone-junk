@@ -6,6 +6,11 @@
 
 //  name_(u|s)?(d+)
 
+#ifndef   BITOPS_H
+#include "bitops.h"
+#endif
+
+
 #if !defined(_MSC_VER)
 #else
 #include <intrin.h>
