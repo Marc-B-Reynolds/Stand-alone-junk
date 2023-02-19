@@ -9,6 +9,10 @@
 
 #include <stdbool.h>
 
+#ifndef   INTOPS_H
+#include "intops.h"
+#endif
+
 #define F64_PRAGMA(X) _Pragma(X)
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
@@ -49,9 +53,11 @@
 
 
 // ulp(1.0)
-static const double   f64_ulp1 = 0x1.0p-52;
+const double f64_ulp1         = 0x1.0p-52;
+const double f64_min_normal   = 0x1.0p-1022;
+const double f64_min_denormal = 0x1.0p-1074;
 
-static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
+const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
 
 // NOTES:
@@ -107,6 +113,13 @@ static inline double f64_mulsign(double v, uint64_t s)
 static inline uint64_t f64_sign_bit(float a)
 {
   return f64_to_bits(a) & f64_sign_bit_k;
+}
+
+// returns 'c' if 'sx' is negative. otherwise zero
+static inline double f64_sign_select(double c, double sx)
+{
+  uint64_t m = sgn_mask_u64(f64_to_bits(sx));
+  return f64_from_bits(m & f64_to_bits(c));
 }
 
 // to cut some of the pain of math errno not being disabled
