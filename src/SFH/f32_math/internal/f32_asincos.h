@@ -3,12 +3,13 @@
 
 // Build your own libm level quality acos and asin
 
-// TODO: sign arg reduction variants (esp. hybrid a la f32_odd_reduce)
-
-// **************************************************************
+//**************************************************************
 // classic polynomial approximations of asin(x) on [-1/2, 1/2]
 // if P(x) is one of the following then:
-// asin(x) ~= x + x^3 P(x^2) 
+// asin(x) ~= x + x^3 P(x^2)
+
+// NOTES:
+// * only uses hybrid method of sign range reduction (SEE: f32_odd_reduce)
 
 // too short to meet faithfully rounded (can hit 2 ulp)
 static inline float f32_asincos_k3(float x2)
@@ -68,34 +69,33 @@ static inline float f32_asincos_k6(float x2)
   return f32_horner_6(x2,C);
 }
 
+//**************************************************************
+// asin expansions
 
 // SEE: f32_asin_x1. stripped of double promotion. can hit
 // 2 ulp and could be cleaned & sped up...but meh.
 static inline float f32_asin_x0(float x, float (*P)(float))
 {
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
-  uint32_t sx = ix ^ ax;
+  float a = fabsf(x);
 
   // |x| <= 0.5
-  if (ax <= 0x3f000000) {
+  if (a <= 0.5f) {
     float x2 = x*x;
     float r  = x2*P(x2);
     return fmaf(r,x,x);
   }
 
   // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-x) )
-  float a  = f32_from_bits(ax);         // |x|
+  float sx = f32_xor(x,a);
   float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
   float t  = -2.f*f32_sqrt(t2); 
   float r  = t2*P(t2);
-
+  
   r = fmaf(r,t,t);
   r = f32_add_half_pi(r);               // FMA: r + pi/2
 
-  return f32_mulsign((float)r,sx);
+  return f32_xor((float)r,sx);
 }
-
 
 
 // classic core for asin:
@@ -109,19 +109,17 @@ static inline float f32_asin_x0(float x, float (*P)(float))
 //   precision to meet target. punt to doubles.
 static inline float f32_asin_x1(float x, float (*P)(float))
 {
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
-  uint32_t sx = ix ^ ax;
+  float a = fabsf(x);
 
   // |x| <= 0.5
-  if (ax <= 0x3f000000) {
+  if (a <= 0.5f) {
     float x2 = x*x;
     float r  = x2*P(x2);
     return fmaf(r,x,x);
   }
 
   // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-x) )
-  float  a  = f32_from_bits(ax);        // |x|
+  float  sx = f32_xor(x,a);
   float  t2 = 0.5f * (1.f-a);           // exact: Sterbenz lemma
   double d2 = (double)t2;
   double t  = -2.0*sqrt(d2); 
@@ -130,9 +128,11 @@ static inline float f32_asin_x1(float x, float (*P)(float))
   r = fma(r,t,t);
   r = f64_half_pi + r;
 
-  return f32_mulsign((float)r,sx);
+  return f32_xor((float)r,sx);
 }
 
+//**************************************************************
+// acos expansions
 
 // classic core for acos:
 // P is an approximation of asin on x on [-1/2,1/2] where:
@@ -143,12 +143,10 @@ static inline float f32_asin_x1(float x, float (*P)(float))
 //   using P for all three via identities
 static inline float f32_acos_x1(float x, float (*P)(float))
 {
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
-  uint32_t sx = ix ^ ax;
+  float a = fabsf(x);
 
   // |x| < 0.5 : acos(x) = pi/2 - asin(x)
-  if (ax <= 0x3f000000) {
+  if (a <= 0.5f) {
     float x2 = x*x;
     float k  = P(x2);
     float r  = fmaf(x,x2*k,x);        
@@ -156,12 +154,12 @@ static inline float f32_acos_x1(float x, float (*P)(float))
   }
 
   // 1-|x| is exact (Sterbenz lemma)
-  float a  = f32_from_bits(ax);
+  //float sx = f32_xor(x,a);
   float t2 = 0.5f*(1.f-a);
   float p  = f32_asincos_k5(t2);
 
   // x < -0.5 : acos(x) = pi - 2 asin( sqrt((1+x)/2 )
-  if (sx) {
+  if (x < 0.f) {
     float t = f32_sqrt(t2);
     float r = fmaf(t,t2*p,t);
 
@@ -187,42 +185,39 @@ static inline float f32_acos_x1(float x, float (*P)(float))
 // that under high utilization that the inputs are not
 // highly correlated then this is probably the better
 // choice (and vise-versa if highly correlated).
+// lowers average error for (x < -0.5) due to higher
+// precision computations.
 static inline float f32_acos_x2(float x, float (*P)(float))
 {
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
+  float a = fabsf(x);
 
   // |x| < 0.5 : acos(x) = pi/2 - asin(x)
-  if (ax <= 0x3f000000) {
+  if (a <= 0.5f) {
     float x2 = x*x;
     float k  = P(x2);
     float r  = fmaf(x,x2*k,x);        
-    return f32_add_half_pi(-r);     // FMA addition
+    return f32_add_half_pi(-r);       // FMA addition
   }
 
   // x < -0.5 : acos(x) = pi - 2 asin( sqrt((1+x)/2 )
   // x >  0.5 : acos(x) =      2 asin( sqrt((1-x)/2 )
 
-  uint32_t sx = ix ^ ax;
-  float    a  = f32_from_bits(ax);
-  float    z  = 0.5f*(1.f-a);       // exact: Sterbenz lemma
-  double   t2 = (double)z;
-  double   t  = 2.0*f64_sqrt(t2);
+  uint32_t sx = f32_xor_to_bits(x,a);
 
-  double   p  = (double)P(z);
-  double   r  = fma(t, t2*p, t);
+  // the whole point of this version is not to branch on
+  // the sign of the input. otherwise might as well use
+  // the 'x1' expansion. sledgehammer it ATM.
+  
+  // we simply want this branchfree:
+//double   c  = (x < 0.f) ? -M_PI : 0.0;
+  uint64_t m  = f32_sign_mask_u64(x);
+  double   c  = f64_from_bits(m & f64_to_bits(-f64_pi));
 
-#if 1
-  if (sx) {
-    return (float) (M_PI-r);
-  }
-
-  return (float)r;
-#else
-  if (sx) {
-    return (float) (r-M_PI);
-  }
-
+  float  z  = 0.5f*(1.f-a);         // exact: Sterbenz lemma
+  double t2 = (double)z;
+  double t  = 2.0*f64_sqrt(t2);
+  double p  = (double)P(z);
+  double r  = fma(t, t2*p, t+c);
+  
   return f32_mulsign((float)r, sx);
-#endif
 }
