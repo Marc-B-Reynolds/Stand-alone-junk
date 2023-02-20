@@ -23,6 +23,8 @@
 //     f32_acospi_sb_xf   = expand an approximation for full range
 //     f32_acopis_bs_fx_l =   full range (see below)
 
+// NOTES:
+//   hybrid (stdfunc/bitops) only reduction. see f32_reduce_odd
 
 //**********************************************************************
 // f(0) relaxed spitball polynomials: P(x)
@@ -126,6 +128,7 @@ static inline float f32_acospi_sb_ke6(float x)
 
 //**********************************************************************
 
+
 // given f = P(x) expand approximation restricted to positive input.
 // return NaN for negative inputs.
 static inline float f32_acospi_sb_xp(float (*f)(float), float x)
@@ -136,28 +139,26 @@ static inline float f32_acospi_sb_xp(float (*f)(float), float x)
   return t*p;
 }
 
-// remember signed zero needs to be handled properly
-static inline float f32_acospi_c(uint32_t sx)
-{
-  uint32_t m = (uint32_t)(((int32_t)sx)>>31);
-  return f32_from_bits(f32_to_bits(1.f) & m);
-}
 
-// remember signed zero needs to be handled properly
-static inline float f32_acospi_cf(float x)
+// compiler hand holding to keep it branchfree. placeholder for being
+// to make it easy to flip a compile time switch if the compiler + arch
+// is doing better than the work around.
+static inline float f32_acospi_c(float x)
 {
-  uint32_t m = (uint32_t)(((int32_t)f32_to_bits(x)) >> 31);
-  return f32_from_bits(f32_to_bits(1.f) & m);
+#if 1
+  return f32_sign_select(1.f, x);
+#else
+  return (x < 0.f) ? 1.f : 0.f; 
+#endif  
 }
 
 
 // given f = P(x) expand full range approximation
 static inline float f32_acospi_sb_xf(float (*f)(float), float x)
 {
-  // hybrid (stdfunc/bitops) only reduction. see f32_reduce_odd
   float a  = fabsf(x);
-  float sx = f32_xor(x,a);
-  float c  = f32_acospi_cf(x);
+  float sx = f32_xor(x,a);      // isolate sign bit
+  float c  = f32_acospi_c(x);   // (x<0) ? 1 : 0
   float t  = f32_sqrt(1.f-a);
   float p  = f(a);
   
@@ -170,12 +171,11 @@ static inline float f32_acospi_sb_xf(float (*f)(float), float x)
 }
 
 // longer polynomial version (see note above)
-// just hacked: now test blockhead
 static inline float f32_acospi_sb_xf_l(float (*f)(float), float x)
 {
   float a  = fabsf(x);
   float sx = f32_xor(x,a);
-  float c  = f32_acospi_cf(x);
+  float c  = f32_acospi_c(x);
   float t  = f32_sqrt(1.f-a);
   float p  = f(a);
   
