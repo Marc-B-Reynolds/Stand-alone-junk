@@ -1,8 +1,8 @@
 // Marc B. Reynolds, 2016-2023
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef __BITOPS_H__
-#define __BITOPS_H__
+#ifndef BITOPS_H
+#define BITOPS_H
 
 //  name_(u|s)?(d+)
 
