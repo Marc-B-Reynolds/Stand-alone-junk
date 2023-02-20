@@ -80,8 +80,8 @@ const f64_pair_t f64_mul_k_e       = {.h = 0x1.5bf0a8b145769p1,  .l= 0x1.4d57ee2
 const f64_pair_t f64_mul_k_e_i     = {.h = 0x1.78b56362cef38p-2, .l=-0x1.ca8a4270fadf5p-57};
 
 // single word precision "helpers"
-const double f64_pi      = f64_mul_k_pi.h;
-const double f64_half_pi = 0.5*f64_mul_k_pi.h;
+const double f64_pi      = 0x1.921fb54442d18p1;
+const double f64_half_pi = 0.5*0x1.921fb54442d18p1;
 
 
 static inline uint64_t f64_to_bits(double x)
