@@ -149,6 +149,19 @@ static inline uint32_t f32_sign_bit(float a)
   return f32_to_bits(a) & f32_sign_bit_k;
 }
 
+// all set bits if x is negative (sign bit set), otherwise zero
+static inline uint32_t f32_sign_mask(float x)
+{
+  return sgn_mask_u32(f32_to_bits(x));
+}
+
+// widened to 64-bit version of previous
+static inline uint64_t f32_sign_mask_u64(float x)
+{
+  uint32_t ix = f32_to_bits(x);
+  return (uint64_t)(((int64_t)((int32_t)ix))>>31);
+}
+
 // returns 'c' if 'sx' is negative. otherwise zero
 static inline float f32_sign_select(float c, float sx)
 {
