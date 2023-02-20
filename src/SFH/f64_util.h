@@ -110,15 +110,20 @@ static inline double f64_mulsign(double v, uint64_t s)
   return f64_from_bits(f64_to_bits(v)^s);
 }
 
-static inline uint64_t f64_sign_bit(float a)
+static inline uint64_t f64_sign_bit(double a)
 {
   return f64_to_bits(a) & f64_sign_bit_k;
+}
+
+static inline uint64_t f64_sign_mask(double x)
+{
+  return sgn_mask_u64(f64_to_bits(x));
 }
 
 // returns 'c' if 'sx' is negative. otherwise zero
 static inline double f64_sign_select(double c, double sx)
 {
-  uint64_t m = sgn_mask_u64(f64_to_bits(sx));
+  uint64_t m = f64_sign_mask(sx);
   return f64_from_bits(m & f64_to_bits(c));
 }
 
