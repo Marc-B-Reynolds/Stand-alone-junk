@@ -37,7 +37,7 @@ static inline float f32_asinpi_sb_xf(float (*f)(float), float x)
 
   float a  = fabsf(x);
   float sx = f32_xor(x,    a);
-  float c  = f32_xor(0.5f, sx);
+  float c  = f32_xor(0.5f, sx);   // (x>=0) ? .5 : -.5
   float t  = -f32_sqrt(1.f-a);
   float p  = f(a);
   
