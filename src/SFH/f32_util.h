@@ -107,8 +107,8 @@ const f32_pair_t f32_mul_k_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
 
 
 // single word precision "helpers"
-const float f32_pi      = f32_mul_k_pi.h;
-const float f32_half_pi = 0.5f*f32_mul_k_pi.h;
+const float f32_pi      = 0x1.921fb6p1f;
+const float f32_half_pi = 0.5f*0x1.921fb6p1f;
 
 
 // extended precision additive constants as unevaluate pairs:
