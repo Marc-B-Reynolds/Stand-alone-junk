@@ -27,7 +27,7 @@ static inline double f64_horner2_5(const double x, const double c[static 6])
   double e,o;
   e =          c[1];  o =          c[0];
   e = fma(e,x2,c[3]); o = fma(o,x2,c[2]);
-  e = fma(e,x2,c[4]); o = fma(o,x2,c[5]);
+  e = fma(e,x2,c[5]); o = fma(o,x2,c[4]);
 
   return fma(x,o,e);
 }
@@ -38,8 +38,8 @@ static inline double f64_horner2_7(const double x, const double c[static 8])
   double e,o;
   e =          c[1];  o =          c[0];
   e = fma(e,x2,c[3]); o = fma(o,x2,c[2]);
-  e = fma(e,x2,c[4]); o = fma(o,x2,c[5]);
-  e = fma(e,x2,c[6]); o = fma(o,x2,c[7]);
+  e = fma(e,x2,c[5]); o = fma(o,x2,c[4]);
+  e = fma(e,x2,c[7]); o = fma(o,x2,c[6]);
 
   return fma(x,o,e);
 }
@@ -50,9 +50,9 @@ static inline double f64_horner2_9(const double x, const double c[static 10])
   double e,o;
   e =          c[1];  o =          c[0];
   e = fma(e,x2,c[3]); o = fma(o,x2,c[2]);
-  e = fma(e,x2,c[4]); o = fma(o,x2,c[5]);
-  e = fma(e,x2,c[6]); o = fma(o,x2,c[7]);
-  e = fma(e,x2,c[8]); o = fma(o,x2,c[9]);
+  e = fma(e,x2,c[5]); o = fma(o,x2,c[4]);
+  e = fma(e,x2,c[7]); o = fma(o,x2,c[6]);
+  e = fma(e,x2,c[9]); o = fma(o,x2,c[8]);
 
   return fma(x,o,e);
 }
@@ -63,10 +63,10 @@ static inline double f64_horner2_11(const double x, const double c[static 12])
   double e,o;
   e =          c[ 1];  o =          c[ 0];
   e = fma(e,x2,c[ 3]); o = fma(o,x2,c[ 2]);
-  e = fma(e,x2,c[ 4]); o = fma(o,x2,c[ 5]);
-  e = fma(e,x2,c[ 6]); o = fma(o,x2,c[ 7]);
-  e = fma(e,x2,c[ 8]); o = fma(o,x2,c[ 9]);
-  e = fma(e,x2,c[10]); o = fma(o,x2,c[11]);
+  e = fma(e,x2,c[ 5]); o = fma(o,x2,c[ 4]);
+  e = fma(e,x2,c[ 7]); o = fma(o,x2,c[ 6]);
+  e = fma(e,x2,c[ 9]); o = fma(o,x2,c[ 8]);
+  e = fma(e,x2,c[11]); o = fma(o,x2,c[10]);
 
   return fma(x,o,e);
 }
