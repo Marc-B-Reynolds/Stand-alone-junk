@@ -234,6 +234,7 @@ static inline float f32_round_na(float x)  { return f32_round(x);  }
 
 // round to nearest (ties to even) aka banker's rounding. default mode
 // so 'f32_round_cm' produces same if mode hasn't been changed.
+#if defined(F32_INTEL)
 static inline float f32_round_ne(float x)
 {
 #if defined(F32_INTEL)
@@ -247,7 +248,7 @@ static inline float f32_round_ne(float x)
   // do nothing for warning ATM
 #endif  
 }
-
+#endif
 
 // x >=0 ? 1.0 : -1.f
 static inline float f32_sgn(float x) { return copysignf(1.f,x); }
