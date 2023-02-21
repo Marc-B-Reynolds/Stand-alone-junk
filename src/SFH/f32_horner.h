@@ -28,5 +28,7 @@ static inline float f32_horner_13(float x, const float C[static 14]) { return fm
 static inline float f32_horner_14(float x, const float C[static 15]) { return fmaf(x,f32_horner_13(x,C),C[14]); }
 static inline float f32_horner_15(float x, const float C[static 16]) { return fmaf(x,f32_horner_14(x,C),C[15]); }
 
+
+
 #endif
 
