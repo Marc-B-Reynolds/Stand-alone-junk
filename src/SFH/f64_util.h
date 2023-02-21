@@ -190,6 +190,7 @@ static inline double f64_round_na(double x)  { return f64_round(x);  }
 
 // round to nearest (ties to even) aka banker's rounding. default mode
 // so 'f64_round_cm' produces same if mode hasn't been changed.
+#if defined(F64_INTEL) 
 static inline double f64_round_ne(double x)
 {
 #if defined(F64_INTEL)
@@ -203,8 +204,7 @@ static inline double f64_round_ne(double x)
   // do nothing for warning ATM
 #endif
 }
-
-
+#endif
 
 // x >=0 ? 1.0 : -1.f
 static inline double f64_sgn(double x) { return copysign(1.0,x); }
