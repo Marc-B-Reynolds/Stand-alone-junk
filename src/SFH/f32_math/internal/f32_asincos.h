@@ -3,6 +3,11 @@
 
 // Build your own libm level quality acos and asin
 
+
+
+#ifndef F32_ASINCOS_H
+#define F32_ASINCOS_H
+
 //**************************************************************
 // classic polynomial approximations of asin(x) on [-1/2, 1/2]
 // if P(x) is one of the following then:
@@ -221,3 +226,5 @@ static inline float f32_acos_x2(float x, float (*P)(float))
   
   return f32_mulsign((float)r, sx);
 }
+
+#endif
