@@ -130,13 +130,7 @@ static inline float f32_acospi_sb_ke6(float x)
 }
 
 //**********************************************************************
-// binary64 kernels (for binary32 results)
-
-
-// temp hack
-#ifndef   F64_HORNER
-#include "f64_horner.h"
-#endif
+// binary64 kernels (for binary32 results) both are exact at f(0)
 
 #ifndef   F64_HORNER2
 #include "f64_horner2.h"
@@ -189,6 +183,14 @@ static inline float f32_acospi_sb_xp(float (*f)(float), float x)
   return t*p;
 }
 
+static inline float f32_acospi_d_xp(double (*f)(double), float x)
+{
+  double v = (double)x;
+  double t = f64_sqrt(1.0-v);
+  double p = f(x);
+
+  return (float)(t*p);
+}
 
 // compiler hand holding to keep it branchfree. placeholder for being
 // to make it easy to flip a compile time switch if the compiler + arch
@@ -243,8 +245,8 @@ static inline float f32_acospi_sb_xf_l(float (*f)(float), float x)
 }
 
 
-// full range, branchfree double promote expansions
-static inline float f32_acospi_xd(double (*P)(double), float v)
+// full range, branchfree double promote expansions 
+static inline float f32_acospi_d_xf(double (*P)(double), float v)
 {
   double x  = (double)v;
   double a  = fabs(x);
