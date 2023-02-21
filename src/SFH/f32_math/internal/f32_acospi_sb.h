@@ -1,6 +1,6 @@
 
-#ifndef __F32_ACOSPI_SB_H__
-#define __F32_ACOSPI_SB_H__
+#ifndef F32_ACOSPI_SB_H
+#define F32_ACOSPI_SB_H
 
 // fast branchfree asinpi targeting minimizing abs error. intended for
 // low quality approximations.
@@ -127,6 +127,11 @@ static inline float f32_acospi_sb_ke6(float x)
 }
 
 //**********************************************************************
+// binary64 kernels (for binary32 results)
+
+
+
+//**********************************************************************
 
 
 // given f = P(x) expand approximation restricted to positive input.
@@ -149,6 +154,16 @@ static inline float f32_acospi_c(float x)
   return f32_sign_select(1.f, x);
 #else
   return (x < 0.f) ? 1.f : 0.f; 
+#endif  
+}
+
+static inline double f32_acospi_cw(float x)
+{
+#if 1
+  uint64_t m = f32_sign_mask_u64(x);
+  return f64_from_bits(m & f64_to_bits(1.0));
+#else
+  return (x < 0.f) ? 1.0 : 0.0; 
 #endif  
 }
 
@@ -181,6 +196,21 @@ static inline float f32_acospi_sb_xf_l(float (*f)(float), float x)
   
   return fmaf(f32_xor(t,sx), p, c);  
 }
+
+
+// full range, branchfree double promote expansions
+static inline float f32_acospi_xd(double (*P)(double), float v)
+{
+  double x  = (double)v;
+  double a  = fabs(x);
+  double sx = f64_xor(x,a);
+  double c  = f32_acospi_cw(v);
+  double t  = f64_sqrt(1.0-a);
+  double p  = P(a);
+
+  return (float)fma(f64_xor(t,sx), p, c);
+}
+
 
 
 #endif
