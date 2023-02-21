@@ -3,8 +3,8 @@
 
 // common approximation utility functions
 
-#ifndef __F32_MATH_COMMON_H__
-#define __F32_MATH_COMMON_H__
+#ifndef F32_MATH_COMMON_H
+#define F32_MATH_COMMON_H
 
 
 // given a function 'f' defined for postive 'x': extend to it
