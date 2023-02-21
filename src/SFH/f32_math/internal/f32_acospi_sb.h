@@ -31,6 +31,9 @@
 // not forcing result of f(0) to 1/2 gives an additional degree of
 // freedom and produces slightly more accurate result.
 
+
+
+
 static inline float f32_acospi_sb_kr1(float x)
 {
   static const float C[] = {-0x1.b6bfa6p-5f, 0x1.fef466p-2f };
@@ -130,6 +133,48 @@ static inline float f32_acospi_sb_ke6(float x)
 // binary64 kernels (for binary32 results)
 
 
+// temp hack
+#ifndef   F64_HORNER
+#include "f64_horner.h"
+#endif
+
+#ifndef   F64_HORNER2
+#include "f64_horner2.h"
+#endif
+
+static inline double f32_acospi_dp_7(double x)
+{
+  static const double C[] = {
+    -0x1.a25e75102a784p-12,
+     0x1.14f922ea95169p-9,
+    -0x1.6392dee5c3e07p-8,
+     0x1.41e900ddb9fbep-7,
+    -0x1.059da0937915ep-6,
+     0x1.d008947285f77p-6,
+    -0x1.17cb0f25e856bp-4,
+     0x1.ffffff82e9620p-2
+  };
+  // order-2 horner
+  return f64_horner2_7(x,C);
+}
+
+static inline double f32_acospi_dp_8(double x)
+{
+  static const double C[] = {
+     0x1.d96812d527187p-13,
+    -0x1.53ee1c1b10406p-10,
+     0x1.d2e6213801f55p-9,
+    -0x1.b349d19615f9ap-8,
+     0x1.546a48855e022p-7,
+    -0x1.07f1875d82e60p-6,
+     0x1.d051fb78ab1c9p-6,
+    -0x1.17cbeaa7bc3e2p-4,
+     0x1.ffffffede992fp-2
+  };
+
+  // order-2 horner
+  return f64_horner2_8(x,C);
+}
 
 //**********************************************************************
 
