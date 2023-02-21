@@ -135,7 +135,8 @@ static inline uint64_t mul_hilo_64(uint64_t a, uint64_t b, uint64_t* hi)
 #pragma intrinsic(_umul128)
   return _umul128(a,b,hi);
 #else
-  static_assert(0, "mul_hilo_64: not written");
+  assert(0);
+  return 0;
 #endif    
 }
 
