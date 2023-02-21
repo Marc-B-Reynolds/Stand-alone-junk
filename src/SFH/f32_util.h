@@ -182,7 +182,6 @@ static inline float f32_sqrt(float a)
 #elif defined(F32_ARM)
   return __sqrtf(a);
 #else
-  assert(("f32_sqrt: doing nothing", 0));
   // do nothing for warning ATM
 #endif  
 }
@@ -245,7 +244,6 @@ static inline float f32_round_ne(float x)
 #elif defined(__ARM_FEATURE_DIRECTED_ROUNDING)
   return __rintnf(x);
 #else
-  assert(("f32_round: doing nothing", 0));
   // do nothing for warning ATM
 #endif  
 }
