@@ -1,0 +1,55 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+//verbosity=10;
+
+execute("../util.sollya");
+execute("../struct.sollya");
+execute("../approx.sollya");
+execute("../plotly.sollya");
+
+// In this directory run: sollya sincospi.sollya (BROKEN HACK)
+
+// Approximate sincos 
+// * single precision (the default)
+// * minimize relative error (the default)
+// * use 5 non-zero terms
+// * allow the library to detect the symettry
+
+scale = pi/4;
+
+// set-up
+sin_a = a_setup(sin(pi/4*x), [0;1]);
+sin_a._nterms = 5;
+// some explict set-up
+//sin_a._symmetry = A_SYMMETRY_EVEN;    // symmetry
+//sin_a._degree   =  [|1, 3, 5, 7, 9|]; // monimonials to use (ignore _nterms)
+print("here");
+sin_a = a_make_listing(sin_a);
+write("sin_core_" @ sin_a._nterms @ "(float x) {\n  float r;\n");
+sin_a._listing;
+print("  return r;\n}\n");
+
+
+quit;
+cos_a = a_setup(cos(scale*x), [0;1]);
+
+// make the approximation
+cos_a = a_build_approx(cos_a);
+cos_a._infnorm;
+
+// temp hack version of creating a listing
+cos_a = a_make_listing(cos_a);
+write("cos_core_" @ cos_a._nterms @ "(float x) {\n  float r;\n");
+cos_a._listing;
+print("  return r;\n}\n");
+
+
+//page.new("sin.html");
+//page.add_trace(sin_a);
+//plotly_build_pages();
+//plotly_show_html("sin.html");  // automatically open the result
+
+
