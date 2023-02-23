@@ -195,8 +195,8 @@ static inline float f32_acospi_d_xp(double (*f)(double), float x)
 // is doing better than the work around.
 static inline float f32_acospi_c(float x)
 {
-#if 1
-  return f32_sign_select(1.f, x);
+#if 0
+  return f32_sign_select1(1.f, x);
 #else
   return (x < 0.f) ? 1.f : 0.f; 
 #endif  
@@ -204,7 +204,7 @@ static inline float f32_acospi_c(float x)
 
 static inline double f32_acospi_cw(float x)
 {
-#if 1
+#if 0
   uint64_t m = f32_sign_mask_u64(x);
   return f64_from_bits(m & f64_to_bits(1.0));
 #else
