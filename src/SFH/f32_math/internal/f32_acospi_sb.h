@@ -32,8 +32,6 @@
 // freedom and produces slightly more accurate result.
 
 
-
-
 static inline float f32_acospi_sb_kr1(float x)
 {
   static const float C[] = {-0x1.b6bfa6p-5f, 0x1.fef466p-2f };
