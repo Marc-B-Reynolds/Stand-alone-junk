@@ -1,6 +1,7 @@
 *.exe
 *~
 *.png
+\#*\#
 src/Posts/rank1/foo
 src/Mathematica/DiscPoints.jpg
 src/Mathematica/PrideoutTwist1.jpg
