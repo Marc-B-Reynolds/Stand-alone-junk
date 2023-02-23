@@ -1,0 +1,95 @@
+// -*- mode: c; -*- 
+
+// spitball approximations of asinpi(x)
+
+// set up some globals
+T  = floating;
+E  = absolute;
+B  = [|24...|];
+F  = asin(x)/pi;
+tx = sqrt(1-x);
+
+procedure asinpi_make(basis, r)
+{
+  var e,approx,p0,p1;
+
+  print("asinpi(x) on: " @ r);
+  
+  approx = fpminimax(F,basis,B,r,T,E);
+
+  display=powers!;      write("  "); approx;  // for perverted languages without hex float
+  display=hexadecimal!; write("  "); approx;  // for happy languages
+  display=decimal!;     write("  "); approx;  // for happy humans
+
+  p0;
+  
+  display=hexadecimal!;
+  e = single(dirtyinfnorm(approx-F, r));
+  write("  approx abs error: ", e);
+  display=decimal!;
+  write(" (", e, ")\n\n");
+};
+
+// for asinpi(x)
+basis3 = [|1,x,        tx,tx*x       |];
+basis4 = [|1,x,        tx,tx*x,tx*x^2|];
+basis5 = [|1,x,x^2,    tx,tx*x,tx*x^2|];
+basis6 = [|1,x,x^2,    tx,tx*x,tx*x^2,tx*x^3|];
+basis7 = [|1,x,x^2,x^3,tx,tx*x,tx*x^2,tx*x^3|];
+
+xe = 1-2^-25;
+R = [2^-128;xe];             // abs error:
+
+if (false) then {
+asinpi_make(basis3, R); // 0x1.a22000p-12 (3.987551e-4)
+asinpi_make(basis4, R); // 0x1.c563f0p-15 (5.404835e-5)
+asinpi_make(basis5, R); // 0x1.4b0000p-16 (1.972914e-5)
+asinpi_make(basis6, R); // 0x1.c9af1ep-19 (3.410012e-6)
+asinpi_make(basis7, R); // 0x1.30bd62p-20 (1.135244e-6)
+};
+
+if (true) then {
+basis3 = [|1,x,        tx,tx*x       |];
+basis4 = [|1,x,        tx,tx*x,tx*x^2|];
+basis5 = [|1,x,x^3,    tx,tx*x,tx*x^2|];
+basis6 = [|1,x,x^3,    tx,tx*x,tx*x^2,tx*x^3|];
+basis7 = [|1,x,x^3,x^5,tx,tx*x,tx*x^2,tx*x^3|];
+
+asinpi_make(basis3, R); // 
+asinpi_make(basis4, R); // 
+asinpi_make(basis5, R); // 
+asinpi_make(basis6, R); //
+//asinpi_make(basis7, R); //
+};
+
+
+
+
+if (false) then {
+print("foo");
+T = (1-sqrt(1-x));
+basis3 = [|T,T*x,T*x^2|];
+basis4 = [|T,T*x,T*x^2,T*x^3|];
+basis5 = [|T,T*x,T*x^2,T*x^3,T*x^4|];
+basis6 = [|T,T*x,T*x^2,T*x^3,T*x^4,T*x^5|];
+basis7 = [|T,T*x,T*x^2,T*x^3,T*x^4,T*x^5,T*x^6|];
+
+asinpi_make(basis3, R); // 
+asinpi_make(basis4, R); // 
+asinpi_make(basis5, R); // 
+asinpi_make(basis6, R); //
+};
+
+if (false) then {
+sx = sqrt(1+x);
+// garbage
+basis3 = [|1,x,      sx,sx*x       |];
+basis4 = [|1,x,      sx,sx*x,sx*x^2|];
+basis5 = [|1,x,x^2,  sx,sx*x,sx*x^2|];
+basis6 = [|1,x,x^2,  sx,sx*x,sx*x^2,sx*x^3|];
+
+asinpi_make(basis3, R); // 
+asinpi_make(basis4, R); // 
+asinpi_make(basis5, R); // 
+asinpi_make(basis6, R); //
+};
