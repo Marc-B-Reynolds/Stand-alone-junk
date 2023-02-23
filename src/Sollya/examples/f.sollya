@@ -1,0 +1,52 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+//verbosity=10;
+
+// Using arctangent as an example
+// load the library
+execute("../util.sollya");
+execute("../struct.sollya");
+execute("../approx.sollya");
+execute("../plotly.sollya");
+
+// temp hack..html is too big for a gist
+_plotly._points = 200;
+
+// ***********************************************************************
+// Use the library to build some approximations
+
+//print("creating approximations");
+
+// set up a template structure for full range min rel and abs error
+f_r = a_setup(log(1+x)/(x*log(2)), [1/sqrt(2)-1; sqrt(2)-1]);
+f_a = s_copy(f_r);
+f_a._nterms = 11;            
+f_a = a_build_approx(f_a);
+
+f_a;
+	      
+a_to_inline_f32(f_a,  "f");
+
+print("Single precision:");
+r=[1/sqrt(2)-1; sqrt(2)-1];
+
+//f=log2(1+x)/x;
+f=log(1+x)/(x*log(2));
+
+p=fpminimax(f, 11, [|24...|], r, floating, relative);
+b=dirtyinfnorm(p-f, r);
+p;
+print("\ninf-norm:",b);
+print("\nzeros", dirtyfindzeros(f-p,r),"\n");
+print("max-e:", dirtyfindzeros(diff(f-p),r));
+
+//print("\nDouble precision:");
+//p=fpminimax(f, 11, [|53...|], r, floating, relative);
+//b=dirtyinfnorm(p-f, r);
+//p;
+//print("\ninf-norm:",b);
+//print("\nzeros", dirtyfindzeros(f-p,r),"\n");
+//print("max-e:", dirtyfindzeros(diff(f-p),r));
