@@ -209,7 +209,11 @@ static inline float f32_acos_x2(float x, float (*P)(float))
   // the sign of the input. otherwise might as well use
   // the 'x1' expansion. sledgehammer it ATM.
   
-  // we simply want this branchfree:
+  // we simply want this branchfree. flip of types
+  // (binary32 in -> binary64 out is generating
+  // a branch in current gcc & clang). creating a
+  // sadly long chain of ops ATM. need to rethink.
+  // promoting x to double is even sader?
 //double   c  = (x < 0.f) ? -M_PI : 0.0;
   uint64_t m  = f32_sign_mask_u64(x);
   double   c  = f64_from_bits(m & f64_to_bits(-f64_pi));
