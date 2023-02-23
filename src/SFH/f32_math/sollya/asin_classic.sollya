@@ -32,17 +32,9 @@ procedure asin_make(basis, r)
 };
 
 print("asin");
-asin_make([|3,5,7,9|],         R);
-asin_make([|3,5,7,9,11|],      R);
-asin_make([|3,5,7,9,11,13|],   R);
-asin_make([|3,5,7,9,11,13,15|],R);
+//asin_make([|3,5,7,9|],         R);
+//asin_make([|3,5,7,9,11|],      R);
+//asin_make([|3,5,7,9,11,13|],   R);
+//asin_make([|3,5,7,9,11,13,15|],R);
 
 
-if (false) then {
-print("asinpi");
-F = asin(x)/pi;
-asin_make([|3,5,7,9|],         R);
-asin_make([|3,5,7,9,11|],      R);
-asin_make([|3,5,7,9,11,13|],   R);
-asin_make([|3,5,7,9,11,13,15|],R);
-};
