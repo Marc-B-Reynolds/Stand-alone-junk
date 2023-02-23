@@ -120,12 +120,31 @@ static inline uint64_t f64_sign_mask(double x)
   return sgn_mask_u64(f64_to_bits(x));
 }
 
-// returns 'c' if 'sx' is negative. otherwise zero
-static inline double f64_sign_select(double c, double sx)
+// returns 'c' if 'cond' is negative. otherwise zero
+static inline double f64_sign_select1(double c, double cond)
 {
+#if defined(F64_SIGN_SELECT_VIA_MASK)
   uint64_t m = f64_sign_mask(sx);
   return f64_from_bits(m & f64_to_bits(c));
+#else
+  return (cond < 0.0) ? c : 0.0;
+#endif  
 }
+
+// 'a' if cond is less than zero, otherwise 'b'
+static inline double f64_sign_select(double a, double b, double cond)
+{
+#if defined(F64_SIGN_SELECT_VIA_MASK)  
+  uint64_t m  = f64_sign_mask(cond);
+  uint64_t ia = f64_to_bits(a);
+  uint64_t ib = f64_to_bits(b);
+  uint64_t ir = (ia & m)|(ib & ~m);
+  return f64_from_bits(ir);
+#else
+  return (cond < 0.0) ? a : b;
+#endif  
+}
+
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
