@@ -46,7 +46,10 @@ static inline float f32_asinpi_k8(float x)
 //**************************************************************
 // asinpi expansions
 
-// branch on the major ranges. stay in binary32
+// branchs on the two ranges. stays in binary32
+// 1) no promotion makes the errors much larger for |x| > 1/2
+//    than |x| <= 1/2 for a given kernel
+// 2) it's sad if the input is random WRT ranges
 static inline float f32_asinpi_x0(float (*P)(float), float x)
 {
   float a = fabsf(x);
@@ -62,42 +65,28 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
     return r;
   }
 
-#if 0  
   // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
-  float sx = f32_xor(x,a);
-  float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
-  float t  = -2.f * f32_sqrt(t2);
-  float r  = P(t2);
 
+  // extract the sign bit and apply early to break dep-chain
+  // removes application at end at cost of 1 basic op.
+  float sx = f32_xor(x,a);
+  float m  = f32_xor(-2.0f, sx);
+  float c  = f32_xor( 0.5f, sx);
+  
+  float t2 = 0.5f * (1.f-a);             // exact: Sterbenz lemma
+  float t  =    m * f32_sqrt(t2);
+  float r  = P(t2);
+  
   r = fmaf(r,t2, f32_mul_k_pi_i.l);
   r = fmaf(t,    f32_mul_k_pi_i.h, t*r);
   
   // merging this and t*r into fma increases error
-  r = 0.5f + r;                         
-
-  // sign application could be folded above. lack of motivation ATM
-  // (apply to t and 1/2)
-  return f32_xor(r,sx);
-#else
-  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
-  float sx = f32_xor(x,a);
-  float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
-  float t  = -2.f * f32_sqrt(t2);
-  float r  = P(t2);
-
-  r = fmaf(r,t2, f32_mul_k_pi_i.l);
-  r = fmaf(t,    f32_mul_k_pi_i.h, t*r);
-  
-  // merging this and t*r into fma increases error
-  r = 0.5f + r;                         
-
-  // sign application could be folded above. lack of motivation ATM
-  // (apply to t and 1/2)
-  return f32_xor(r,sx);
-#endif  
+  return r + c;
 }
 
-// as x0 but promote to binary64 on troublesome: sqrt needs more bits
+// branchs on the two ranges. promotes to binary64 on |x| > 1/2
+// 1) drastically improves error numbers vs. 'x0'
+// 2) it's sad if the input is random WRT ranges
 static inline float f32_asinpi_x1(float (*P)(float), float x)
 {
   float a = fabsf(x);
@@ -114,29 +103,27 @@ static inline float f32_asinpi_x1(float (*P)(float), float x)
 
   // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
   float  sx = f32_xor(x,a);
-  float  tf = 0.5f * (1.f-a);
+  float  tf = 0.5f * (1.f-a);        // exact: Sterbenz lemma
   double t2 = (double)tf;
   double t  = -2.0 * f64_sqrt(t2);
   double r  = (double)P(tf);
-
+  
   r = fma(t2, r, f64_mul_k_pi_i.h);
   r = fma(t,  r, 0.5);
 
-  // sign application again
-  return f32_xor((float)r,sx);
+  // dep-chain of sign application could be removed. requires
+  // a bit of thinking and restructuring though.
+  return f32_xor((float)r, sx);
 }
 
-// NO: doesn't give blend
-static inline double f64_mask_select(double a, double b, uint64_t m)
-{
-  uint64_t ia = f64_to_bits(a);
-  uint64_t ib = f64_to_bits(b);
-  uint64_t ir = (ia & m)|(ib & ~m);
-  return f64_from_bits(ir);
-}
 
 // always promote and branchfree. always promote doesn't have a
 // huge impact on error measures so skipping on branchy version
+// 1) lowest errors (for a given kernel) but not vastly better
+//    than 'x1'
+// 2) performance isn't a concern OR:
+// 3) is a performance concern but want (1) and input isn't 
+//    predictable WRT reducation ranges.
 static inline float f32_asinpi_x2(float (*P)(float), float v)
 {
   double x = (double)v;
@@ -144,26 +131,23 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 
   double r;
 
-#if 1
-  // range and sign select
-  uint64_t im = f64_sign_mask(0.5-a);
-  double   sx = f64_from_bits(f64_sign_bit(x));
-
   // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
-  double   r0 = 0.5f * (1.f-a);            // exact: Sterbenz lemma (when used)
+  double   r0 = 0.5f * (1.f-a);       // exact: Sterbenz lemma (when used)
   double   r1 = -2.0 * f64_sqrt(r0);
+  double   im = 0.5-a;                // select based on: |x| <= 1/2
+  double   sx = f64_xor(x,a);         // sign bit
 
-  // select based on: |x| <= 1/2
-  double   c  = f64_mask_select(0.5, 0.0, im);
-  double   t  = f64_mask_select(r1,  a,   im);
-  double   t2 = f64_mask_select(r0,  x*x, im);
-#else
-#endif  
+  // perform the range selection
+  double   c  = f64_sign_select(0.5, 0.0, im);
+  double   t  = f64_sign_select(r1,  a,   im);
+  double   t2 = f64_sign_select(r0,  x*x, im);
 
-  // apply sign
+  // apply sign: break dep-chain instead of apply at end
   t = f64_xor(t, sx);
   c = f64_xor(c, sx);
   
+  // |x| <= 0.5 : asinpi(x) = a/pi + a^3 P(a^2), a = |x|
+  // |x| >  0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
   r  = (double)P((float)t2);
   r = fma(t2, r, f64_mul_k_pi_i.h);
   r = fma(t,  r, c);
