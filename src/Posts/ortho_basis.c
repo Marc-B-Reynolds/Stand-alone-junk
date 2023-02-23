@@ -4,9 +4,6 @@
 //
 // The error measurements are somewhat lacking.
 //
-// to compile under VC you'll have to change the float hex-constants...couldn't
-// be bothered.
-//
 // The noted number of issues is for x64 from gcc 6.3 -O3
 
 #include <stdio.h>
@@ -23,14 +20,15 @@
 // compile time configuration options
 
 #define HISTOGRAM
+#define HISTOGRAM_DETAILED
 
 // enable to test with both pseudo-random and Sobol sequences
 #define USE_SOBOL
 
-#define TRIALS 0x7FFFFFFF
-//#define TRIALS 0x3FFFFFF
-
-#define THRESHOLD -0x1.0p-14f
+//#define TRIALS 0x7FFFFFFF
+#define TRIALS 0x3FFFFFFF
+//#define TRIALS 0xFFFFFF
+#define HLEN 100
 
 //#define HALF_SPHERE
 
@@ -43,6 +41,16 @@
 
 sobol_2d_t qrng;
 
+#endif
+
+#if defined(_MSC_VER)
+#define TWO_OVER_PI_D 0.6366197723675813824328884038550313562154769897461
+#define R2D_D 57.29577951308232286464772187173366546630859375
+#define ULP1  5.9604644775390625e-8f
+#else
+#define TWO_OVER_PI_D 0x1.45f306dc9c883p-1
+#define R2D_D 0x1.ca5dc1a63c1f8p5
+#define ULP1  0x1p-24f
 #endif
 
 // xoroshiro128+
@@ -69,7 +77,7 @@ static inline uint64_t rng_u64(void)
 
 static inline float rng_f32(void)
 {
-  return (rng_u64() >> 40)*0x1p-24f;
+  return (rng_u64() >> 40)*ULP1;
 }
 
 static inline float sgn(float x) { return copysignf(1.f,x); }
@@ -82,8 +90,8 @@ float uniform_hdisk(vec2_t* p)
 
   do {
     v = rng_u64();
-    x = (v >> 40)*0x1p-24f;
-    y = (v & 0xFFFFFF)*0x1p-24f;
+    x = (v >> 40)*ULP1;
+    y = (v & 0xFFFFFF)*ULP1;
     d = x*x;
     y = 2.f*x-1.f; d += y*y;
   } while(d >= 1.f);
@@ -102,8 +110,8 @@ float uniform_disk(vec2_t* p)
 
   do {
     v = rng_u64();
-    x = (v >> 40)*0x1p-24f;
-    y = (v & 0xFFFFFF)*0x1p-24f;
+    x = (v >> 40)*ULP1;
+    y = (v & 0xFFFFFF)*ULP1;
     x = 2.f*x-1.f; d  = x*x;
     y = 2.f*y-1.f; d += y*y;
   } while(d >= 1.f);
@@ -364,6 +372,19 @@ void ortho_basis_r1(vec3_t* v, vec3_t* xp, vec3_t* yp)
   vec3_set(yp, sz*c, sz*b-1, sz*y);
 }
 
+
+// for measuring effect of simply promoting to double
+void ortho_basis_1_pd(vec3_t* v, vec3_t* xp, vec3_t* yp)
+{
+  double x = v->x, y = v->y, z = v->z;
+  double a = y/(z+1.0);
+  double b = y*a;
+  double c = x*a;
+  
+  vec3_set(xp, -z-b, c,  x);
+  vec3_set(yp, c, b-1.f, y);
+}
+
 // for future post note
 void ortho_max_reviewer_7(vec3_t* n, vec3_t* b1, vec3_t* b2)
 {
@@ -398,6 +419,80 @@ void ortho_max_reviewer_7(vec3_t* n, vec3_t* b1, vec3_t* b2)
   }
 }
 
+
+void ortho_hocevar_(vec3_t* v, vec3_t* xp, vec3_t* yp)
+{
+  float x =v->x, y=v->y, z=v->z;
+  float s;
+  
+  if (fabs(x) > fabs(z)) {
+    s = 1.f/sqrtf(x*x+y*y);
+    vec3_set(xp, -s*y, s*x, 0.f);
+    vec3_cross(yp, v, xp);
+  } else {
+    s = 1.f/sqrtf(y*y+z*z);
+    vec3_set(xp, 0.f, -s*z, s*y);
+    vec3_cross(yp, v, xp);
+  }
+}
+
+
+void ortho_hocevar(vec3_t* v, vec3_t* xp, vec3_t* yp)
+{
+  float x =v->x, y =v->y, z =v->z;
+  float x2=x*x,  y2=y*y,  z2=z*z;
+  float s;
+  
+  if (x2 > z2) {
+    s = 1.f/sqrtf(x2+y2);
+    vec3_set(xp, -s*y, s*x, 0.f);
+    vec3_cross(yp, v, xp);
+  } else {
+    s = 1.f/sqrtf(y2+z2);
+    vec3_set(xp, 0.f, -s*z, s*y);
+    vec3_cross(yp, v, xp);
+  }
+}
+
+void ortho_forsyth(vec3_t* v, vec3_t* xp, vec3_t* yp)
+{
+  float x =v->x, y =v->y, z =v->z;
+  float s;
+  
+  if (fabsf(y) < 0.99f) {
+    s = 1.f/sqrtf(x*x+z*z);
+    vec3_set(xp, -s*z, 0.f, s*x);
+    vec3_cross(yp, v, xp);
+  } else {
+    s = 1.f/sqrtf(y*y+z*z);
+    vec3_set(xp, 0.f, s*z, -s*y);
+    vec3_cross(yp, v, xp);
+  }
+}
+
+
+void ortho_hm(vec3_t* u, vec3_t* xp, vec3_t* yp)
+{
+  float x =u->x, y =u->y, z =u->z;
+  float ax = fabsf(x), ay = fabsf(y), az = fabsf(z);
+  
+  if (ax <= ay && ax <= az)
+    vec3_set(xp, 0, -z, y);
+  else if (ay <= ax && ay <= az)
+    vec3_set(xp, -z, 0, x);
+  else
+    vec3_set(xp, -y, x, 0);
+
+  float s = 1.f/sqrtf(xp->x*xp->x + xp->y*xp->y + xp->z*xp->z);
+  vec3_scale(xp,s);
+
+  vec3_cross(yp, u, xp);
+}
+
+
+
+
+
 typedef void(*ortho_gen_t)(vec3_t* v, vec3_t* xp, vec3_t* yp);
 
 typedef struct {
@@ -413,9 +508,14 @@ gens_t gens[] = {
   {&ortho_frisvad_m1,     "frisvad (m1)"},
   {&ortho_basis_pixar,    "pixar"}
 #else
+  {&ortho_basis_1,        "method1"},
+  {&ortho_basis_1_pd,     "method1 (pd)"},
+#if 0  
+  {&ortho_hocevar,        "hovevar"},
+  {&ortho_forsyth,        "forsyth"},
+  {&ortho_hm,             "hm"},
   {&ortho_frisvad,        "frisvad"},
   {&ortho_frisvad_m1,     "frisvad (m1)"},
-#if 0  
   {&ortho_basis_1,        "method1"},
   {&ortho_basis_2,        "method2"},
   {&ortho_basis_2a,       "method2a"},
@@ -432,8 +532,21 @@ gens_t gens[] = {
 
 #define NUM_GENS (sizeof(gens)/sizeof(gens[0]))
 
+#if defined(HISTOGRAM)
+// yes, very hacky..too lazy to shove in struct
+double histo[HLEN];
+#if defined(HISTOGRAM_DETAILED)
+double histo_d_xy[HLEN];
+double histo_d_xz[HLEN];
+double histo_d_yz[HLEN];
+double histo_m_x[HLEN];
+double histo_m_y[HLEN];
+#endif
+#endif
+
+
 typedef struct {
-  double   d0,d1,d2;
+  double   xz,yz,xy;
   double   minm0,minm1;
   double   maxm0,maxm1;
   double   rms;
@@ -446,6 +559,19 @@ void ortho_error_init(ortho_error_t* e)
 {
   memset(e, 0, sizeof(ortho_error_t));
   e->minm0 = e->minm1 = e->maxm0 = e->maxm1 = 1.f;
+
+#if defined(HISTOGRAM)
+  // yes, very hacky
+  memset(histo,     0, sizeof(double)*HLEN);
+
+#if defined(HISTOGRAM_DETAILED)
+  memset(histo_d_xz, 0, sizeof(double)*HLEN);
+  memset(histo_d_yz, 0, sizeof(double)*HLEN);
+  memset(histo_d_xy, 0, sizeof(double)*HLEN);
+  memset(histo_m_x,  0, sizeof(double)*HLEN);
+  memset(histo_m_y,  0, sizeof(double)*HLEN);
+#endif
+#endif
 }
 
 static inline double vec3_dot_d(vec3_t* a, vec3_t* b)
@@ -462,52 +588,59 @@ static inline double vec3_norm_d(vec3_t* a)
   return vec3_dot_d(a,a);
 }
 
-#if defined(HISTOGRAM)
-double histo[HLEN];
-#endif
-
 void ortho_check(ortho_error_t* e, vec3_t* v, vec3_t* x, vec3_t* y)
 {
-  double d0,d1,d2;
-  double m0,m1;
+  double xz,yz,xy;
+  double mx,my;
   uint32_t display=0;
 
   // NOT SOUND MEASURES..speed of testing..should be good enough
-  d0 = fabs(vec3_dot_d(v,x));
-  d1 = fabs(vec3_dot_d(v,y));
-  d2 = fabs(vec3_dot_d(x,y));
-  m0 = vec3_norm_d(x);
-  m1 = vec3_norm_d(y);
+  xz = fabs(vec3_dot_d(v,x));
+  yz = fabs(vec3_dot_d(v,y));
+  xy = fabs(vec3_dot_d(x,y));
+  mx = vec3_norm_d(x);
+  my = vec3_norm_d(y);
   
-  if (e->d0 < d0)         {e->d0 = d0;    vec3_dup(&e->v0, v); display=1; }
-  if (e->d1 < d1)         {e->d1 = d1;    vec3_dup(&e->v1, v); display=1; }
-  if (e->d2 < d2)         {e->d2 = d2;    vec3_dup(&e->v2, v); display=1; }
-  if (e->minm0 > m0)      {e->minm0 = m0; vec3_dup(&e->v3, v); display=1; }
-  else if (e->maxm0 < m0) {e->maxm0 = m0; vec3_dup(&e->v4, v); display=1; }
-  if (e->minm1 > m1)      {e->minm1 = m1; vec3_dup(&e->v5, v); display=1; }
-  else if (e->maxm1 < m1) {e->maxm1 = m1; vec3_dup(&e->v6, v); display=1; }
+  if (e->xz < xz)         {e->xz = xz;    vec3_dup(&e->v0, v); display=1; }
+  if (e->yz < yz)         {e->yz = yz;    vec3_dup(&e->v1, v); display=1; }
+  if (e->xy < xy)         {e->xy = xy;    vec3_dup(&e->v2, v); display=1; }
+  if (e->minm0 > mx)      {e->minm0 = mx; vec3_dup(&e->v3, v); display=1; }
+  else if (e->maxm0 < mx) {e->maxm0 = mx; vec3_dup(&e->v4, v); display=1; }
+  if (e->minm1 > my)      {e->minm1 = my; vec3_dup(&e->v5, v); display=1; }
+  else if (e->maxm1 < my) {e->maxm1 = my; vec3_dup(&e->v6, v); display=1; }
 
   // add RMS measure
   double t,error;
+  mx = sqrt(mx)-1.0;
+  my = sqrt(my)-1.0;
   t = vec3_norm_d(v);
   t = sqrt(t) -1.0; error  = t*t;
-  t = sqrt(m0)-1.0; error += t*t;
-  t = sqrt(m1)-1.0; error += t*t;
-  error += d0*d0;
-  error += d1*d1;
-  error += d2*d2;
+  error += mx*mx;
+  error += my*my;
+  error += xz*xz;
+  error += yz*yz;
+  error += xy*xy;
 
   if (error > e->peak) e->peak = error;
 
 #if defined(HISTOGRAM)
+  // bins of histogram are wrt height of cap
   float    hidf = 0.5f*(1.f-v->z);
   if (hidf < 0) hidf = 0;
   uint32_t hid = (uint32_t)(HLEN*hidf);
   if (hid >= HLEN) hid=HLEN-1;
+  
+  if (error > histo[hid]) histo[hid] = error;
 
-  if (error > histo[hid]) histo[hid] = error;  
+#if defined(HISTOGRAM_DETAILED)
+  mx = fabs(mx); my = fabs(my);
+  if (xz > histo_d_xz[hid]) histo_d_xz[hid] = xz;
+  if (yz > histo_d_yz[hid]) histo_d_yz[hid] = yz;
+  if (xy > histo_d_xy[hid]) histo_d_xy[hid] = xy; 
+  if (mx > histo_m_x[hid])  histo_m_x[hid]  = mx;
+  if (my > histo_m_y[hid])  histo_m_y[hid]  = my;
 #endif
-
+#endif
   
   e->rms += error;
   e->cnt++;
@@ -533,19 +666,21 @@ double ortho_spew(ortho_gen_t f, ortho_error_t* e)
   double maxx = sqrt(e->maxm0);
   double miny = sqrt(e->minm1);
   double maxy = sqrt(e->maxm1);
-  double avx  = 1.0-0xa.2f983p-4*acos(e->d0);
-  double avy  = 1.0-0xa.2f983p-4*acos(e->d1);
-  double axy  = 1.0-0xa.2f983p-4*acos(e->d1);
+  double avx  = 1.0-TWO_OVER_PI_D*acos(e->xz);
+  double avy  = 1.0-TWO_OVER_PI_D*acos(e->yz);
+  double axy  = 1.0-TWO_OVER_PI_D*acos(e->xy);
   double rms  = sqrt(e->rms/(6.0*e->cnt));
   double peak = sqrt(e->peak/6.0);
 
-  printf("\nmax v.x:   %e %a | rel angle error: %e %a\n", e->d0, e->d0, avx,avx); ortho_basis_spew(f,&e->v0);
-  printf("\nmax v.y:   %e %a | rel angle error: %e %a\n", e->d1, e->d1, avy,avy); ortho_basis_spew(f,&e->v1);
-  printf("\nmax x.y:   %e %a | rel angle error: %e %a\n", e->d2, e->d2, axy,axy); ortho_basis_spew(f,&e->v2);
+#if 0  
+  printf("\nmax v.x:   %e %a | rel angle error: %e %a\n", e->xz, e->xz, avx,avx); ortho_basis_spew(f,&e->v0);
+  printf("\nmax v.y:   %e %a | rel angle error: %e %a\n", e->yz, e->yz, avy,avy); ortho_basis_spew(f,&e->v1);
+  printf("\nmax x.y:   %e %a | rel angle error: %e %a\n", e->xy, e->xy, axy,axy); ortho_basis_spew(f,&e->v2);
   printf("\n1-min|x|:  %e %a\n", 1.0-minx, 1.0-minx); ortho_basis_spew(f,&e->v3);
   printf("\nmax|x|-1:  %e %a\n", maxx-1.0, maxx-1.0); ortho_basis_spew(f,&e->v4);
   printf("\n1-min|y|:  %e %a\n", 1.0-miny, 1.0-miny); ortho_basis_spew(f,&e->v5);
   printf("\nmax|y|-1:  %e %a\n", maxy-1.0, maxy-1.0); ortho_basis_spew(f,&e->v6);
+#endif  
   printf("max error: %e %a\n",   peak, peak);
   printf("\nRMS:       %e %a\n", rms, rms);
 
@@ -562,6 +697,10 @@ void gen_reset(uint64_t s0, uint64_t s1)
 #endif
 }
 
+
+// histogram data is dot product
+#define SPEW_ANGLE(D) printf("%e, ", D)
+//#define SPEW_ANGLE(D) printf("%e, ", 1.0-TWO_OVER_PI_D*acos(D))
 
 void ortho_test(uint64_t s0, uint64_t s1)
 {
@@ -612,11 +751,17 @@ void ortho_test(uint64_t s0, uint64_t s1)
     ln();
 
 #if defined(HISTOGRAM)
-    printf("histogram { ");
-    for(uint32_t i=0; i<HLEN; i++) {
-      printf("%e, ", sqrt(histo[i]/6.f));
-    }
-    printf("}\n\n");
+    printf("RMS { "); for(uint32_t i=0; i<HLEN; i++) { printf("%e, ", sqrt(histo[i]/6.f)); }  printf("}\n\n");
+
+#if defined(HISTOGRAM_DETAILED)
+    printf("x.z { ");     for(uint32_t i=0; i<HLEN; i++) { SPEW_ANGLE(histo_d_xz[i]); } printf("}\n\n");
+    printf("y.z { ");     for(uint32_t i=0; i<HLEN; i++) { SPEW_ANGLE(histo_d_yz[i]); } printf("}\n\n");
+    printf("x.y { ");     for(uint32_t i=0; i<HLEN; i++) { SPEW_ANGLE(histo_d_xy[i]); } printf("}\n\n");
+    
+    printf("|1-|x|| { "); for(uint32_t i=0; i<HLEN; i++) { printf("%e, ", histo_m_x[i]);  } printf("}\n\n");
+    printf("|1-|y|| { "); for(uint32_t i=0; i<HLEN; i++) { printf("%e, ", histo_m_y[i]);  } printf("}\n\n");
+#endif
+
 #endif    
   }
 
@@ -682,7 +827,7 @@ int main()
 {
   uint64_t t = __rdtsc();
   uint64_t s0,s1;
-  
+
   s0 = t;
   s1 = t ^ 0x123456789;
   
