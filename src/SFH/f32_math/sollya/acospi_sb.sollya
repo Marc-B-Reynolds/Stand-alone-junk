@@ -2,7 +2,6 @@
 
 // spitball approximations of acospi(x)
 
-if (false) then {
 // set up some globals
 T  = floating;
 E  = absolute;
@@ -15,6 +14,8 @@ x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
 x1 = 1 - 2^-25;  // 1 - ulp(1)/2
 R  = [x0 ; x1];
 
+
+if (false) then {
 
 procedure acospi_rmake(basis, r)
 {
@@ -53,22 +54,20 @@ ebasis5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
 ebasis6 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
 ebasis7 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
 
-
 acospi_rmake(rbasis3, R); // 0x1.b35fdap-14 (1.038014e-4)
 acospi_rmake(rbasis4, R); // 0x1.95ffc8p-17 (1.209972e-5)
 acospi_rmake(rbasis5, R); // 0x1.99c8b2p-20 (1.526564e-6)
 acospi_rmake(rbasis6, R); // 0x1.bfff84p-23 (2.086154e-7)
 acospi_rmake(rbasis7, R); // 0x1.ffff48p-26 (2.980216e-8)
-
-
-quit;
+ 
+ quit;
 };
 
 
 f0_relaxed   = true;
-binary64_gen = false;
+binary64_gen = true;
 
-tx = sqrt(1-x);
+
 
 procedure dump(f,a,r)
 {
@@ -88,17 +87,17 @@ procedure dump(f,a,r)
 };
 
 // range set to avoid bad control points
-x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [0x1.921fb4p-25,-0x1.921fb4p-24]
-x1 = 1 - 2^-25;  // 1 - ulp(1)/2
-r  = [x0 ; x1];
-f  = (acos(x)/pi);
+//x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [0x1.921fb4p-25,-0x1.921fb4p-24]
+//x1 = 1 - 2^-25;  // 1 - ulp(1)/2
+//r  = [x0 ; x1];
+//f  = (acos(x)/pi);
 
 // P(x) = 1/2
-s0 = (1/2)*sqrt(1-x);
-dump(f,s0,r);
+//s0 = (1/2)*sqrt(1-x);
+//dump(f,s0,r);
 
 // binary32 polynomial approximations
-B  = [|24...|];
+//B  = [|24...|];
 
 if (false) then {
   // temp hack...move
@@ -108,67 +107,73 @@ if (false) then {
 
  basis = [|1,x,x^2,     tx,tx*x,tx*x^2,tx*x^3|];
 
-  s1 = fpminimax(f, basis, B, r, floating, absolute); dump(f,s1,r);
-//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
-//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
-//s3 = fpminimax(f, [|1,x,tx*x,x^2, tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
+  s1 = fpminimax(f, basis, B, r, floating, E); dump(f,s1,r);
+//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, E); dump(f,s2,r);
+//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, E); dump(f,s2,r);
+//s3 = fpminimax(f, [|1,x,tx*x,x^2, tx*x^2|], B, r, floating, E); dump(f,s2,r);
 
-//s3 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute); dump(f,s3,r);
-//  s4 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute); dump(f,s4,r);
-//  s5 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute); dump(f,s5,r);
-//  s6 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute); dump(f,s6,r);
+//s3 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3|], B, r, floating, E); dump(f,s3,r);
+//  s4 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E); dump(f,s4,r);
+//  s5 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E); dump(f,s5,r);
+//  s6 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E); dump(f,s6,r);
 quit;
 };
 
 
-
+if (false) then {
 if (f0_relaxed) then {
   print("\nbinary32: f(0) result relaxed\n");
-  s1 = fpminimax(f, [|tx,tx*x|], B, r, floating, absolute); dump(f,s1,r);
-  s2 = fpminimax(f, [|tx,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
-  s3 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute); dump(f,s3,r);
-  s4 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute); dump(f,s4,r);
-  s5 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute); dump(f,s5,r);
-  s6 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute); dump(f,s6,r);
+  s1 = fpminimax(F, [|tx,tx*x|], B, r, floating, E); dump(F,s1,r);
+  s2 = fpminimax(F, [|tx,tx*x,tx*x^2|], B, r, floating, E); dump(F,s2,r);
+  s3 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, E); dump(F,s3,r);
+  s4 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E); dump(F,s4,r);
+  s5 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E); dump(F,s5,r);
+  s6 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E); dump(F,s6,r);
 } else {
   print("\nbinary32 : f(0) result exact\n");
   r = [2^-2048,1-2^-24];
-  s1 = fpminimax(f, [|tx*x|], B, r, floating, absolute,tx/2); dump(f,s1,r);
-  s2 = fpminimax(f, [|tx*x,tx*x^2|], B, r, floating, absolute,tx/2); dump(f,s2,r);
-  s3 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute,tx/2); dump(f,s3,r);
-  s4 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute,tx/2); dump(f,s4,r);
-  s5 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute,tx/2); dump(f,s5,r);
-  s6 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute,tx/2); dump(f,s6,r);
+  s1 = fpminimax(F, [|tx*x|], B, r, floating, E,tx*0.5); dump(F,s1,r);
+  s2 = fpminimax(F, [|tx*x,tx*x^2|], B, r, floating, E,tx*0.5); dump(F,s2,r);
+  s3 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3|], B, r, floating, E,tx*0.5); dump(F,s3,r);
+  s4 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E,tx*0.5); dump(F,s4,r);
+  s5 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E,tx*0.5); dump(F,s5,r);
+  s6 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E,tx*0.5); dump(F,s6,r);
 };
+	   };
 
-
+E=relative;
+f0_relaxed = true;
 
 // binary64 polynomial approximations (all hack)
 if (binary64_gen) then {
   B  = [|53...|];
 
   // TODO: binary64 endpoints need adjustment - these are just a hack
-  x0 = 0x1.9p-55;
-  x1 = 1 - 2^-55;
-  r  = [x0 ; x1];
+  // try without for binary32 targets.
+  //x0 = 0x1.9p-55;
+  //x1 = 1 - 2^-55;
+  //R  = [x0 ; x1];
 
 if (f0_relaxed) then {
   print("\nbinary64 : f(0) result relaxed\n");
-  s1 = fpminimax(f, [|tx,tx*x|], B, r, floating, absolute); dump(f,s1,r);
-  s2 = fpminimax(f, [|tx,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
-  s3 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute); dump(f,s3,r);
-  s4 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute); dump(f,s4,r);
-  s5 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute); dump(f,s5,r);
-  s6 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute); dump(f,s6,r);
+  //s1 = fpminimax(F, [|tx,tx*x|], B, R, floating, E); dump(F,s1,R);
+  //s2 = fpminimax(F, [|tx,tx*x,tx*x^2|], B, R, floating, E); dump(F,s2,R);
+  //s3 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3|], B, R, floating, E); dump(F,s3,R);
+  //s4 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, R, floating, E); dump(F,s4,R);
+  //s5 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, R, floating, E); dump(F,s5,R);
+  //s6 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, R, floating, E); dump(F,s6,R);
+  s7 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|], B, R, floating, E); dump(F,s7,R);
+  s8 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^8|], B, R, floating, E); dump(F,s8,R);
 } else {
   print("\nbinary64 : f(0) result exact\n");
-  B  = [|53...|];
-  s1 = fpminimax(f, [|tx*x|], B, r, floating, absolute,tx/2); dump(f,s1,r);
-  s2 = fpminimax(f, [|tx*x,tx*x^2|], B, r, floating, absolute,tx/2); dump(f,s2,r);
-  s3 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute,tx/2); dump(f,s3,r);
-  s4 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute,tx/2); dump(f,s4,r);
-  s5 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute,tx/2); dump(f,s5,r);
-  s6 = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute,tx/2); dump(f,s6,r);
+  //s1 = fpminimax(F, [|tx*x|], B, R, floating, E,tx*0.5); dump(F,s1,R);
+  //s2 = fpminimax(F, [|tx*x,tx*x^2|], B, R, floating, E,tx*0.5); dump(F,s2,R);
+  //s3 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3|], B, R, floating, E,tx*0.5); dump(F,s3,R);
+  //s4 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, R, floating, E,tx*0.5); dump(F,s4,R);
+  //s5 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, R, floating, E,tx*0.5); dump(F,s5,R);
+  //s6 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, R, floating, E,tx*0.5); dump(F,s6,R);
+  s7 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|], B, R, floating, E,tx*0.5); dump(F,s7,R);
+  s8 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^8|], B, R, floating, E,tx*0.5); dump(F,s8,R);
 };
 };
 
