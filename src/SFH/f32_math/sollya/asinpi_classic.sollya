@@ -1,0 +1,82 @@
+// -*- mode: c; -*- 
+
+// classic polynomial approximation of asin on [-1/2,1/2]
+// x + x^3 P(x^2)
+
+execute("util.sollya");
+
+// set up some globals
+T  = floating;
+E  = relative;
+B  = [|24...|];
+F  = asin(x)/pi;
+R  = [0+2^-2048, 1/2];
+
+// correctly rounded initial term 
+// sinpi(x) ~= x/pi + x^3 P(x^2)
+procedure asinpi_make(basis, r)
+{
+  var e,approx;
+
+  print("asin(x) on: " @ r);
+  
+  approx = fpminimax(F,basis,B,r,T,E,x/pi);
+
+  // display=powers!;      write("  "); approx;  // for perverted languages without hex float
+  // display=hexadecimal!; write("  "); approx;  // for happy languages
+  display=decimal!;     write("  "); approx;  // for happy humans
+
+  display=hexadecimal!;
+  e = single(dirtyinfnorm(approx-F, r));
+  write("  approx rel error: ", e);
+  display=decimal!;
+  write(" (", e, ")\n\n");
+  //supnorm(approx, F, r, E, 2^(-24));
+
+  return approx;
+};
+
+/*
+print("asinpi");
+P5 = asinpi_make([|3,5,7,9|],         R);
+P6 = asinpi_make([|3,5,7,9,11|],      R);
+P7 = asinpi_make([|3,5,7,9,11,13|],   R);
+P8 = asinpi_make([|3,5,7,9,11,13,15|],R);
+
+// hacked 'f32_print_kernel_odd_extended_lead'
+procedure asinpi_dump(a)
+{
+  var l,c,e,d;
+
+  l = list_of_odd_coeff(a);
+  c = tail(l);
+
+  f32_print_kernel_list("asinpi", c);
+};
+
+
+asinpi_dump(P5);
+asinpi_dump(P6);
+asinpi_dump(P7);
+asinpi_dump(P8);
+*/
+
+//R  = [0+2^-2048, 1/2];
+//P6 = asinpi_make([|3,5,7,9,11|],      R);
+
+//x1 = 24/64; //small
+x1 = 25/64; //small
+//x1 = 27/64; //big
+//x1 = 30/64; big
+//x1 = 7/16;
+
+//basis = [|3,5,7,9,11|];
+basis = [|3,5,7,9|];
+
+asinpi_make(basis,R);
+R  = [0+2^-2048, x1];
+asinpi_make(basis,R);
+R  = [x1, 1/2];
+asinpi_make(basis,R);
+R  = [1/2, 3/4];
+asinpi_make(basis,R);
