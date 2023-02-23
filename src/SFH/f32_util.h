@@ -162,13 +162,32 @@ static inline uint64_t f32_sign_mask_u64(float x)
   return (uint64_t)(((int64_t)((int32_t)ix))>>31);
 }
 
-// returns 'c' if 'sx' is negative. otherwise zero
-static inline float f32_sign_select(float c, float sx)
+// returns 'c' if 'cond' is less than zero. otherwise zero
+static inline float f32_sign_select1(float c, float cond)
 {
+#if defined(F64_SIGN_SELECT_VIA_MASK)
+  // NOTE: opposite result for sNaN
   uint32_t m = sgn_mask_u32(f32_to_bits(sx));
   return f32_from_bits(m & f32_to_bits(c));
+#else
+  return (cond < 0.f) ? c : 0.f;
+#endif
 }
 
+// 'a' if cond is less than zero, otherwise 'b'
+static inline float f32_sign_select(float a, float b, float cond)
+{
+#if defined(F64_SIGN_SELECT_VIA_MASK)
+  // NOTE: opposite result for sNaN
+  uint32_t m  = f32_sign_mask(cond);
+  uint32_t ia = f32_to_bits(a);
+  uint32_t ib = f32_to_bits(b);
+  uint32_t ir = (ia & m)|(ib & ~m);
+  return f32_from_bits(ir);
+#else
+  return (cond < 0.f) ? a : b;
+#endif  
+}
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
