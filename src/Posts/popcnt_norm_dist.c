@@ -360,6 +360,46 @@ void sample_dist(float (*f)())
   printf("score: %e [%e,%e] %+e\n", score,min,max,max+min);
 }
 
+// uniform in postive-x half disc
+static float uniform_hdisc(vec2_t* p)
+{
+  float d,x,y;
+  uint64_t u;
+
+  do {
+    u = rng_u64();
+    y = 0x1p-24f*((float)(((int64_t)u) >> (64-25)));
+    x = 0x1p-24f*(u & 0xffffff);
+    d = x*x + y*y;
+  } while(d >= 1.f);
+
+  p->x = x;
+  p->y = y;
+
+  return d;
+}
+
+
+float uniform_disc(vec2_t* p)
+{
+  float d,x,y;
+
+  do {
+    uint64_t u = rng_u64();
+    x = 0x1p-24f*((float)(((int64_t)u    ) >> (64-25)));
+    y = 0x1p-24f*((float)(((int64_t)u<<25) >> (64-25)));
+    d = x*x + y*y;
+  } while(d >= 1.f);
+  
+  p->x = x;
+  p->y = y;
+  
+  return d;
+}
+
+
+
+
 float dist_tri_ref()
 {
   uint64_t u0 = rng_u0();
