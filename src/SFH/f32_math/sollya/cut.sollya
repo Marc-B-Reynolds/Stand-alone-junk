@@ -1,0 +1,56 @@
+// -*- mode: c; -*- 
+
+// hacky garbage WIP
+
+
+// sigh. not even started
+procedure find_cut_same_exp(f,range,basis,x0,x1)
+{
+}
+
+
+// sigh. needs major work
+procedure find_cut(f,range,basis,x0,x1)
+{
+  var d;
+  var e_lo,e_hi;
+  var c_lo,c_hi,c_mid;
+  var cnt;
+
+  d   = display;
+  cnt = 1;
+
+  c_lo    = single(0.5*(cut+x0));
+  c_hi    = single(0.5*(cut+x1));
+  cut     = single(cut);
+
+  e_lo    = cos_build(basis, x0,cut);
+  e_hi    = cos_build(basis, cut,x1);
+  display = hexadecimal!;
+
+  print(" cut=", cut, " [", c_lo,",",c_hi,"]");
+
+  for cnt from 1 to 32 do {
+    display=decimal!;
+   
+    if (e_lo < e_hi) then {
+      c_lo = cut;
+    } else {
+      c_hi = cut;
+    };
+
+    cut  = single((c_lo+c_hi)*0.5);
+    e_lo = cos_build(basis, x0,cut);
+    e_hi = cos_build(basis, cut,x1);
+    
+    if (cnt < 10) then { write(" "); };
+    write(cnt, ": ");
+    display=hexadecimal!;
+    write(e_lo, " ", e_hi);
+    print(" cut=", cut, " [", c_lo,",",c_hi,"]");
+  };
+
+  display = d!;
+
+  return cut;
+};
