@@ -6,10 +6,10 @@
 // NOTES:
 // * no real effort at portability
 // * Intel only ATM
-#ifndef __CARRYLESS_H__
-#define __CARRYLESS_H__
+#ifndef CARRYLESS_H
+#define CARRYLESS_H
 
-#ifndef __BITOPS_H__
+#ifndef BITOPS_H
 #include "bitops.h"
 #endif
 
