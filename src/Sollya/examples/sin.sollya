@@ -36,3 +36,10 @@ write("sin_core_" @ sin_a._nterms @ "(float x) {\n  float r;\n");
 sin_a._listing;
 print("  return r;\n}\n");
 
+
+//page.new("sin.html");
+//page.add_trace(sin_a);
+//plotly_build_pages();
+//plotly_show_html("sin.html");  // automatically open the result
+
+
