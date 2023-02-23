@@ -62,6 +62,7 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
     return r;
   }
 
+#if 0  
   // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
   float sx = f32_xor(x,a);
   float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
@@ -77,6 +78,23 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
   // sign application could be folded above. lack of motivation ATM
   // (apply to t and 1/2)
   return f32_xor(r,sx);
+#else
+  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
+  float sx = f32_xor(x,a);
+  float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
+  float t  = -2.f * f32_sqrt(t2);
+  float r  = P(t2);
+
+  r = fmaf(r,t2, f32_mul_k_pi_i.l);
+  r = fmaf(t,    f32_mul_k_pi_i.h, t*r);
+  
+  // merging this and t*r into fma increases error
+  r = 0.5f + r;                         
+
+  // sign application could be folded above. lack of motivation ATM
+  // (apply to t and 1/2)
+  return f32_xor(r,sx);
+#endif  
 }
 
 // as x0 but promote to binary64 on troublesome: sqrt needs more bits
@@ -108,7 +126,7 @@ static inline float f32_asinpi_x1(float (*P)(float), float x)
   return f32_xor((float)r,sx);
 }
 
-
+// NO: doesn't give blend
 static inline double f64_mask_select(double a, double b, uint64_t m)
 {
   uint64_t ia = f64_to_bits(a);
@@ -117,8 +135,8 @@ static inline double f64_mask_select(double a, double b, uint64_t m)
   return f64_from_bits(ir);
 }
 
-
-// wip: always promote to branchfree
+// always promote and branchfree. always promote doesn't have a
+// huge impact on error measures so skipping on branchy version
 static inline float f32_asinpi_x2(float (*P)(float), float v)
 {
   double x = (double)v;
@@ -126,6 +144,8 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 
   double r;
 
+#if 1
+  // range and sign select
   uint64_t im = f64_sign_mask(0.5-a);
   double   sx = f64_from_bits(f64_sign_bit(x));
 
@@ -137,7 +157,10 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
   double   c  = f64_mask_select(0.5, 0.0, im);
   double   t  = f64_mask_select(r1,  a,   im);
   double   t2 = f64_mask_select(r0,  x*x, im);
+#else
+#endif  
 
+  // apply sign
   t = f64_xor(t, sx);
   c = f64_xor(c, sx);
   
