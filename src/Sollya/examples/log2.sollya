@@ -1,0 +1,57 @@
+/* -*- mode: c; -*- */
+
+// Marc B. Reynolds, 2016
+// Public Domain under http://unlicense.org, see link for details.
+
+//verbosity=10;
+
+execute("../util.sollya");
+execute("../struct.sollya");
+execute("../approx.sollya");
+execute("../plotly.sollya");
+
+//ln2 = a_setup(log2(x), [1/2;1]);
+//ln2._nterms = 5;
+//ln2 = a_build_approx(ln2);
+
+// my script are choking on this..go manual.
+// not tranforming log2 is a poke in the eye
+R = [1/2;1];
+P = fpminimax(log2(x), 5, [|24...|],R, floating, absolute);
+E    = log2(x)-P;
+INFN = single(dirtyinfnorm(E,R));
+Z    = list_to_f32(dirtyfindzeros(E,R));
+
+print("no transform");
+print("// error =", INFN);
+print("// zero  =", Z);
+P;
+
+print("");
+print("transform");
+
+//l2._infnorm;
+R = [-.1715728752538099023966;.1715728752538099023966];    // range of the approximation
+ch = a_setup(2*atanh(x)/log(2), R);
+ch._nterms = 2;
+ch._symmetry = A_SYMMETRY_ODD; // too dumb
+ch = a_build_approx(ch);
+ch._infnorm;
+ch._poly;
+
+print("");
+print("transform");
+
+//F = 2*atanh(x)/log(2); // function to approximate
+
+//T = fixed;
+//T = floating;
+
+//P = fpminimax(2*atanh(x)/log(2), {1,3,5,7}, [|24...|],R, T, absolute);
+//display=decimal!;
+//P;
+//display=hexadecimal!;
+//P;
+//display=decimal!;
+//print("norm = ", accurateinfnorm(F-P, R, 23));
+
