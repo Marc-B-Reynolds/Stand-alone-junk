@@ -1,10 +1,6 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2023
 
-// Build your own libm level quality acos and asin
-
-
-
 #ifndef F32_ASINCOS_H
 #define F32_ASINCOS_H
 
@@ -123,7 +119,7 @@ static inline float f32_asin_x1(float x, float (*P)(float))
     return fmaf(r,x,x);
   }
 
-  // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-|x|) )
   float  sx = f32_xor(x,a);
   float  t2 = 0.5f * (1.f-a);           // exact: Sterbenz lemma
   double d2 = (double)t2;
