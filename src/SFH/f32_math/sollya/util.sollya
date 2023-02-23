@@ -1,0 +1,184 @@
+// -*- mode: c; -*- 
+// hacky garbage
+
+
+procedure list_of_coeff(p)
+{
+  var r,e,i;
+  e = degree(p);
+  r = [||];
+
+  for i from 0 to e do { r = r :. coeff(p,i); };
+  
+  return r;
+};
+
+procedure list_of_even_coeff(p)
+{
+  var r,e,i;
+  e = degree(p);
+  r = [||];
+
+  for i from 0 to e by 2 do { r = r :. coeff(p,i); };
+  
+  return r;
+};
+
+procedure list_of_odd_coeff(p)
+{
+  var r,e,i;
+  e = degree(p);
+  r = [||];
+
+  for i from 1 to e by 2 do { r = r :. coeff(p,i); };
+  
+  return r;
+};
+
+procedure fp_write(v)
+{
+  if (v != nearestint(v)) then {
+   write(v);
+  } else {
+   write(v,".0");
+  };
+};
+
+procedure f32_write_list(p,l)
+{
+  var e,i,d;
+
+  d = display;
+  
+  display=hexadecimal!;
+  e = length(l)-1;
+  write("const float ", p,"[] = {");
+  fp_write(l[0]);
+  write("f");
+  for i from 1 to e do { write(", "); fp_write(l[i]); write("f"); };
+  print("};");
+  
+  display=d!;
+};
+
+
+// split x into hi and lo terms: x ~= hi+lo
+procedure f32_split(v)
+{
+  var r;
+  r.h = single(v);
+  r.l = single(v-r.h);
+  return r;
+};
+
+procedure rational_constant(c)
+{
+  var r;
+
+  r.n = mantissa(c);
+  r.d = 2^(-exponent(c));
+
+  return r;
+};
+
+procedure f32_rational_write(r)
+{
+  var d;
+  d = display;
+  display=decimal!;
+  write("(" @ r.n @ ".f/" @ r.d @ ".f)");
+  display=d!;
+};
+
+procedure f64_rational_write(r)
+{
+  var d;
+  d = display;
+  display=decimal!;
+  write("(" @ r.n @ ".0/" @ r.d @ ".0)");
+  display=d!;
+};
+
+
+procedure f32_print_pair(name, v)
+{
+  var d;
+  d = display;
+  display=hexadecimal!;
+  print("const f32_pair_t f32_mul_k_" @ name @
+    " = {.h = " @ v.h @ "f, .l=" @ v.l @ "f};");
+  display=d!;
+};
+
+
+/*
+procedure f32_print_pair_rational(name, x)
+{
+  var h = rational_constant(x.h);
+  var l = rational_constant(x.l);
+  
+  write("const f32_pair_t f32_mul_k_" @ name @
+	" = {.h = ");
+  //@ x.h @ "f, .l=" @ x.l @ "f};");
+};
+*/
+
+procedure f32_print_kernel_list(name, c)
+{
+  var d;
+
+  d = display;
+  display=decimal!;
+  
+  write("static inline float f32_", name @ "_k" @ (length(c)+1) @ "(float x)\n{\n  static ");
+  f32_write_list("C", revert(c));
+  print("");
+  print("  return f32_horner_" @ (length(c)-1) @ "(x,C);");
+  print("}\n");
+
+  display=d!;
+};
+
+procedure f32_print_kernel_odd(name, a)
+{
+  f32_print_kernel_list(name, list_of_odd_coeff(a));
+};
+
+procedure f32_print_kernel_even(name, a)
+{
+  f32_print_kernel_list(name, list_of_even_coeff(a));
+};
+
+procedure f32_print_kernel(name, a)
+{
+  f32_print_kernel_list(name, list_of_coeff(a));
+};
+
+
+// change to putting lo/hi of lead into the array?
+procedure f32_print_kernel_odd_extended_lead(name, a)
+{
+  var l,c,e,d;
+
+  d = display;
+  l = list_of_odd_coeff(a);
+  c = revert(tail(l));
+  e = f32_split(head(l));
+
+  display=decimal!;
+  
+  write("static inline f32_", name @ "_k" @ (length(c)+1) @ "(float x)\n{\n  static ");
+  f32_write_list("C", c);
+  print("");
+  print("  float s = x*x;");
+  print("  float r;\n");
+  print("  r = f32_horner_" @ (length(c)-1) @ "(s,C);");
+  display=hexadecimal!;
+  print("  r = fmaf(r,s,", e.l @ "f)");
+  print("  r = fmaf(x,", e.h @ "f, x*r);");
+  print("");
+  print("  return r;");
+  print("}\n");
+
+  display=d!;
+};
