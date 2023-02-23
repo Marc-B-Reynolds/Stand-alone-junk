@@ -725,7 +725,7 @@ uint32_t foo(uint32_t x)
 
 static hash32_table_t hash32_table[] =
 {
-#if 1
+#if 0
  {.f = &ref,    .name = "baseline",    .flags=0 },
  {.f = &g0,     .name = "g0",          .flags=F_INVOL },
  {.f = &f0,     .name = "f0",          .flags=F_INVOL },
@@ -753,6 +753,7 @@ int main()
 
   for(uint32_t i=0; i<num_hash32; i++)
     test_32(hash32_table+i);
+
 
   return 0;
 }
