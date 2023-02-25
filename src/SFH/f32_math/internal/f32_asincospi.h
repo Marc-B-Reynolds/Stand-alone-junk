@@ -2,9 +2,11 @@
 // Marc B. Reynolds, 2022-2023
 
 // classic style asinpi/cospi approximations
+// 
 
 #ifndef F32_ASINCOSPI_H
 #define F32_ASINCOSPI_H
+
 
 
 //**************************************************************
@@ -43,6 +45,14 @@ static inline float f32_asinpi_k8(float x)
 }
 
 
+
+//**************************************************************
+// add cut kernels here
+
+
+
+
+
 //**************************************************************
 // asinpi expansions
 
@@ -65,7 +75,7 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
     return r;
   }
 
-  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/1 )
 
   // extract the sign bit and apply early to break dep-chain
   // removes application at end at cost of 1 basic op.
@@ -101,7 +111,7 @@ static inline float f32_asinpi_x1(float (*P)(float), float x)
     return r;
   }
 
-  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/2 )
   float  sx = f32_xor(x,a);
   float  tf = 0.5f * (1.f-a);        // exact: Sterbenz lemma
   double t2 = (double)tf;
@@ -131,7 +141,7 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 
   double r;
 
-  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| > 0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/2 )
   double   r0 = 0.5f * (1.f-a);       // exact: Sterbenz lemma (when used)
   double   r1 = -2.0 * f64_sqrt(r0);
   double   im = 0.5-a;                // select based on: |x| <= 1/2
@@ -147,13 +157,54 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
   c = f64_xor(c, sx);
   
   // |x| <= 0.5 : asinpi(x) = a/pi + a^3 P(a^2), a = |x|
-  // |x| >  0.5 : asinpi(x) = 1/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| >  0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/2 )
   r  = (double)P((float)t2);
   r = fma(t2, r, f64_mul_k_pi_i.h);
   r = fma(t,  r, c);
 
   return (float)r;
 }
+
+
+//**************************************************************
+// acospi expansions:
+//   |x| <  0.5 : acospi(x) = 1/2 -   asinpi(x)
+//    x  < -0.5 : acospi(x) =   1 - 2 asinpi( sqrt((1+x)/2 )
+//    x  >  0.5 : acospi(x) =       2 asinpi( sqrt((1-x)/2 )
+
+
+// WIP
+static inline float f32_acospi_x1(float (*P)(float), float x)
+{
+  float a = fabsf(x);
+
+  // |x| <= 0.5
+  if (a <= 0.5f) {
+    float t2 = x*x;
+    float r  = P(t2);
+    r = fmaf(r,t2, f32_mul_k_pi_i.l);
+    r = fmaf(x,    f32_mul_k_pi_i.h, x*r);
+
+    return 0.5f-r; // hack
+  }
+
+  // nope: not done
+  float  sx = f32_xor(x,a);
+  float  tf = 0.5f * (1.f-a);        // exact: Sterbenz lemma
+  double t2 = (double)tf;
+  double t  = 2.0 * f64_sqrt(t2);
+  double r  = (double)P(tf);
+  double c  = 1.0;
+  
+  r = fma(t2, r, f64_mul_k_pi_i.h);
+  r = fma(t,  r, c);
+
+  // dep-chain of sign application could be removed. requires
+  // a bit of thinking and restructuring though.
+  return f32_xor((float)r, sx);
+}
+
+
 
 
 
