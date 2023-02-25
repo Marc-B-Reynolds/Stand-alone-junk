@@ -9,7 +9,8 @@
 //
 // Fast & lower quality acospi functions (targeting abs error)
 // core approximation on [0,1] using expressions:
-//    acospi(x) ~= sqrt(1-x) P(x)
+//    acospi(x) ~= sqrt(1-x) P(x), x >= 0
+//               = 1 - acospi(-x), x <  0
 //
 // * defines two sets of polynomial approximations P(x)
 //     f32_acospi_sb_kr{n} = n^th degree where P(0) ~= 1/2 
@@ -128,6 +129,10 @@ static inline float f32_acospi_sb_ke6(float x)
 }
 
 //**********************************************************************
+// add cut kernels here
+
+
+//**********************************************************************
 // binary64 kernels (for binary32 results) both are exact at f(0)
 
 #ifndef   F64_HORNER2
@@ -193,10 +198,30 @@ static inline float f32_acospi_d_xp(double (*f)(double), float x)
 // compiler hand holding to keep it branchfree. placeholder for being
 // to make it easy to flip a compile time switch if the compiler + arch
 // is doing better than the work around.
+//
+// WARNING: f32_acospi_c/f32_acospi_cw & f32_acospi_sx need to work
+// together to handle -0 (acutally both zeroes) inputs correctly. Using:
+//   1 - acospi(|x|) 
+//
+// so for x=-0 we need either (sx,c) = {set,1} or {clear,0} (same for +0)
+
+#define F32_ACOS_SB_BITOPS
+
+// needs to properly handle -0: -0 -> 0 
+static inline float f32_acospi_sx(float x, float a)
+{
+#if defined(F32_ACOS_SB_BITOPS)
+  return f32_xor(x,a);
+#else  
+  return (x < 0.f) ? -0.f : 0.f;
+#endif  
+}
+
 static inline float f32_acospi_c(float x)
 {
-#if 0
-  return f32_sign_select1(1.f, x);
+#if defined(F32_ACOS_SB_BITOPS)
+  uint32_t m = sgn_mask_u32(f32_to_bits(sx));
+  return f32_from_bits(m & f32_to_bits(1.f));
 #else
   return (x < 0.f) ? 1.f : 0.f; 
 #endif  
@@ -204,7 +229,7 @@ static inline float f32_acospi_c(float x)
 
 static inline double f32_acospi_cw(float x)
 {
-#if 0
+#if defined(F32_ACOS_SB_BITOPS)
   uint64_t m = f32_sign_mask_u64(x);
   return f64_from_bits(m & f64_to_bits(1.0));
 #else
@@ -217,8 +242,8 @@ static inline double f32_acospi_cw(float x)
 static inline float f32_acospi_sb_xf(float (*f)(float), float x)
 {
   float a  = fabsf(x);
-  float sx = f32_xor(x,a);      // isolate sign bit
-  float c  = f32_acospi_c(x);   // (x<0) ? 1 : 0
+  float sx = f32_acospi_sx(x,a);  // (x<0) ? -0 : 0 isolate sign bit
+  float c  = f32_acospi_c(x);     // (x<0) ?  1 : 0
   float t  = f32_sqrt(1.f-a);
   float p  = f(a);
   
@@ -234,7 +259,7 @@ static inline float f32_acospi_sb_xf(float (*f)(float), float x)
 static inline float f32_acospi_sb_xf_l(float (*f)(float), float x)
 {
   float a  = fabsf(x);
-  float sx = f32_xor(x,a);
+  float sx = f32_acospi_sx(x,a);
   float c  = f32_acospi_c(x);
   float t  = f32_sqrt(1.f-a);
   float p  = f(a);
@@ -248,7 +273,7 @@ static inline float f32_acospi_d_xf(double (*P)(double), float v)
 {
   double x  = (double)v;
   double a  = fabs(x);
-  double sx = f64_xor(x,a);
+  double sx = f64_xor(x,a);     // ? recheck -0
   double c  = f32_acospi_cw(v);
   double t  = f64_sqrt(1.0-a);
   double p  = P(a);
