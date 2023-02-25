@@ -64,7 +64,7 @@ static inline void brute_error_add(func_error_t* error, float e, float a)
 
   if (d == 0.f) { error->ulp[0]++; return; };
 
-  uint32_t ulp = f32_ulp_dist_ss(e,a);
+  uint32_t ulp = f32_ulp_dist(e,a);
 
   if (ulp > error->max) { error->max = ulp; }
   if (d   > error->abs) { error->abs = d;   }
@@ -212,5 +212,8 @@ void brute_1pot_pn(float x)
 }
 
 
+#include <unistd.h>
+#include <time.h>
+#include "timehack.h"
 
 #endif
