@@ -207,20 +207,30 @@ static inline float f32_acospi_d_xp(double (*f)(double), float x)
 
 #define F32_ACOS_SB_BITOPS
 
-// needs to properly handle -0: -0 -> 0 
 static inline float f32_acospi_sx(float x, float a)
 {
 #if defined(F32_ACOS_SB_BITOPS)
   return f32_xor(x,a);
-#else  
+#else
+  a=a;
   return (x < 0.f) ? -0.f : 0.f;
+#endif  
+}
+
+static inline double f32_acospi_sxw(double x, double a)
+{
+#if defined(F32_ACOS_SB_BITOPS)
+  return f64_xor(x,a);
+#else
+  a=a;
+  return (x < 0.0) ? -0.0 : 0.0;
 #endif  
 }
 
 static inline float f32_acospi_c(float x)
 {
 #if defined(F32_ACOS_SB_BITOPS)
-  uint32_t m = sgn_mask_u32(f32_to_bits(sx));
+  uint32_t m = sgn_mask_u32(f32_to_bits(x));
   return f32_from_bits(m & f32_to_bits(1.f));
 #else
   return (x < 0.f) ? 1.f : 0.f; 
@@ -238,12 +248,13 @@ static inline double f32_acospi_cw(float x)
 }
 
 
+
 // given f = P(x) expand full range approximation
 static inline float f32_acospi_sb_xf(float (*f)(float), float x)
 {
   float a  = fabsf(x);
-  float sx = f32_acospi_sx(x,a);  // (x<0) ? -0 : 0 isolate sign bit
-  float c  = f32_acospi_c(x);     // (x<0) ?  1 : 0
+  float sx = f32_acospi_sx(x,a);
+  float c  = f32_acospi_c(x);
   float t  = f32_sqrt(1.f-a);
   float p  = f(a);
   
@@ -273,7 +284,7 @@ static inline float f32_acospi_d_xf(double (*P)(double), float v)
 {
   double x  = (double)v;
   double a  = fabs(x);
-  double sx = f64_xor(x,a);     // ? recheck -0
+  double sx = f32_acospi_sxw(x,a);
   double c  = f32_acospi_cw(v);
   double t  = f64_sqrt(1.0-a);
   double p  = P(a);
