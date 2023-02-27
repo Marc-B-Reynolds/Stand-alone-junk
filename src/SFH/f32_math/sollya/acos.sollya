@@ -1,0 +1,215 @@
+// -*- mode: c; -*- 
+
+ACP = (acos(x)/pi);
+tx  = sqrt(1-x);
+t2  = (1-x)/2;
+t   = sqrt(t2);
+E   = absolute;
+ACR = [2^-128;1-2^-25];
+B   = [|24...|];
+
+procedure dump(f,a,r)
+{
+  var aerror;
+
+  aerror = dirtyinfnorm((f-a), r);
+
+  display=decimal!;
+  a; 
+  display=hexadecimal!;
+  a; 
+  display=decimal!;
+
+  write("~abs error:", aerror);
+  display=hexadecimal!;
+  print(" ", aerror, "\n");
+};
+
+// full range approxs
+if (true) then {
+  var r,f,s0,s1,s2,s3,s4,s5;
+  r = [0;1-2^-24];
+  f = (acos(x)/pi);
+
+  s0 = (1/2)*sqrt(1-x);
+  dump(f,s0,r);
+
+  s1 = fpminimax(f, [|tx,tx*x|], B, r, floating, absolute); dump(f,s1,r);
+  s2 = fpminimax(f, [|tx,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
+  s3 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute); dump(f,s3,r);
+  s4 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute); dump(f,s4,r);
+  s5 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute); dump(f,s5,r);
+  s6 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute); dump(f,s6,r);
+}; 
+
+
+if (false) then {
+  var r,f,s0,s1,s2,s3,s4,s5,x0;
+  r = [0;1-2^-24];
+  f = (acos(x)/pi);
+
+  //s1 = fpminimax(f, [|tx,tx*x|], B, r, floating, absolute); dump(f,s1,r);
+
+  s2 = fpminimax(f, [|tx,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
+
+  x0 = .707;
+  r = [x0 ; 1-2^-24];
+  s2 = fpminimax(f, [|tx,tx*x,tx*x^2|], B, r, floating, absolute); dump(f,s2,r);
+  r = [0 ; x0];
+  s2 = fpminimax(f, [|1,x,x^3,x^5|], B, r, floating, absolute); dump(f,s2,r);
+
+
+  //s3 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, absolute); dump(f,s3,r);
+  //s4 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, absolute); dump(f,s4,r);
+  //s5 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, absolute); dump(f,s5,r);
+  //s6 = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, absolute); dump(f,s6,r);
+}; 
+
+
+
+
+if (false) then {
+  var f,r;
+  print("asin: lo");
+
+  f = asin(x);
+  r = [0x1.d12edp-12;1/2];
+
+B  = [|53...|];
+ ASL = fpminimax(f, [|3,5,7,9,11,13|], B, r, floating, relative,x);
+B  = [|24...|];
+display=hexadecimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+  //display=decimal!;
+  r = [1/2;1];
+  ASH = fpminimax(f, [|1,tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, relative);
+  //display=hexadecimal!;
+  ASH; print("~error:", dirtyinfnorm((f-ASH)/f, r), "\n");
+  display=decimal!;
+};
+
+if (false) then {
+  var f,r;
+  print("asin: lo");
+  f = asin(x);
+  r = [0x1.d12edp-12;1/2];
+};
+
+
+if (false) then {
+  var f,r;
+  print("cos: hi");
+  f = acos(x)/(pi/2);
+  r = [1/2;1-2^-25];
+  ASL = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, relative);
+  display=decimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+  display=hexadecimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+
+
+  ASL = fpminimax(f, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, relative);
+  display=decimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+  display=hexadecimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+
+  ASL = fpminimax(f, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, relative,tx);
+  display=decimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+  display=hexadecimal!;
+  ASL; print("~error:", dirtyinfnorm(f-ASL, r), "\n");
+  
+};
+
+
+
+if (false) then {
+E    = relative;
+print("full range : abs error");
+P1 = fpminimax(ACP, [|tx,x*tx|],                      B, ACR, floating, E);
+P2 = fpminimax(ACP, [|tx,x*tx,x^2*tx|],               B, ACR, floating, E);
+P3 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx|],        B, ACR, floating, E);
+P4 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx|], B, ACR, floating, E);
+P5 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx,x^5*tx|], B, ACR, floating, E);
+E    = absolute;
+
+P1; print("~error:", dirtyinfnorm(P1-ACP, ACR), "\n");
+P2; print("~error:", dirtyinfnorm(P2-ACP, ACR), "\n");
+P3; print("~error:", dirtyinfnorm(P3-ACP, ACR), "\n");
+P4; print("~error:", dirtyinfnorm(P4-ACP, ACR), "\n");
+P5; print("~error:", dirtyinfnorm(P5-ACP, ACR), "\n");
+};
+
+if (false) then {
+print("hack: hi");
+R  = [1/2;1-2^-25];
+T1 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx|], B, R, floating, E);
+T2 = fpminimax(ACP, [|tx,x   ,x^1*tx,x^2   ,x^2*tx|], B, R, floating, E);
+T1; print("~error:", dirtyinfnorm(T1-ACP, R), "\n");
+T2; print("~error:", dirtyinfnorm(T2-ACP, R), "\n");
+};
+
+
+if (false) then {
+print("hi range : abs error");
+R  = [1/2;1-2^-25];
+P1 = fpminimax(ACP, [|tx,x*tx|],                      B, R, floating, E);
+P2 = fpminimax(ACP, [|tx,x*tx,x^2*tx|],               B, R, floating, E);
+P3 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx|],        B, R, floating, E);
+P4 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx|], B, R, floating, E);
+
+P1; print("~error:", dirtyinfnorm(P1-ACP, ACR), "\n");
+P2; print("~error:", dirtyinfnorm(P2-ACP, ACR), "\n");
+P3; print("~error:", dirtyinfnorm(P3-ACP, ACR), "\n");
+P4; print("~error:", dirtyinfnorm(P4-ACP, ACR), "\n");
+};
+
+
+
+if (false) then {
+print("hi range : abs error");
+ACR  = [1/2;1-2^-25];
+P1 = fpminimax(ACP, [|tx,x*tx|],                      B, ACR, floating, E);
+P2 = fpminimax(ACP, [|tx,x*tx,x^2*tx|],               B, ACR, floating, E);
+P3 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx|],        B, ACR, floating, E);
+P4 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx|], B, ACR, floating, E);
+
+P1; print("~error:", dirtyinfnorm(P1-ACP, ACR), "\n");
+P2; print("~error:", dirtyinfnorm(P2-ACP, ACR), "\n");
+P3; print("~error:", dirtyinfnorm(P3-ACP, ACR), "\n");
+P4; print("~error:", dirtyinfnorm(P4-ACP, ACR), "\n");
+};
+
+if (false) then {
+print("hi range : relative error");
+ACR  = [1/2;1-2^-25];
+E  = relative;
+P1 = fpminimax(ACP, [|tx,x*tx|],                      B, ACR, floating, E);
+P2 = fpminimax(ACP, [|tx,x*tx,x^2*tx|],               B, ACR, floating, E);
+P3 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx|],        B, ACR, floating, E);
+P4 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx|], B, ACR, floating, E);
+P5 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx,x^5*tx|], B, ACR, floating, E);
+P6 = fpminimax(ACP, [|tx,x*tx,x^2*tx,x^3*tx,x^4*tx,x^5*tx,x^6*tx|], B, ACR, floating, E);
+
+P1; print("~error:", dirtyinfnorm(P1-ACP, ACR), "\n");
+P2; print("~error:", dirtyinfnorm(P2-ACP, ACR), "\n");
+P3; print("~error:", dirtyinfnorm(P3-ACP, ACR), "\n");
+P4; print("~error:", dirtyinfnorm(P4-ACP, ACR), "\n");
+P5; print("~error:", dirtyinfnorm(P5-ACP, ACR), "\n");
+P6; print("~error:", dirtyinfnorm(P6-ACP, ACR), "\n");
+};
+
+if (false) then {
+print("foo");
+ACR  = [1/2;1-2^-25];
+P1 = fpminimax(ACP, [|tx,tx^2|],                B, ACR, floating, E);
+P2 = fpminimax(ACP, [|tx,tx^2,tx^3|],           B, ACR, floating, E);
+P3 = fpminimax(ACP, [|tx,tx^2,tx^3,tx^4|],      B, ACR, floating, E);
+P4 = fpminimax(ACP, [|tx,tx^2,tx^3,tx^4,tx^5|], B, ACR, floating, E);
+
+P1; print("~error:", dirtyinfnorm(P1-ACP, ACR), "\n");
+P2; print("~error:", dirtyinfnorm(P2-ACP, ACR), "\n");
+P3; print("~error:", dirtyinfnorm(P3-ACP, ACR), "\n");
+P4; print("~error:", dirtyinfnorm(P4-ACP, ACR), "\n");
+};
