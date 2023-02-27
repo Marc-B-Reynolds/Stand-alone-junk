@@ -4,53 +4,120 @@
 
 
 // sigh. not even started
-procedure find_cut_same_exp(f,range,basis,x0,x1)
+
+//
+//   f     : function being approximated
+//   build : function to build approximation (returns error measure)
+//   range : range of the approximation
+//   c0,c1 : subrange to search of the 'cut'
+
+/*
+procedure find_cut_same_exp(f,build,range,basis,c0,c1)
 {
-}
+  var cut,scale,r0,r1;
+
+  cut   = c0;
+  scale = exponent(c0);
+  
+  if (scale == exponent(c1)) then {
+    var i0,i1;
+    i0    = mantissa(c0);
+    i1    = mantissa(c1);
+    scale = 2^(-scale);
+
+    
+  }
+  else {
+    print("find_cut_same_exp: search bounds must have the same exponent");
+  };
+
+  return cut;
+};
+*/
+
+// WIP (cut-n-paste junk atm): assumes neither odd nor even
+procedure build_cut(capprox)
+{
+  var c0,c1;
 
 
-// sigh. needs major work
-procedure find_cut(f,range,basis,x0,x1)
+  display=decimal!;
+
+  /*
+  write("static inline f32_", name @ "_k" @ (length(c)+1) @ "(float x)\n{\n  static ");
+  f32_write_list("C", c);
+  print("");
+  print("  float s = x*x;");
+  print("  float r;\n");
+  print("  r = f32_horner_" @ (length(c)-1) @ "(s,C);");
+  display=hexadecimal!;
+  print("  r = fmaf(r,s,", e.l @ "f)");
+  print("  r = fmaf(x,", e.h @ "f, x*r);");
+  print("");
+  print("  return r;");
+  print("}\n");
+  */
+
+  display=d!;
+};
+
+
+procedure find_cut_initial(build,x0,x1,cut)
 {
   var d;
-  var e_lo,e_hi;
-  var c_lo,c_hi,c_mid;
+  var e_diff,t;
+  var c_lo,c_hi;
   var cnt;
+  var lo,hi,r;
 
-  d   = display;
-  cnt = 1;
+  d    = display;
+  cnt  = 1;
+  c_lo = x0;
+  c_hi = x1;
 
-  c_lo    = single(0.5*(cut+x0));
-  c_hi    = single(0.5*(cut+x1));
-  cut     = single(cut);
-
-  e_lo    = cos_build(basis, x0,cut);
-  e_hi    = cos_build(basis, cut,x1);
+  lo      = build(x0,cut);
+  hi      = build(cut,x1);
   display = hexadecimal!;
+  e_diff  = abs(lo.aerror-hi.aerror);
 
   print(" cut=", cut, " [", c_lo,",",c_hi,"]");
 
   for cnt from 1 to 32 do {
     display=decimal!;
    
-    if (e_lo < e_hi) then {
+    if (lo.aerror < hi.aerror) then {
       c_lo = cut;
     } else {
       c_hi = cut;
     };
 
-    cut  = single((c_lo+c_hi)*0.5);
-    e_lo = cos_build(basis, x0,cut);
-    e_hi = cos_build(basis, cut,x1);
+    t = abs(lo.aerror-hi.aerror);
+
+    if (t < e_diff) then { e_diff=t; write("+"); } else { write(" "); };
+
+    cut = single((c_lo+c_hi)*0.5);
+    lo  = build(x0,cut);
+    hi  = build(cut,x1);
     
     if (cnt < 10) then { write(" "); };
     write(cnt, ": ");
     display=hexadecimal!;
-    write(e_lo, " ", e_hi);
-    print(" cut=", cut, " [", c_lo,",",c_hi,"]");
+    write(lo.aerror, " ", hi.aerror);
+    print(" cut=", cut, " [", c_lo,",",c_hi,"]", single(e_diff));
   };
 
   display = d!;
 
-  return cut;
+  r.lo = lo;
+  r.hi = hi;
+
+  return r;
+};
+
+
+
+// helper: initial at point middle of range
+procedure find_cut(build,x0,x1)
+{
+  find_cut_initial(build,x0,x1,single(0.5*(x0+x1)));
 };
