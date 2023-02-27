@@ -1,7 +1,6 @@
 // -*- mode: c; -*- 
 // hacky garbage
 
-
 procedure list_of_coeff(p)
 {
   var r,e,i;
@@ -130,7 +129,7 @@ procedure f32_print_kernel_list(name, c)
   d = display;
   display=decimal!;
   
-  write("static inline float f32_", name @ "_k" @ (length(c)+1) @ "(float x)\n{\n  static ");
+  write("static inline float ", name @ "(float x)\n{\n  static ");
   f32_write_list("C", revert(c));
   print("");
   print("  return f32_horner_" @ (length(c)-1) @ "(x,C);");
@@ -181,4 +180,67 @@ procedure f32_print_kernel_odd_extended_lead(name, a)
   print("}\n");
 
   display=d!;
+};
+
+
+// approximation builder wrappers. shoves some results into key/value pair "structs"
+
+procedure fn_build(f, basis, x0, x1, bits, etype)
+{
+  var r;
+
+  r.func   = f;
+  r.basis  = basis;
+  r.arange = [x0;x1];
+  r.approx = fpminimax(f, r.basis, bits, r.arange, floating, etype);
+  r.aerror = dirtyinfnorm(r.approx-r.func, r.arange);
+  r.rerror = dirtyinfnorm(1-(r.approx/r.func), r.arange);
+
+  return r;
+};
+
+// total basis is basis+req
+procedure fn_build_constrained(f, basis, x0, x1, req, bits, etype)
+{
+  var r;
+
+  r.func   = f;
+  r.basis  = basis;
+  r.arange = [x0;x1];
+  r.approx = fpminimax(f, r.basis, bits, r.arange, floating, etype, req);
+  r.aerror = dirtyinfnorm(r.approx-r.func, r.arange);
+  r.rerror = dirtyinfnorm(1-(r.approx/r.func), r.arange);
+
+  return r;
+};
+
+// helpers for common configurations
+procedure f32_build(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|24...|], relative);
+};
+
+procedure f64_build(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|53...|], relative);
+};
+
+procedure f32_build_constrained(f, basis, x0, x1, req)
+{
+  return fn_build_constrained(f, basis, x0, x1, req, [|24...|], relative);
+};
+
+procedure f64_build_constrained(f, basis, x0, x1, req)
+{
+  return fn_build_constrained(f, basis, x0, x1, req, [|53...|], relative);
+};
+
+procedure f32_build_hp_lead(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|48,24...|], relative);
+};
+
+procedure f64_build_hp_lead(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|106,53...|], relative);
 };
