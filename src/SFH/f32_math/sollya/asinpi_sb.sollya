@@ -1,6 +1,10 @@
 // -*- mode: c; -*- 
 
-// spitball approximations of asinpi(x)
+// attempts at spitball approximations of asinpi(x)
+// can't think of an expression form that works well.
+// the "magic" of making acospi(x) stems from transforming
+// it to asinpi...so not too suprising. This file is
+// complete junk of tinkering around.
 
 // set up some globals
 T  = floating;
@@ -8,6 +12,10 @@ E  = absolute;
 B  = [|24...|];
 F  = asin(x)/pi;
 tx = sqrt(1-x);
+x0 = 2^-128;
+x1 = 1-2^-25;
+
+execute("util.sollya");
 
 procedure asinpi_make(basis, r)
 {
@@ -30,7 +38,35 @@ procedure asinpi_make(basis, r)
   write(" (", e, ")\n\n");
 };
 
-// for asinpi(x)
+
+// wip
+procedure asinpi_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_constrained(asin(x)/pi, basis, x0, x1, x/pi);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  //f32_print_kernel_list("f32_asin_sb_k" @ (length(c)-1) , c);
+  
+  return r;
+};
+
+
+xbasis3 = [|tx,tx*x               |];
+xbasis4 = [|tx,tx*x,tx*x^2        |];
+xbasis5 = [|tx,tx*x,tx*x^2,tx*x^3 |];
+
+asinpi_build(xbasis3, 2^-128, 1-2^-25).approx;
+asinpi_build(xbasis4, 2^-128, 1-2^-25).approx;
+asinpi_build(xbasis5, 2^-128, 1-2^-25).approx;
+
+quit;
+
+
+// for asinpi(x) : at least it converges. sucks
+// performance wise.
 basis3 = [|1,x,        tx,tx*x       |];
 basis4 = [|1,x,        tx,tx*x,tx*x^2|];
 basis5 = [|1,x,x^2,    tx,tx*x,tx*x^2|];
@@ -60,36 +96,4 @@ asinpi_make(basis4, R); //
 asinpi_make(basis5, R); // 
 asinpi_make(basis6, R); //
 //asinpi_make(basis7, R); //
-};
-
-
-
-
-if (false) then {
-print("foo");
-T = (1-sqrt(1-x));
-basis3 = [|T,T*x,T*x^2|];
-basis4 = [|T,T*x,T*x^2,T*x^3|];
-basis5 = [|T,T*x,T*x^2,T*x^3,T*x^4|];
-basis6 = [|T,T*x,T*x^2,T*x^3,T*x^4,T*x^5|];
-basis7 = [|T,T*x,T*x^2,T*x^3,T*x^4,T*x^5,T*x^6|];
-
-asinpi_make(basis3, R); // 
-asinpi_make(basis4, R); // 
-asinpi_make(basis5, R); // 
-asinpi_make(basis6, R); //
-};
-
-if (false) then {
-sx = sqrt(1+x);
-// garbage
-basis3 = [|1,x,      sx,sx*x       |];
-basis4 = [|1,x,      sx,sx*x,sx*x^2|];
-basis5 = [|1,x,x^2,  sx,sx*x,sx*x^2|];
-basis6 = [|1,x,x^2,  sx,sx*x,sx*x^2,sx*x^3|];
-
-asinpi_make(basis3, R); // 
-asinpi_make(basis4, R); // 
-asinpi_make(basis5, R); // 
-asinpi_make(basis6, R); //
 };
