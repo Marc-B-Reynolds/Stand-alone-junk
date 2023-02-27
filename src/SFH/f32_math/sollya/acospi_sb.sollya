@@ -14,6 +14,76 @@ x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
 x1 = 1 - 2^-25;  // 1 - ulp(1)/2
 R  = [x0 ; x1];
 
+execute("cut.sollya");
+
+// for acospi(x) : relaxed f(0)
+rbasis2 = [|tx,tx*x|];
+rbasis3 = [|tx,tx*x,tx*x^2|];
+rbasis4 = [|tx,tx*x,tx*x^2,tx*x^3|];
+rbasis5 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|];
+rbasis6 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
+rbasis7 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+
+// for acospi(x) : exact f(0)
+ebasis2 = [|tx*x|];
+ebasis3 = [|tx*x,tx*x^2|];
+ebasis4 = [|tx*x,tx*x^2,tx*x^3|];
+ebasis5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
+ebasis6 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
+ebasis7 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+
+
+
+// f(0) relaxed approx
+procedure acospi_build_relaxed(x0, x1)
+{
+  var r;
+
+  r.arange  = [x0;x1];
+  r.approx = fpminimax(F, builder_basis, B, r.arange, T, E);
+  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+
+  return r;
+};
+
+// f(0) exact approx
+procedure acospi_build_exact(x0, x1)
+{
+  var r;
+
+  r.arange  = [x0;x1];
+  r.approx = fpminimax(F, builder_basis, B, r.arange, T, E, tx*0.5);
+  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+
+  return r;
+};
+
+procedure acospi_find_cut_exact(basis)
+{
+  builder_basis=basis;
+  return find_cut(acospi_build_exact, x0, x1);
+};
+
+procedure acospi_find_cut_relaxed(basis)
+{
+  builder_basis=basis;
+  return find_cut(acospi_build_relaxed, x0, x1);
+};
+
+//a = acospi_build_exact(ebasis3, x0,x1);
+
+quit;
+
+
+//builder_basis=rbasis6;
+//find_cut(acospi_build_relaxed, x0, x1);
+//find_cut_initial(acospi_build_relaxed, x0, x1, 0x1.7cp-2);
+
+
+foo = find_cut(acospi_build_exact, x0, x1);
+
+
+quit;
 
 if (false) then {
 
@@ -38,21 +108,6 @@ procedure acospi_rmake(basis, r)
   write(" (", e, ")\n\n");
 };
 
-// for acospi(x) : relaxed f(0)
-rbasis2 = [|tx,tx*x|];
-rbasis3 = [|tx,tx*x,tx*x^2|];
-rbasis4 = [|tx,tx*x,tx*x^2,tx*x^3|];
-rbasis5 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|];
-rbasis6 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
-rbasis7 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
-
-// for acospi(x) : exact f(0)
-ebasis2 = [|tx*x|];
-ebasis3 = [|tx*x,tx*x^2|];
-ebasis4 = [|tx*x,tx*x^2,tx*x^3|];
-ebasis5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
-ebasis6 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
-ebasis7 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
 
 acospi_rmake(rbasis3, R); // 0x1.b35fdap-14 (1.038014e-4)
 acospi_rmake(rbasis4, R); // 0x1.95ffc8p-17 (1.209972e-5)
