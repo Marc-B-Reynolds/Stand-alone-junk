@@ -72,7 +72,6 @@ static inline double f64_horner2_11(const double x, const double c[static 12])
 }
 
 // even
-
 static inline double f64_horner2_4(const double x, const double c[static 5])
 {
   double x2 = x*x;
