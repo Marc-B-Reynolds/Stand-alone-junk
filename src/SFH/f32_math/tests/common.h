@@ -58,7 +58,7 @@ void error_dump()
 }
 
 
-static inline void brute_error_add(func_error_t* error, float e, float a)
+static inline void test_error_add(func_error_t* error, float e, float a)
 {
   float d = fabsf(e-a);
 
@@ -75,7 +75,7 @@ static inline void brute_error_add(func_error_t* error, float e, float a)
 }
 
 // for when signs of e and a can (reasonably) be different
-static inline void brute_error_add_ds(func_error_t* error, float e, float a)
+static inline void test_error_add_ds(func_error_t* error, float e, float a)
 {
   float d = fabsf(e-a);
 
@@ -91,7 +91,7 @@ static inline void brute_error_add_ds(func_error_t* error, float e, float a)
   error->ulp[ulp]++;
 }
 
-void brute_force(uint32_t x0, uint32_t x1)
+void test_force(uint32_t x0, uint32_t x1)
 {
   if (x1 < x0) { uint32_t t = x0; x0=x1; x1=t; }
 
@@ -108,7 +108,7 @@ void brute_force(uint32_t x0, uint32_t x1)
     
     for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
       float r = func_table[fi].f(x);
-      brute_error_add(error+fi, cr,r);
+      test_error_add(error+fi, cr,r);
     }
   }
   
@@ -118,7 +118,7 @@ void brute_force(uint32_t x0, uint32_t x1)
 
 
 // correctly rounded f(x) = RN(kx) on [x0,x1]
-void brute_linear_range(uint32_t x0, uint32_t x1, float k)
+void test_linear_range(uint32_t x0, uint32_t x1, float k)
 {
   func_error_t error[LENGTHOF(func_table)] = {{0}};
   
@@ -132,7 +132,7 @@ void brute_linear_range(uint32_t x0, uint32_t x1, float k)
       float x  = f32_from_bits(xi);
       float r  = func_table[fi].f(x);
       float cr = k*x;
-      brute_error_add(error+fi,cr,r);
+      test_error_add(error+fi,cr,r);
     }
   }
   error_to_totals(error);
@@ -141,7 +141,7 @@ void brute_linear_range(uint32_t x0, uint32_t x1, float k)
 
 
 // correctly rounded f(x) = k on [x0,x1]
-void brute_const_range(uint32_t x0, uint32_t x1, float k)
+void test_const_range(uint32_t x0, uint32_t x1, float k)
 {
   func_error_t error[LENGTHOF(func_table)] = {{0}};
   
@@ -154,7 +154,29 @@ void brute_const_range(uint32_t x0, uint32_t x1, float k)
     for(uint32_t xi=x0; xi<=x1; xi++) {
       float x = f32_from_bits(xi);
       float r = func_table[fi].f(x);
-      brute_error_add(error+fi,k,r);
+      test_error_add(error+fi,k,r);
+    }
+  }
+  error_to_totals(error);
+  error_dump_i(error);
+}
+
+// correctly rounded f(x) = RN(RN(kx,53),24) on [x0,x1]
+void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t* k)
+{
+  func_error_t error[LENGTHOF(func_table)] = {{0}};
+  
+  float f0 = f32_from_bits(x0);
+  float f1 = f32_from_bits(x1);
+  
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range}\n", func_name, x0,x1,f0,f1);
+  
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    for(uint32_t xi=x0; xi<=x1; xi++) {
+      float x  = f32_from_bits(xi);
+      float r  = func_table[fi].f(x);
+      float cr = (float)f64_up_mul(k, (double)x);
+      test_error_add(error+fi,cr,r);
     }
   }
   error_to_totals(error);
@@ -162,7 +184,7 @@ void brute_const_range(uint32_t x0, uint32_t x1, float k)
 }
 
 // correctly rounded f(x) = x on [x0,x1]
-void brute_identity_range(uint32_t x0, uint32_t x1)
+void test_identity_range(uint32_t x0, uint32_t x1)
 {
   func_error_t error[LENGTHOF(func_table)] = {{0}};
 
@@ -175,7 +197,7 @@ void brute_identity_range(uint32_t x0, uint32_t x1)
     for(uint32_t xi=x0; xi<=x1; xi++) {
       float x = f32_from_bits(xi);
       float r = func_table[fi].f(x);
-      brute_error_add(error+fi,x,r);
+      test_error_add(error+fi,x,r);
     }
   }
 
@@ -184,31 +206,31 @@ void brute_identity_range(uint32_t x0, uint32_t x1)
 }
 
 // test all denormal inputs
-void brute_di()
+void test_di()
 {
   uint32_t x0 = f32_to_bits(0x1.0p-149f);
   uint32_t x1 = f32_to_bits(0x1.0p-126f)-1;
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
 // test a full power-of-two interval starting from x. (need not start on a boundary)
-void brute_1pot(float x)
+void test_1pot(float x)
 {
   uint32_t x0 = f32_to_bits(x);
   uint32_t x1 = f32_to_bits(2.f*x)-1;
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
 // test a full power-of-two interval starting from x. (need not start on a boundary)
 // [x,2x) & (-2x,-x]
-void brute_1pot_pn(float x)
+void test_1pot_pn(float x)
 {
   uint32_t x0 = f32_to_bits(x);
   uint32_t x1 = f32_to_bits(2.f*x)-1;
-  brute_force(x0,x1);
+  test_force(x0,x1);
   x0 = f32_to_bits(-x);
   x1 = f32_to_bits(-2.f*x);
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
 
