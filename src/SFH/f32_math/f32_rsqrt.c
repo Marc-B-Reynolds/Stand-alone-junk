@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "f32_util.h"
+#include "internal/f32_math_common.h"
 
 // The "best" simply way to compute 1/sqrt(x) is sqrt(1/x) which is
 // faithfully rounded (f32_rsqrt in f32_util.h).
