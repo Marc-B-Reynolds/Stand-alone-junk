@@ -19,5 +19,3 @@ src/TestAndSearch/check_bijection.c
 src/TestAndSearch/WeylBitByBit.c
 src/SFH/plotly.h
 src/SFH/rng_xform.h
-src/SFH/f32_math/tests/timehack.c
-src/SFH/f32_math/tests/timehack.c
