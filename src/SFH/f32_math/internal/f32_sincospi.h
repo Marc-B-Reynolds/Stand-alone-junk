@@ -5,39 +5,43 @@
 #ifndef F32_SINCOSPI_H
 #define F32_SINCOSPI_H
 
-static inline float f32_sin_pi_k3(float x)
+// http://marc-b-reynolds.github.io/math/2020/03/11/SinCosPi.html
+// original post version with reworked expression. one less constant
+// load vs. f32_sinpi_k6
+static inline float f32_sinpi_o6(float a)
 {
-  static const float C[] = {-0x1.2f5992p-1f, 0x1.466b2p1f, -0x1.4abbecp2f, 0x1.921fb6p1f};
+  // blog post ordering of coefficients
+  static const float C[] =
+    { 0x1.921fb6p1f,  -0x1.4abbecp2f, 0x1.466b2p1f,  -0x1.2f5992p-1f };
 
-  return f32_horner_3(x,C);
+  float r,a2,a3;
+  
+  a2 = a*a; a3 = a2*a;
+  r = fmaf(C[3], a2, C[2]);
+  r = fmaf(r,    a2, C[1]); 
+  r = a3 * r;
+  r = fmaf(C[0], a,  r);
+
+  return r;
 }
 
+//************* sinpi relative error
 
-static inline float f32_sin_pi_k4(float x)
+static inline float f32_sinpi_k5(float x)
 {
-  static const float C[] = {0x1.eb5482p-3f, -0x1.3e497cp-1f, 0x1.468e6cp1f, -0x1.4abc1cp2f, 0x1.921fb6p1f};
+  static const float C[] = {0x1.3f3dep1f, -0x1.4aa60ap2f};
 
-  return f32_horner_4(x,C);
+  float s = x*x;
+  float r;
+
+  r = f32_horner_1(s,C);
+  r = fmaf(r,s, -0x1.db31b8p-25f);
+  r = fmaf(x, 0x1.921f8ep1f, x*r);
+
+  return r;
 }
 
-
-static inline float f32_sin_pi_k5(float x)
-{
-  static const float C[] = {-0x1.054c4ap3f, 0x1.7dd156p0f, -0x1.603544p-1f, 0x1.46bbd8p1f, -0x1.4abc42p2f, 0x1.921fb6p1f};
-
-  return f32_horner_5(x,C);
-}
-
-
-static inline float f32_sin_pi_k6(float x)
-{
-  static const float C[] = {0x1.b64fb2p8f, -0x1.65c5fp6f, 0x1.c6e31cp2f, -0x1.ba9fd4p-1f, 0x1.470b92p1f, -0x1.4abc7p2f, 0x1.921fb6p1f};
-
-  return f32_horner_6(x,C);
-}
-
-
-static inline float f32_sin_pi_xp_k4(float x)
+static inline float f32_sinpi_k6(float x)
 {
   static const float C[] = {-0x1.2d9e5ap-1f, 0x1.465edcp1f, -0x1.4abbbap2f};
 
@@ -51,8 +55,7 @@ static inline float f32_sin_pi_xp_k4(float x)
   return r;
 }
 
-
-static inline float f32_sin_pi_xp_k5(float x)
+static inline float f32_sinpi_k7(float x)
 {
   static const float C[] = {0x1.48208cp-4f, -0x1.32babap-1f, 0x1.466b8ep1f, -0x1.4abbcep2f};
 
@@ -66,8 +69,7 @@ static inline float f32_sin_pi_xp_k5(float x)
   return r;
 }
 
-
-static inline float f32_sin_pi_xp_k6(float x)
+static inline float f32_sinpi_k8(float x)
 {
   static const float C[] = {0x1.f095fp-6f, 0x1.36acd8p-4f, -0x1.32a156p-1f, 0x1.466b76p1f, -0x1.4abbcep2f};
 
@@ -81,21 +83,73 @@ static inline float f32_sin_pi_xp_k6(float x)
   return r;
 }
 
+// one more term version only as tiny effect
 
-static inline float f32_sin_pi_xp_k7(float x)
+
+//************* sinpi absolute error
+
+static inline float f32_sinpi_a5(float x)
 {
-  static const float C[] = {-0x1.87e56cp0f, 0x1.3048acp-2f, 0x1.e3e2f2p-5f, -0x1.326692p-1f, 0x1.466b52p1f, -0x1.4abbcep2f};
+  static const float C[] = {0x1.3e2042p1f, -0x1.4a9ac4p2f};
 
   float s = x*x;
   float r;
 
-  r = f32_horner_5(s,C);
-  r = fmaf(r,s, -0x1.77f8c8p-24f);
-  r = fmaf(x, 0x1.921fb6p1f, x*r);
+  r = f32_horner_1(s,C);
+  r = fmaf(r,s, -0x1.12767p-24f);
+  r = fmaf(x, 0x1.921f32p1f, x*r);
 
   return r;
 }
 
+static inline float f32_sinpi_a6(float x)
+{
+  static const float C[] = {-0x1.2cf9fep-1f, 0x1.465a5cp1f, -0x1.4abba8p2f};
 
+  float s = x*x;
+  float r;
+
+  r = f32_horner_2(s,C);
+  r = fmaf(r,s, 0x1.d2c0fp-24f);
+  r = fmaf(x, 0x1.921fb4p1f, x*r);
+
+  return r;
+}
+
+//************* cospi
+
+// not exact at f(0)
+static inline float f32_cospi_k3(float x)
+{
+  static const float C[] = {0x1.f7b478p1f, -0x1.3ba49ep2f, 0x1.fffeb2p-1f};
+
+  return f32_horner_2(x*x,C);
+}
+
+static inline float f32_cospi_k4(float x)
+{
+  static const float C[] = {-0x1.4ea1aep0f, 0x1.03b132p2f, -0x1.3bd3ap2f, 1.f};
+
+  return f32_horner_3(x*x,C);
+}
+
+static inline float f32_cospi_k5(float x)
+{
+  static const float C[] = {0x1.d61e28p-3f, -0x1.55b684p0f, 0x1.03c1b6p2f, -0x1.3bd3ccp2f, 1.f};
+
+  return f32_horner_4(x*x,C);
+}
+
+// promote to double kernel (is exact of f(0) due to rounding)
+static inline float f32_cospi_d5(float x)
+{
+  static const double C[] = {0x1.d9c364eac5b26p-3, -0x1.55c57b06db5e8p0, 0x1.03c1dc1bafc62p2, -0x1.3bd3cc7323531p2, 0x1.ffffffff97c47p-1};
+
+  double d = (double)x;
+  double s = d*d;
+
+  // using second order doesn't change error
+  return (float)f64_horner2_4(s,C);
+}
 
 #endif
