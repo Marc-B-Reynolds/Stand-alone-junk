@@ -1,0 +1,38 @@
+// -*- mode: c; -*- 
+
+// polynomial approximations of cospi on [0,1/4]
+
+execute("util.sollya");
+
+x0 = 0;
+x1 = 1/4;
+
+procedure cospi_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_ae(cos(pi*x), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel_even("f32_cospi_k", r.approx);
+  
+  return r;
+};
+
+basis = [|0,2|];
+
+for i from 4 to 10 by 2 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = cospi_build(basis, x0,x1);
+  print("");
+};
+
+
+//f64_build_constrained_ae(cos(pi*x), [|2,4,6,8|], x0, x1, 1);
+a = f64_build_ae(cos(pi*x), [|0,2,4,6,8|], x0, x1);
+a;
+display=hexadecimal!;
+revert(list_of_even_coeff(a.approx));
