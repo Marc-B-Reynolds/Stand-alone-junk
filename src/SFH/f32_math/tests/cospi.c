@@ -1,7 +1,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
-// 1) reference (cr_asinf) version:
+// 1) reference (cr_cospif) version:
 // ************************************
 //
 // The CORE-MATH routine fall under:
@@ -31,18 +31,14 @@
 #include <string.h>
 #include <assert.h>
 
-#include "f32_util.h"
-#include "f64_util.h"
-#include "f32_horner.h"
-#include "f64_horner.h"
-
-#include "internal/f32_asincos.h"
+#include "internal/f32_math_common.h"
+#include "internal/f32_sincospi.h"
 
 #include "util.h"
 
 //**********************************************************************
 
-float libm(float x) { return asinf(x); }
+float libm(float x) { return cosf((float)M_PI*x); }
 
 
 //**********************************************************************
@@ -136,6 +132,10 @@ float cr_cospif(float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(f32_cospi_k3),
+  ENTRY(f32_cospi_k4),
+  ENTRY(f32_cospi_k5),
+  ENTRY(f32_cospi_d5),
 };
 
 const char* func_name = "cospi";
@@ -146,27 +146,49 @@ float cr_func(float x) { return cr_cospif(x); }
 
 //********************************************************
 
-void test_simple()
+void scan_constant() {
+  uint32_t ix = 0;
+  float    cr;
+
+  do {
+    float x = f32_from_bits(++ix);
+    cr = cr_cospif(x);
+  } while(cr == 1.f);
+
+  ix--;
+
+  printf("f(x) = 1 up to %a %08x\n", f32_from_bits(ix),ix);
+}
+
+// up to 1/4
+void test_spot()
 {
+  test_1pot(1.f/32.f);
+  test_1pot(1.f/16.f);
+  test_1pot(1.f/ 8.f);
 }
 
 void test_all()
 {
-  uint32_t x0 = f32_to_bits(0.0f);
-  uint32_t x1 = f32_to_bits(1.0f);
-  test_force(x0,x1);
+  // f(x) = 1 up to 0x1.45f306p-14 38a2f983
+  static const uint32_t cut = 0x38a2f983;
+  test_const_range(0, cut, 1.f);  
+  test_force(cut+1, f32_to_bits(1.f/32.f));
+  
+  // partition the rest into POT intervals
+
+  test_spot();
 }
 
 int main(void)
 {
+  //scan_constant(); return 0;
+
+  float x = 1.f/32.f, r0 = cr_cospif(x), r1 = f32_cospi_k5(x);
+  printf("%a = %a %a : %e %e %e\n", x,r0,r1,x,r0,r1);
+  
 #if 0
-  //test_lo();
-  //test_hi();
-  test_hi();
-  test_1pot(0.25f);
-  test_1pot(0.125f);
-  //test_1pot(0x1.0p-100f);
-  //test_di();
+  test_spot();
 #else  
   test_all();
 #endif  
