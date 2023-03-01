@@ -2,8 +2,6 @@
 #ifndef F32_ASINPI_SB_H
 #define F32_ASINPI_SB_H
 
-// fast branchfree asinpi targeting minimizing abs error. intended for
-// low quality approximations.
 // SEE:
 // * (put post link here)
 // * f32_acospi_sb.h
