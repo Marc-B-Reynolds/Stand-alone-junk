@@ -24,10 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// compile with (or equiv).
-// clang -O3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function -fno-math-errno -ffp-contract=off acospif.c -o acospif -lm
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,14 +31,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "f32_util.h"
-#include "f32_horner.h"
-#include "f32_horner2.h"
-
-#include "f64_util.h"
-#include "f64_horner.h"
-#include "f64_horner2.h"
-
+#include "internal/f32_math_common.h"
 #include "util.h"
 
 #if defined(__GNUC__)
@@ -70,6 +59,7 @@ float f32_acospi_a0p(float x)
 }
 
 
+#if 0
 // expand variants restricted to positive input: f(0) result relaxed
 float f32_acospi_a1p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr1, x); }
 float f32_acospi_a2p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr2, x); }
@@ -77,31 +67,35 @@ float f32_acospi_a3p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr3, x); 
 float f32_acospi_a4p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr4, x); }
 float f32_acospi_a5p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr5, x); }
 float f32_acospi_a6p(float x) { return f32_acospi_sb_xp(&f32_acospi_sb_kr6, x); }
-
+#endif
 
 // fake polynomial for initial version
 static inline float f32_acospi_sb_ke0(UNUSED float x) { return 0.5f; }
 
-// expand full range variants: f(0) result relaxed
-float f32_acospi_r1(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr1, x); }
-float f32_acospi_r2(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr2, x); }
-float f32_acospi_r3(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr3, x); }
-float f32_acospi_r4(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr4, x); }
-float f32_acospi_r5(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr5, x); }
-float f32_acospi_r6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr6, x); }
+// expand full range variants: f(0) result relaxed { minimize abs error }
+float f32_acospi_e1(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr1, x); }
+float f32_acospi_e2(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr2, x); }
+float f32_acospi_e3(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr3, x); }
+float f32_acospi_e4(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr4, x); }
+float f32_acospi_e5(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr5, x); }
+float f32_acospi_e6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_kr6, x); }
 
-// expand full range variants: f(0) result exact
+// expand full range variants: f(0) result exact { minimize abs error }
 float f32_acospi_a0(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke0, x); }
 float f32_acospi_a1(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke1, x); }
 float f32_acospi_a2(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke2, x); }
 float f32_acospi_a3(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke3, x); }
 float f32_acospi_a4(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke4, x); }
 float f32_acospi_a5(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke5, x); }
-float f32_acospi_a6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_ke6, x); }
 
-// expand full range variants: f(0) result exact (use doubles)
-float f32_acospi_a7(float x) { return f32_acospi_d_xf(&f32_acospi_dp_7, x); }
-float f32_acospi_a8(float x) { return f32_acospi_d_xf(&f32_acospi_dp_8, x); }
+// expand full range variants: f(0) result exact { minimize rel error }
+float f32_acospi_r4(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_re4, x); }
+float f32_acospi_r5(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_re5, x); }
+float f32_acospi_r6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_re6, x); }
+
+// expand full range variants: f(0) result exact (use doubles, rel error)
+float f32_acospi_d7(float x) { return f32_acospi_d_xf(&f32_acospi_dp_7, x); }
+float f32_acospi_d8(float x) { return f32_acospi_d_xf(&f32_acospi_dp_8, x); }
 
 
 //**********************************************************************
@@ -136,8 +130,8 @@ float cr_acospif(float x){
     if(x == 1.0f) return 0.0f;
     if(x ==-1.0f) return 1.0f;
     if(e==0xff && (t.u<<9)) return x; // nan
-    //errno = EDOM;
-    feraiseexcept(FE_INVALID);
+    //errno = EDOM;               // MBR: this is why we can't have nice things
+    //feraiseexcept(FE_INVALID);  // MBR: not needed for testing
     return __builtin_nanf("1");
   }
   int s = 146 - e, i = 0;
@@ -206,34 +200,71 @@ float cr_acospif(float x){
 
 //********************************************************
 
+static inline float f32_acospi_sb_c6(float x)
+{
+  static const float C[] = {
+     0x1.01aeb4p-9f,
+    -0x1.7de608p-8f,
+     0x1.4e2ac2p-7f,
+    -0x1.07a872p-6f,
+     0x1.d0524ap-6f,
+    -0x1.17cbfcp-4f,
+     0.5f,
+     0x1.27af24p-12f,
+    -0x1.e9e412p-10f,
+     0x1.8abe42p-8f,
+    -0x1.bbe3ecp-7f,
+     0x1.c0e7fcp-6f,
+    -0x1.16fdc2p-4f,
+     0x1.fffb52p-2f
+  };
+  return f32_horner_6(x,C + (x < 0x1.de6d4cp-2f ? 0 : 7));
+}
+
+float f32_acospi_c6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_c6, x); }
+  
+#if !defined(WIP_FUNC)
 
 func_entry_t func_table[] =
 {
+#if 0  
   ENTRY(libm),
   ENTRY(libm_crdiv),
 
-#if 0
+  ENTRY(f32_acospi_e1),
+  ENTRY(f32_acospi_e2),
+  ENTRY(f32_acospi_e3),
+  ENTRY(f32_acospi_e4),
+  ENTRY(f32_acospi_e5),
+  ENTRY(f32_acospi_e6),
+
   ENTRY(f32_acospi_a0),
   ENTRY(f32_acospi_a1),
   ENTRY(f32_acospi_a2),
   ENTRY(f32_acospi_a3),
   ENTRY(f32_acospi_a4),
   ENTRY(f32_acospi_a5),
-  ENTRY(f32_acospi_a6),
-  ENTRY(f32_acospi_a7),
-  ENTRY(f32_acospi_a8),
-#endif
-  
-#if 0
-  ENTRY(f32_acospi_r1),
-  ENTRY(f32_acospi_r2),
-  ENTRY(f32_acospi_r3),
+
   ENTRY(f32_acospi_r4),
   ENTRY(f32_acospi_r5),
   ENTRY(f32_acospi_r6),
-#endif  
 
+  ENTRY(f32_acospi_d7),
+  ENTRY(f32_acospi_d8),
+#else
+  ENTRY(f32_acospi_c6),
+#endif  
 };
+
+#else
+
+float acospi_wip(float x) { return WIP_FUNC; }
+
+func_entry_t func_table[] = { ENTRY(acospi_wip) };
+
+#endif
+
+
 
 const char* func_name = "acospi";
 
@@ -245,7 +276,7 @@ float cr_func(float x) { return cr_acospif(x); }
 
 
 // acospi(x) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
-void brute_all()
+void test_all()
 {
   static const uint32_t xa = 0x33490fda;  // f32_to_bits( 0x1.921fb4p-25f);
   static const uint32_t xb = 0xb3c90fda;  // f32_to_bits(-0x1.921fb4p-24f);
@@ -253,11 +284,11 @@ void brute_all()
   uint32_t x1 = f32_to_bits(1.0f);
 
   // handle constant output range
-  brute_const_range(0x00000000,xa, 0.5f);
-  brute_const_range(0x80000000,xb, 0.5f);
+  test_const_range(0x00000000,xa, 0.5f);
+  test_const_range(0x80000000,xb, 0.5f);
 
-  brute_force(xa,x1);
-  brute_force(xb,x1 ^ 0x80000000);
+  test_force(xa,x1);
+  test_force(xb,x1 ^ 0x80000000);
 }
 
 
@@ -286,19 +317,21 @@ void scan_half() {
 
 int main(void)
 {
-#if 0
-  brute_all();
+#if 1
+  test_all();
 #else
-#if 0  
-  brute_1pot_pn(1.f/32.f);
-  brute_1pot_pn(1.f/16.f);
-  brute_1pot_pn(1.f/ 8.f);
-  brute_1pot_pn(1.f/ 4.f);
+#if 1
+  test_1pot_pn(1.f/32.f);
+  test_1pot_pn(1.f/16.f);
+  test_1pot_pn(1.f/ 8.f);
+  test_1pot_pn(1.f/ 4.f);
 #endif  
-  brute_1pot_pn(1.f/ 2.f);
+  test_1pot_pn(1.f/ 2.f);
 #endif  
 
   error_dump();
 
+  //timing_test(func_table, LENGTHOF(func_table));
+  
   return 0;
 }
