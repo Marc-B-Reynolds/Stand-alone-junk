@@ -14,7 +14,7 @@ static inline float f32_horner2_3(const float x, const float c[static 4])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[1];  o =          c[0];
+  e =           c[1];  o =           c[0];
   e = fmaf(e,x2,c[3]); o = fmaf(o,x2,c[2]);
 
   return fmaf(x,o,e);
@@ -24,7 +24,7 @@ static inline float f32_horner2_5(const float x, const float c[static 6])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[1];  o =          c[0];
+  e =           c[1];  o =           c[0];
   e = fmaf(e,x2,c[3]); o = fmaf(o,x2,c[2]);
   e = fmaf(e,x2,c[5]); o = fmaf(o,x2,c[4]);
 
@@ -35,7 +35,7 @@ static inline float f32_horner2_7(const float x, const float c[static 8])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[1];  o =          c[0];
+  e =           c[1];  o =           c[0];
   e = fmaf(e,x2,c[3]); o = fmaf(o,x2,c[2]);
   e = fmaf(e,x2,c[5]); o = fmaf(o,x2,c[4]);
   e = fmaf(e,x2,c[7]); o = fmaf(o,x2,c[6]);
@@ -47,7 +47,7 @@ static inline float f32_horner2_9(const float x, const float c[static 10])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[1];  o =          c[0];
+  e =           c[1];  o =           c[0];
   e = fmaf(e,x2,c[3]); o = fmaf(o,x2,c[2]);
   e = fmaf(e,x2,c[5]); o = fmaf(o,x2,c[4]);
   e = fmaf(e,x2,c[7]); o = fmaf(o,x2,c[6]);
@@ -60,7 +60,7 @@ static inline float f32_horner2_11(const float x, const float c[static 12])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[ 1];  o =          c[ 0];
+  e =           c[ 1];  o =           c[ 0];
   e = fmaf(e,x2,c[ 3]); o = fmaf(o,x2,c[ 2]);
   e = fmaf(e,x2,c[ 5]); o = fmaf(o,x2,c[ 4]);
   e = fmaf(e,x2,c[ 7]); o = fmaf(o,x2,c[ 6]);
@@ -76,7 +76,7 @@ static inline float f32_horner2_4(const float x, const float c[static 5])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[0];  o =          c[1];
+  e =           c[0];  o =           c[1];
   e = fmaf(e,x2,c[2]); o = fmaf(o,x2,c[3]);
   e = fmaf(e,x2,c[4]); 
 
@@ -87,7 +87,7 @@ static inline float f32_horner2_6(const float x, const float c[static 7])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[0];  o =          c[1];
+  e =           c[0];  o =           c[1];
   e = fmaf(e,x2,c[2]); o = fmaf(o,x2,c[3]);
   e = fmaf(e,x2,c[4]); o = fmaf(o,x2,c[5]);
   e = fmaf(e,x2,c[6]); 
@@ -99,7 +99,7 @@ static inline float f32_horner2_8(const float x, const float c[static 9])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[0];  o =          c[1];
+  e =           c[0];  o =           c[1];
   e = fmaf(e,x2,c[2]); o = fmaf(o,x2,c[3]);
   e = fmaf(e,x2,c[4]); o = fmaf(o,x2,c[5]);
   e = fmaf(e,x2,c[6]); o = fmaf(o,x2,c[7]);
@@ -112,7 +112,7 @@ static inline float f32_horner2_10(const float x, const float c[static 11])
 {
   float x2 = x*x;
   float e,o;
-  e =          c[0];  o =          c[1];
+  e =           c[0];  o =           c[1];
   e = fmaf(e,x2,c[2]); o = fmaf(o,x2,c[3]);
   e = fmaf(e,x2,c[4]); o = fmaf(o,x2,c[5]);
   e = fmaf(e,x2,c[6]); o = fmaf(o,x2,c[7]);
