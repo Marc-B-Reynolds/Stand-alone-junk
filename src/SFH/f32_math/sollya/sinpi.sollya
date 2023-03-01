@@ -1,0 +1,62 @@
+// -*- mode: c; -*- 
+
+// polynomial approximations of sinpi on [0,1/4]
+
+execute("util.sollya");
+
+x0 = 0;
+x1 = 1/4;
+
+procedure sinpi_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_hp_lead(sin(pi*x), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel_odd_xp_lead("sinpi", r.approx);
+  
+  return r;
+};
+
+print("// sinpi relative error. extended precision lead coeff");
+
+basis = [|1,3|];
+
+for i from 5 to 9 by 2 do
+{
+  var approx;
+  
+  basis  = basis :.i;
+  approx = sinpi_build(basis, x0,x1);
+  print("");
+};
+
+
+procedure sinpi_build_ae(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_hp_lead_ae(sin(pi*x), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel_odd_xp_lead("sinpia", r.approx);
+  
+  return r;
+};
+
+
+print("// sinpi absolute error. extended precision lead coeff");
+
+basis = [|1,3|];
+x0    = 2^-1024;
+
+for i from 5 to 7 by 2 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = sinpi_build_ae(basis, x0,x1);
+  print("");
+};
