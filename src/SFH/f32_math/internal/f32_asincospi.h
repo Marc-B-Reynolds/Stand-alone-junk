@@ -2,7 +2,6 @@
 // Marc B. Reynolds, 2022-2023
 
 // classic style asinpi/cospi approximations
-// 
 
 #ifndef F32_ASINCOSPI_H
 #define F32_ASINCOSPI_H
@@ -43,14 +42,6 @@ static inline float f32_asinpi_k8(float x)
 
   return f32_horner_6(x,C);
 }
-
-
-
-//**************************************************************
-// add cut kernels here
-
-
-
 
 
 //**************************************************************
@@ -171,7 +162,12 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 //   |x| <  0.5 : acospi(x) = 1/2 -   asinpi(x)
 //    x  < -0.5 : acospi(x) =   1 - 2 asinpi( sqrt((1+x)/2 )
 //    x  >  0.5 : acospi(x) =       2 asinpi( sqrt((1-x)/2 )
-
+//
+//  m = ( x  < 0.5) ?   2  : 1 {hummm}
+//  s = ( x  < 0.5) ?  -1  : 1
+//  a = (|x| < 0.5) ? -1/2 : 0
+//
+//  acospi(x) = sm()
 
 // WIP
 static inline float f32_acospi_x1(float (*P)(float), float x)
@@ -185,7 +181,7 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
     r = fmaf(r,t2, f32_mul_k_pi_i.l);
     r = fmaf(x,    f32_mul_k_pi_i.h, x*r);
 
-    return 0.5f-r; // hack
+    return 0.5f-r; // hack. try negate x and add into fma with x*r
   }
 
   // nope: not done
@@ -204,7 +200,35 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
   return f32_xor((float)r, sx);
 }
 
+// WIP: totally unmodified from sinpi ATM
+static inline float f32_cospi_x2(float (*P)(float), float v)
+{
+  double x = (double)v;
+  double a = fabs(x);
 
+  // |x| <  0.5 : acospi(x) = 1/2 -   asinpi(x)
+  //  x  < -0.5 : acospi(x) =   1 - 2 asinpi( sqrt((1+x)/2 )
+  //  x  >  0.5 : acospi(x) =       2 asinpi( sqrt((1-x)/2 )
+  
+  double r;
+  double   r0 = 0.5f * (1.f-a);       // exact: Sterbenz lemma (when used)
+  double   r1 = -2.0 * f64_sqrt(r0);
+  double   im = 0.5-a;                // select based on: |x| <= 1/2
+  double   sx = f64_xor(x,a);         // sign bit
+
+  double   c  = f64_sign_select(0.5, 0.0, im);
+  double   t  = f64_sign_select(r1,  a,   im);
+  double   t2 = f64_sign_select(r0,  x*x, im);
+
+  t = f64_xor(t, sx);
+  c = f64_xor(c, sx);
+  
+  r  = (double)P((float)t2);
+  r = fma(t2, r, f64_mul_k_pi_i.h);
+  r = fma(t,  r, c);
+
+  return (float)r;
+}
 
 
 
