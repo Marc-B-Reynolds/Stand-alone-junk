@@ -140,22 +140,22 @@ procedure f32_print_kernel_list(name, c)
 
 procedure f32_print_kernel_odd(name, a)
 {
-  f32_print_kernel_list(name, list_of_odd_coeff(a));
+  f32_print_kernel_list(name @ ((degree(a)-1)/2), list_of_odd_coeff(a));
 };
 
 procedure f32_print_kernel_even(name, a)
 {
-  f32_print_kernel_list(name, list_of_even_coeff(a));
+  f32_print_kernel_list(name @ (degree(a)/2), list_of_even_coeff(a));
 };
 
 procedure f32_print_kernel(name, a)
 {
-  f32_print_kernel_list(name, list_of_coeff(a));
+  f32_print_kernel_list(name @ (degree(a)), list_of_coeff(a));
 };
 
 
 // change to putting lo/hi of lead into the array?
-procedure f32_print_kernel_odd_extended_lead(name, a)
+procedure f32_print_kernel_odd_xp_lead(name, a)
 {
   var l,c,e,d;
 
@@ -166,14 +166,14 @@ procedure f32_print_kernel_odd_extended_lead(name, a)
 
   display=decimal!;
   
-  write("static inline f32_", name @ "_k" @ (length(c)+1) @ "(float x)\n{\n  static ");
+  write("static inline float f32_", name @ "_k" @ (length(c)+3) @ "(float x)\n{\n  static ");
   f32_write_list("C", c);
   print("");
   print("  float s = x*x;");
   print("  float r;\n");
   print("  r = f32_horner_" @ (length(c)-1) @ "(s,C);");
   display=hexadecimal!;
-  print("  r = fmaf(r,s,", e.l @ "f)");
+  print("  r = fmaf(r,s,", e.l @ "f);");
   print("  r = fmaf(x,", e.h @ "f, x*r);");
   print("");
   print("  return r;");
@@ -214,7 +214,7 @@ procedure fn_build_constrained(f, basis, x0, x1, req, bits, etype)
   return r;
 };
 
-// helpers for common configurations
+// helpers for common configurations (rel error)
 procedure f32_build(f, basis, x0, x1)
 {
   return fn_build(f, basis, x0, x1, [|24...|], relative);
@@ -243,4 +243,51 @@ procedure f32_build_hp_lead(f, basis, x0, x1)
 procedure f64_build_hp_lead(f, basis, x0, x1)
 {
   return fn_build(f, basis, x0, x1, [|106,53...|], relative);
+};
+
+// helpers for common configurations (abs error)
+procedure f32_build_ae(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|24...|], absolute);
+};
+
+procedure f64_build_ae(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|53...|], absolute);
+};
+
+procedure f32_build_constrained_ae(f, basis, x0, x1, req)
+{
+  return fn_build_constrained(f, basis, x0, x1, req, [|24...|], absolute);
+};
+
+procedure f64_build_constrained_ae(f, basis, x0, x1, req)
+{
+  return fn_build_constrained(f, basis, x0, x1, req, [|53...|], absolute);
+};
+
+procedure f32_build_hp_lead_ae(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|48,24...|], absolute);
+};
+
+procedure f64_build_hp_lead_ae(f, basis, x0, x1)
+{
+  return fn_build(f, basis, x0, x1, [|106,53...|], absolute);
+};
+
+// composed build and dump helpers
+
+procedure f32_build_dump_odd(f, name, basis, x0,x1)
+{
+  var r;
+
+  r = f32_build(f, basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+
+  f32_print_kernel_odd(name, r.approx);
+  
+  return r;
 };
