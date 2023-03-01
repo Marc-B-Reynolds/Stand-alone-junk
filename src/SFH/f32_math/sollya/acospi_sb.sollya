@@ -3,7 +3,6 @@
 // spitball approximations of acospi(x)
 
 // set up some globals
-T  = floating;
 E  = absolute;
 B  = [|24...|];
 F  = acos(x)/pi;
@@ -14,6 +13,7 @@ x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
 x1 = 1 - 2^-25;  // 1 - ulp(1)/2
 R  = [x0 ; x1];
 
+execute("util.sollya");
 execute("cut.sollya");
 
 // for acospi(x) : relaxed f(0)
@@ -23,6 +23,7 @@ rbasis4 = [|tx,tx*x,tx*x^2,tx*x^3|];
 rbasis5 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|];
 rbasis6 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
 rbasis7 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+rbasis8 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|];
 
 // for acospi(x) : exact f(0)
 ebasis2 = [|tx*x|];
@@ -31,7 +32,7 @@ ebasis4 = [|tx*x,tx*x^2,tx*x^3|];
 ebasis5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
 ebasis6 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
 ebasis7 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
-
+ebasis8 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|];
 
 
 // f(0) relaxed approx
@@ -40,8 +41,8 @@ procedure acospi_build_relaxed(x0, x1)
   var r;
 
   r.arange  = [x0;x1];
-  r.approx = fpminimax(F, builder_basis, B, r.arange, T, E);
-  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+  r.approx = fpminimax(acos(x)/pi, builder_basis, B, r.arange, floating, E);
+  r.aerror = single(dirtyinfnorm(r.approx-acos(x)/pi, r.arange));
 
   return r;
 };
@@ -52,11 +53,23 @@ procedure acospi_build_exact(x0, x1)
   var r;
 
   r.arange  = [x0;x1];
-  r.approx = fpminimax(F, builder_basis, B, r.arange, T, E, tx*0.5);
-  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+  r.approx = fpminimax(acos(x)/pi, builder_basis, B, r.arange, floating, E, tx*0.5);
+  r.aerror = single(dirtyinfnorm(r.approx-acos(x)/pi, r.arange));
 
   return r;
 };
+
+
+// relative error (via f32_build...)
+//display=hexadecimal!;
+//f32_build_constrained(F, ebasis5, x0, x1, 0.5*tx).approx;
+//f32_build_constrained(F, ebasis6, x0, x1, 0.5*tx).approx;
+//f32_build_constrained(F, ebasis7, x0, x1, 0.5*tx).approx;
+
+// the 2 promote to 64-bit kernels
+//f64_build(F, rbasis7, x0, x1).approx;
+//f64_build(F, rbasis8, x0, x1).approx;
+
 
 procedure acospi_find_cut_exact(basis)
 {
@@ -70,166 +83,26 @@ procedure acospi_find_cut_relaxed(basis)
   return find_cut(acospi_build_relaxed, x0, x1);
 };
 
-//a = acospi_build_exact(ebasis3, x0,x1);
+//**** cut - doesn't seem useful here
 
-quit;
-
-
-//builder_basis=rbasis6;
-//find_cut(acospi_build_relaxed, x0, x1);
-//find_cut_initial(acospi_build_relaxed, x0, x1, 0x1.7cp-2);
-
-
-foo = find_cut(acospi_build_exact, x0, x1);
+// minimize abs error
+//acospi_find_cut_exact(ebasis2);  // 0x1.1a6b24p-1
+//acospi_find_cut_exact(ebasis3);  // 0x1.065e6cp-1
+//acospi_find_cut_exact(ebasis4);  // 0x1.f65f3p-2
+//acospi_find_cut_exact(ebasis5);  // 0x1.e838dp-2
+//acospi_find_cut_exact(ebasis6);  // 0x1.de6d4cp-2
+//acospi_find_cut_exact(ebasis7);  // 0x1.d6d5f4p-2
 
 
-quit;
+//E = relative;
+// minimize rel error
+//acospi_find_cut_exact(ebasis3);  // 0x1.22188p-1
+//acospi_find_cut_exact(ebasis4);  // 0x1.0e778p-1
+//acospi_find_cut_exact(ebasis5);  // 0x1.02e464p-1
+//acospi_find_cut_exact(ebasis6);  // 0x1.f64f7p-2 
+//acospi_find_cut_exact(ebasis7);  // 0x1.ebf4b8p-2
 
-if (false) then {
-
-procedure acospi_rmake(basis, r)
-{
-  var e,approx,p0,p1;
-
-  print("acospi(x) on: " @ r);
-  
-  approx = fpminimax(F,basis,B,r,T,E);
-
-  display=powers!;      write("  "); approx;  // for perverted languages without hex float
-  display=hexadecimal!; write("  "); approx;  // for happy languages
-  display=decimal!;     write("  "); approx;  // for happy humans
-
-  p0;
-  
-  display=hexadecimal!;
-  e = single(dirtyinfnorm(approx-F, r));
-  write("  approx abs error: ", e);
-  display=decimal!;
-  write(" (", e, ")\n\n");
-};
-
-
-acospi_rmake(rbasis3, R); // 0x1.b35fdap-14 (1.038014e-4)
-acospi_rmake(rbasis4, R); // 0x1.95ffc8p-17 (1.209972e-5)
-acospi_rmake(rbasis5, R); // 0x1.99c8b2p-20 (1.526564e-6)
-acospi_rmake(rbasis6, R); // 0x1.bfff84p-23 (2.086154e-7)
-acospi_rmake(rbasis7, R); // 0x1.ffff48p-26 (2.980216e-8)
- 
- quit;
-};
-
-
-f0_relaxed   = true;
-binary64_gen = true;
-
-
-
-procedure dump(f,a,r)
-{
-  var aerror;
-
-  aerror = dirtyinfnorm((f-a), r);
-
-  display=decimal!;
-  a; 
-  display=hexadecimal!;
-  a; 
-  display=decimal!;
-
-  write("~abs error:", aerror);
-  display=hexadecimal!;
-  print(" ", aerror, "\n");
-};
-
-// range set to avoid bad control points
-//x0 = 0x1.9p-25;  // RN(acospi(x)) = 1/2 on [0x1.921fb4p-25,-0x1.921fb4p-24]
-//x1 = 1 - 2^-25;  // 1 - ulp(1)/2
-//r  = [x0 ; x1];
-//f  = (acos(x)/pi);
-
-// P(x) = 1/2
-//s0 = (1/2)*sqrt(1-x);
-//dump(f,s0,r);
-
-// binary32 polynomial approximations
-//B  = [|24...|];
-
-if (false) then {
-  // temp hack...move
-  f = asin(x)/pi;
-  r = [1/4 ; 1/2];
-  print("\nsinpi hack - binary32: f(0) result relaxed\n");
-
- basis = [|1,x,x^2,     tx,tx*x,tx*x^2,tx*x^3|];
-
-  s1 = fpminimax(f, basis, B, r, floating, E); dump(f,s1,r);
-//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, E); dump(f,s2,r);
-//s2 = fpminimax(f, [|1,x,tx*x,tx*x^2|], B, r, floating, E); dump(f,s2,r);
-//s3 = fpminimax(f, [|1,x,tx*x,x^2, tx*x^2|], B, r, floating, E); dump(f,s2,r);
-
-//s3 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3|], B, r, floating, E); dump(f,s3,r);
-//  s4 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E); dump(f,s4,r);
-//  s5 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E); dump(f,s5,r);
-//  s6 = fpminimax(f, [|x,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E); dump(f,s6,r);
-quit;
-};
-
-
-if (false) then {
-if (f0_relaxed) then {
-  print("\nbinary32: f(0) result relaxed\n");
-  s1 = fpminimax(F, [|tx,tx*x|], B, r, floating, E); dump(F,s1,r);
-  s2 = fpminimax(F, [|tx,tx*x,tx*x^2|], B, r, floating, E); dump(F,s2,r);
-  s3 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3|], B, r, floating, E); dump(F,s3,r);
-  s4 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E); dump(F,s4,r);
-  s5 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E); dump(F,s5,r);
-  s6 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E); dump(F,s6,r);
-} else {
-  print("\nbinary32 : f(0) result exact\n");
-  r = [2^-2048,1-2^-24];
-  s1 = fpminimax(F, [|tx*x|], B, r, floating, E,tx*0.5); dump(F,s1,r);
-  s2 = fpminimax(F, [|tx*x,tx*x^2|], B, r, floating, E,tx*0.5); dump(F,s2,r);
-  s3 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3|], B, r, floating, E,tx*0.5); dump(F,s3,r);
-  s4 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, r, floating, E,tx*0.5); dump(F,s4,r);
-  s5 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, r, floating, E,tx*0.5); dump(F,s5,r);
-  s6 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, r, floating, E,tx*0.5); dump(F,s6,r);
-};
-	   };
-
-E=relative;
-f0_relaxed = true;
-
-// binary64 polynomial approximations (all hack)
-if (binary64_gen) then {
-  B  = [|53...|];
-
-  // TODO: binary64 endpoints need adjustment - these are just a hack
-  // try without for binary32 targets.
-  //x0 = 0x1.9p-55;
-  //x1 = 1 - 2^-55;
-  //R  = [x0 ; x1];
-
-if (f0_relaxed) then {
-  print("\nbinary64 : f(0) result relaxed\n");
-  //s1 = fpminimax(F, [|tx,tx*x|], B, R, floating, E); dump(F,s1,R);
-  //s2 = fpminimax(F, [|tx,tx*x,tx*x^2|], B, R, floating, E); dump(F,s2,R);
-  //s3 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3|], B, R, floating, E); dump(F,s3,R);
-  //s4 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|], B, R, floating, E); dump(F,s4,R);
-  //s5 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, R, floating, E); dump(F,s5,R);
-  //s6 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, R, floating, E); dump(F,s6,R);
-  s7 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|], B, R, floating, E); dump(F,s7,R);
-  s8 = fpminimax(F, [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^8|], B, R, floating, E); dump(F,s8,R);
-} else {
-  print("\nbinary64 : f(0) result exact\n");
-  //s1 = fpminimax(F, [|tx*x|], B, R, floating, E,tx*0.5); dump(F,s1,R);
-  //s2 = fpminimax(F, [|tx*x,tx*x^2|], B, R, floating, E,tx*0.5); dump(F,s2,R);
-  //s3 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3|], B, R, floating, E,tx*0.5); dump(F,s3,R);
-  //s4 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4|], B, R, floating, E,tx*0.5); dump(F,s4,R);
-  //s5 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|], B, R, floating, E,tx*0.5); dump(F,s5,R);
-  //s6 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|], B, R, floating, E,tx*0.5); dump(F,s6,R);
-  s7 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|], B, R, floating, E,tx*0.5); dump(F,s7,R);
-  s8 = fpminimax(F, [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^8|], B, R, floating, E,tx*0.5); dump(F,s8,R);
-};
-};
-
-
+//display=hexadecimal!;
+//cut6 = 0x1.de6d4cp-2;
+//f32_build_constrained(F, ebasis7, x0, cut6, 0.5*tx).approx;
+//f32_build(F, rbasis7, cut6, x1).approx;
