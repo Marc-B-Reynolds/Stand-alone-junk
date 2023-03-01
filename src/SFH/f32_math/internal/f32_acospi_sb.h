@@ -2,27 +2,32 @@
 #ifndef F32_ACOSPI_SB_H
 #define F32_ACOSPI_SB_H
 
-// fast branchfree asinpi targeting minimizing abs error. intended for
-// low quality approximations.
+// fast branchfree acospi using non-standard approximation method
+// based on being able to compute a square root in parallel with
+// a polynomial. the construction puts some limitiations on
+// accuracy at the top end.
+//
 // SEE:
 // * (put post link here)
 //
-// Fast & lower quality acospi functions (targeting abs error)
 // core approximation on [0,1] using expressions:
 //    acospi(x) ~= sqrt(1-x) P(x), x >= 0
 //               = 1 - acospi(-x), x <  0
 //
-// * defines two sets of polynomial approximations P(x)
-//     f32_acospi_sb_kr{n} = n^th degree where P(0) ~= 1/2 
-//     f32_acospi_sb_ke{n} = n^th degree where P(0)  = 1/2
-//   the former has slightly lower error with the one more
-//   degree of freedom and the latter is exact for inputs
-//   at (and near) zero.
-// * defines two functions for expanding the P(x) into usable
+// * defines sets of polynomial approximations P(x)
+//     f32_acospi_sb_kr{n} = n^th degree where P(0) ~= 1/2  {abs error}
+//     f32_acospi_sb_ke{n} = n^th degree where P(0)  = 1/2  {abs error}
+//     f32_acospi_sb_re{n} = n^th degree where P(0)  = 1/2  {rel error}
+//   the P(0) ~= 1/2 has slightly lower error with the one more
+//   degree of freedom and the P(0)=1/2 is exact for inputs
+//   at (and near) zero. This make a huge difference on total
+//   counts (which can be misleading is not mentally noted)
+// * defines functions for expanding the P(x) into usable
 //   functions:
 //     f32_acospi_sb_xp   = expand an approximation for positive inputs
 //     f32_acospi_sb_xf   = expand an approximation for full range
-//     f32_acopis_bs_fx_l =   full range (see below)
+//     f32_acopis_bs_xf_l =   alternate full range (see below)
+// * also promote-to-double flavors of some of the previous
 
 // NOTES:
 //   hybrid (stdfunc/bitops) only reduction. see f32_reduce_odd
@@ -31,7 +36,7 @@
 // f(0) relaxed spitball polynomials: P(x)
 // not forcing result of f(0) to 1/2 gives an additional degree of
 // freedom and produces slightly more accurate result.
-
+// some of these should probably be nuked
 
 static inline float f32_acospi_sb_kr1(float x)
 {
@@ -81,7 +86,7 @@ static inline float f32_acospi_sb_kr6(float x)
 
 
 //**********************************************************************
-// f(0) exact spitball polynomials: P(x)
+// f(0) exact spitball polynomials: P(x)  { minimized for abs error }
 
 static inline float f32_acospi_sb_ke1(float x)
 {
@@ -120,16 +125,30 @@ static inline float f32_acospi_sb_ke5(float x)
   return f32_horner_5(x,C);
 }
 
-static inline float f32_acospi_sb_ke6(float x)
-{
-  static const float C[] = {
-    0x1.bf2db4p-11f, -0x1.fd24cp-9f, 0x1.23eabp-7f, -0x1.0131b8p-6f, 0x1.cf73dep-6f, -0x1.17c992p-4f, 0.5f
-  };
-  return f32_horner_6(x,C);
-}
 
 //**********************************************************************
-// add cut kernels here
+// f(0) exact spitball polynomials: P(x) { minimized for relative error }
+
+static inline float f32_acospi_sb_re4(float x)
+{
+  static const float C[] =
+    {0x1.732054p-9f, -0x1.7ac4b8p-7f, 0x1.bbbd74p-6f, -0x1.1753ap-4f, 0.5f };
+  return f32_horner_4(x,C);
+}
+
+static inline float f32_acospi_sb_re5(float x)
+{
+  static const float C[] =
+    { -0x1.729abcp-10f, 0x1.99a6f8p-8f, -0x1.d7f70ep-7f, 0x1.caf59ap-6f, -0x1.17b5e6p-4, 0.5f };
+  return f32_horner_5(x,C);
+}
+
+static inline float f32_acospi_sb_re6(float x)
+{
+  static const float C[] =
+    { 0x1.87057p-11f, -0x1.d77f8p-9f, 0x1.1a9f46p-7f, -0x1.fe45dep-7f, 0x1.cf0faap-6f, -0x1.17c80ep-4f, 0.5f };
+  return f32_horner_6(x,C);
+}
 
 
 //**********************************************************************
