@@ -24,10 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// compile with (or equiv).
-// clang -O3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function -fno-math-errno -ffp-contract=off asinpif.c -o asinpif -lm
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,13 +31,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "f32_util.h"
-#include "f64_util.h"
-#include "f32_horner.h"
-#include "f32_horner2.h"
-#include "f64_horner.h"
-#include "f64_horner2.h"
-
+#include "internal/f32_math_common.h"
 #include "util.h"
 
 //**********************************************************************
@@ -61,30 +51,34 @@ float f32_asinpi_a0(float x)
   return copysignf(0.5f - 0.5f * f32_sqrt(1.f-fabsf(x)), x);
 }
 
-// expand full range variants: f(0) result relaxed
-float f32_asinpi_r1(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr1, x); }
-float f32_asinpi_r2(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr2, x); }
-float f32_asinpi_r3(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr3, x); }
-float f32_asinpi_r4(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr4, x); }
-float f32_asinpi_r5(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr5, x); }
-float f32_asinpi_r6(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr6, x); }
+// expand full range variants: f(0) result relaxed { minimize abs error }
+float f32_asinpi_e1(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr1, x); }
+float f32_asinpi_e2(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr2, x); }
+float f32_asinpi_e3(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr3, x); }
+float f32_asinpi_e4(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr4, x); }
+float f32_asinpi_e5(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr5, x); }
+float f32_asinpi_e6(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_kr6, x); }
 
-// expand full range variants: f(0) result exact
+// expand full range variants: f(0) result exact { minimize abs error }
 float f32_asinpi_a1(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke1, x); }
 float f32_asinpi_a2(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke2, x); }
 float f32_asinpi_a3(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke3, x); }
 float f32_asinpi_a4(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke4, x); }
 float f32_asinpi_a5(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke5, x); }
-float f32_asinpi_a6(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_ke6, x); }
 
-float f32_asinpi_c5(float x) { return f32_asinpi_x0(&f32_asinpi_k5, x); }
-float f32_asinpi_c6(float x) { return f32_asinpi_x0(&f32_asinpi_k6, x); }
-float f32_asinpi_c7(float x) { return f32_asinpi_x0(&f32_asinpi_k7, x); }
-float f32_asinpi_c8(float x) { return f32_asinpi_x0(&f32_asinpi_k8, x); }
+// expand full range variants: f(0) result exact { minimize rel error }
+float f32_asinpi_r4(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_re4, x); }
+float f32_asinpi_r5(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_re5, x); }
+float f32_asinpi_r6(float x) { return f32_asinpi_sb_xf(&f32_acospi_sb_re5, x); }
 
-float f32_asinpi_a(float x) { return f32_asinpi_x0(&f32_asinpi_k8, x); }
-float f32_asinpi_b(float x) { return f32_asinpi_x1(&f32_asinpi_k8, x); }
-float f32_asinpi_c(float x) { return f32_asinpi_x2(&f32_asinpi_k8, x); }
+// full range classic polynomials: vary kernels
+#define REDUCE f32_asinpi_x2
+float f32_asinpi_c5(float x) { return REDUCE(&f32_asinpi_k5, x); }
+float f32_asinpi_c6(float x) { return REDUCE(&f32_asinpi_k6, x); }
+float f32_asinpi_c7(float x) { return REDUCE(&f32_asinpi_k7, x); }
+float f32_asinpi_c8(float x) { return REDUCE(&f32_asinpi_k8, x); }
+#undef REDUCE
+
 
 
 //**********************************************************************
@@ -116,8 +110,8 @@ float cr_asinpif(float x){
   if(__builtin_expect(e>=127, 0)){
     if(ax == 1.0f) return __builtin_copysignf(0.5f, x);
     if(e==0xff && (t.u<<9)) return x; // nan
-    //errno = EDOM;
-    feraiseexcept(FE_INVALID);
+    //errno = EDOM;               // MBR: my eyes! my eyes!
+    //feraiseexcept(FE_INVALID);  // MBR: not needed for testing
     return __builtin_nanf("1");
   }
   int32_t s = 146 - e, i = 0;
@@ -188,30 +182,30 @@ float cr_asinpif(float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
-#if 0
+
+#if 1
   ENTRY(f32_asinpi_a0),
   ENTRY(f32_asinpi_a1),
   ENTRY(f32_asinpi_a2),
   ENTRY(f32_asinpi_a3),
   ENTRY(f32_asinpi_a4),
   ENTRY(f32_asinpi_a5),
-  ENTRY(f32_asinpi_a6),
+#endif  
 
+#if 0  
   ENTRY(f32_asinpi_r1),
   ENTRY(f32_asinpi_r2),
   ENTRY(f32_asinpi_r3),
   ENTRY(f32_asinpi_r4),
   ENTRY(f32_asinpi_r5),
   ENTRY(f32_asinpi_r6),
+#endif
 
+#if 1
   ENTRY(f32_asinpi_c5),
   ENTRY(f32_asinpi_c6),
   ENTRY(f32_asinpi_c7),
   ENTRY(f32_asinpi_c8),
-#else
-  ENTRY(f32_asinpi_a),
-  ENTRY(f32_asinpi_b),
-  ENTRY(f32_asinpi_c),
 #endif
 };
 
@@ -223,39 +217,66 @@ float cr_func(float x) { return cr_asinpif(x); }
 
 //********************************************************
 
+// f(x) = x/pi up to 0x1.e768f4p-24 33f3b47a
+void scan_linear() {
+  uint32_t ix = 0;
+  float    r,cr;
 
-void brute_all()
-{
-  uint32_t x0 = f32_to_bits( 0.0f);
-  uint32_t x1 = f32_to_bits( 1.f/32.f);
-  brute_force(x0,x1);
-  brute_1pot(1.f/32.f);
-  brute_1pot(1.f/16.f);
-  brute_1pot(1.f/ 8.f);
-  brute_1pot(1.f/ 4.f);
-  brute_1pot(1.f/ 2.f);
+  do {
+    float x = f32_from_bits(++ix);
+
+    // these work out the same
+#if 0    
+    r  = (float)((double)x / M_PI);
+#else
+    r = (float)f64_up_mul(&f64_mul_k_pi_i, (double)x);
+#endif    
+
+    cr = cr_asinpif(x);
+  } while(r == cr);
+
+  ix--;
+
+  printf("f(x) = x/pi up to %a %08x\n", f32_from_bits(ix),ix);
 }
+
+void test_spot()
+{
+  test_1pot(1.f/32.f);
+  test_1pot(1.f/16.f);
+  test_1pot(1.f/ 8.f);
+  test_1pot(1.f/ 4.f);
+  test_1pot(1.f/ 2.f);
+}
+
+void test_all()
+{
+  // asinpi(x) = RN(x/pi) on range: [-0x1.e768f4p-24, 0x1.e768f4p-24]
+  static const uint32_t cut = 0x33f3b47a;
+  test_linear_range_dp_up(0, cut, &f64_mul_k_pi_i);  
+
+  test_force(cut+1, f32_to_bits( 1.f/32.f));
+
+  // partition the rest into POT intervals
+  test_spot();
+}
+
 
 
 
 int main(void)
 {
-
 #if 1
-#if 0  
-  brute_1pot_pn(1.f/32.f);
-  brute_1pot_pn(1.f/16.f);
-  brute_1pot_pn(1.f/ 8.f);
-  brute_1pot_pn(1.f/ 4.f);
-#else
-  //brute_1pot(1.f/32.f);
-  brute_1pot_pn(1.f/4.f);
-  brute_1pot_pn(1.f/2.f);
-#endif
-#else
-  brute_all();
-#endif
+#if 0
+  test_spot();
+#else  
+  test_all();
+#endif  
   
   error_dump();
+#endif  
+  
+  timing_test(func_table, LENGTHOF(func_table));
+  
   return 0;
 }
