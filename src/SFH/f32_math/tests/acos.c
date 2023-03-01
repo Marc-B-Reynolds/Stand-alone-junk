@@ -24,10 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// compile with (or equiv).
-// clang -O3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function -fno-math-errno -ffp-contract=off acosf.c -o acosf -lm
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,10 +31,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "f32_util.h"
-#include "f64_util.h"
-#include "f32_horner.h"
-
+#include "internal/f32_math_common.h"
 #include "internal/f32_asincos.h"
 
 #include "util.h"
@@ -404,7 +397,7 @@ float f32_acos(float x)    { return f32_acos_x2(x, &f32_asincos_k4); }
 #include <fenv.h>
 
 #include <fenv.h>
-#include <errno.h>
+//#include <errno.h>
 
 typedef union {float f; unsigned u;} b32u32_u;
 
@@ -418,8 +411,8 @@ float cr_acosf(float x){
     if(t.u == (0x7fu<<23)) return 0.0f; // x=1
     if(t.u == (0x17fu<<23)) return pih + pil;  // x=-1
     if(e==0xff && (t.u<<9)) return x; // nan
-    errno = EDOM;
-    feraiseexcept(FE_INVALID);
+    //errno = EDOM;               // MBR: nobody needs this
+    //feraiseexcept(FE_INVALID);  // MBR: don't need for testing
     return __builtin_nanf("1");
   }
   if (e<126){
@@ -519,35 +512,35 @@ float cr_func(float x) { return cr_acosf(x); }
 
 //********************************************************
 
-void brute_hi()
+void test_hi()
 {
   uint32_t x0 = f32_to_bits(0.5f);
   uint32_t x1 = f32_to_bits(1.0f);
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
-void brute_hi_neg()
+void test_hi_neg()
 {
   uint32_t x0 = f32_to_bits(-0.5f);
   uint32_t x1 = f32_to_bits(-1.0f);
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
-void brute_lo()
+void test_lo()
 {
   uint32_t x0 = f32_to_bits(0.0f);
   uint32_t x1 = f32_to_bits(0.5f);
-  brute_force(x0,x1);
+  test_force(x0,x1);
 }
 
-void brute_all()
+void test_all()
 {
   uint32_t x0 = f32_to_bits( 0.0f);
   uint32_t x1 = f32_to_bits( 1.0f);
-  //brute_force(x0,x1);
+  //test_force(x0,x1);
   x0 = f32_to_bits( -0.0f);
   x1 = f32_to_bits( -1.0f);
-  brute_force(x0,x1);  
+  test_force(x0,x1);  
 }
 
 int main(void)
@@ -566,14 +559,14 @@ int main(void)
 #endif  
 
 #if 1
-  brute_hi();
-  brute_hi_neg();
-  brute_1pot( .25f);
-  brute_1pot(-.25f);
-  brute_1pot( 0x1.0p-8f);
-  brute_1pot(-0x1.0p-8f);
+  test_hi();
+  test_hi_neg();
+  test_1pot( .25f);
+  test_1pot(-.25f);
+  test_1pot( 0x1.0p-8f);
+  test_1pot(-0x1.0p-8f);
 #else
-  brute_all();
+  test_all();
 #endif  
   
   error_dump();
