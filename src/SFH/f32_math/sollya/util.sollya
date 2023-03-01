@@ -140,12 +140,41 @@ procedure f32_print_kernel_list(name, c)
 
 procedure f32_print_kernel_odd(name, a)
 {
-  f32_print_kernel_list(name @ ((degree(a)-1)/2), list_of_odd_coeff(a));
+  var d,c,n;
+
+  c = list_of_even_coeff(a);
+  n = (degree(a)-1)/2;
+
+  d = display;
+  display=decimal!;
+  
+  write("static inline float ", name @ n @ "(float x)\n{\n  static ");
+  f32_write_list("C", revert(c));
+  print("");
+  print("  return x*f32_horner_" @ (length(c)-1) @ "(x*x,C);");
+  print("}\n");
+
+  display=d!;
+
 };
 
 procedure f32_print_kernel_even(name, a)
 {
-  f32_print_kernel_list(name @ (degree(a)/2), list_of_even_coeff(a));
+  var d,c,n;
+
+  c = list_of_even_coeff(a);
+  n = 1+degree(a)/2;
+
+  d = display;
+  display=decimal!;
+  
+  write("static inline float ", name @ n @ "(float x)\n{\n  static ");
+  f32_write_list("C", revert(c));
+  print("");
+  print("  return f32_horner_" @ (length(c)-1) @ "(x*x,C);");
+  print("}\n");
+
+  display=d!;
 };
 
 procedure f32_print_kernel(name, a)
