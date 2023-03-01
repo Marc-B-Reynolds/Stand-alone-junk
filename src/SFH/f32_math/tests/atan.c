@@ -24,10 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-// compile with (or equiv).
-// clang -O3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function -fno-math-errno -ffp-contract=off atanf.c -o atanf -lm
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,10 +31,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "f32_util.h"
-#include "f64_util.h"
-#include "f32_horner.h"
-
+#include "internal/f32_math_common.h"
 #include "util.h"
 
 //**********************************************************************
