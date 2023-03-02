@@ -481,27 +481,36 @@ float f32_acos_x2_4(float x)  { return f32_acos_x2(x, &f32_asincos_k4); }
 float f32_acos_x2_5(float x)  { return f32_acos_x2(x, &f32_asincos_k5); }
 float f32_acos_x2_6(float x)  { return f32_acos_x2(x, &f32_asincos_k6); }
 
+float f32_acos_x3_3(float x)  { return f32_acos_x3(x, &f32_asincos_k3); }
+float f32_acos_x3_4(float x)  { return f32_acos_x3(x, &f32_asincos_k4); }
+float f32_acos_x3_5(float x)  { return f32_acos_x3(x, &f32_asincos_k5); }
 float f32_acos_x3_6(float x)  { return f32_acos_x3(x, &f32_asincos_k6); }
 
 func_entry_t func_table[] =
 {
-  //ENTRY(libm),
+  ENTRY(libm),
   //ENTRY(libm_d),
   //ENTRY(fdlibm_acosfu),
   //ENTRY(fdlibm_acosf),
   //ENTRY(sleef_acosf),
   //ENTRY(f32_acos_),
   //ENTRY(f32_acos),
-#if 0  
-  ENTRY(f32_acos_x3),
+  
+  ENTRY(f32_acos_x1_3),
   ENTRY(f32_acos_x2_3),
+  ENTRY(f32_acos_x3_3),
+  
+  ENTRY(f32_acos_x1_4),
   ENTRY(f32_acos_x2_4),
+  ENTRY(f32_acos_x3_4),
+
+  ENTRY(f32_acos_x1_5),
   ENTRY(f32_acos_x2_5),
-#endif  
+  ENTRY(f32_acos_x3_5),
+
   ENTRY(f32_acos_x1_6),
   ENTRY(f32_acos_x2_6),
   ENTRY(f32_acos_x3_6),
-  //ENTRY(f32_acos_x2_f),
 };
 
 const char* func_name = "acos";
@@ -512,43 +521,64 @@ float cr_func(float x) { return cr_acosf(x); }
 
 //********************************************************
 
-void test_hi()
+// validating range that f(x) = pi/2
+//  f(x) = pi/2 on [0x1.110b46p-26,-0x1.bbbd2ep-24]
+void scan_constant()
 {
-  uint32_t x0 = f32_to_bits(0.5f);
-  uint32_t x1 = f32_to_bits(1.0f);
-  test_force(x0,x1);
-}
+  uint32_t ix = f32_to_bits(0x1.p-28f);
+  float    r;
 
-void test_hi_neg()
-{
-  uint32_t x0 = f32_to_bits(-0.5f);
-  uint32_t x1 = f32_to_bits(-1.0f);
-  test_force(x0,x1);
-}
+  do {
+    float x = f32_from_bits(++ix);
+    r = cr_func(x);
+  } while(r == 0.5f*f32_pi);
 
-void test_lo()
-{
-  uint32_t x0 = f32_to_bits(0.0f);
-  uint32_t x1 = f32_to_bits(0.5f);
-  test_force(x0,x1);
+  uint32_t x0 = ix-1;
+  ix = f32_to_bits(-0x1.p-28f);
+  
+  do {
+    float x = f32_from_bits(++ix);
+    r = cr_func(x);
+  } while(r == 0.5f*f32_pi);
+
+  uint32_t x1 = ix-1;
+
+  printf("f(x) = pi/2 on [%a,%a]\n", f32_from_bits(x0), f32_from_bits(x1));
 }
 
 void test_spot()
 {
+  test_1pot_pn(1.f/32.f);
+  test_1pot_pn(1.f/16.f);
+  test_1pot_pn(1.f/ 8.f);
+  test_1pot_pn(1.f/ 4.f);
+  test_1pot_pn(1.f/ 2.f);
 }
 
 void test_all()
 {
-  uint32_t x0 = f32_to_bits( 0.0f);
-  uint32_t x1 = f32_to_bits( 1.0f);
-  //test_force(x0,x1);
-  x0 = f32_to_bits( -0.0f);
-  x1 = f32_to_bits( -1.0f);
-  test_force(x0,x1);  
+  const uint32_t xa = f32_to_bits( 0x1.110b46p-26f);
+  const uint32_t xb = f32_to_bits(-0x1.bbbd2ep-24f);
+
+  // handle constant output range
+  test_const_range(0x00000000,xa, 0.5f*f32_pi);
+  test_const_range(0x80000000,xb, 0.5f*f32_pi);
+
+  uint32_t x1 = f32_to_bits(1.0f/32.f);
+
+  test_force(xa, x1);
+  test_force(xb, x1 ^ 0x80000000);
+
+  test_spot();
+}
+
+void test_sanity()
+{
 }
 
 int main(int argc, char** argv)
 {
+  //scan_constant(); return 0;
   return test_run(argc, argv);
 }
 

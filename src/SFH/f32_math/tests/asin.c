@@ -372,14 +372,6 @@ void test_spot()
   test_force(x0,x1);
 }
 
-
-void test_lo()
-{
-  uint32_t x0 = f32_to_bits(0.0f);
-  uint32_t x1 = f32_to_bits(0.5f);
-  test_force(x0,x1);
-}
-
 void test_all()
 {
   uint32_t x0 = f32_to_bits(0.0f);
@@ -387,30 +379,16 @@ void test_all()
   test_force(x0,x1);
 }
 
-void odd_sanity()
+void test_sanity()
 {
-  printf("\nrunning: minimal sanity check\n");
-  
-  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
-
-    for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
-      float r0 = func_table[fi].f( x);
-      float r1 = func_table[fi].f(-x);
-
-      if (r0+r1 != 0) {
-	printf("  %s : FAILED -> f(%a) = %a, f(-%a)=%a\n",
-	       func_table[fi].name, x,r0,x,r1);
-	break;
-      }
-    }
-  }
+  test_sanity_odd();
 }
 
 
 int main(int argc, char** argv)
 {
   //scan(); return 0;
-  odd_sanity();
+  test_sanity();
 
   return test_run(argc, argv);
 }

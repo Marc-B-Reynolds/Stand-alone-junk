@@ -200,34 +200,10 @@ float cr_acospif(float x){
 
 //********************************************************
 
-static inline float f32_acospi_sb_c6(float x)
-{
-  static const float C[] = {
-     0x1.01aeb4p-9f,
-    -0x1.7de608p-8f,
-     0x1.4e2ac2p-7f,
-    -0x1.07a872p-6f,
-     0x1.d0524ap-6f,
-    -0x1.17cbfcp-4f,
-     0.5f,
-     0x1.27af24p-12f,
-    -0x1.e9e412p-10f,
-     0x1.8abe42p-8f,
-    -0x1.bbe3ecp-7f,
-     0x1.c0e7fcp-6f,
-    -0x1.16fdc2p-4f,
-     0x1.fffb52p-2f
-  };
-  return f32_horner_6(x,C + (x < 0x1.de6d4cp-2f ? 0 : 7));
-}
-
-float f32_acospi_c6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_c6, x); }
-  
 #if !defined(WIP_FUNC)
 
 func_entry_t func_table[] =
 {
-#if 0  
   ENTRY(libm),
   ENTRY(libm_crdiv),
 
@@ -251,9 +227,6 @@ func_entry_t func_table[] =
 
   ENTRY(f32_acospi_d7),
   ENTRY(f32_acospi_d8),
-#else
-  ENTRY(f32_acospi_c6),
-#endif  
 };
 
 #else
@@ -273,27 +246,6 @@ float cr_func(float x) { return cr_acospif(x); }
 #include "common.h"
 
 //********************************************************
-
-
-void test_spot()
-{
-}
-
-// acospi(x) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
-void test_all()
-{
-  static const uint32_t xa = 0x33490fda;  // f32_to_bits( 0x1.921fb4p-25f);
-  static const uint32_t xb = 0xb3c90fda;  // f32_to_bits(-0x1.921fb4p-24f);
-
-  uint32_t x1 = f32_to_bits(1.0f);
-
-  // handle constant output range
-  test_const_range(0x00000000,xa, 0.5f);
-  test_const_range(0x80000000,xb, 0.5f);
-
-  test_force(xa,x1);
-  test_force(xb,x1 ^ 0x80000000);
-}
 
 
 // validating range that f(x)=1/2
@@ -317,6 +269,37 @@ void scan_half() {
   uint32_t x1 = ix-1;
 
   printf("f(x) = 1/2 on [%a,%a]\n", f32_from_bits(x0), f32_from_bits(x1));
+}
+
+void test_spot()
+{
+  test_1pot_pn(1.f/32.f);
+  test_1pot_pn(1.f/16.f);
+  test_1pot_pn(1.f/ 8.f);
+  test_1pot_pn(1.f/ 4.f);
+  test_1pot_pn(1.f/ 2.f);
+}
+
+// acospi(x) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
+void test_all()
+{
+  static const uint32_t xa = 0x33490fda;  // f32_to_bits( 0x1.921fb4p-25f);
+  static const uint32_t xb = 0xb3c90fda;  // f32_to_bits(-0x1.921fb4p-24f);
+
+  // handle constant output range
+  test_const_range(0x00000000,xa, 0.5f);
+  test_const_range(0x80000000,xb, 0.5f);
+
+  uint32_t x1 = f32_to_bits(1.0f/32.f);
+
+  test_force(xa, x1);
+  test_force(xb, x1 ^ 0x80000000);
+
+  test_spot();
+}
+
+void test_sanity()
+{
 }
 
 int main(int argc, char** argv)

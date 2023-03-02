@@ -98,8 +98,7 @@ void test_force(uint32_t x0, uint32_t x1)
   float f0 = f32_from_bits(x0);
   float f1 = f32_from_bits(x1);
   
-  printf("<details markdown=\"1\">\n\n");
-  printf("<summary>checking: %s on [%08x,%08x] [%e,%e]<\\summary>\n\n", func_name, x0,x1,f0,f1);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e]\n", func_name, x0,x1,f0,f1);
 
   func_error_t error[LENGTHOF(func_table)] = {{0}};
   
@@ -115,7 +114,6 @@ void test_force(uint32_t x0, uint32_t x1)
   
   error_to_totals(error);
   error_dump_i(error);
-  printf("<\\details>\n");
 }
 
 
@@ -127,8 +125,7 @@ void test_linear_range(uint32_t x0, uint32_t x1, float k)
   float f0 = f32_from_bits(x0);
   float f1 = f32_from_bits(x1);
   
-  printf("<details markdown=\"1\"><summary>");
-  printf("\n<summary>checking: %s on [%08x,%08x] [%e,%e] : {linear result range %a*x}</summary>\n", func_name, x0,x1,f0,f1,k);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range %a*x}\n", func_name, x0,x1,f0,f1,k);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -140,7 +137,6 @@ void test_linear_range(uint32_t x0, uint32_t x1, float k)
   }
   error_to_totals(error);
   error_dump_i(error);
-  printf("\n<details>\n");
 }
 
 
@@ -152,8 +148,7 @@ void test_const_range(uint32_t x0, uint32_t x1, float k)
   float f0 = f32_from_bits(x0);
   float f1 = f32_from_bits(x1);
 
-  printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {constant result range %a}</summary>\n", func_name, x0,x1,f0,f1,k);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {constant result range %a}\n", func_name, x0,x1,f0,f1,k);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -164,7 +159,6 @@ void test_const_range(uint32_t x0, uint32_t x1, float k)
   }
   error_to_totals(error);
   error_dump_i(error);
-  printf("\n<details>\n");
 }
 
 // correctly rounded f(x) = RN(RN(kx,53),24) on [x0,x1]
@@ -175,8 +169,7 @@ void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t* k)
   float f0 = f32_from_bits(x0);
   float f1 = f32_from_bits(x1);
   
-  printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range}</summary>\n", func_name, x0,x1,f0,f1);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range}\n", func_name, x0,x1,f0,f1);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -188,7 +181,6 @@ void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t* k)
   }
   error_to_totals(error);
   error_dump_i(error);
-  printf("\n<details>\n");
 }
 
 // correctly rounded f(x) = x on [x0,x1]
@@ -199,8 +191,7 @@ void test_identity_range(uint32_t x0, uint32_t x1)
   float f0 = f32_from_bits(x0);
   float f1 = f32_from_bits(x1);
   
-  printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {result = input range}</summary>\\n", func_name, x0,x1,f0,f1);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {result = input range}\n", func_name, x0,x1,f0,f1);
 
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -212,7 +203,6 @@ void test_identity_range(uint32_t x0, uint32_t x1)
 
   error_to_totals(error);
   error_dump_i(error);
-  printf("\n<details>\n");
 }
 
 // test all denormal inputs
@@ -243,6 +233,58 @@ void test_1pot_pn(float x)
   test_force(x0,x1);
 }
 
+// for functions that expect f(-x) = -f(x) {exactly}
+//   expects {and note about range once reworked}
+void test_sanity_odd()
+{
+  bool failed = false;
+  
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    
+    for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
+      float r0 = func_table[fi].f( x);
+      float r1 = func_table[fi].f(-x);
+      
+      if (r0 != -r1) {
+	printf("  %s : FAILED -> f(%a) = %a, f(-%a)=%a\n",
+	       func_table[fi].name, x,r0,x,r1);
+	failed = true;
+	break;
+      }
+    }
+  }
+
+  if (failed) {
+    printf("ERROR: sanity checked failed\n");
+  }
+}
+
+
+// for functions that expect f(-x) = f(x) {exactly}
+//   expects {and note about range once reworked}
+void test_sanity_even()
+{
+  bool failed = false;
+  
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    
+    for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
+      float r0 = func_table[fi].f( x);
+      float r1 = func_table[fi].f(-x);
+      
+      if (r0 != r1) {
+	printf("  %s : FAILED -> f(%a) = %a, f(-%a)=%a\n",
+	       func_table[fi].name, x,r0,x,r1);
+	failed = true;
+	break;
+      }
+    }
+  }
+
+  if (failed) {
+    printf("ERROR: sanity checked failed\n");
+  }
+}
 
 #include <unistd.h>
 #include <time.h>
@@ -250,11 +292,15 @@ void test_1pot_pn(float x)
 
 void test_all();
 void test_spot();
+void test_sanity();
 
 int test_run(int argc, char** argv)
 {
-  bool all = true;
-  int  sid = 1;
+  bool all    = true;
+  bool sanity = true;
+
+  // hacky command line options
+  int  sid    = 1;
   
   while (argc > sid) {
     if (argv[sid][0] == '-') {
@@ -273,14 +319,25 @@ int test_run(int argc, char** argv)
     sid++;
   }
 
-  // add range reduction related sanity test here
+  // add range reduction & special input related sanity test here
   
   //
+
+  printf("<details markdown=\"1\"><summary>click for range breakdown</summary>\n\n");
+
+  if (sanity) {
+    printf("\nrunning: minimal sanity check\n");
+    test_sanity();
+  }
+  
   if (all)
     test_all();
   else
     test_spot();
-  
+
+  printf("\n</details>\n\n");
+
+  // dump summary
   error_dump();
 
   return 0;

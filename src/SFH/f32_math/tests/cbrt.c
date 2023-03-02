@@ -135,6 +135,10 @@ void test_all()
   test_spot();
 }
 
+void test_sanity()
+{
+  test_sanity_odd();
+}
 
 int main(int argc, char** argv)
 {

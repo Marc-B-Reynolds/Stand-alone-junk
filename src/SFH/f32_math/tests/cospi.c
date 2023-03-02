@@ -180,6 +180,11 @@ void test_all()
   test_spot();
 }
 
+void test_sanity()
+{
+  test_sanity_even();
+}
+
 int main(int argc, char** argv)
 {
   //scan_constant(); return 0;

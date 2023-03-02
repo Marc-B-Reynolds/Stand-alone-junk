@@ -133,6 +133,11 @@ void test_all()
 {
 }
 
+void test_sanity()
+{
+  test_sanity_odd();
+}
+
 int main(int argc, char** argv)
 {
   return test_run(argc, argv);
