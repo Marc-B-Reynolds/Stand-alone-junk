@@ -69,6 +69,7 @@ static inline float f32_sinpi_k7(float x)
   return r;
 }
 
+// one more term version only as tiny effect
 static inline float f32_sinpi_k8(float x)
 {
   static const float C[] = {0x1.f095fp-6f, 0x1.36acd8p-4f, -0x1.32a156p-1f, 0x1.466b76p1f, -0x1.4abbcep2f};
@@ -83,7 +84,15 @@ static inline float f32_sinpi_k8(float x)
   return r;
 }
 
-// one more term version only as tiny effect
+static inline float f32_sinpi_d6(float v)
+{
+  static const double C[] = {0x1.4bc25574ce357p-4, -0x1.32ca854cad10ep-1, 0x1.466bba8bfcp1, -0x1.4abbce564cd85p2, 0x1.921fb5443af5fp1};
+
+  double x = (double)v;
+  double s = x*x;
+
+  return (float)(x*f64_horner_4(s,C));
+}
 
 
 //************* sinpi absolute error
@@ -117,6 +126,9 @@ static inline float f32_sinpi_a6(float x)
 }
 
 //************* cospi
+
+// kernel codomain on [sqrt(2)/2, 1] and optimizing for abs outperforms wrt
+// relative error as well.
 
 // not exact at f(0)
 static inline float f32_cospi_k3(float x)

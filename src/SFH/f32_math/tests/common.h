@@ -233,12 +233,27 @@ void test_1pot_pn(float x)
   test_force(x0,x1);
 }
 
+
+void test_sanity_nan()
+{
+  float x = 0.f/0.f;
+  
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    float r0 = func_table[fi].f( x);
+    
+    if (r0 == r0) {
+      printf("  %s : FAILED NaN-> f(%a) = %a\n",
+	     func_table[fi].name, x,r0);
+      break;
+    }
+  }
+}
+
+
 // for functions that expect f(-x) = -f(x) {exactly}
 //   expects {and note about range once reworked}
 void test_sanity_odd()
 {
-  bool failed = false;
-  
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -246,26 +261,18 @@ void test_sanity_odd()
       float r1 = func_table[fi].f(-x);
       
       if (r0 != -r1) {
-	printf("  %s : FAILED -> f(%a) = %a, f(-%a)=%a\n",
+	printf("  %s : FAILED ODD -> f(%a) = %a, f(-%a)=%a\n",
 	       func_table[fi].name, x,r0,x,r1);
-	failed = true;
 	break;
       }
     }
   }
-
-  if (failed) {
-    printf("ERROR: sanity checked failed\n");
-  }
 }
-
 
 // for functions that expect f(-x) = f(x) {exactly}
 //   expects {and note about range once reworked}
 void test_sanity_even()
 {
-  bool failed = false;
-  
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -273,16 +280,11 @@ void test_sanity_even()
       float r1 = func_table[fi].f(-x);
       
       if (r0 != r1) {
-	printf("  %s : FAILED -> f(%a) = %a, f(-%a)=%a\n",
+	printf("  %s : FAILED EVEN -> f(%a) = %a, f(-%a)=%a\n",
 	       func_table[fi].name, x,r0,x,r1);
-	failed = true;
 	break;
       }
     }
-  }
-
-  if (failed) {
-    printf("ERROR: sanity checked failed\n");
   }
 }
 
@@ -327,6 +329,7 @@ int test_run(int argc, char** argv)
 
   if (sanity) {
     printf("\nrunning: minimal sanity check\n");
+    test_sanity_nan();
     test_sanity();
   }
   

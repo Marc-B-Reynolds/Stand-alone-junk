@@ -60,3 +60,8 @@ for i from 5 to 7 by 2 do {
   approx = sinpi_build_ae(basis, x0,x1);
   print("");
 };
+
+
+d6 = f64_build(sin(pi*x), [|1,3,5,7,9|], x0, x1);
+d6.approx;
+f64_print_kernel_odd("foo", d6.approx);

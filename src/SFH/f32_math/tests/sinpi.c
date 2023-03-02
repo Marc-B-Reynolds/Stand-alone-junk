@@ -147,6 +147,7 @@ func_entry_t func_table[] =
   ENTRY(f32_sinpi_k6),
   ENTRY(f32_sinpi_k7),
   ENTRY(f32_sinpi_k8),
+  ENTRY(f32_sinpi_d6),
 };
 
 const char* func_name = "sinpi";

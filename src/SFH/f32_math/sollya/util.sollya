@@ -61,6 +61,23 @@ procedure f32_write_list(p,l)
 };
 
 
+procedure f64_write_list(p,l)
+{
+  var e,i,d;
+
+  d = display;
+  
+  display=hexadecimal!;
+  e = length(l)-1;
+  write("const double ", p,"[] = {");
+  fp_write(l[0]);
+  for i from 1 to e do { write(", "); fp_write(l[i]); };
+  print("};");
+  
+  display=d!;
+};
+
+
 // split x into hi and lo terms: x ~= hi+lo
 procedure f32_split(v)
 {
@@ -142,7 +159,7 @@ procedure f32_print_kernel_odd(name, a)
 {
   var d,c,n;
 
-  c = list_of_even_coeff(a);
+  c = list_of_odd_coeff(a);
   n = (degree(a)-1)/2;
 
   d = display;
@@ -157,6 +174,27 @@ procedure f32_print_kernel_odd(name, a)
   display=d!;
 
 };
+
+
+procedure f64_print_kernel_odd(name, a)
+{
+  var d,c,n;
+
+  c = list_of_odd_coeff(a);
+  n = (degree(a)-1)/2;
+
+  d = display;
+  display=decimal!;
+  
+  write("static inline double ", name @ n @ "(double x)\n{\n  static ");
+  f64_write_list("C", revert(c));
+  print("");
+  print("  return x*f64_horner_" @ (length(c)-1) @ "(x*x,C);");
+  print("}\n");
+
+  display=d!;
+};
+
 
 procedure f32_print_kernel_even(name, a)
 {
