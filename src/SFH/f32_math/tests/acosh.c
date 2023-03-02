@@ -334,7 +334,7 @@ float cr_func(float x) { return cr_acoshf(x); }
 
 //********************************************************
 
-void test_simple()
+void test_spot()
 {
 }
 
@@ -345,23 +345,9 @@ void test_all()
   test_force(x0,x1);
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-#if 0
-  //test_lo();
-  //test_hi();
-  test_hi();
-  test_1pot(0.25f);
-  test_1pot(0.125f);
-  //test_1pot(0x1.0p-100f);
-  //test_di();
-#else  
-  test_all();
-#endif  
-
-  error_dump();
-
-  return 0;
+  return test_run(argc, argv);
 }
 
 

@@ -180,22 +180,10 @@ void test_all()
   test_spot();
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
   //scan_constant(); return 0;
-
-  float x = 1.f/32.f, r0 = cr_cospif(x), r1 = f32_cospi_k5(x);
-  printf("%a = %a %a : %e %e %e\n", x,r0,r1,x,r0,r1);
-  
-#if 0
-  test_spot();
-#else  
-  test_all();
-#endif  
-
-  error_dump();
-
-  return 0;
+  return test_run(argc, argv);
 }
 
 

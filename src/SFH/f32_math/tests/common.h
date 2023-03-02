@@ -128,7 +128,7 @@ void test_linear_range(uint32_t x0, uint32_t x1, float k)
   float f1 = f32_from_bits(x1);
   
   printf("<details markdown=\"1\"><summary>");
-  printf("\n<summary>checking: %s on [%08x,%08x] [%e,%e] : {linear result range %a*x}<\\summary>\n", func_name, x0,x1,f0,f1,k);
+  printf("\n<summary>checking: %s on [%08x,%08x] [%e,%e] : {linear result range %a*x}</summary>\n", func_name, x0,x1,f0,f1,k);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -153,7 +153,7 @@ void test_const_range(uint32_t x0, uint32_t x1, float k)
   float f1 = f32_from_bits(x1);
 
   printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {constant result range %a}<\\summary>\n", func_name, x0,x1,f0,f1,k);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {constant result range %a}</summary>\n", func_name, x0,x1,f0,f1,k);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -176,7 +176,7 @@ void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t* k)
   float f1 = f32_from_bits(x1);
   
   printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range}<\\summary>\n", func_name, x0,x1,f0,f1);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {linear result range}</summary>\n", func_name, x0,x1,f0,f1);
   
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -200,7 +200,7 @@ void test_identity_range(uint32_t x0, uint32_t x1)
   float f1 = f32_from_bits(x1);
   
   printf("<details markdown=\"1\"><summary>");
-  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {result = input range}<\\summary>\\n", func_name, x0,x1,f0,f1);
+  printf("\nchecking: %s on [%08x,%08x] [%e,%e] : {result = input range}</summary>\\n", func_name, x0,x1,f0,f1);
 
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     for(uint32_t xi=x0; xi<=x1; xi++) {
@@ -247,5 +247,44 @@ void test_1pot_pn(float x)
 #include <unistd.h>
 #include <time.h>
 #include "timehack.h"
+
+void test_all();
+void test_spot();
+
+int test_run(int argc, char** argv)
+{
+  bool all = true;
+  int  sid = 1;
+  
+  while (argc > sid) {
+    if (argv[sid][0] == '-') {
+      switch(argv[sid][1]) {
+      case 's' : all = false; break;
+      default  :
+	fprintf(stderr, "error: unknown option %c\n", argv[sid][1]);
+	return -1;
+      }
+    }
+    else {
+      // here to add limiting functions tested
+      printf("skipping: %s\n", argv[sid]);
+    }
+
+    sid++;
+  }
+
+  // add range reduction related sanity test here
+  
+  //
+  if (all)
+    test_all();
+  else
+    test_spot();
+  
+  error_dump();
+
+  return 0;
+}
+
 
 #endif

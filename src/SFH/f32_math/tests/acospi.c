@@ -275,6 +275,10 @@ float cr_func(float x) { return cr_acospif(x); }
 //********************************************************
 
 
+void test_spot()
+{
+}
+
 // acospi(x) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
 void test_all()
 {
@@ -315,23 +319,7 @@ void scan_half() {
   printf("f(x) = 1/2 on [%a,%a]\n", f32_from_bits(x0), f32_from_bits(x1));
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-#if 1
-  test_all();
-#else
-#if 1
-  test_1pot_pn(1.f/32.f);
-  test_1pot_pn(1.f/16.f);
-  test_1pot_pn(1.f/ 8.f);
-  test_1pot_pn(1.f/ 4.f);
-#endif  
-  test_1pot_pn(1.f/ 2.f);
-#endif  
-
-  error_dump();
-
-  //timing_test(func_table, LENGTHOF(func_table));
-  
-  return 0;
+  return test_run(argc, argv);
 }

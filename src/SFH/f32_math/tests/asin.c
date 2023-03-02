@@ -364,7 +364,8 @@ void test_simple()
   }
 }
 
-void test_hi()
+// clean up testing 
+void test_spot()
 {
   uint32_t x0 = f32_to_bits(0.5f);
   uint32_t x1 = f32_to_bits(1.0f);
@@ -406,26 +407,12 @@ void odd_sanity()
 }
 
 
-int main(void)
+int main(int argc, char** argv)
 {
   //scan(); return 0;
   odd_sanity();
 
-#if 1
-  //test_lo();
-  //test_hi();
-  test_hi();
-  test_1pot(0.25f);
-  test_1pot(0.125f);
-  //test_1pot(0x1.0p-100f);
-  //test_di();
-#else  
-  test_all();
-#endif  
-
-  error_dump();
-
-  return 0;
+  return test_run(argc, argv);
 }
 
 

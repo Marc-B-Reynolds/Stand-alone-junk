@@ -262,21 +262,7 @@ void test_all()
 }
 
 
-
-
-int main(void)
+int main(int argc, char** argv)
 {
-#if 1
-#if 0
-  test_spot();
-#else  
-  test_all();
-#endif  
-  
-  error_dump();
-#endif  
-  
-  timing_test(func_table, LENGTHOF(func_table));
-  
-  return 0;
+  return test_run(argc, argv);
 }

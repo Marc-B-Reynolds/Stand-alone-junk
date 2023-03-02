@@ -140,7 +140,7 @@ static inline float f32_cospi_k5(float x)
   return f32_horner_4(x*x,C);
 }
 
-// promote to double kernel (is exact of f(0) due to rounding)
+// promote to double kernel (exact at f(0) due to rounding)
 static inline float f32_cospi_d5(float x)
 {
   static const double C[] = {0x1.d9c364eac5b26p-3, -0x1.55c57b06db5e8p0, 0x1.03c1dc1bafc62p2, -0x1.3bd3cc7323531p2, 0x1.ffffffff97c47p-1};

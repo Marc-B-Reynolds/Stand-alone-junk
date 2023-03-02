@@ -533,6 +533,10 @@ void test_lo()
   test_force(x0,x1);
 }
 
+void test_spot()
+{
+}
+
 void test_all()
 {
   uint32_t x0 = f32_to_bits( 0.0f);
@@ -543,35 +547,9 @@ void test_all()
   test_force(x0,x1);  
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-#if 0
-  float x = 0.5f;
-  printf("%f\n", acosf(x));
-  printf("%f\n", foo(x));
-  x = 0.707f;
-  printf("%f\n", acosf(x));
-  printf("%f\n", foo(x));
-  x = 1.f;
-  printf("%f\n", acosf(x));
-  printf("%f\n", foo(x));
-  return 0;
-#endif  
-
-#if 1
-  test_hi();
-  test_hi_neg();
-  test_1pot( .25f);
-  test_1pot(-.25f);
-  test_1pot( 0x1.0p-8f);
-  test_1pot(-0x1.0p-8f);
-#else
-  test_all();
-#endif  
-  
-  error_dump();
-
-  return 0;
+  return test_run(argc, argv);
 }
 
 

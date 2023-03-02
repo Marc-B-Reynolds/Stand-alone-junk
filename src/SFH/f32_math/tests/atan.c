@@ -136,9 +136,16 @@ float cr_func(float x) { return cr_atanf(x); }
 
 //********************************************************
 
-int main(void)
+void test_spot()
 {
-  error_dump();
+}
 
-  return 0;
+void test_all()
+{
+  test_spot();
+}
+
+int main(int argc, char** argv)
+{
+  return test_run(argc, argv);
 }
