@@ -199,6 +199,7 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
+  printf("## Range of the kernel\n\n");
   return test_run(argc, argv);
 }
 

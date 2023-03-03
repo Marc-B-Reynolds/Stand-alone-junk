@@ -211,6 +211,6 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
-   printf("## REPORTED NUMBERS ARE LIMITED TO NORMAL INPUTS\n\n");
+  printf("## REPORTED NUMBERS ARE LIMITED TO NORMAL INPUTS\n\n");
   return test_run(argc, argv);
 }

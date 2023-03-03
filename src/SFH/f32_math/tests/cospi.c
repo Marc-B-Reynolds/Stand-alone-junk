@@ -187,6 +187,8 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
+  printf("## Range of the kernel\n\n");
+
   //scan_constant(); return 0;
   return test_run(argc, argv);
 }
