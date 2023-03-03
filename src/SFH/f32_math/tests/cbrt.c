@@ -183,7 +183,7 @@ void test_all()
 {
   // not supporting denormal range ATM: don't pollute the reporting.
   // should "beef up" the hacky framework
-  test_force(0, f32_to_bits(f32_min_normal)-1);
+  //test_force(0, f32_to_bits(f32_min_normal)-1);
   test_spot();
 }
 
@@ -194,8 +194,6 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
-  printf("%f\n", f32_cbrt_1(-0.f));
-  
-  printf("## REPORTED NUMBERS ARE LIMITED TO NORMAL INPUTS\n\n");
+   printf("## REPORTED NUMBERS ARE LIMITED TO NORMAL INPUTS\n\n");
   return test_run(argc, argv);
 }
