@@ -57,6 +57,20 @@ void error_dump()
   error_dump_i(func_error);
 }
 
+// mostly usless ATM. need to add flags to func
+const f32_pair_t test_vector_odd_data[] ={
+  {.x= 0.f,     .y= 0.f},
+  {.x=-0.f,     .y=-0.f},
+//{.x= f32_inf, .y= f32_inf},
+//{.x=-f32_inf, .y=-f32_inf}
+};
+
+const f32_pair_t test_vector_even_data[] ={
+  {.x= 0.f,     .y= 0.f},
+  {.x=-0.f,     .y= 0.f},
+//{.x= f32_inf, .y= f32_inf},
+//{.x=-f32_inf, .y= f32_inf}
+};
 
 static inline void test_error_add(func_error_t* error, float e, float a)
 {
@@ -250,10 +264,30 @@ void test_sanity_nan()
 }
 
 
+void test_vector(const f32_pair_t* data, uint32_t n)
+{
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    
+    for (uint32_t i=0; i<n; i++) {
+      float x  = data[i].x;
+      float r0 = func_table[fi].f(x);
+      float r1 = data[i].y;
+      
+      if (r0 != r1) {
+	printf("  %s : FAILED VECTOR -> f(%a) = %a expected %a\n",
+	       func_table[fi].name, x,r0,r1);
+	break;
+      }
+    }
+  }
+}
+
 // for functions that expect f(-x) = -f(x) {exactly}
 //   expects {and note about range once reworked}
 void test_sanity_odd()
 {
+  test_vector(test_vector_odd_data, LENGTHOF(test_vector_odd_data));
+
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -269,10 +303,13 @@ void test_sanity_odd()
   }
 }
 
+
 // for functions that expect f(-x) = f(x) {exactly}
 //   expects {and note about range once reworked}
 void test_sanity_even()
 {
+  test_vector(test_vector_even_data, LENGTHOF(test_vector_even_data));
+  
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -298,6 +335,7 @@ void test_sanity();
 
 int test_run(int argc, char** argv)
 {
+  bool lol    = false;
   bool all    = true;
   bool sanity = true;
 
@@ -308,6 +346,8 @@ int test_run(int argc, char** argv)
     if (argv[sid][0] == '-') {
       switch(argv[sid][1]) {
       case 's' : all = false; break;
+      case 't' : lol = true;  break;
+	
       default  :
 	fprintf(stderr, "error: unknown option %c\n", argv[sid][1]);
 	return -1;
@@ -321,10 +361,14 @@ int test_run(int argc, char** argv)
     sid++;
   }
 
+  if (lol) {
+    timing_test(func_table, LENGTHOF(func_table));
+    return 0;
+  }
   // add range reduction & special input related sanity test here
   
   //
-
+  
   printf("<details markdown=\"1\"><summary>click for range breakdown</summary>\n\n");
 
   if (sanity) {

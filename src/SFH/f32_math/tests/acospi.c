@@ -97,6 +97,15 @@ float f32_acospi_r6(float x) { return f32_acospi_sb_xf(&f32_acospi_sb_re6, x); }
 float f32_acospi_d7(float x) { return f32_acospi_d_xf(&f32_acospi_dp_7, x); }
 float f32_acospi_d8(float x) { return f32_acospi_d_xf(&f32_acospi_dp_8, x); }
 
+// expand full range classic reduction methods
+#include "internal/f32_asincospi.h"
+float f32_acospi_c5(float x) { return f32_acospi_x1(&f32_asinpi_k5, x); }
+float f32_acospi_c6(float x) { return f32_acospi_x1(&f32_asinpi_k6, x); }
+
+// meh: not worth the incremental improvement imho
+//float f32_acospi_c7(float x) { return f32_acospi_x1(&f32_asinpi_k7, x); }
+//float f32_acospi_c8(float x) { return f32_acospi_x1(&f32_asinpi_k8, x); }
+
 
 //**********************************************************************
 // SEE: https://core-math.gitlabpages.inria.fr
@@ -200,6 +209,7 @@ float cr_acospif(float x){
 
 //********************************************************
 
+
 #if !defined(WIP_FUNC)
 
 func_entry_t func_table[] =
@@ -227,6 +237,11 @@ func_entry_t func_table[] =
 
   ENTRY(f32_acospi_d7),
   ENTRY(f32_acospi_d8),
+
+  ENTRY(f32_acospi_c5),
+  ENTRY(f32_acospi_c6),
+//ENTRY(f32_acospi_c7),
+//ENTRY(f32_acospi_c8),
 };
 
 #else

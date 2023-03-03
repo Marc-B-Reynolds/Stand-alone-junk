@@ -42,7 +42,8 @@ float libm(float x) { return cbrtf(x); }
 
 //**********************************************************************
 
-// temp hack only
+// temp hack only: works but sucky. need to move to bit manipulation
+#if 0
 static inline float f32_cbrt_fxd(float x, float (*f)(float))
 {
   float a = fabsf(x); 
@@ -60,8 +61,9 @@ static inline float f32_cbrt_fxd(float x, float (*f)(float))
 
   return m*r;
 }
-
-
+#else
+#define f32_cbrt_fxd f32_cbrt_fx
+#endif
 
 
 float f32_cbrt_1(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k1); }
@@ -168,6 +170,7 @@ const float test_start_value = 0x1.0p-126f;   // smallest mag. normal
 // to cover the test range (124) and compute values
 // to the 4th power (another -2 = 122)
 
+// move to common.h
 
 void test_spot()
 {

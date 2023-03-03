@@ -169,7 +169,7 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 //
 //  acospi(x) = sm()
 
-// WIP
+// WIP: but in working state
 static inline float f32_acospi_x1(float (*P)(float), float x)
 {
   float a = fabsf(x);
@@ -178,58 +178,24 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
   if (a <= 0.5f) {
     float t2 = x*x;
     float r  = P(t2);
-    r = fmaf(r,t2, f32_mul_k_pi_i.l);
-    r = fmaf(x,    f32_mul_k_pi_i.h, x*r);
+    r =  fmaf(r,t2, f32_mul_k_pi_i.l);
+    r =  fmaf(x,    f32_mul_k_pi_i.h, x*r);
 
-    return 0.5f-r; // hack. try negate x and add into fma with x*r
+    // merging via FMA with x*r increase error
+    return 0.5f-r;
   }
 
-  // nope: not done
   float  sx = f32_xor(x,a);
   float  tf = 0.5f * (1.f-a);        // exact: Sterbenz lemma
   double t2 = (double)tf;
-  double t  = 2.0 * f64_sqrt(t2);
+  double t  = 2.0*f64_sqrt(t2);
   double r  = (double)P(tf);
-  double c  = 1.0;
+  double c  = (x < 0.f) ? -1.f : 0.f;
   
   r = fma(t2, r, f64_mul_k_pi_i.h);
   r = fma(t,  r, c);
 
-  // dep-chain of sign application could be removed. requires
-  // a bit of thinking and restructuring though.
   return f32_xor((float)r, sx);
 }
-
-// WIP: totally unmodified from sinpi ATM
-static inline float f32_cospi_x2(float (*P)(float), float v)
-{
-  double x = (double)v;
-  double a = fabs(x);
-
-  // |x| <  0.5 : acospi(x) = 1/2 -   asinpi(x)
-  //  x  < -0.5 : acospi(x) =   1 - 2 asinpi( sqrt((1+x)/2 )
-  //  x  >  0.5 : acospi(x) =       2 asinpi( sqrt((1-x)/2 )
-  
-  double r;
-  double   r0 = 0.5f * (1.f-a);       // exact: Sterbenz lemma (when used)
-  double   r1 = -2.0 * f64_sqrt(r0);
-  double   im = 0.5-a;                // select based on: |x| <= 1/2
-  double   sx = f64_xor(x,a);         // sign bit
-
-  double   c  = f64_sign_select(0.5, 0.0, im);
-  double   t  = f64_sign_select(r1,  a,   im);
-  double   t2 = f64_sign_select(r0,  x*x, im);
-
-  t = f64_xor(t, sx);
-  c = f64_xor(c, sx);
-  
-  r  = (double)P((float)t2);
-  r = fma(t2, r, f64_mul_k_pi_i.h);
-  r = fma(t,  r, c);
-
-  return (float)r;
-}
-
-
 
 #endif

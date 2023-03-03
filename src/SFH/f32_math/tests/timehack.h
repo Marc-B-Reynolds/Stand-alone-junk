@@ -149,6 +149,8 @@ void timing_test(func_entry_t* entry, int len)
   seq_stats_t stats;
   double gof = 0.0;
 
+  printf("HOT HACKED GARBAGE! YOU'VE BEEN WARNED\n");
+  
   printf("%15s %10s %10s\n", "function", "ave "  TIME_STR, "std");
   printf("-------------------------------------------------------\n");
   
