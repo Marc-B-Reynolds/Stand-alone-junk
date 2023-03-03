@@ -120,7 +120,7 @@ static inline float f32_cbrt_fx(float x, float (*f)(float))
 // faithfully:  45.591750% (11473540)
 //   2 ulp:      2.141619% (538956)
 //   3 ulp:      0.000060% (15)
-static inline float f32_cbrt_k_1(float x)
+static inline float f32_cbrt_k1(float x)
 {
   float y = f32_cbrt_ki(x);
 
@@ -132,7 +132,7 @@ static inline float f32_cbrt_k_1(float x)
 // correctly:   77.553369% (19516945)
 // faithfully:  22.445829% (5648678)
 //   2 ulp:      0.000803% (202)
-static inline float f32_cbrt_k_2(float x)
+static inline float f32_cbrt_k2(float x)
 {
   float y = f32_cbrt_ki(x);
 
@@ -142,7 +142,7 @@ static inline float f32_cbrt_k_2(float x)
 // ulp   1
 // correctly:   80.880794% (20354319)
 // faithfully:  19.119206% (4811506)
-static inline float f32_cbrt_k_3(float x)
+static inline float f32_cbrt_k3(float x)
 {
   float y = f32_cbrt_ki(x);
 
@@ -151,7 +151,7 @@ static inline float f32_cbrt_k_3(float x)
 
 // correctly:   98.239267% (24722722)
 // faithfully:   1.760733% (443103)
-static inline float f32_cbrt_k_4(float x)
+static inline float f32_cbrt_k4(float x)
 {
   double y = (double)f32_cbrt_ki(x);
   double d = (double)x;
@@ -162,7 +162,7 @@ static inline float f32_cbrt_k_4(float x)
 }
 
 // correctly rounded : but questionable perf vs. fdlibm
-static inline float f32_cbrt_k_5(float x)
+static inline float f32_cbrt_k5(float x)
 {
   double y = (double)f32_cbrt_ki(x);
   double d = (double)x;
