@@ -161,29 +161,46 @@ float cr_func(float x) { return cr_cbrtf(x); }
 
 //********************************************************
 
-//const float test_start_value = 0.25f;            // cover [1/4,2] (both sides of 1)
-
-//const float test_start_value = 0.5f;             // boring, but useful
-const float test_start_value = 0x1.0p-126f;   // smallest mag. normal 
-//const float test_start_value = 0x1.0p+122f;   // big but no overflow
-// max finite exponent is 127, we need to subtract 3
-// to cover the test range (124) and compute values
-// to the 4th power (another -2 = 122)
-
 // move to common.h
 
 void test_spot()
 {
-  const uint32_t xs = f32_to_bits(test_start_value);
-  const uint32_t xe = f32_to_bits(8.f*test_start_value);
+  float    x0;
+  uint32_t xs,xe;
+
+  // cover [1/3,2] : sufficient for all normal input
+  x0 = 0.25;
+  xs = f32_to_bits(x0);
+  xe = f32_to_bits(8.f*x0);
   test_force(xs,xe);
 }
 
 void test_all()
 {
+  float    x0;
+  uint32_t xs,xe;
+
   // not supporting denormal range ATM: don't pollute the reporting.
   // should "beef up" the hacky framework
   //test_force(0, f32_to_bits(f32_min_normal)-1);
+
+  // test_spot is sufficient for everything else. as sanity check
+  // both of the extremes should produce identical results
+  
+  // from smallest normal
+  x0 = 0x1.0p-126f;
+  xs = f32_to_bits(x0);
+  xe = f32_to_bits(8.f*x0);
+  test_force(xs,xe);
+
+  // max finite exponent is 127, we need to subtract 3
+  // to cover the test range (124) and compute values
+  // to the 4th power (another -2 = 122)
+  x0 = 0x1.0p+122f;
+  xs = f32_to_bits(x0);
+  xe = f32_to_bits(8.f*x0);
+  test_force(xs,xe);
+  
   test_spot();
 }
 
