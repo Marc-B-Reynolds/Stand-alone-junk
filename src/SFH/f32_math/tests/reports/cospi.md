@@ -4,11 +4,6 @@
 
 
 running: minimal sanity check
-  libm : FAILED VECTOR -> f(0x0p+0) = 0x1p+0 expected 0x0p+0
-  f32_cospi_k3 : FAILED VECTOR -> f(0x0p+0) = 0x1.fffeb2p-1 expected 0x0p+0
-  f32_cospi_k4 : FAILED VECTOR -> f(0x0p+0) = 0x1p+0 expected 0x0p+0
-  f32_cospi_k5 : FAILED VECTOR -> f(0x0p+0) = 0x1p+0 expected 0x0p+0
-  f32_cospi_d5 : FAILED VECTOR -> f(0x0p+0) = 0x1p+0 expected 0x0p+0
 
 checking: cospi on [00000000,38a2f983] [0.000000e+00,7.771237e-05] : {constant result range 0x1p+0}
 |           func|   max ULP|        CR|        FR|     2 ULP|   > 2 ULP|       CR%|       FR%|    2 ULP%|  > 2 ULP%|         abs|
