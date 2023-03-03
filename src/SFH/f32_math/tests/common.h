@@ -72,6 +72,8 @@ const f32_pair_t test_vector_even_data[] ={
 //{.x=-f32_inf, .y= f32_inf}
 };
 
+
+
 static inline void test_error_add(func_error_t* error, float e, float a)
 {
   float d = fabsf(e-a);
@@ -267,20 +269,47 @@ void test_sanity_nan()
 void test_vector(const f32_pair_t* data, uint32_t n)
 {
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
-    
     for (uint32_t i=0; i<n; i++) {
       float x  = data[i].x;
       float r0 = func_table[fi].f(x);
       float r1 = data[i].y;
       
-      if (r0 != r1) {
-	printf("  %s : FAILED VECTOR -> f(%a) = %a expected %a\n",
-	       func_table[fi].name, x,r0,r1);
-	break;
+      if (!(r0 == r1)) {
+	if ((r0 == r0)||(r1 == r1)) {
+	  printf(" * %10s : f(%a) = %a expected %a (%08x %08x)\n",
+		 func_table[fi].name, x,r0,r1, f32_to_bits(r0), f32_to_bits(r1));
+	}
       }
     }
   }
 }
+
+static inline void test_specials()
+{
+  static const float specials[] =
+  {
+    0.f, -0.f, f32_nan, -f32_nan, f32_inf, -f32_inf
+  };
+
+  for (uint32_t i=0; i<LENGTHOF(specials); i++) {
+    float    x  = specials[i];
+    float    cr = cr_func(x);
+    uint32_t ic = f32_to_bits(cr);
+    
+    for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+      float    r  = func_table[fi].f(x);
+      uint32_t ir = f32_to_bits(r);
+
+      if (ir != ic) {
+	if ((r == r)||(cr == cr)) {
+	    printf(" * %10s : f(%a) = %a expected %a (%08x %08x)\n",
+		   func_table[fi].name, x, r, cr, ir,ic);
+	}
+      }
+    }
+  }
+}
+
 
 // for functions that expect f(-x) = -f(x) {exactly}
 //   expects {and note about range once reworked}
@@ -373,7 +402,8 @@ int test_run(int argc, char** argv)
 
   if (sanity) {
     printf("\nrunning: minimal sanity check\n");
-    test_sanity_nan();
+    //test_sanity_nan();
+    test_specials();
     test_sanity();
   }
   

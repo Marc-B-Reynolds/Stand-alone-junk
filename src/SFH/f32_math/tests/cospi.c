@@ -180,9 +180,17 @@ void test_all()
   test_spot();
 }
 
+const f32_pair_t test_vector_data[] ={
+  // no; zeroes are already tested
+  {.x= 0.f,     .y= 1.0f},
+  {.x=-0.f,     .y= 1.0f},
+};
+
+
 void test_sanity()
 {
-  test_sanity_even();
+  //test_vector(test_vector_data, LENGTHOF(test_vector_data));
+  //test_sanity_even();
 }
 
 int main(int argc, char** argv)

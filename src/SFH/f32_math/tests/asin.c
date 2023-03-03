@@ -140,83 +140,15 @@ float cephes_asinf(float x)
 }
 
 // expand classic constructions
+float asin_x0_k3(float x) { return f32_asin_x0(x, &f32_asincos_k3); }
+float asin_x0_k4(float x) { return f32_asin_x0(x, &f32_asincos_k4); }
+float asin_x0_k5(float x) { return f32_asin_x0(x, &f32_asincos_k5); }
+float asin_x0_k6(float x) { return f32_asin_x0(x, &f32_asincos_k6); }
+
 float asin_x1_k3(float x) { return f32_asin_x1(x, &f32_asincos_k3); }
 float asin_x1_k4(float x) { return f32_asin_x1(x, &f32_asincos_k4); }
 float asin_x1_k5(float x) { return f32_asin_x1(x, &f32_asincos_k5); }
 float asin_x1_k6(float x) { return f32_asin_x1(x, &f32_asincos_k6); }
-
-float asin_x0_k6(float x) { return f32_asin_x0(x, &f32_asincos_k6); }
-
-static inline float f32_asincos_x1(float x2)
-{
-  // abs error - 
-  static const float C[] = {
-     0x1.d0b534p-11f,
-    -0x1.803a5ap-8f,
-     0x1.357982p-6f,
-    -0x1.5c356cp-5f,
-     0x1.606a40p-4f,
-    -0x1.b635e4p-3f,
-     0x1.921be8p0f
-  };
-
-  return f32_horner_6(x2,C);
-}
-
-// seems tough to make this useful
-float f32_asin_t(float x)
-{
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
-  uint32_t sx = ix ^ ax;
-
-  // |x| <= 0.5
-  if (ax <= 0x3f000000) {
-    float x2 = x*x;
-    float r  = x2*f32_asincos_k5(x2);
-    return fmaf(r,x,x);
-  }
-
-  // |x| > 0.5
-  float a = f32_from_bits(ax);
-#if 1
-  // sadface. looking like a fail
-  double t = sqrt((double)(1.f-a));
-  double p = f32_asincos_x1(a);
-  float  r = (float)(M_PI/2.0 - t*p);
-#else  
-#endif  
-  
-  return f32_mulsign(r,sx);
-}
-
-
-
-float asinf_0(float x)
-{
-  uint32_t ix = f32_to_bits(x);
-  uint32_t ax = ix & 0x7fffffff;
-  uint32_t sx = ix ^ ax;
-
-  // |x| < 0.5
-  if (ax <= 0x3f000000) {
-    float x2 = x*x;
-    float r  = x2*f32_asincos_k4(x2);
-    return fmaf(r,x,x);
-  }
-
-  float a  = f32_from_bits(ax);
-  float t2 = 0.5f * (1.f-a);
-  float t  = -2.f*f32_sqrt(t2); 
-  float r  = t2*f32_asincos_k5(t2);
-  
-  r = fmaf(r,t,t);
-  r = f32_add_half_pi(r);
-
-  return f32_mulsign(r,sx);
-}
-
-
 
 
 //**********************************************************************
@@ -319,17 +251,16 @@ func_entry_t func_table[] =
   ENTRY(fdlibm_asinf),
   //ENTRY(cephes_asinf),
   //ENTRY(sleef_asinf),
+  
+  ENTRY(asin_x0_k3),
+  ENTRY(asin_x0_k4),
+  ENTRY(asin_x0_k5),
+  ENTRY(asin_x0_k6),
+
   ENTRY(asin_x1_k3),
   ENTRY(asin_x1_k4),
   ENTRY(asin_x1_k5),
   ENTRY(asin_x1_k6),
-  ENTRY(asin_x0_k6),
-  ENTRY(f32_asin_t),
-  //ENTRY(asinf_x_),
-  //ENTRY(asinf_xd),
-  //ENTRY(asinf_0),
-  //ENTRY(asinf_1),
-  //ENTRY(asinf_2),
 };
 
 const char* func_name = "asin";
