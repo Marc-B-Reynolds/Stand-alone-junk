@@ -32,6 +32,7 @@
 #include <assert.h>
 
 #include "internal/f32_math_common.h"
+#include "internal/f32_cbrt.h"
 #include "util.h"
 
 //**********************************************************************
@@ -41,6 +42,33 @@ float libm(float x) { return cbrtf(x); }
 
 //**********************************************************************
 
+// temp hack only
+static inline float f32_cbrt_fxd(float x, float (*f)(float))
+{
+  float a = fabsf(x); 
+  float m = x < 0 ? -1.f : 1.f;
+  float r;
+
+  if (a != 0) {
+    while (a < f32_min_normal) {
+      a *= 0x1.0p126f;
+      m *= 0x1.0p-42f;
+    }
+  }
+
+  r = f(a);
+
+  return m*r;
+}
+
+
+
+
+float f32_cbrt_1(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k1); }
+float f32_cbrt_2(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k2); }
+float f32_cbrt_3(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k3); }
+float f32_cbrt_4(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k4); }
+float f32_cbrt_5(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k5); }
 
 //**********************************************************************
 // SEE: https://core-math.gitlabpages.inria.fr
@@ -116,6 +144,11 @@ float cr_cbrtf (float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(f32_cbrt_1),
+  ENTRY(f32_cbrt_2),
+  ENTRY(f32_cbrt_3),
+  ENTRY(f32_cbrt_4),
+  ENTRY(f32_cbrt_5),
 };
 
 const char* func_name = "cbrt";
@@ -126,12 +159,28 @@ float cr_func(float x) { return cr_cbrtf(x); }
 
 //********************************************************
 
+//const float test_start_value = 0.25f;            // cover [1/4,2] (both sides of 1)
+
+//const float test_start_value = 0.5f;             // boring, but useful
+const float test_start_value = 0x1.0p-126f;   // smallest mag. normal 
+//const float test_start_value = 0x1.0p+122f;   // big but no overflow
+// max finite exponent is 127, we need to subtract 3
+// to cover the test range (124) and compute values
+// to the 4th power (another -2 = 122)
+
+
 void test_spot()
 {
+  const uint32_t xs = f32_to_bits(test_start_value);
+  const uint32_t xe = f32_to_bits(8.f*test_start_value);
+  test_force(xs,xe);
 }
 
 void test_all()
 {
+  // not supporting denormal range ATM: don't pollute the reporting.
+  // should "beef up" the hacky framework
+  test_force(0, f32_to_bits(f32_min_normal)-1);
   test_spot();
 }
 
@@ -142,5 +191,8 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
+  printf("%f\n", f32_cbrt_1(-0.f));
+  
+  printf("## REPORTED NUMBERS ARE LIMITED TO NORMAL INPUTS\n\n");
   return test_run(argc, argv);
 }
