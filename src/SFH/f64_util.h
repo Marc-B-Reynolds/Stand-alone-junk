@@ -56,6 +56,8 @@
 const double f64_ulp1         = 0x1.0p-52;
 const double f64_min_normal   = 0x1.0p-1022;
 const double f64_min_denormal = 0x1.0p-1074;
+const double f64_nan          = 0.0/0.0;
+const double f64_inf          = 1.0/0.0;
 
 const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
@@ -63,7 +65,11 @@ const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 // NOTES:
 // u = round-off unit (2^-) = ulp(1)/2
 
-typedef struct { double h,l; } f64_pair_t;
+typedef union {
+  struct { double h,l; };
+  struct { double x,y; };
+  double d[2];
+} f64_pair_t;
 
 // extended precision constants section
 // SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)

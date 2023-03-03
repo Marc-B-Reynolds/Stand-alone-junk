@@ -69,7 +69,13 @@
 #define F32_SSE_WRAP_BI(F,A,B) _mm_cvtsi128_si32(F(_mm_set_ss(A),_mm_set_ss(B)))
 
 
-typedef struct { float h,l; } f32_pair_t;
+typedef union {
+  struct {float h,l; };
+  struct {float x,y; };
+  float f[2];
+} f32_pair_t;
+
+
 typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 
 // u = round-off unit = ulp(1)/2
@@ -77,6 +83,8 @@ typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 const float f32_ulp1         = 0x1.0p-23f;
 const float f32_min_normal   = 0x1.0p-126f;
 const float f32_min_denormal = 0x1.0p-149f;
+const float f32_nan          = 0.f/0.f;
+const float f32_inf          = 1.f/0.f;
 
 const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
