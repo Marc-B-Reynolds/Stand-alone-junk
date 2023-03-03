@@ -6,13 +6,17 @@
 #ifndef F32_MATH_COMMON_H
 #define F32_MATH_COMMON_H
 
+#ifndef   F32_HORNER2
 #include "f32_util.h"
 #include "f32_horner.h"
 #include "f32_horner2.h"
+#endif
 
+#ifndef   F64_HORNER2
 #include "f64_util.h"
 #include "f64_horner.h"
 #include "f64_horner2.h"
+#endif
 
 // given a function 'f' defined for postive 'x': extend to it
 // negative numbers as an odd function: f(-x) = -f(x)
