@@ -27,7 +27,7 @@
 //   x = input to function
 //   h = -x/2
 //   r = RN(1/x)
-inline float f32_rsqrt_nr_step(float x, float h, float r)
+static inline float f32_rsqrt_nr_step(float x, float h, float r)
 {
   float s = fmaf(h,r,0.5f);
   float t = fmaf(x,x, -r);
@@ -39,7 +39,7 @@ inline float f32_rsqrt_nr_step(float x, float h, float r)
 //   x = input to function
 //   h = -x/2
 //   r = RN(1/x)
-inline float f32_rsqrt_hm_step(float x, float h, float r)
+static inline float f32_rsqrt_hm_step(float x, float h, float r)
 {
   float s = fmaf(r,h,0.5f);
   float t = fmaf(x,x,-r);

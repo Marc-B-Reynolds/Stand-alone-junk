@@ -232,7 +232,7 @@ void scan_linear() {
     r = (float)f64_up_mul(&f64_mul_k_pi_i, (double)x);
 #endif    
 
-    cr = cr_asinpif(x);
+    cr = cr_func(x);
   } while(r == cr);
 
   ix--;

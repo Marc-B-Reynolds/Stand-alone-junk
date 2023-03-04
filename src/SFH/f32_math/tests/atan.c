@@ -121,11 +121,105 @@ float cr_atanf(float x){
 #pragma GCC diagnostic pop
 
 //********************************************************
+// fdlibm
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunPro, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+float fdlibm_atan(float x)
+{
+  static const float atanhi[] = {
+    4.6364760399e-01f, /* atan(0.5)hi 0x3eed6338 */
+    7.8539812565e-01f, /* atan(1.0)hi 0x3f490fda */
+    9.8279368877e-01f, /* atan(1.5)hi 0x3f7b985e */
+    1.5707962513e+00f, /* atan(inf)hi 0x3fc90fda */
+  };
+  
+  static const float atanlo[] = {
+    5.0121582440e-09f, /* atan(0.5)lo 0x31ac3769 */
+    3.7748947079e-08f, /* atan(1.0)lo 0x33222168 */
+    3.4473217170e-08f, /* atan(1.5)lo 0x33140fb4 */
+    7.5497894159e-08f, /* atan(inf)lo 0x33a22168 */
+  };
+  
+  static const float aT[] = {
+     3.3333328366e-01f,
+    -1.9999158382e-01f,
+     1.4253635705e-01f,
+    -1.0648017377e-01f,
+     6.1687607318e-02f,
+  };
+  
+  float_t w,s1,s2,z;
+  uint32_t ix,sign;
+  int id;
+  
+  //GET_FLOAT_WORD(ix, x);
+  ix = f32_to_bits(x);
+  sign = ix>>31;
+  ix &= 0x7fffffff;
+  if (ix >= 0x4c800000) {  /* if |x| >= 2**26 */
+    if (isnan(x))
+      return x;
+    z = atanhi[3] + 0x1p-120f;
+    return sign ? -z : z;
+  }
+  if (ix < 0x3ee00000) {   /* |x| < 0.4375 */
+    if (ix < 0x39800000) {  /* |x| < 2**-12 */
+      if (ix < 0x00800000)
+	/* raise underflow for subnormal x */
+	//FORCE_EVAL(x*x);
+      return x;
+    }
+    id = -1;
+  } else {
+    x = fabsf(x);
+    if (ix < 0x3f980000) {  /* |x| < 1.1875 */
+      if (ix < 0x3f300000) {  /*  7/16 <= |x| < 11/16 */
+	id = 0;
+	x = (2.0f*x - 1.0f)/(2.0f + x);
+      } else {                /* 11/16 <= |x| < 19/16 */
+	id = 1;
+	x = (x - 1.0f)/(x + 1.0f);
+      }
+    } else {
+      if (ix < 0x401c0000) {  /* |x| < 2.4375 */
+	id = 2;
+	x = (x - 1.5f)/(1.0f + 1.5f*x);
+      } else {                /* 2.4375 <= |x| < 2**26 */
+	id = 3;
+	x = -1.0f/x;
+      }
+    }
+  }
+  /* end of argument reduction */
+  z = x*x;
+  w = z*z;
+  /* break sum from i=0 to 10 aT[i]z**(i+1) into odd and even poly */
+  s1 = z*(aT[0]+w*(aT[2]+w*aT[4]));
+  s2 = w*(aT[1]+w*aT[3]);
+  if (id < 0)
+    return x - x*(s1+s2);
+  z = atanhi[id] - ((x*(s1+s2) - atanlo[id]) - x);
+  return sign ? -z : z;
+}
+
+
+
+//********************************************************
 
 
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(fdlibm_atan),
 };
 
 const char* func_name = "atan";
@@ -136,8 +230,68 @@ float cr_func(float x) { return cr_atanf(x); }
 
 //********************************************************
 
+void test_sample_positive_finite(uint32_t n)
+{
+  printf("\nchecking: %s on LDS sampling of positive finite (n=%08x)\n", func_name, n);
+
+  func_error_t error[LENGTHOF(func_table)] = {{0}};
+
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+
+    // use an additive recurrence to cover the range cheaply
+    static const uint32_t A = 2654435769;
+    uint32_t u = A;
+
+    while (n > 0) {
+      // skip infinites and nans
+      if ((u & 0x7f80000) != 0x7f80000) {
+	uint32_t ix = u;
+	float    x  = f32_from_bits(ix);
+	float    r  = func_table[fi].f(x);
+	float    cr = cr_func(x);
+	test_error_add(error+fi, cr,r);
+	n--;
+
+	if (x !=   x)    { printf("what!\n"); }
+	if (x == 0.5f*x) { printf("huh? %f\n",x); }
+	
+      }
+      u += A;
+    }
+  }
+
+  error_to_totals(error);
+  error_dump_i(error);
+}
+
+// f(x) = x on [-0x1.713744p-12,0x1.713744p-12] [b9b89ba2,39b89ba2]
+void scan_linear() {
+  uint32_t ix = 0;
+  float    x,cr;
+
+  do {
+    x = f32_from_bits(++ix);
+    cr = cr_func(x);
+  } while(x == cr);
+
+  uint32_t hx = ix-1;
+
+  ix = 0x80000000;
+  do {
+    x = f32_from_bits(++ix);
+    cr = cr_func(x);
+  } while(x == cr);
+
+  uint32_t lx = ix-1;
+
+  printf("f(x) = x on [%a,%a] [%08x,%08x]\n",
+	 f32_from_bits(lx), f32_from_bits(hx),lx,hx);
+}
+
 void test_spot()
 {
+  test_1pot(.25f);
+  test_sample_positive_finite(256);
 }
 
 void test_all()
@@ -152,5 +306,7 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
+  printf("%a\n", cr_func(0x1.0p128f));
+  //scan_linear();
   return test_run(argc, argv);
 }

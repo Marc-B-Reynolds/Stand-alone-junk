@@ -125,6 +125,39 @@ float cr_func(float x) { return cr_atanpif(x); }
 
 //********************************************************
 
+// f(x) = 1/2 for x > 0x1.45f308p+24 (4ba2f984)
+void scan_constant()
+{
+  uint32_t ix = f32_to_bits(0x1.0p25f);
+  float r;
+
+  do {
+    float x = f32_from_bits(--ix);
+    r = cr_func(x);
+  } while(r == 0.5f);
+
+  ix++;
+  
+  printf("f(x) = 1/2 for x > %a (%08x)\n", f32_from_bits(ix),ix);
+}
+
+// f(x) = x/pi up to 0x1.4665dp-25 332332e8
+void scan_linear() {
+  uint32_t ix = 0;
+  float    r,cr;
+
+  do {
+    float x = f32_from_bits(++ix);
+    r = (float)f64_up_mul(&f64_mul_k_pi_i, (double)x);
+    cr = cr_func(x);
+  } while(r == cr);
+
+  ix--;
+
+  printf("f(x) = x/pi up to %a %08x\n", f32_from_bits(ix),ix);
+}
+
+
 void test_spot()
 {
 }
@@ -140,5 +173,8 @@ void test_sanity()
 
 int main(int argc, char** argv)
 {
+  //scan_constant();
+  //scan_linear();
+  
   return test_run(argc, argv);
 }
