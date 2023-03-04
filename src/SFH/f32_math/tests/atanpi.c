@@ -164,6 +164,33 @@ void test_spot()
 
 void test_all()
 {
+  uint32_t x0 = 0;
+  uint32_t x1 = 0x332332e8;
+  
+  //test_linear_range_dp_up(x0, x1, &f64_mul_k_pi_i);
+
+  x0 = x1+1; x1=f32_to_bits(1.f/64.f);
+  test_force(x0,x1);
+
+  // break-down the interior a bit
+  test_1pot(1.f/64.f);
+  test_1pot(1.f/32.f);
+  test_1pot(1.f/16.f);
+  test_1pot(1.f/ 8.f);
+  test_1pot(1.f/ 4.f);
+  test_1pot(1.f/ 2.f);
+  test_1pot(1.f);
+  test_1pot(2.f);
+  test_1pot(4.f);
+  test_1pot(8.f);
+  test_1pot(16.f);
+  test_1pot(32.f);
+  test_1pot(64.f);
+
+  x0 = 0x43000000; x1= 0x4ba2f983;
+  test_force(x0,x1);
+  
+  test_const_range(0x4ba2f984, 0x7f7fffff, 0.5f);
 }
 
 void test_sanity()
