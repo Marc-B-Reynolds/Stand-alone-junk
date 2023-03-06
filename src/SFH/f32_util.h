@@ -63,7 +63,7 @@
 #endif
 
 // wrap an intel intrinsic
-#define F32_SSE_WRAP(F,X) _mm_cvtss_f32(F(_mm_set_ss(X)))
+#define F32_SSE_WRA(F,X) _mm_cvtss_f32(F(_mm_set_ss(X)))
 
 #define F32_SSE_WRAP_B(F,A,B)  _mm_cvtss_f32(F(_mm_set_ss(A),_mm_set_ss(B)))
 #define F32_SSE_WRAP_BI(F,A,B) _mm_cvtsi128_si32(F(_mm_set_ss(A),_mm_set_ss(B)))
@@ -80,20 +80,20 @@ typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 
 // u = round-off unit = ulp(1)/2
 // ulp(1.f)
-const float f32_ulp1         = 0x1.0p-23f;
-const float f32_min_normal   = 0x1.0p-126f;
-const float f32_min_denormal = 0x1.0p-149f;
-const float f32_nan          = 0.f/0.f;
-const float f32_inf          = 1.f/0.f;
+static const float f32_ulp1         = 0x1.0p-23f;
+static const float f32_min_normal   = 0x1.0p-126f;
+static const float f32_min_denormal = 0x1.0p-149f;
+static const float f32_nan          = 0.f/0.f;
+static const float f32_inf          = 1.f/0.f;
 
-const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
-const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
-const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
+static const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
+static const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
+static const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
 
 
 
 // rounding unit + lowest bit set
-const float f32_succ_pred_k = 0x1.000002p-24f;
+static const float f32_succ_pred_k = 0x1.000002p-24f;
 
 // extended precision constants section
 // SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)
@@ -102,26 +102,26 @@ const float f32_succ_pred_k = 0x1.000002p-24f;
 // product: Kx = fmaf(H,x,L*x) -> f32_up_mul(K,x)
 // K_i = 1/K  (e.g. pi_i = 1/pi)
 // sollya script: src/Sollya/mulk.sollya
-const f32_pair_t f32_mul_k_pi      = {.h = 0x1.921fb6p1f,  .l=-0x1.777a5cp-24f};
-const f32_pair_t f32_mul_k_pi_i    = {.h = 0x1.45f306p-2f, .l= 0x1.b9391p-27f};
-const f32_pair_t f32_mul_k_log2    = {.h = 0x1.62e43p-1f,  .l=-0x1.05c61p-29f};
-const f32_pair_t f32_mul_k_log2_i  = {.h = 0x1.715476p0f,  .l= 0x1.4ae0cp-26f};
-const f32_pair_t f32_mul_k_log10   = {.h = 0x1.26bb1cp1f,  .l=-0x1.12aabap-25f};
-const f32_pair_t f32_mul_k_log10_i = {.h = 0x1.bcb7b2p-2f, .l=-0x1.5b235ep-27f};
-const f32_pair_t f32_mul_k_e       = {.h = 0x1.5bf0a8p1f,  .l= 0x1.628aeep-24f};
-const f32_pair_t f32_mul_k_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
+static const f32_pair_t f32_mul_k_pi      = {.h = 0x1.921fb6p1f,  .l=-0x1.777a5cp-24f};
+static const f32_pair_t f32_mul_k_pi_i    = {.h = 0x1.45f306p-2f, .l= 0x1.b9391p-27f};
+static const f32_pair_t f32_mul_k_log2    = {.h = 0x1.62e43p-1f,  .l=-0x1.05c61p-29f};
+static const f32_pair_t f32_mul_k_log2_i  = {.h = 0x1.715476p0f,  .l= 0x1.4ae0cp-26f};
+static const f32_pair_t f32_mul_k_log10   = {.h = 0x1.26bb1cp1f,  .l=-0x1.12aabap-25f};
+static const f32_pair_t f32_mul_k_log10_i = {.h = 0x1.bcb7b2p-2f, .l=-0x1.5b235ep-27f};
+static const f32_pair_t f32_mul_k_e       = {.h = 0x1.5bf0a8p1f,  .l= 0x1.628aeep-24f};
+static const f32_pair_t f32_mul_k_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
 
-const f32_pair_t f32_mul_k_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
+static const f32_pair_t f32_mul_k_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
 
 
 // single word precision "helpers"
-const float f32_pi      = 0x1.921fb6p1f;
-const float f32_half_pi = 0.5f*0x1.921fb6p1f;
+static const float f32_pi      = 0x1.921fb6p1f;
+static const float f32_half_pi = 0.5f*0x1.921fb6p1f;
 
 
 // extended precision additive constants as unevaluate pairs:
 // K + x = fma(H,L,x)
-const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
+static const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
 
 
 static inline uint32_t f32_to_bits(float x)
