@@ -146,6 +146,7 @@ float cr_func(float x) { return cr_cospif(x); }
 
 //********************************************************
 
+  // f(x) = 1 up to 0x1.45f306p-14 38a2f983
 void scan_constant() {
   uint32_t ix = 0;
   float    cr;
@@ -170,13 +171,11 @@ void test_spot()
 
 void test_all()
 {
-  // f(x) = 1 up to 0x1.45f306p-14 38a2f983
   static const uint32_t cut = 0x38a2f983;
   test_const_range(0, cut, 1.f);  
   test_force(cut+1, f32_to_bits(1.f/32.f));
   
   // partition the rest into POT intervals
-
   test_spot();
 }
 
