@@ -63,7 +63,7 @@
 #endif
 
 // wrap an intel intrinsic
-#define F32_SSE_WRA(F,X) _mm_cvtss_f32(F(_mm_set_ss(X)))
+#define F32_SSE_WRAP(F,X) _mm_cvtss_f32(F(_mm_set_ss(X)))
 
 #define F32_SSE_WRAP_B(F,A,B)  _mm_cvtss_f32(F(_mm_set_ss(A),_mm_set_ss(B)))
 #define F32_SSE_WRAP_BI(F,A,B) _mm_cvtsi128_si32(F(_mm_set_ss(A),_mm_set_ss(B)))
