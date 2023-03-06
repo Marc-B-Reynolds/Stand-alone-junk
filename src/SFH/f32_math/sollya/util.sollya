@@ -155,6 +155,24 @@ procedure f32_print_kernel_list(name, c)
   display=d!;
 };
 
+
+procedure f64_print_kernel_list(name, c)
+{
+  var d;
+
+  d = display;
+  display=decimal!;
+  
+  write("static inline double ", name @ "(double x)\n{\n  static ");
+  f64_write_list("C", revert(c));
+  print("");
+  print("  return f64_horner_" @ (length(c)-1) @ "(x,C);");
+  print("}\n");
+
+  display=d!;
+};
+
+
 procedure f32_print_kernel_odd(name, a)
 {
   var d,c,n;
