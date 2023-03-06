@@ -221,6 +221,37 @@ void test_identity_range(uint32_t x0, uint32_t x1)
   error_dump_i(error);
 }
 
+// wip: broken. only first being recorded...what?
+void test_sample_positive_finite(uint32_t count)
+{
+  printf("\nchecking: %s via LDS sampling of positive finite (n=%08x)\n", func_name, count);
+
+  func_error_t error[LENGTHOF(func_table)] = {{0}};
+
+  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
+    // use an additive recurrence to cover the range cheaply
+    static const uint32_t A = 2654435769;
+    uint32_t u = A;
+    uint32_t n = count;
+
+    while (n > 0) {
+      // skip infinites and nans
+      if ((u & 0x7f800000) != 0x7f800000) {
+	uint32_t ix = u;
+	float    x  = f32_from_bits(ix);
+	float    r  = func_table[fi].f(x);
+	float    cr = cr_func(x);
+	test_error_add(error+fi, cr,r);
+	n--;
+      }
+      u += A;
+    }
+  }
+  
+  error_to_totals(error);
+  error_dump_i(error);
+}
+
 // test all denormal inputs
 void test_di()
 {
@@ -309,6 +340,8 @@ static inline void test_specials()
     }
   }
 }
+
+
 
 
 // for functions that expect f(-x) = -f(x) {exactly}
