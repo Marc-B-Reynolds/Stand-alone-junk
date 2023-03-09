@@ -282,7 +282,7 @@ static inline uint32_t pop_next_32(uint32_t x)
   uint32_t b = x + a;
   uint32_t c = x ^ b;
   uint32_t d = (2 + ctz_32(x));
-  return b | (c >> d);
+  return b | (uint32_t)((uint64_t)c >> d);
 }
 
 static inline uint64_t pop_next_64(uint64_t x)
@@ -290,12 +290,17 @@ static inline uint64_t pop_next_64(uint64_t x)
   uint64_t a = x & -x;
   uint64_t b = x + a;
   uint64_t c = x ^ b;
-  uint32_t d = (2 + ctz_64(x));
-  return b | (c >> d);
+  uint32_t z = ctz_64(x);
+
+  c >>= 2;
+  c >>= z & 0x3f;
+  
+  return b | c;
 }
 
 // pop_next_{32/64}_inc: pop_next but increments
-// the pop count when moving past largest
+// the pop count when moving past largest (sigh
+// broken because of UB. correct)
 
 static inline uint32_t pop_next_inc_32(uint32_t x)
 {
@@ -304,8 +309,8 @@ static inline uint32_t pop_next_inc_32(uint32_t x)
   uint32_t c = x ^ b;
   uint32_t t = ctz_32(x);
   uint32_t d = (2 + t);
-  uint32_t r = b | (c >> d);
-  uint32_t n = 1 | (x >> (t-1));
+  uint32_t r = b | (uint32_t)((uint64_t)c >> d);
+  uint32_t n = 1 | (x >> (t-1));  // UB
 
   return r > x ? r : n;
 }
@@ -317,8 +322,8 @@ static inline uint64_t pop_next_inc_64(uint64_t x)
   uint64_t c = x ^ b;
   uint32_t t = ctz_64(x);
   uint32_t d = (2 + t);
-  uint64_t r = b | (c >> d);
-  uint64_t n = 1 | (x >> (t-1));
+  uint64_t r = b | (c >> d);     // UB
+  uint64_t n = 1 | (x >> (t-1)); // UB
 
   return r > x ? r : n;
 }
