@@ -94,10 +94,10 @@ static inline float f32_cbrt_fx(float x, float (*f)(float))
 
 // SEE: https://marc-b-reynolds.github.io/math/2019/03/12/FpDiv.html
 // RN(1/3) = RU(1/3)
-const float  f32_cbrt_third    =  0x1.555556p-2f;
-const float  f32_cbrt_third_l  = -0x1.555556p-27f;
-const double f64_cbrt_third    =  0x1.5555555555555p-2;
-const double f64_cbrt_third_l  =  0x1.5555555555555p-56;
+static const float  f32_cbrt_third    =  0x1.555556p-2f;
+static const float  f32_cbrt_third_l  = -0x1.555556p-27f;
+static const double f64_cbrt_third    =  0x1.5555555555555p-2;
+static const double f64_cbrt_third_l  =  0x1.5555555555555p-56;
 
 // 1/cbrt(x) newton step with correctly rounded div by 3
 // y = y_n (estimate in)
