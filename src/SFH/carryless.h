@@ -631,6 +631,26 @@ static inline uint64_t cl_div_64(uint64_t a, uint64_t b)
   return cl_divrem_64(a,b,&t);
 }
 
+
+// summation of {0..n}
+static inline uint32_t cl_sum_32(uint32_t n)
+{
+  uint32_t r = n & (   -(n &  1)); // n contributes if odd: r = (n & 1) ? n : 0;
+  uint32_t d = 1 & (n ^ (n >> 1)); // add the sum of bottom two bits
+
+  return r^d;
+}
+
+static inline uint64_t cl_sum_64(uint64_t n)
+{
+  uint64_t r = n & (   -(n &  1)); // n contributes if odd: r = (n & 1) ? n : 0;
+  uint64_t d = 1 & (n ^ (n >> 1)); // add the sum of bottom two bits
+
+  return r^d;
+}
+
+
+
 //-----------------------------------------------------------
 // bit operation built on carryless ops
 
