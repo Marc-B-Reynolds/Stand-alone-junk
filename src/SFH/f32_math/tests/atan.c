@@ -2,6 +2,8 @@
 //
 // *****EXCEPT:************************
 // 1) reference (cr_atanf) version:
+// 2) sleef  (see below)
+// 3) fdlibm (see below)
 // ************************************
 //
 // The CORE-MATH routine fall under:
@@ -33,6 +35,14 @@
 
 #include "internal/f32_math_common.h"
 #include "util.h"
+
+// core identity for range reduction:
+//   atan(u) +/- atan(v) = atan( (u +/- v)/(1 -/+ uv)  ) 
+//
+// plus version on LHS: atan(u)+atan(v)     = atan( (u+v)/(1-uv)  )
+// divide through by u: atan( (u/u+v/u)/(1/u-uv/u) ) = atan( (1+v/u)/(1/u-v) )
+// limit u->inf:        atan(-(1/v)) = -atan(1/v)
+// so:                  atan(inf)+atan(x) = pi/2 - atan(1/x)
 
 //**********************************************************************
 
@@ -168,7 +178,7 @@ float fdlibm_atan(float x)
   if (ix >= 0x4c800000) {  /* if |x| >= 2**26 */
     if (isnan(x))
       return x;
-    z = atanhi[3] + 0x1p-120f;
+    z = f32_pi*0.5f; // atanhi[3] + 0x1p-120f;  // MBR: hack 2 exact for big and poop poop to inexact flag
     return sign ? -z : z;
   }
   if (ix < 0x3ee00000) {   /* |x| < 0.4375 */
@@ -212,6 +222,417 @@ float fdlibm_atan(float x)
 }
 
 
+//********************************************************
+//   Copyright Naoki Shibata and contributors 2010 - 2021.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+//#define MLA mlaf
+#define MLA fmaf // mbr hack
+#define C2V(x) (x)
+
+#define POLY2(x, c1, c0) MLA(x, C2V(c1), C2V(c0))
+#define POLY3(x, x2, c2, c1, c0) MLA(x2, C2V(c2), MLA(x, C2V(c1), C2V(c0)))
+#define POLY4(x, x2, c3, c2, c1, c0) MLA(x2, MLA(x, C2V(c3), C2V(c2)), MLA(x, C2V(c1), C2V(c0)))
+#define POLY5(x, x2, x4, c4, c3, c2, c1, c0) MLA(x4, C2V(c4), POLY4(x, x2, c3, c2, c1, c0))
+#define POLY6(x, x2, x4, c5, c4, c3, c2, c1, c0) MLA(x4, POLY2(x, c5, c4), POLY4(x, x2, c3, c2, c1, c0))
+#define POLY7(x, x2, x4, c6, c5, c4, c3, c2, c1, c0) MLA(x4, POLY3(x, x2, c6, c5, c4), POLY4(x, x2, c3, c2, c1, c0))
+#define POLY8(x, x2, x4, c7, c6, c5, c4, c3, c2, c1, c0) MLA(x4, POLY4(x, x2, c7, c6, c5, c4), POLY4(x, x2, c3, c2, c1, c0))
+
+// mbr hack
+static inline float signf(float x) { return copysignf(1.f,x); }
+
+float sleef_atan(float s) {
+  float t, u;
+  int q = 0;
+
+  if (signf(s) == -1) { s = -s; q = 2; }
+  if (s > 1) { s = 1.0f / s; q |= 1; }
+
+  t = s * s;
+
+  float t2 = t * t, t4 = t2 * t2;
+  u = POLY8(t, t2, t4,
+	    0.00282363896258175373077393f,
+	    -0.0159569028764963150024414f,
+	    0.0425049886107444763183594f,
+	    -0.0748900920152664184570312f,
+	    0.106347933411598205566406f,
+	    -0.142027363181114196777344f,
+	    0.199926957488059997558594f,
+	    -0.333331018686294555664062f);
+
+  t = s + s * (t * u);
+
+  if ((q & 1) != 0) t = 1.570796326794896557998982f - t;
+  if ((q & 2) != 0) t = -t;
+
+  return t;
+}
+
+//********************************************************
+/*
+  Cephes Math Library Release 2.2:  June, 1992
+  Copyright 1984, 1987, 1988, 1992 by Stephen L. Moshier
+  Direct inquiries to 30 Frost Street, Cambridge, MA 02140
+*/
+// MBR: hacked a bit
+
+float cephes_atan(float xx)
+{
+  float x, y, z;
+  int sign;
+  
+  x = xx;
+  
+  /* make argument positive and save the sign */
+  if (xx < 0.f) {
+    sign = -1;
+    x = -xx;
+  }
+  else {
+    sign = 1;
+    x = xx;
+  }
+
+  /* range reduction */
+  if (x > 2.414213562373095f) { /* tan 3pi/8 */
+    y = f32_pi/2.f;//PIO2F;
+    x = -(1.f/x);
+  }
+  else
+  if (x > 0.4142135623730950f) { /* tan pi/8 */
+    y = f32_pi/4.f;//PIO4F;
+    x = (x-1.f)/(x+1.f);
+  }
+  else
+    y = 0.f;
+  
+  z = x * x;
+  y +=
+    (((8.05374449538e-2f  * z
+     - 1.38776856032E-1f) * z
+     + 1.99777106478E-1f) * z
+     - 3.33329491539E-1f) * z * x
+     + x;
+  
+  if (sign < 0)
+    y = -y;
+  
+  return y;
+}
+
+// kernels on [0,] : error numbers listed are for dev reference (sollya) and not actual
+
+// ~abs error = 8.076679210744672984905982912400153259095662054471e-9
+// ~rel error = 2.0567094722521001030964742420885101260294581004079e-8
+static inline float f32_atan_k3(float x)
+{
+  static const float C[] = {0x1.49e74cp-4f, -0x1.1c380cp-3f, 0x1.9924dap-3f, -0x1.555454p-2f};
+
+  return f32_horner_3(x,C);
+}
+
+// ~abs error = 2.741736165110236716770575626651440565655612147484e-10
+// ~rel error = 6.9846742879580123383384312928692470127659109264337e-10
+static inline float f32_atan_k4(float x)
+{
+  static const float C[] = {-0x1.f2f766p-5f, 0x1.b227bp-4f, -0x1.23b9d6p-3f, 0x1.9991e4p-3f, -0x1.55554ap-2f};
+
+  return f32_horner_4(x,C);
+}
+
+// ~abs error = 7.5262882772964624710774484778354340144362370998285e-12
+// ~rel error = 7.4052469528746873645517541529861785118441042122558e-11
+static inline float f32_atan_k5(float x)
+{
+  static const float C[] = {0x1.768d06p-5f, -0x1.5767cp-4f, 0x1.c39f28p-4f, -0x1.24758ap-3f, 0x1.9998b2p-3f, -0x1.555554p-2f};
+
+  return f32_horner_5(x,C);
+}
+
+// ~abs error = 3.6676695776968535550982088802819023440506848021614e-12
+// ~rel error = 3.65170102085744197025823312809289822929990067319e-11
+static inline float f32_atan_k6(float x)
+{
+  static const float C[] = {-0x1.fb9356p-5f, 0x1.5bf91cp-4f, -0x1.7fc7cep-4f, 0x1.c8b72ep-4f, -0x1.24a068p-3f, 0x1.999a0ep-3f, -0x1.555556p-2f};
+
+  return f32_horner_6(x,C);
+}
+
+float cephes_atan_x(float x)
+{
+  float a  = fabsf(x);
+  float sx = f32_xor(x,a);
+  float ah = 0;
+  float al = 0;
+  float z;
+  //double da=0.0;
+
+  /* range reduction */
+  if (a > 2.414213562373095f) { /* tan 3pi/8 */
+    ah = f32_pi/2.f;
+    al = f32_mul_k_pi.l/2.f;
+    //da = f64_pi/2.0;
+    a  = -(1.f/a);
+  }
+  else if (a > 0.4142135623730950f) { /* tan pi/8 */
+    ah = f32_pi/4.f;
+    al = f32_mul_k_pi.l/4.f;
+    //da = f64_pi/4.0;
+    a  = (a-1.f)/(a+1.f);
+  }
+  
+  z = a*a;
+
+  float r;
+
+#if 0
+  // 2|  13106398|   4637048|     82345|         0| 73.524917| 26.013140|  0.461943|
+  r = 
+    (((8.05374449538e-2f  * z
+       - 1.38776856032E-1f) * z
+      + 1.99777106478E-1f) * z
+     - 3.33329491539E-1f) * z * a
+    + al;
+
+  r += ah + a;
+#else
+#if 1
+  // 3|  11619430|   5268786|    906139|     31436|
+  //r = a*fmaf(z,f32_atan_k6(z),al); r += ah + a;
+
+  // 2|  12410923|   4993598|    421270|
+  //r = z*fmaf(a,f32_atan_k6(z),al); r += ah + a;
+
+  // 2|  13798456|   3967946|     59389|
+  //r = a*z*f32_atan_k6(z)+al; r += ah + a;
+
+  // 2|  13802093|   3964565|     59133|
+  r = fmaf(z,a*f32_atan_k6(z),al); r += ah + a;
+
+  //
+  //double t = fma((double)z,(double)a*(double)f32_atan_k4(z),da)+(double)a; r =(float)t;
+
+
+#else  
+  //r = a*z*f32_atan_k5(z)+al;
+
+  float p = f32_atan_k6(z);
+
+  r  = fmaf(z,p,al);
+  r  = fmaf(a,r,a);
+  r += ah;
+#endif  
+#endif  
+
+
+  
+  return f32_xor(r,sx);
+}
+
+// kernels on [0,] : error numbers listed are for dev reference (sollya) and not actual
+
+// ~abs error = 8.064294902448633802328275450934537763902190604841e-9
+// ~rel error = 2.05355587104842068064381844868281860709965642641417e-8
+static inline double f32_atan_d3(double x)
+{
+  static const double C[] = {0x1.49e1673feaeb1p-4, -0x1.1c370119bfaa1p-3, 0x1.9924bc80dfb1ep-3, -0x1.555453813053p-2};
+
+  return f64_horner_3(x,C);
+}
+
+// ~abs error = 2.6439710754096367399898726267505237083406045059501e-10
+// ~rel error = 6.7328404456209885195014351908340644339366945112152e-10
+static inline double f32_atan_d4(double x)
+{
+  static const double C[] = {-0x1.f1ed8c3145b3p-5, 0x1.b1ec3088526bcp-4, -0x1.23b522de969c6p-3, 0x1.9991961ac575p-3, -0x1.55554928193eep-2};
+
+  return f64_horner_4(x,C);
+}
+
+// ~abs error = 8.932298611790113845054565576528975431746079315093e-12
+// ~rel error = 2.2745911802486380712014925119468805142178116732138e-11
+static inline double f32_atan_d5(double x)
+{
+  static const double C[] = {0x1.84a1eeff076c7p-5, -0x1.5b30200c976b6p-4, 0x1.c463fc0b3460dp-4, -0x1.247eda4dcaa0cp-3, 0x1.999918a05d2dap-3, -0x1.555554c604107p-2};
+
+  return f64_horner_5(x,C);
+}
+
+// s : only the sign bit might be set
+// non-zero normal number : 2x
+// zero                   : 2^-126
+static inline float sgn_mul_2(float x, uint32_t s)
+{
+  return f32_from_bits(f32_to_bits(x) + (s >> 8));
+}
+
+// s : only the sign bit might be set
+// non-zero normal number : x/2
+// zero-                  : -inf
+static inline float sgn_div_2(float x, uint32_t s)
+{
+  return f32_from_bits(f32_to_bits(x) - (s >> 8));
+}
+
+
+float atan_hack_(float x)
+{
+#if 0  
+  float  a  = fabsf(x);
+  float  sx = f32_xor(x,a);
+  double t  = (double)a;
+  double c  = f64_pi;
+  double o  = 0.0;
+  double m  = 0.0;
+  double n;
+  double d;
+
+#if 1
+  o = (a > 0x1.a8279ap-2f) ? 1.0 : 0.0;
+#else
+#endif  
+
+  n = t;
+  d = 1.0;
+  
+  // range reduction
+  if (a > 0x1.3504f4p1f) { /* tan 3pi/8 */
+    m = 0.5;
+    n = -1.0;
+    d = t;
+  }
+  else if (a > 0x1.a8279ap-2f) { /* tan pi/8 */
+    m = 0.25;
+    n = t-o;
+    d = t+o;
+  }
+
+  t  = n/d;  // temp hack
+  c *= m;
+  
+  double t2 = t*t;
+  double p  = f32_atan_d5(t2);
+  double r;
+
+  r = fma(t2,p, 1.f);
+  r = fma(t,r,c);
+
+  return f32_xor((float)r,sx);
+#else
+  static const float r0 = 0x1.a8279ap-2f;
+  //static const float r1 = 0x1.3504f4p+1f;
+  
+  float  a  = fabsf(x);
+  float  sx = f32_xor(x,a);
+  double t  = (double)a;
+  double c  = f64_pi;
+  double o  = 0.0;
+  double m  = 0.0;
+  double n;
+  double d;
+
+  //uint64_t m0 = f32_sign_mask_u64(a-0x1.a8279ap-2f);
+  //uint64_t m1 = f32_sign_mask_u64(a-0x1.3504f4p+1f);
+  //double c = f64_from_bits(f64_to_bits(f64_pi) & m0);
+  
+#if 1
+  o = (a > r0) ? 1.0 : 0.0;
+#else
+#endif  
+
+  n = t;
+  d = 1.0;
+  
+  // range reduction
+  if (a > 0x1.3504f4p1f) { /* tan 3pi/8 */
+    m = 0.5;
+    n = -1.0;
+    d = t;
+  }
+  else if (a > 0x1.a8279ap-2f) { /* tan pi/8 */
+    m = 0.25;
+    n = t-o;
+    d = t+o;
+  }
+
+  t  = n/d;  // temp hack
+  c *= m;
+  
+  double t2 = t*t;
+  double p  = f32_atan_d5(t2);
+  double r;
+
+  r = fma(t2,p, 1.f);
+  r = fma(t,r,c);
+
+  return f32_xor((float)r,sx);
+#endif  
+}
+
+float atan_hack_prev(float x)
+{
+  static const float r0 = 0x1.a8279ap-2f;  // RN( tan( pi/8) )
+  static const float r1 = 0x1.3504f4p+1f;  // RN( tan(3pi/8) )
+  
+  float    a  = fabsf(x);
+  float    sx = f32_xor(x,a);
+  double   t  = (double)a;
+  uint32_t b0 = a > r0;
+  uint32_t b1 = a > r1;
+  uint32_t q  = b0 + b1;
+  double   d  = (q == 0) ?  1.0 : t;
+  double   n  = (q == 2) ? -1.0 : t;
+  double   o  = (q == 1) ?  1.0 : 0.0;
+  double   c  = 0.25*f64_pi * (double)q;
+
+  t  = (n-o)/(d+o);
+  
+  double t2 = t*t;
+  double p  = f32_atan_d5(t2);
+  double r;
+
+  r = fma(t2,p, 1.f);
+  r = fma(t,r,c);
+
+  return f32_xor((float)r,sx);
+}
+
+
+float atan_hack(float x)
+{
+  static const float r0 = 0x1.a8279ap-2f;  // RN( tan( pi/8) )
+  static const float r1 = 0x1.3504f4p+1f;  // RN( tan(3pi/8) )
+  
+  double   t  = (double)x;
+  double   a  = fabs(t);
+  double   sx = f64_xor(t,a);
+   
+  uint32_t b0 = a > r0;
+  uint32_t b1 = a > r1;
+  uint32_t q  = b0 + b1;
+  double   d  = (q == 0) ?  1.0 : a;
+  double   o  = (q == 1) ?  1.0 : 0.0;
+  double   n  = (q == 2) ? -1.0 : a;
+  double   c  = 0.25*f64_pi * (double)q;
+
+  t  = (n-o)/(d+o);
+  
+  double t2 = t*t;
+  double p  = f32_atan_d5(t2);
+  double r;
+
+  r = fma(t2,p, 1.f);
+  r = fma(t,r,c);
+
+  return (float)f64_xor(r,sx);
+}
+
+
+
+
 
 //********************************************************
 
@@ -219,7 +640,11 @@ float fdlibm_atan(float x)
 func_entry_t func_table[] =
 {
   ENTRY(libm),
-  ENTRY(fdlibm_atan),
+  //ENTRY(fdlibm_atan),
+  //ENTRY(cephes_atan),
+  ENTRY(cephes_atan_x),
+  ENTRY(sleef_atan),
+  ENTRY(atan_hack),
 };
 
 const char* func_name = "atan";
@@ -230,39 +655,22 @@ float cr_func(float x) { return cr_atanf(x); }
 
 //********************************************************
 
-void test_sample_positive_finite(uint32_t n)
+// f(x) = pi/2 for x > 0x1.e00a3p+25 (4c700518)
+void scan_constant()
 {
-  printf("\nchecking: %s on LDS sampling of positive finite (n=%08x)\n", func_name, n);
+  uint32_t ix = f32_to_bits(0x1.0p50f);
+  float r;
 
-  func_error_t error[LENGTHOF(func_table)] = {{0}};
+  do {
+    float x = f32_from_bits(--ix);
+    r = cr_func(x);
+  } while(r == 0.5f*f32_pi);
 
-  for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
-
-    // use an additive recurrence to cover the range cheaply
-    static const uint32_t A = 2654435769;
-    uint32_t u = A;
-
-    while (n > 0) {
-      // skip infinites and nans
-      if ((u & 0x7f80000) != 0x7f80000) {
-	uint32_t ix = u;
-	float    x  = f32_from_bits(ix);
-	float    r  = func_table[fi].f(x);
-	float    cr = cr_func(x);
-	test_error_add(error+fi, cr,r);
-	n--;
-
-	if (x !=   x)    { printf("what!\n"); }
-	if (x == 0.5f*x) { printf("huh? %f\n",x); }
-	
-      }
-      u += A;
-    }
-  }
-
-  error_to_totals(error);
-  error_dump_i(error);
+  ix++;
+  
+  printf("f(x) = pi/2 for x > %a (%08x)\n", f32_from_bits(ix),ix);
 }
+
 
 // f(x) = x on [-0x1.713744p-12,0x1.713744p-12] [b9b89ba2,39b89ba2]
 void scan_linear() {
@@ -288,25 +696,59 @@ void scan_linear() {
 	 f32_from_bits(lx), f32_from_bits(hx),lx,hx);
 }
 
+
 void test_spot()
 {
-  test_1pot(.25f);
-  test_sample_positive_finite(256);
+  test_sample_positive_finite(0x000fffff);
 }
 
 void test_all()
 {
-  test_spot();
+  uint32_t x0 = 0;
+  uint32_t x1 = 0x39b89ba2;
+  
+  test_linear_range(x0, x1, 1.f);
+
+  x0 = x1+1; x1=f32_to_bits(1.f/64.f);
+  test_force(x0,x1);
+
+  // break-down the interior a bit. probably overkill WRT breakdown
+  test_1pot(1.f/64.f);
+  test_1pot(1.f/32.f);
+  test_1pot(1.f/16.f);
+  test_1pot(1.f/ 8.f);
+  test_1pot(1.f/ 4.f);
+  test_1pot(1.f/ 2.f);
+  test_1pot(1.f);
+  test_1pot(2.f);
+  test_1pot(4.f);
+  test_1pot(8.f);
+  test_1pot(16.f);
+  test_1pot(32.f);
+  test_1pot(64.f);
+
+  // remaining up until hitting constant output range
+  x0 = 0x43000000; x1= 0x4c700518;
+  test_force(x0,x1-1);
+  
+  test_const_range(x1, 0x7f7fffff, 0.5f*f32_pi);
 }
+
 
 void test_sanity()
 {
-  test_sanity_odd();
+  test_1pot(1.f/ 4.f);
+  test_1pot(1.f/ 2.f);
+  //test_sanity_odd();
 }
 
 int main(int argc, char** argv)
 {
-  printf("%a\n", cr_func(0x1.0p128f));
+  float a = sgn_div_2(1.f, 0x80000000);
+  float b = sgn_div_2(0.f, 0x80000000);
+  printf("%f %f (%a %a)\n", a,b,a,b);
+
+  //scan_constant();
   //scan_linear();
   return test_run(argc, argv);
 }
