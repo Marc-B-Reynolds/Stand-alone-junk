@@ -141,10 +141,16 @@ static inline uint64_t mul_hilo_64(uint64_t a, uint64_t b, uint64_t* hi)
 }
 
 
+typedef struct {uint64_t r; int64_t x,y; } gcd_u64_t;
+typedef struct {uint32_t r; int32_t x,y; } gcd_u32_t;
+
 #if !defined(INTOPS_IMPLEMENTATION)
 
 extern uint32_t gcd_nz_u32(uint32_t u, uint32_t v);
 extern uint64_t gcd_nz_u64(uint64_t u, uint64_t v);
+
+extern gcd_u64_t gcd_extended_u64(uint64_t u, uint64_t v);
+extern gcd_u32_t gcd_extended_u32(uint32_t u, uint32_t v);
 
 #else
 
@@ -179,6 +185,50 @@ uint64_t gcd_nz_u64(uint64_t u, uint64_t v)
   } while (v != 0);
   
   return u<<s;
+}
+
+gcd_u32_t gcd_extended_u32(uint32_t u, uint32_t v)
+{
+  int32_t  x0 = 0, y0 = 1;
+  int32_t  x1 = 1, y1 = 0;
+  uint32_t a1 = u, a2 = v;
+  uint32_t q  = 0;
+  
+  while (a2 != 0) {
+    int32_t  x2 = x0 - (int32_t)q*x1;
+    int32_t  y2 = y0 - (int32_t)q*y1;
+    uint32_t a0 = a1;
+
+    x0=x1; y0=y1;
+    x1=x2; y1=y2; a1=a2;
+    
+    q  = a0/a1;
+    a2 = a0 - q*a1;
+  }
+
+  return (gcd_u32_t){.r=a1, .x=x1, .y=y1};
+}
+
+gcd_u64_t gcd_extended_u64(uint64_t u, uint64_t v)
+{
+  int64_t  x0 = 0, y0 = 1;
+  int64_t  x1 = 1, y1 = 0;
+  uint64_t a1 = u, a2 = v;
+  uint64_t q  = 0;
+  
+  while (a2 != 0) {
+    int64_t  x2 = x0 - (int64_t)q*x1;
+    int64_t  y2 = y0 - (int64_t)q*y1;
+    uint64_t a0 = a1;
+
+    x0=x1; y0=y1;
+    x1=x2; y1=y2; a1=a2;
+    
+    q  = a0/a1;
+    a2 = a0 - q*a1;
+  }
+
+  return (gcd_u64_t){.r=a1, .x=x1, .y=y1};
 }
 
 #endif
