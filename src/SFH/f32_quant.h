@@ -4,6 +4,8 @@
 #ifndef F32_QUANT_H
 #define F32_QUANT_H
 
+// uniform scalar quantization helpers
+
 //**** helper functions:
 
 typedef struct { float h,l; } suq_scale_t;
@@ -75,14 +77,14 @@ static inline float suq_decode_l_cr(uint32_t u, uint32_t n)
 
 //**** encode/decode pairs helpers: (assumes n is power-of-two)
 
-// output point set exludes 0 & 1. point distance = 1/n
+// output point set excludes 0 & 1. point distance = 1/n {floor/center}
 //   x on [0,1)   -> [0,n-1]
 //   u on [0,n-1] -> (0,1)
 static inline uint32_t suq_encode_fc(float x ,   uint32_t n) { return suq_encode_f(x,n); }
 static inline float    suq_decode_fc(uint32_t u, uint32_t n) { return suq_decode_c(u,n); }
 
 
-// output point set includes 0 & 1. point distance = 1/(n-1)
+// output point set includes 0 & 1. point distance = 1/(n-1)  {rounded/left}
 //   x on [0,1]   -> [0,n-1]
 //   u on [0,n-1] -> [0,1]
 static inline uint32_t suq_encode_rl(float x,    uint32_t n) { return suq_encode_r(x,n); }
