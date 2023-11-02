@@ -63,6 +63,19 @@ static const uint32_t bit_set_even_16_32 = (uint32_t)0x0000ffff;
 static const uint64_t bit_set_nibble_1_64 = UINT64_C(0x1111111111111111);
 static const uint32_t bit_set_nibble_1_32 = (uint32_t)0x11111111;
 
+
+// meh. n must be valid or UB
+static inline uint32_t shr_32(uint32_t x, uint32_t n)
+{
+  return (uint32_t)((int32_t)x >> n);
+}
+
+static inline uint64_t shr_64(uint64_t x, uint32_t n)
+{
+  return (uint64_t)((int64_t)x >> n);
+}
+
+
 #if !defined(_MSC_VER)
 
 #if !defined(__x86_64__)
@@ -200,7 +213,11 @@ static inline uint64_t bit_reverse_64(uint64_t x)
 }
 #endif
 
-// number of bit strings (runs of 1's) in input 'x'
+// number of zero-one transitions
+static inline uint32_t bit_sequency_32(uint32_t x) { return pop_32(x^(x >> 1)); }
+static inline uint64_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); }
+
+// number of bit strings (runs of 1's)
 static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
 static inline uint64_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
 
@@ -274,58 +291,25 @@ static inline uint64_t bit_zip_64(uint64_t x)
 
 
 // pop_next_{32/64}: next number greater than 'x' with the
-// same population count.
+// same population count. If input is max then result pins
+// to all ones.
 
 static inline uint32_t pop_next_32(uint32_t x)
 {
-  uint32_t a = x & -x;
-  uint32_t b = x + a;
-  uint32_t c = x ^ b;
-  uint32_t d = (2 + ctz_32(x));
-  return b | (uint32_t)((uint64_t)c >> d);
+  uint32_t t = x + (x & -x);
+  x = x & ~t;
+  x = shr_32(x, ctz_32(x));
+  x = shr_32(x, 1);
+  return t|x;
 }
 
 static inline uint64_t pop_next_64(uint64_t x)
 {
-  uint64_t a = x & -x;
-  uint64_t b = x + a;
-  uint64_t c = x ^ b;
-  uint32_t z = ctz_64(x);
-
-  c >>= 2;
-  c >>= z & 0x3f;
-  
-  return b | c;
-}
-
-// pop_next_{32/64}_inc: pop_next but increments
-// the pop count when moving past largest (sigh
-// broken because of UB. correct)
-
-static inline uint32_t pop_next_inc_32(uint32_t x)
-{
-  uint32_t a = x & -x;
-  uint32_t b = x + a;
-  uint32_t c = x ^ b;
-  uint32_t t = ctz_32(x);
-  uint32_t d = (2 + t);
-  uint32_t r = b | (uint32_t)((uint64_t)c >> d);
-  uint32_t n = 1 | (x >> (t-1));  // UB
-
-  return r > x ? r : n;
-}
-
-static inline uint64_t pop_next_inc_64(uint64_t x)
-{
-  uint64_t a = x & -x;
-  uint64_t b = x + a;
-  uint64_t c = x ^ b;
-  uint32_t t = ctz_64(x);
-  uint32_t d = (2 + t);
-  uint64_t r = b | (c >> d);     // UB
-  uint64_t n = 1 | (x >> (t-1)); // UB
-
-  return r > x ? r : n;
+  uint64_t t = x + (x & -x);
+  x = x & ~t;
+  x = shr_64(x, ctz_64(x));
+  x = shr_64(x, 1);
+  return t|x;
 }
 
 #endif
