@@ -158,7 +158,8 @@ float cr_func(float x) { return cr_sinpif(x); }
 
 //********************************************************
 
-void scan_linear() {
+void scan_linear(void)
+{
   uint32_t ix = 0;
   float    r,cr;
 
@@ -174,14 +175,14 @@ void scan_linear() {
 }
 
 // up to 1/4
-void test_spot()
+void test_spot(void)
 {
   test_1pot(1.f/32.f);
   test_1pot(1.f/16.f);
   test_1pot(1.f/ 8.f);
 }
 
-void test_all()
+void test_all(void)
 {
   // sinpi(x) = RN(pi*x) up to 0x1.f82a6ep-24 0x33fc1537
   static const uint32_t cut = 0x33fc1537;
@@ -192,7 +193,7 @@ void test_all()
   test_spot();
 }
 
-void test_sanity()
+void test_sanity(void)
 {
   test_sanity_odd();
 }
