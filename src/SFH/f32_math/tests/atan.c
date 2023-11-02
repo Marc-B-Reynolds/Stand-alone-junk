@@ -656,7 +656,7 @@ float cr_func(float x) { return cr_atanf(x); }
 //********************************************************
 
 // f(x) = pi/2 for x > 0x1.e00a3p+25 (4c700518)
-void scan_constant()
+void scan_constant(void)
 {
   uint32_t ix = f32_to_bits(0x1.0p50f);
   float r;
@@ -673,7 +673,8 @@ void scan_constant()
 
 
 // f(x) = x on [-0x1.713744p-12,0x1.713744p-12] [b9b89ba2,39b89ba2]
-void scan_linear() {
+void scan_linear(void)
+{
   uint32_t ix = 0;
   float    x,cr;
 
@@ -697,12 +698,12 @@ void scan_linear() {
 }
 
 
-void test_spot()
+void test_spot(void)
 {
   test_sample_positive_finite(0x000fffff);
 }
 
-void test_all()
+void test_all(void)
 {
   uint32_t x0 = 0;
   uint32_t x1 = 0x39b89ba2;
@@ -735,7 +736,7 @@ void test_all()
 }
 
 
-void test_sanity()
+void test_sanity(void)
 {
   test_1pot(1.f/ 4.f);
   test_1pot(1.f/ 2.f);

@@ -334,15 +334,15 @@ float cr_func(float x) { return cr_acoshf(x); }
 
 //********************************************************
 
-void test_spot()
+void test_spot(void)
 {
 }
 
-void test_all()
+void test_all(void)
 {
 }
 
-void test_sanity()
+void test_sanity(void)
 {
 }
 

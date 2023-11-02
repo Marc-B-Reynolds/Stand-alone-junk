@@ -51,7 +51,7 @@ void error_dump_i(func_error_t* e)
   }
 }
 
-void error_dump()
+void error_dump(void)
 {
   printf("\nTOTAL: %s\n", func_name);
   error_dump_i(func_error);
@@ -253,7 +253,7 @@ void test_sample_positive_finite(uint32_t count)
 }
 
 // test all denormal inputs
-void test_di()
+void test_di(void)
 {
   uint32_t x0 = f32_to_bits(0x1.0p-149f);
   uint32_t x1 = f32_to_bits(0x1.0p-126f)-1;
@@ -281,7 +281,7 @@ void test_1pot_pn(float x)
 }
 
 
-void test_sanity_nan()
+void test_sanity_nan(void)
 {
   float x = 0.f/0.f;
   
@@ -315,7 +315,7 @@ void test_vector(const f32_pair_t* data, uint32_t n)
   }
 }
 
-static inline void test_specials()
+static inline void test_specials(void)
 {
   static const float specials[] =
   {
@@ -346,7 +346,7 @@ static inline void test_specials()
 
 // for functions that expect f(-x) = -f(x) {exactly}
 //   expects {and note about range once reworked}
-void test_sanity_odd()
+void test_sanity_odd(void)
 {
   test_vector(test_vector_odd_data, LENGTHOF(test_vector_odd_data));
 
@@ -368,7 +368,7 @@ void test_sanity_odd()
 
 // for functions that expect f(-x) = f(x) {exactly}
 //   expects {and note about range once reworked}
-void test_sanity_even()
+void test_sanity_even(void)
 {
   test_vector(test_vector_even_data, LENGTHOF(test_vector_even_data));
   
@@ -391,9 +391,9 @@ void test_sanity_even()
 #include <time.h>
 #include "timehack.h"
 
-void test_all();
-void test_spot();
-void test_sanity();
+void test_all(void);
+void test_spot(void);
+void test_sanity(void);
 
 int test_run(int argc, char** argv)
 {
@@ -436,7 +436,9 @@ int test_run(int argc, char** argv)
   if (sanity) {
     printf("\nrunning: minimal sanity check\n");
     //test_sanity_nan();
+#if !defined(NO_TEST_SPECIALS)    
     test_specials();
+#endif    
     test_sanity();
   }
   

@@ -218,7 +218,8 @@ float cr_func(float x) { return cr_asinpif(x); }
 //********************************************************
 
 // f(x) = x/pi up to 0x1.e768f4p-24 33f3b47a
-void scan_linear() {
+void scan_linear(void)
+{
   uint32_t ix = 0;
   float    r,cr;
 
@@ -240,7 +241,7 @@ void scan_linear() {
   printf("f(x) = x/pi up to %a %08x\n", f32_from_bits(ix),ix);
 }
 
-void test_spot()
+void test_spot(void)
 {
   test_1pot(1.f/32.f);
   test_1pot(1.f/16.f);
@@ -249,7 +250,7 @@ void test_spot()
   test_1pot(1.f/ 2.f);
 }
 
-void test_all()
+void test_all(void)
 {
   // asinpi(x) = RN(x/pi) on range: [-0x1.e768f4p-24, 0x1.e768f4p-24]
   static const uint32_t cut = 0x33f3b47a;
@@ -261,7 +262,7 @@ void test_all()
   test_spot();
 }
 
-void test_sanity()
+void test_sanity(void)
 {
   test_sanity_odd();
 }

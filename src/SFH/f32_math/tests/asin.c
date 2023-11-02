@@ -272,7 +272,7 @@ float cr_func(float x) { return cr_asinf(x); }
 //********************************************************
 
 // asinf(x) = x on |x| < 0x1.d12edp-12
-void test_simple()
+void test_simple(void)
 {
   uint32_t xe = f32_to_bits(0x1.d12edp-12f);
   
@@ -296,21 +296,21 @@ void test_simple()
 }
 
 // clean up testing 
-void test_spot()
+void test_spot(void)
 {
   uint32_t x0 = f32_to_bits(0.5f);
   uint32_t x1 = f32_to_bits(1.0f);
   test_force(x0,x1);
 }
 
-void test_all()
+void test_all(void)
 {
   uint32_t x0 = f32_to_bits(0.0f);
   uint32_t x1 = f32_to_bits(1.0f);
   test_force(x0,x1);
 }
 
-void test_sanity()
+void test_sanity(void)
 {
   test_sanity_odd();
 }

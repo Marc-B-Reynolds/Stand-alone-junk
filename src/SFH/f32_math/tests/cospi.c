@@ -147,7 +147,8 @@ float cr_func(float x) { return cr_cospif(x); }
 //********************************************************
 
   // f(x) = 1 up to 0x1.45f306p-14 38a2f983
-void scan_constant() {
+void scan_constant(void)
+{
   uint32_t ix = 0;
   float    cr;
 
@@ -162,14 +163,14 @@ void scan_constant() {
 }
 
 // up to 1/4
-void test_spot()
+void test_spot(void)
 {
   test_1pot(1.f/32.f);
   test_1pot(1.f/16.f);
   test_1pot(1.f/ 8.f);
 }
 
-void test_all()
+void test_all(void)
 {
   static const uint32_t cut = 0x38a2f983;
   test_const_range(0, cut, 1.f);  
@@ -186,7 +187,7 @@ const f32_pair_t test_vector_data[] ={
 };
 
 
-void test_sanity()
+void test_sanity(void)
 {
   //test_vector(test_vector_data, LENGTHOF(test_vector_data));
   //test_sanity_even();

@@ -523,7 +523,7 @@ float cr_func(float x) { return cr_acosf(x); }
 
 // validating range that f(x) = pi/2
 //  f(x) = pi/2 on [0x1.110b46p-26,-0x1.bbbd2ep-24]
-void scan_constant()
+void scan_constant(void)
 {
   uint32_t ix = f32_to_bits(0x1.p-28f);
   float    r;
@@ -546,7 +546,7 @@ void scan_constant()
   printf("f(x) = pi/2 on [%a,%a]\n", f32_from_bits(x0), f32_from_bits(x1));
 }
 
-void test_spot()
+void test_spot(void)
 {
   test_1pot_pn(1.f/32.f);
   test_1pot_pn(1.f/16.f);
@@ -555,7 +555,7 @@ void test_spot()
   test_1pot_pn(1.f/ 2.f);
 }
 
-void test_all()
+void test_all(void)
 {
   const uint32_t xa = f32_to_bits( 0x1.110b46p-26f);
   const uint32_t xb = f32_to_bits(-0x1.bbbd2ep-24f);
@@ -572,7 +572,7 @@ void test_all()
   test_spot();
 }
 
-void test_sanity()
+void test_sanity(void)
 {
 }
 

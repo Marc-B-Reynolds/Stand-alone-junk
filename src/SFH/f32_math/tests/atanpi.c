@@ -126,7 +126,7 @@ float cr_func(float x) { return cr_atanpif(x); }
 //********************************************************
 
 // f(x) = 1/2 for x > 0x1.45f308p+24 (4ba2f984)
-void scan_constant()
+void scan_constant(void)
 {
   uint32_t ix = f32_to_bits(0x1.0p25f);
   float r;
@@ -142,7 +142,7 @@ void scan_constant()
 }
 
 // f(x) = x/pi up to 0x1.4665dp-25 332332e8
-void scan_linear() {
+void scan_linear(void) {
   uint32_t ix = 0;
   float    r,cr;
 
@@ -158,11 +158,11 @@ void scan_linear() {
 }
 
 
-void test_spot()
+void test_spot(void)
 {
 }
 
-void test_all()
+void test_all(void)
 {
   uint32_t x0 = 0;
   uint32_t x1 = 0x332332e8;
@@ -194,7 +194,7 @@ void test_all()
   test_const_range(0x4ba2f984, 0x7f7fffff, 0.5f);
 }
 
-void test_sanity()
+void test_sanity(void)
 {
   test_sanity_odd();
 }

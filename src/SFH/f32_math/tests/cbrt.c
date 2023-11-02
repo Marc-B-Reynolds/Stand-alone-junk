@@ -72,6 +72,10 @@ float f32_cbrt_3(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k3); }
 float f32_cbrt_4(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k4); }
 float f32_cbrt_5(float x) { return f32_cbrt_fxd(x, &f32_cbrt_k5); }
 
+float f32_cbrt_6(float x) { return f32_cbrt_fxd(x, &f32_cbrt_d1); }
+float f32_cbrt_7(float x) { return f32_cbrt_fxd(x, &f32_cbrt_d2); }
+
+
 //**********************************************************************
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
@@ -146,11 +150,15 @@ float cr_cbrtf (float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+#if 1
   ENTRY(f32_cbrt_1),
   ENTRY(f32_cbrt_2),
   ENTRY(f32_cbrt_3),
   ENTRY(f32_cbrt_4),
   ENTRY(f32_cbrt_5),
+#endif  
+  ENTRY(f32_cbrt_6),
+  ENTRY(f32_cbrt_7),
 };
 
 const char* func_name = "cbrt";
@@ -163,19 +171,20 @@ float cr_func(float x) { return cr_cbrtf(x); }
 
 // move to common.h
 
-void test_spot()
+void test_spot(void)
 {
   float    x0;
   uint32_t xs,xe;
 
-  // cover [1/3,2] : sufficient for all normal input
+  // cover [1/4,2] : sufficient for all normal input
+  // {except for checking for spurious over & underflows}
   x0 = 0.25;
   xs = f32_to_bits(x0);
   xe = f32_to_bits(8.f*x0);
   test_force(xs,xe);
 }
 
-void test_all()
+void test_all(void)
 {
   float    x0;
   uint32_t xs,xe;
@@ -204,7 +213,7 @@ void test_all()
   test_spot();
 }
 
-void test_sanity()
+void test_sanity(void)
 {
   test_sanity_odd();
 }

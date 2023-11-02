@@ -264,7 +264,8 @@ float cr_func(float x) { return cr_acospif(x); }
 
 
 // validating range that f(x)=1/2
-void scan_half() {
+void scan_half(void)
+{
   uint32_t ix = f32_to_bits(0x1.921fp-25f);
   float    r;
 
@@ -286,7 +287,7 @@ void scan_half() {
   printf("f(x) = 1/2 on [%a,%a]\n", f32_from_bits(x0), f32_from_bits(x1));
 }
 
-void test_spot()
+void test_spot(void)
 {
   test_1pot_pn(1.f/32.f);
   test_1pot_pn(1.f/16.f);
@@ -296,7 +297,7 @@ void test_spot()
 }
 
 // acospi(x) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
-void test_all()
+void test_all(void)
 {
   static const uint32_t xa = 0x33490fda;  // f32_to_bits( 0x1.921fb4p-25f);
   static const uint32_t xb = 0xb3c90fda;  // f32_to_bits(-0x1.921fb4p-24f);
@@ -313,7 +314,7 @@ void test_all()
   test_spot();
 }
 
-void test_sanity()
+void test_sanity(void)
 {
 }
 
