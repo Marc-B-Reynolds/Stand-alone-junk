@@ -64,15 +64,14 @@ static const uint64_t bit_set_nibble_1_64 = UINT64_C(0x1111111111111111);
 static const uint32_t bit_set_nibble_1_32 = (uint32_t)0x11111111;
 
 
-// meh. n must be valid or UB
 static inline uint32_t shr_32(uint32_t x, uint32_t n)
 {
-  return (uint32_t)((int32_t)x >> n);
+  return (uint32_t)((int32_t)x >> (n & 0x1f));
 }
 
 static inline uint64_t shr_64(uint64_t x, uint32_t n)
 {
-  return (uint64_t)((int64_t)x >> n);
+  return (uint64_t)((int64_t)x >> (n & 0x3f));
 }
 
 
