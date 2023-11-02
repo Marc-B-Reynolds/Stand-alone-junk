@@ -82,6 +82,7 @@ typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
 // ulp(1.f)
 static const float f32_ulp1         = 0x1.0p-23f;
 static const float f32_min_normal   = 0x1.0p-126f;
+static const float f32_max_normal   = 0x1.fffffep+127f;
 static const float f32_min_denormal = 0x1.0p-149f;
 static const float f32_nan          = 0.f/0.f;
 static const float f32_inf          = 1.f/0.f;
@@ -218,6 +219,12 @@ static inline float f32_sqrt(float a)
 // correctly:   86.991060% (14594678)
 // faithfully:  13.008940% (2182538)
 static inline float f32_rsqrt(float a) { return f32_sqrt(1.f/a); }
+
+// promote/demote double is correctly rounded (full domain)
+static inline float f32_rsqrt_cr(float x)
+{
+  return (float)sqrt(1.0/(double)x);
+}
 
 // min/max : returns non-NaN result if one is NaN
 static inline float f32_min(float a, float b)  { return fminf(a,b); }
