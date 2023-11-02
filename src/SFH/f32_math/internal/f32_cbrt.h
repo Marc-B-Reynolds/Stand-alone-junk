@@ -1,3 +1,5 @@
+// Public Domain under http://unlicense.org, see link for details.
+// Marc B. Reynolds, 2022-2023
 
 #ifndef F32_CBRT_H
 #define F32_CBRT_H
@@ -7,7 +9,7 @@
 // in place in test/cbrt.c. total garbage performace
 // though)
 
-// core approximations based on:
+//********************************************************
 // "Fast Calculation of Cube and Inverse Cube Roots Using
 // a Magic Constant and Its Implementation on Microcontrollers"
 // Moroz, Samotyy, Walczyk, Cieslinski, 2021
@@ -15,7 +17,6 @@
 //
 // NOTE: algorithm 6 in print is missing a term
 
-//********************************************************
 // paper's inital "guess" method
 
 // common computation for x^(1/3) and x^(-1/3)
@@ -32,9 +33,9 @@ static inline float f32_cbrt_ki(float x)
 {
   // authors optimized Halley's method first step
   // given their "magic" constant (in 1)
-  const float c0 =  0x1.c09806p0f;
-  const float c1 = -0x1.403e6cp0f;
-  const float c2 =  0x1.04cdb2p-1f;
+  static const float c0 =  0x1.c09806p0f;
+  static const float c1 = -0x1.403e6cp0f;
+  static const float c2 =  0x1.04cdb2p-1f;
 
   uint32_t xi = f32_to_bits(x);
   
@@ -55,9 +56,9 @@ static inline float f32_cbrt_ki(float x)
 // for some combos this is a slight win.
 static inline float f32_cbrt_ki_m(float x)
 {
-  const float c0 =  0x1.c09806p0f;
-  const float c1 = -0x1.403e6cp0f;
-  const float c2 =  0x1.04cdb2p-1f;
+  static const float c0 =  0x1.c09806p0f;
+  static const float c1 = -0x1.403e6cp0f;
+  static const float c2 =  0x1.04cdb2p-1f;
 
   uint32_t xi = f32_to_bits(x);
 
@@ -70,6 +71,58 @@ static inline float f32_cbrt_ki_m(float x)
 
   return y;
 }
+
+//********************************************************
+
+// "Generalising the Fast Reciprocal Square Root Algorithm", Mike Day, 2023
+// (PDF: https://arxiv.org/abs/2307.15600)
+
+// listing 9
+static inline float FRCR_Deg1(float x)
+{
+  static const float c0 =  1.8696972f;
+  static const float c1 = -1.2857759f;
+  
+  uint32_t xi = f32_to_bits(x);
+  uint32_t Y  = 0x54638AFE - xi/3;
+  float    y  = f32_from_bits(Y);
+
+  return y * fmaf(x*y, c1*(y*y),   c0);      //  37|   1796014|   3024359|   1649561|  18695891
+  return y * fmaf(x*c1, y*(y*y),   c0);      //  37|   1796284|   3023066|   1650161|  18696314
+  return y * fmaf(x, (c1*y)*(y*y), c0);      //  37|   1796498|   3023261|   1649724|  18696342
+  return y * fmaf(c1, (x*y)*(y*y), c0);      //  37|   1796751|   3023133|   1650162|  18695779
+  return y * (c0 + (x*y)*(y*y)*c1);          //  37|   1796874|   3023724|   1649076|  18696151
+}
+
+// listing 10
+// (1) breaks dep-chain & minor improvment
+static inline float FRCR_Deg2(float x)
+{
+  static const float c0 =  1.3739948f;   //  0x1.5fbe2p0
+  static const float c1 = -0.47285829f;  // -0x1.e434f6p-2
+  static const float c2 =  0.092823250f; //  0x1.7c343cp-4
+  
+  uint32_t xi = f32_to_bits(x);
+  uint32_t Y  = 0x54B8E38E - xi/3;
+  float    y  = f32_from_bits(Y);
+  float    z  = (x*y)*(y*y);            // (1)
+
+  // changed to explict FMA formulation
+  return y * fmaf(z,fmaf(z,c2,c1),c0);
+}
+
+#if 0
+// listing 11: computes x^(-2/3)
+static inline float FRCR2_Deg1(float x)
+{
+  uint32_t xi = f32_to_bits(x);
+  uint32_t Y  = 0x69BC56FC - 2*xi/3;
+  float    y  = f32_from_bits(Y);
+  float    w  = 0.8152238f * y;
+  float    v  = x * w;
+  return w * (1.7563311f - v*v*w);
+}
+#endif
 
 
 //********************************************************
@@ -284,6 +337,30 @@ static inline float f32_cbrt_k1(float x)
   return f32_cbrt_newton_fast(x,y);
 }
 
+#if 0
+// For fail reference:
+//   cbrt(x) = x * f(x*x)  { where f is ~1/cbrt }
+// this style of computation narrows usable domain (minor issue)
+// and only performs slightly better that 'f32_cbrt_k1' on
+// average error and same for error bound so the two
+// extra products don't seem to justify themselves.
+// compare to:
+//   'f32_cbrt_k2' which uses +1 product & +1 sqrt
+//   'f32_cbrt_k4' which uses double promote/demote
+// ulp   3
+// correctly:   62.181562
+// faithfully:  37.071056
+//   2 ulp:      0.747307 
+//   3 ulp:      0.000075 
+static inline float f32_cbrt_nope(float x)
+{
+  float s = x*x;
+  float y = f32_cbrt_ki(s);
+
+  return x * f32_rcbrt_newton_fast_m(s,y);
+}
+#endif
+
 // sqrt(x*x^(-1/3)) = sqrt(x^(2/3)) = x^(1/3)
 // ulp   2
 // correctly:   77.553369% (19516945)
@@ -330,4 +407,22 @@ static inline float f32_cbrt_k5(float x)
   return (float)y;
 }
 
+
+static inline float f32_cbrt_d1(float x)
+{
+  float y = FRCR_Deg1(x);
+
+  return f32_cbrt_newton_fast(x,y);
+}
+
+static inline float f32_cbrt_d2(float x)
+{
+  float y = FRCR_Deg2(x);
+
+  return f32_cbrt_newton_fast(x,y);
+}
+
+
+
 #endif
+
