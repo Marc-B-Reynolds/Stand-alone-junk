@@ -95,7 +95,7 @@ static inline void quat_to_swing_twist_z_hq(swing_twist_t* d, quat_t* q)
   float x=q->x, y=q->y, z=q->z, w=q->w;
 
   // probably not: no loss of signif. explict contraction though
-  float t=f32_sqrt(f32_mma(w,w,z,z));   
+  float t=f32_sqrt(f32_mma(w,w,z,z));   // mma here is useless
   
   if (t > THRESHOLD) {
     float s = 1.f/t;
