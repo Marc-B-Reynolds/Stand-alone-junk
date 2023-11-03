@@ -311,4 +311,15 @@ static inline uint64_t pop_next_64(uint64_t x)
   return t|x;
 }
 
+static inline uint32_t pop_prev_32(uint32_t x)
+{
+  return ~pop_next_32(~x);
+}
+
+static inline uint64_t pop_prev_64(uint64_t x)
+{
+  return ~pop_next_64(~x);
+}
+
+
 #endif
