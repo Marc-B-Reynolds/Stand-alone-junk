@@ -64,6 +64,7 @@ static const uint64_t bit_set_nibble_1_64 = UINT64_C(0x1111111111111111);
 static const uint32_t bit_set_nibble_1_32 = (uint32_t)0x11111111;
 
 
+// signed shift for unsigned input (& without UB)
 static inline uint32_t shr_32(uint32_t x, uint32_t n)
 {
   return (uint32_t)((int32_t)x >> (n & 0x1f));
@@ -73,6 +74,7 @@ static inline uint64_t shr_64(uint64_t x, uint32_t n)
 {
   return (uint64_t)((int64_t)x >> (n & 0x3f));
 }
+
 
 
 #if !defined(_MSC_VER)
@@ -212,6 +214,21 @@ static inline uint64_t bit_reverse_64(uint64_t x)
 }
 #endif
 
+
+// single set bit in the position of lowest set in 'x'
+uint32_t bit_lowest_set_32(uint32_t x)   { return x & (-x); }
+uint64_t bit_lowest_set_64(uint64_t x)   { return x & (-x); }
+
+// single set bit in the position of lowest clear in 'x'
+uint32_t bit_lowest_clear_32(uint32_t x) { return ~x & (x+1); }
+uint64_t bit_lowest_clear_64(uint64_t x) { return ~x & (x+1); }
+
+// single set bit in the position of the first that differs
+// from the lowest bit
+uint32_t bit_lowest_changed_32(uint32_t x) { -x & (x+1); }
+uint64_t bit_lowest_changed_64(uint32_t x) { -x & (x+1); }
+
+
 // number of zero-one transitions
 static inline uint32_t bit_sequency_32(uint32_t x) { return pop_32(x^(x >> 1)); }
 static inline uint64_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); }
@@ -303,7 +320,6 @@ static inline uint64_t bit_zip_64(uint64_t x)
 // pop_next_{32/64}: next number greater than 'x' with the
 // same population count. If input is max then result pins
 // to all ones.
-
 static inline uint32_t pop_next_32(uint32_t x)
 {
   uint32_t t = x + (x & -x);
@@ -322,6 +338,9 @@ static inline uint64_t pop_next_64(uint64_t x)
   return t|x;
 }
 
+// pop_prev_{32/64}: number less than 'x' with the
+// same population count. If input is min then result
+// pins to zero.
 static inline uint32_t pop_prev_32(uint32_t x)
 {
   return ~pop_next_32(~x);
