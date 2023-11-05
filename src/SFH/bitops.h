@@ -242,6 +242,17 @@ static inline uint64_t bit_str_lo_64(uint64_t x)
 // temp hack
 #if defined(BITOPS_HAS_SCATTER_GATHER)
 
+// returns integer with the popcount of 'x' low bits set
+static inline uint32_t pop_to_mask_32(uint32_t x)
+{
+  return bit_gather_32(UINT32_C(-1), x);
+}
+
+static inline uint64_t pop_to_mask_64(uint64_t x)
+{
+  return bit_gather_64(UINT64_C(-1), x);
+}
+
 // clears the 'n^th' set bit in x
 static inline uint32_t bit_clear_nth_set_32(uint32_t x, uint32_t n)
 {
