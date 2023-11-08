@@ -83,11 +83,14 @@ static inline uint64_t shr_64(uint64_t x, uint32_t n)
 // UB if input is zero (even with hw support) problem case is when
 // 'x' ends up being constant and zero. seems to only be an issue with
 // intel and clang (but only for intel targets? ARM doesn't) YMMV
-static inline uint32_t clz_32(uint32_t x) { return (uint32_t)__builtin_clz(x);  }
-static inline uint32_t clz_64(uint64_t x) { return (uint32_t)__builtin_clzl(x); }
-static inline uint32_t ctz_32(uint32_t x) { return (uint32_t)__builtin_ctz(x);  }
-static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)__builtin_ctzl(x); }
+// But anyway intel/ARM builds know how to convert these to a
+// single op (YMMV).
+static inline uint32_t clz_32(uint32_t x) { return (x!=0) ? (uint32_t)__builtin_clz(x)  : 32; }
+static inline uint32_t clz_64(uint64_t x) { return (x!=0) ? (uint32_t)__builtin_clzl(x) : 64; }
+static inline uint32_t ctz_32(uint32_t x) { return (x!=0) ? (uint32_t)__builtin_ctz(x)  : 32; }
+static inline uint32_t ctz_64(uint64_t x) { return (x!=0) ? (uint32_t)__builtin_ctzl(x) : 64; }
 #else
+// just to be clear at idle glance that this is one opcode
 static inline uint32_t clz_32(uint32_t x) { return (uint32_t)_lzcnt_u32(x); }
 static inline uint32_t clz_64(uint64_t x) { return (uint32_t)_lzcnt_u64(x); }
 static inline uint32_t ctz_32(uint32_t x) { return (uint32_t)_tzcnt_u32(x); }
@@ -216,18 +219,17 @@ static inline uint64_t bit_reverse_64(uint64_t x)
 
 
 // single set bit in the position of lowest set in 'x'
-uint32_t bit_lowest_set_32(uint32_t x)   { return x & (-x); }
-uint64_t bit_lowest_set_64(uint64_t x)   { return x & (-x); }
+static inline uint32_t bit_lowest_set_32(uint32_t x)   { return x & (-x); }
+static inline uint64_t bit_lowest_set_64(uint64_t x)   { return x & (-x); }
 
 // single set bit in the position of lowest clear in 'x'
-uint32_t bit_lowest_clear_32(uint32_t x) { return ~x & (x+1); }
-uint64_t bit_lowest_clear_64(uint64_t x) { return ~x & (x+1); }
+static inline uint32_t bit_lowest_clear_32(uint32_t x) { return ~x & (x+1); }
+static inline uint64_t bit_lowest_clear_64(uint64_t x) { return ~x & (x+1); }
 
 // single set bit in the position of the first that differs
 // from the lowest bit
-uint32_t bit_lowest_changed_32(uint32_t x) { -x & (x+1); }
-uint64_t bit_lowest_changed_64(uint32_t x) { -x & (x+1); }
-
+static inline uint32_t bit_lowest_changed_32(uint32_t x) { return -x & (x+1); }
+static inline uint64_t bit_lowest_changed_64(uint32_t x) { return -x & (x+1); }
 
 // number of zero-one transitions
 static inline uint32_t bit_sequency_32(uint32_t x) { return pop_32(x^(x >> 1)); }
@@ -238,10 +240,10 @@ static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >>
 static inline uint64_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
 
 // clears the highest/lowest bit of every bit string
-static inline uint32_t bit_str_clear_hi_32(uint32_t x)   { return x & (x>>1); }
-static inline uint64_t bit_str_clear_hi_64(uint64_t x)   { return x & (x>>1); }
-static inline uint32_t bit_str_clear_lo_32(uint32_t x)   { return x & (x<<1); }
-static inline uint64_t bit_str_clear_lo_64(uint64_t x)   { return x & (x<<1); }
+static inline uint32_t bit_str_clear_hi_32(uint32_t x) { return x & (x>>1); }
+static inline uint64_t bit_str_clear_hi_64(uint64_t x) { return x & (x>>1); }
+static inline uint32_t bit_str_clear_lo_32(uint32_t x) { return x & (x<<1); }
+static inline uint64_t bit_str_clear_lo_64(uint64_t x) { return x & (x<<1); }
 
 // isolate the lowest bit string
 static inline uint32_t bit_str_lo_32(uint32_t x)
@@ -262,12 +264,12 @@ static inline uint64_t bit_str_lo_64(uint64_t x)
 // returns integer with the popcount of 'x' low bits set
 static inline uint32_t pop_to_mask_32(uint32_t x)
 {
-  return bit_gather_32(UINT32_C(-1), x);
+  return bit_gather_32(x,x);
 }
 
 static inline uint64_t pop_to_mask_64(uint64_t x)
 {
-  return bit_gather_64(UINT64_C(-1), x);
+  return bit_gather_64(x,x);
 }
 
 // clears the 'n^th' set bit in x
