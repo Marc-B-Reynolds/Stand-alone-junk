@@ -10,6 +10,7 @@
 #if     defined(__ARM_ARCH)
 #include <arm_acle.h>
 #define BITOPS_ARM
+#define BITOPS_SHIFT_SATURATES
 #elif  !defined(_MSC_VER)
 #include <x86intrin.h>
 #define BITOPS_INTEL
@@ -63,14 +64,17 @@ static const uint32_t bit_set_even_16_32 = (uint32_t)0x0000ffff;
 static const uint64_t bit_set_nibble_1_64 = UINT64_C(0x1111111111111111);
 static const uint32_t bit_set_nibble_1_32 = (uint32_t)0x11111111;
 
+// arithmetic shift for signed input (& without UB)
+static inline int32_t asr_s32(int32_t x, uint32_t n) { return x >> (n & 0x1f); }
+static inline int64_t asr_s64(int64_t x, uint32_t n) { return x >> (n & 0x3f); }
 
-// signed shift for unsigned input (& without UB)
-static inline uint32_t shr_32(uint32_t x, uint32_t n)
+// arithmetic shift for unsigned input (& without UB)
+static inline uint32_t asr_u32(uint32_t x, uint32_t n)
 {
   return (uint32_t)((int32_t)x >> (n & 0x1f));
 }
 
-static inline uint64_t shr_64(uint64_t x, uint32_t n)
+static inline uint64_t asr_u64(uint64_t x, uint32_t n)
 {
   return (uint64_t)((int64_t)x >> (n & 0x3f));
 }
@@ -326,31 +330,45 @@ static inline uint32_t pop_next_32(uint32_t x)
 {
   uint32_t t = x + (x & -x);
   x = x & ~t;
-  x = shr_32(x, ctz_32(x));
-  x = shr_32(x, 1);
-  return t|x;
+  x = asr_u32(x, ctz_32(x));
+  x = asr_u32(x, 1);
+  return t^x;
 }
 
 static inline uint64_t pop_next_64(uint64_t x)
 {
   uint64_t t = x + (x & -x);
   x = x & ~t;
-  x = shr_64(x, ctz_64(x));
-  x = shr_64(x, 1);
-  return t|x;
+  x = asr_u64(x, ctz_64(x));
+  x = asr_u64(x, 1);
+  return t^x;
 }
 
 // pop_prev_{32/64}: number less than 'x' with the
-// same population count. If input is min then result
-// pins to zero.
+// same population count. If input is zero or min
+// then result is zero.
 static inline uint32_t pop_prev_32(uint32_t x)
 {
-  return ~pop_next_32(~x);
+  uint32_t a = ~x & (x+1);
+  uint32_t b =  x - a;
+  uint32_t c = ~x & b;
+  uint32_t d = asr_u32(c, ctz_32(c));
+
+  d = asr_u32(d, 1);
+  
+  return b^d;
 }
 
 static inline uint64_t pop_prev_64(uint64_t x)
 {
-  return ~pop_next_64(~x);
+  uint64_t a = ~x & (x+1); 
+  uint64_t b =  x - a;
+  uint64_t c = ~x & b;
+  uint64_t d = asr_u64(c, ctz_64(c));
+
+  d = asr_u64(d, 1);
+
+  return b^d;
 }
 
 
