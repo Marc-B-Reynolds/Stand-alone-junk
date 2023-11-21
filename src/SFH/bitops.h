@@ -20,6 +20,43 @@
 #endif
 
 // NOTE: there are additional bitops in carryless.h
+typedef union {
+  struct {uint32_t a,b;   };
+  struct {uint32_t hi,lo; }; 
+  struct {uint32_t q,r;   };
+  uint32_t u32[2];
+} pair_u32_t;
+
+typedef union {
+  struct {uint64_t a,b;   };
+  struct {uint64_t hi,lo; }; 
+  struct {uint64_t q,r;   };
+  uint64_t u64[2];
+} pair_u64_t;
+
+// arithmetic/logical (asr/lsr) shifts for signed input by (n & (bitwidth-1))
+static inline int32_t  asr_s32(int32_t  x, uint32_t n) { return x >> (n & 0x1f); }
+static inline int64_t  asr_s64(int64_t  x, uint32_t n) { return x >> (n & 0x3f); }
+static inline uint32_t lsr_u32(uint32_t x, uint32_t n) { return x >> (n & 0x1f); }
+static inline uint64_t lsr_u64(uint64_t x, uint32_t n) { return x >> (n & 0x3f); }
+
+static inline int32_t  asr_sat_s32(int32_t  x, uint32_t n) { return x >> ((n<31) ? n : 31); }
+static inline int64_t  asr_sat_s64(int64_t  x, uint32_t n) { return x >> ((n<63) ? n : 63); }
+
+static inline uint32_t lsr_sat_u32(uint32_t x, uint32_t n) { return (n < 32) ? (x >> n) : 0; }
+static inline uint64_t lsr_sat_u64(uint64_t x, uint32_t n) { return (n < 64) ? (x >> n) : 0; }
+
+
+// just type matching
+static inline uint32_t asr_u32(uint32_t x, uint32_t n) { return (uint32_t)asr_s32((int32_t )x, n); }
+static inline uint64_t asr_u64(uint64_t x, uint32_t n) { return (uint64_t)asr_s64((int64_t )x, n); }
+static inline int32_t  lsr_s32(int32_t x,  uint32_t n) { return (int32_t) lsr_u32((uint32_t)x, n); }
+static inline int64_t  lsr_s64(int64_t x,  uint32_t n) { return (int64_t) lsr_u64((uint64_t)x, n); }
+
+
+#if defined(BITOPS_SHIFT_SATURATES)
+#else
+#endif
 
 
 #if !defined(_MSC_VER)
@@ -63,22 +100,6 @@ static const uint32_t bit_set_even_16_32 = (uint32_t)0x0000ffff;
 // each nibble is 0x1 (0b0001)
 static const uint64_t bit_set_nibble_1_64 = UINT64_C(0x1111111111111111);
 static const uint32_t bit_set_nibble_1_32 = (uint32_t)0x11111111;
-
-// arithmetic shift for signed input (& without UB)
-static inline int32_t asr_s32(int32_t x, uint32_t n) { return x >> (n & 0x1f); }
-static inline int64_t asr_s64(int64_t x, uint32_t n) { return x >> (n & 0x3f); }
-
-// arithmetic shift for unsigned input (& without UB)
-static inline uint32_t asr_u32(uint32_t x, uint32_t n)
-{
-  return (uint32_t)((int32_t)x >> (n & 0x1f));
-}
-
-static inline uint64_t asr_u64(uint64_t x, uint32_t n)
-{
-  return (uint64_t)((int64_t)x >> (n & 0x3f));
-}
-
 
 
 #if !defined(_MSC_VER)
@@ -222,7 +243,7 @@ static inline uint64_t bit_reverse_64(uint64_t x)
 #endif
 
 
-// single set bit in the position of lowest set in 'x'
+// single set bit in the position of lowest set in 'x' (intel: blsi)
 static inline uint32_t bit_lowest_set_32(uint32_t x)   { return x & (-x); }
 static inline uint64_t bit_lowest_set_64(uint64_t x)   { return x & (-x); }
 
@@ -243,13 +264,13 @@ static inline uint64_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); 
 static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
 static inline uint64_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
 
-// clears the highest/lowest bit of every bit string
+// clears the highest/lowest bit of every bit string (runs of 1s)
 static inline uint32_t bit_str_clear_hi_32(uint32_t x) { return x & (x>>1); }
 static inline uint64_t bit_str_clear_hi_64(uint64_t x) { return x & (x>>1); }
 static inline uint32_t bit_str_clear_lo_32(uint32_t x) { return x & (x<<1); }
 static inline uint64_t bit_str_clear_lo_64(uint64_t x) { return x & (x<<1); }
 
-// isolate the lowest bit string
+// isolate the lowest bit string (run of 1s)
 static inline uint32_t bit_str_lo_32(uint32_t x)
 {
   uint32_t t = x + (x & (-x));
@@ -261,6 +282,24 @@ static inline uint64_t bit_str_lo_64(uint64_t x)
   uint64_t t = x + (x & (-x));
   return x & (~t);
 }
+
+// mask of low bits that are the same in x & y
+static inline uint64_t bit_match_lo_32(uint32_t x, uint32_t y)
+{
+  x ^=  y;
+  x &= -x;
+  x -=  x;
+  return x & y;
+}
+
+static inline uint64_t bit_match_lo_64(uint64_t x, uint64_t y)
+{
+  x ^=  y;
+  x &= -x;
+  x -=  x;
+  return x & y;
+}
+
 
 // temp hack
 #if defined(BITOPS_HAS_SCATTER_GATHER)
@@ -326,6 +365,7 @@ static inline uint64_t bit_zip_64(uint64_t x)
 // pop_next_{32/64}: next number greater than 'x' with the
 // same population count. If input is max then result pins
 // to all ones.
+// https://marc-b-reynolds.github.io/math/2023/11/09/PopNextPrev.html
 static inline uint32_t pop_next_32(uint32_t x)
 {
   uint32_t t = x + (x & -x);
