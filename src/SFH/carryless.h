@@ -2,6 +2,11 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // put links here
+//
+// 
+// cl_{func} - carryless product (standard)           : left  xorshifts
+// cr_{func} - carryless product (right or reflected) : right xorshifts
+// cc_{func} - carryless product (circular)           : left rotates & xors
 
 // NOTES:
 // * no real effort at portability
@@ -234,19 +239,23 @@ static inline cl_128_t cl_mul_inv_k(cl_128_t x, uint32_t e)
 
 extern uint32_t cl_mul_inv_32(uint32_t v);
 extern uint64_t cl_mul_inv_64(uint64_t v);
-extern void     cl_mul_inv_x2_32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib);
-extern void     cl_mul_inv_x2_64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib);
+
+extern pair_u32_t cl_mul_inv_x2_32(uint32_t a, uint32_t b);
+extern pair_u64_t cl_mul_inv_x2_64(uint64_t a, uint64_t b);
 
 extern uint32_t cl_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cl_gcd_64(uint64_t u, uint64_t v);
-
-extern uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r);
-extern uint64_t cl_divrem_64(uint64_t a, uint64_t b, uint64_t* r);
 extern uint32_t cl_rem_32(uint32_t a, uint32_t b);
 extern uint64_t cl_rem_64(uint64_t a, uint64_t b);
 
+extern pair_u32_t cl_divrem_32(uint32_t a, uint32_t b);
+extern pair_u64_t cl_divrem_64(uint64_t a, uint64_t b);
+
 extern uint32_t cl_mul_order_32(uint32_t x);
 extern uint32_t cl_mul_order_64(uint64_t x);
+
+extern uint32_t cl_mul_order_log2_32(uint32_t x);
+extern uint32_t cl_mul_order_log2_64(uint64_t x);
 
 extern uint32_t cl_pow_k_32(uint32_t v, uint32_t p);
 extern uint64_t cl_pow_K_64(uint64_t v, uint32_t p);
@@ -321,7 +330,7 @@ uint64_t cl_gcd_64(uint64_t u, uint64_t v)
 }
 
 
-uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r)
+pair_u32_t cl_divrem_32(uint32_t a, uint32_t b)
 {
   // euclidean division:
   uint32_t q  = 0;
@@ -336,13 +345,11 @@ uint32_t cl_divrem_32(uint32_t a, uint32_t b, uint32_t* r)
       t  = lb - clz_32(a);
     }
   }
-    
-  *r = a;
-  
-  return q;
+
+  return (pair_u32_t){.q=q, .r=a};
 }
 
-uint64_t cl_divrem_64(uint64_t a, uint64_t b, uint64_t* r)
+pair_u64_t cl_divrem_64(uint64_t a, uint64_t b)
 {
   uint64_t q  = 0;
 
@@ -357,9 +364,7 @@ uint64_t cl_divrem_64(uint64_t a, uint64_t b, uint64_t* r)
     }
   }
     
-  *r = a;
-  
-  return q;
+  return (pair_u64_t){.q=q, .r=a};
 }
 
 uint32_t cl_rem_32(uint32_t a, uint32_t b)
@@ -398,6 +403,10 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
 #include "intops.h"
 #endif
 
+// multiplicative order (period) of 'x'
+// aka: x^n = 1, solve for n : odd  'x'
+//      x^n = 0, solve for n : even 'x'
+//
 // cl/cr/cc (32-bit) all have:
 //
 // card of units by 'n' (same counts for divisors)
@@ -407,17 +416,30 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
 //   n =  8 0f000000 ( 251658240)
 //   n = 16 30000000 ( 805306368)
 //   n = 32 40000000 (1073741824)
-
 uint32_t cl_mul_order_32(uint32_t x)
 {
   x = (x & UINT32_C(~1));
-  return 32u >> log2_32(ctz_32(x));
+  return 32u >> log2_u32(ctz_32(x));
 }
 
 uint64_t cl_mul_order_64(uint64_t x)
 {
   x = (x & UINT64_C(~1));
-  return 64u >> log2_64(ctz_64(x));
+  return 64u >> log2_u64(ctz_64(x));
+}
+
+
+// log2(cl_mul_order_{32,64})
+uint32_t cl_mul_order_log2_32(uint32_t x)
+{
+  x = (x & UINT32_C(~1));
+  return clz_32(ctz_32(x))-(31-5);
+}
+
+uint64_t cl_mul_order_log2_64(uint64_t x)
+{
+  x = (x & UINT64_C(~1));
+  return clz_64(ctz_64(x))-(63-6);
 }
 
 #if 1
@@ -517,36 +539,38 @@ uint64_t cl_pow_64(uint64_t v, uint32_t p)
 }
 
 // 2 for 1 trick: removes 1 cl_mul
-void cl_mul_inv_x2_32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib)
+pair_u32_t cl_mul_inv_x2_32(uint32_t a, uint32_t b)
 {
 #if !defined(CL_USE_WIDENED)
   uint32_t r = cl_mul_inv_32(cl_mul_32(a,b));
-  *ia = cl_mul_32(r,b);
-  *ib = cl_mul_32(r,a);
+
+  return pair_u32(cl_mul_32(r,b), cl_mul_32(r,a));
 #else  
   cl_128_t x  = cl_load_32(a);
   cl_128_t y  = cl_load_32(b);
   cl_128_t c  = cl_mul_base(x,y);
   cl_128_t ic = cl_mul_inv_k(c,4);
-  *ia = cl_lo_32(cl_mul_base(ic,y));
-  *ib = cl_lo_32(cl_mul_base(ic,x));
+
+  return pair_u32(cl_lo_32(cl_mul_base(ic,y)),
+		  cl_lo_32(cl_mul_base(ic,x)));
 #endif  
 }
 
 // 2 for 1 trick: removes 2 cl_mul
-void cl_mul_inv_x2_64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib)
+pair_u64_t cl_mul_inv_x2_64(uint64_t a, uint64_t b)
 {
 #if !defined(CL_USE_WIDENED)
   uint64_t r = cl_mul_inv_64(cl_mul_64(a,b));
-  *ia = cl_mul_64(r,b);
-  *ib = cl_mul_64(r,a);
+
+  return pair_u64(cl_mul_64(r,b), cl_mul_64(r,a));
 #else  
   cl_128_t x  = cl_load_64(a);
   cl_128_t y  = cl_load_64(b);
   cl_128_t c  = cl_mul_base(x,y);
   cl_128_t ic = cl_mul_inv_k(c,5);
-  *ia = cl_lo_64(cl_mul_base(ic,y));
-  *ib = cl_lo_64(cl_mul_base(ic,x));
+  
+  return pair_u64(cl_lo_64(cl_mul_base(ic,y)),
+		  cl_lo_64(cl_mul_base(ic,x)));
 #endif  
 }
 
@@ -621,14 +645,12 @@ uint64_t cc_mul_inv_64(uint64_t x)
 
 static inline uint32_t cl_div_32(uint32_t a, uint32_t b)
 {
-  uint32_t t;
-  return cl_divrem_32(a,b,&t);
+  return cl_divrem_32(a,b).q;
 }
 
 static inline uint64_t cl_div_64(uint64_t a, uint64_t b)
 {
-  uint64_t t;
-  return cl_divrem_64(a,b,&t);
+  return cl_divrem_64(a,b).q;
 }
 
 
