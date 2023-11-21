@@ -16,23 +16,53 @@
 #include <intrin.h>
 #endif
 
+
+// yes. this is evil except for undordered and very special cases of ordered 
+static inline pair_u32_t pair_u32(uint32_t a, uint32_t b) { return (pair_u32_t){.a=a, .b=b }; }
+static inline pair_u64_t pair_u64(uint64_t a, uint64_t b) { return (pair_u64_t){.a=a, .b=b }; }
+
 static inline uint32_t shr_u32(uint32_t x, uint32_t n) { return (uint32_t)(((int32_t)x) >> n); }
 static inline uint64_t shr_u64(uint64_t x, uint32_t n) { return (uint64_t)(((int64_t)x) >> n); }
 
 static inline uint32_t sgn_mask_u32(uint32_t x) { return shr_u32(x,31); }
 static inline uint64_t sgn_mask_u64(uint64_t x) { return shr_u64(x,63); }
 
-static inline void cs_adder_64(uint64_t* h, uint64_t* l, uint64_t a, uint64_t b, uint64_t c)
+static inline pair_u64_t cs_adder_64(uint64_t a, uint64_t b, uint64_t c)
 {
   uint64_t s = a^b;
-  h[0] = (a & b)|(s & c);
-  l[0] = s^c;
+  return (pair_u64_t){.hi= (a & b)|(s & c), .lo=s^c };
 }
 
-static inline uint32_t log2_32(uint32_t x)       { return (31 - clz_32(x));   }
-static inline uint64_t log2_64(uint64_t x)       { return (63 - clz_64(x));   }
-static inline uint32_t log2_ceil_32(uint32_t x)  { return (32 - clz_32(x-1)); }
-static inline uint64_t log2_ceil_64(uint64_t x)  { return (64 - clz_64(x-1)); }
+static inline pair_u32_t cs_adder_32(uint32_t a, uint32_t b, uint32_t c)
+{
+  uint32_t s = a^b;
+  return (pair_u32_t){.hi= (a & b)|(s & c), .lo=s^c };
+}
+
+// returns 1 for even 2 for odd
+static inline uint32_t even_off_u32(uint32_t x) { return 2-(x&1); }
+static inline uint64_t even_off_u64(uint64_t x) { return 2-(x&1); }
+
+// returns 1 for odd 2 for even
+static inline uint32_t odd_off_u32(uint32_t x)  { return 1+(x&1); }
+static inline uint64_t odd_off_u64(uint64_t x)  { return 1+(x&1); }
+
+
+
+static inline uint32_t min_u32(uint32_t x, uint32_t y) { return (x<y) ? x : y; }
+static inline uint32_t max_u32(uint32_t x, uint32_t y) { return (x>y) ? x : y; }
+static inline uint64_t min_u64(uint64_t x, uint64_t y) { return (x<y) ? x : y; }
+static inline uint64_t max_u64(uint64_t x, uint64_t y) { return (x>y) ? x : y; }
+static inline int32_t  min_s32( int32_t x,  int32_t y) { return (x<y) ? x : y; }
+static inline int32_t  max_s32( int32_t x,  int32_t y) { return (x>y) ? x : y; }
+static inline int64_t  min_s64( int64_t x,  int64_t y) { return (x<y) ? x : y; }
+static inline int64_t  max_s64( int64_t x,  int64_t y) { return (x>y) ? x : y; }
+
+// floor and ceiling log_2(x)
+static inline uint32_t log2_u32(uint32_t x)       { return (31 - clz_32(x));   }
+static inline uint64_t log2_u64(uint64_t x)       { return (63 - clz_64(x));   }
+static inline uint32_t log2_ceil_u32(uint32_t x)  { return (32 - clz_32(x-1)); }
+static inline uint64_t log2_ceil_u64(uint64_t x)  { return (64 - clz_64(x-1)); }
 
 // floor and ceiling of (a+b)/2 without overflow
 static inline uint32_t ave_u32(uint32_t a, uint32_t b)      { return (a&b) + ((a^b)>>1); }
@@ -42,7 +72,7 @@ static inline uint64_t ave_ceil_u64(uint64_t a, uint64_t b) { return (a|b) - ((a
 
 
 //-------------------------------------------------------------------------------
-// mod int ops assume inputs in the ring [0,n)
+// mod int ops assume inputs are in the ring [0,n) 
 
 // (x+1) % n
 static inline uint32_t inc_mod_n_u32(uint32_t x, uint32_t n)
@@ -80,6 +110,32 @@ static inline uint64_t neg_mod_n_u64(uint64_t x, uint64_t n)
   return (x != 0) ? n-x : 0;
 }
 
+static inline uint32_t add_mod_n_u32(uint32_t x, uint32_t y, uint32_t n)
+{
+  uint32_t t = n-y;
+  return (t > x) ? x+y : x-t;
+}
+
+static inline uint64_t add_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
+{
+  uint64_t t = n-y;
+  return (t > x) ? x+y : x-t;
+}
+
+static inline uint32_t sub_mod_n_u32(uint32_t x, uint32_t y, uint32_t n)
+{
+  uint32_t t = (y > x) ? 0 : n;
+  return x-y+t;
+}
+
+static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
+{
+  uint64_t t = (y > x) ? 0 : n;
+  return x-y+t;
+}
+
+
+
 
 //-------------------------------------------------------------------------------
 
@@ -107,37 +163,39 @@ static inline uint64_t mod_inverse_u64(uint64_t a)
   return x;
 }
 
-// two for one trick: mod inverse of a & b
-static inline void mod_inverse_x2_u32(uint32_t a, uint32_t b, uint32_t* ia, uint32_t* ib)
+// two for one trick: mod inverse of a & b (pair order as input)
+static inline pair_u32_t mod_inverse_x2_u32(uint32_t a, uint32_t b)
 {
   uint32_t c  = a*b;
   uint32_t ic = mod_inverse_u32(c);
-  *ia = ic * b;
-  *ib = ic * a;
+  return pair_u32(ic*b, ic*a);
 }
 
-static inline void mod_inverse_x2_u64(uint64_t a, uint64_t b, uint64_t* ia, uint64_t* ib)
+static inline pair_u64_t mod_inverse_x2_u64(uint64_t a, uint64_t b)
 {
   uint64_t c  = a*b;
   uint64_t ic = mod_inverse_u64(c);
-  *ia = ic * b;
-  *ib = ic * a;
+  return pair_u64(ic*b, ic*a);
 }
 
-// 128-bit result of 64-bit product
-static inline uint64_t mul_hilo_64(uint64_t a, uint64_t b, uint64_t* hi)
+// 128-bit result of 64-bit product (access via hi and lo elments)
+static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
 {
+  uint64_t hi,lo;
+
 #if defined(__GNUC__) || defined(__clang__)
   __uint128_t r = (__uint128_t)a * (__uint128_t)b;
-  *hi = (uint64_t)(r >> 64);
-  return (uint64_t)r;
+  hi = (uint64_t)(r >> 64);
+  lo = (uint64_t)r;
 #elif defined(_MSC_VER) && defined(_M_IX64)
 #pragma intrinsic(_umul128)
-  return _umul128(a,b,hi);
+  _umul128(a,b,&hi);
 #else
   assert(0);
-  return 0;
-#endif    
+  hi = lo = 0;
+#endif
+
+  return (pair_u64_t){.hi=hi, .lo=lo};
 }
 
 
