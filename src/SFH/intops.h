@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2023
+// Marc B. Reynolds, 2016-2024
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef INTOPS_H
@@ -191,12 +191,15 @@ static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
 #pragma intrinsic(_umul128)
   _umul128(a,b,&hi);
 #else
-  assert(0);
+  static_assert(0);
   hi = lo = 0;
 #endif
 
   return (pair_u64_t){.hi=hi, .lo=lo};
 }
+
+// high 64-bit result of 64-bit product
+static inline uint64_t mul_u64_hi(uint64_t a, uint64_t b) { return mul_hilo_64(a,b).hi; }
 
 
 typedef struct {uint64_t r; int64_t x,y; } gcd_u64_t;
