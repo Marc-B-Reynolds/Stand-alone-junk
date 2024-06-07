@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2016-2023
+// Marc B. Reynolds, 2016-2024
 
 // WIP: loaded with unconverted constants from f32_util. probably everything
 // is even more broken.
