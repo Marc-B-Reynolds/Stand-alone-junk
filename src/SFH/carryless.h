@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2017-2023
+// Marc B. Reynolds, 2017-2024
 // Public Domain under http://unlicense.org, see link for details.
 
 // put links here
@@ -153,7 +153,7 @@ static inline uint64_t cr_mul_64(uint64_t a, uint64_t b)
 {
   uint64_t r = cl_mul_hi_64(a, b<<1);
 
-  // handle the bit that got discarded by (k<<1)
+  // handle the bit that got discarded by (b<<1)
   r = ((int64_t)b < 0) ? r^a : r;
 
   return r;
@@ -398,7 +398,7 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
 }
 
 
-// temp hack: kill log2 usuage
+// temp hack: kill log2_{u32,u64} useage
 #ifndef __INTOPS_H__
 #include "intops.h"
 #endif
