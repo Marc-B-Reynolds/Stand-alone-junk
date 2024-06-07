@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2023
+// Marc B. Reynolds, 2016-2024
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef BITOPS_H
@@ -17,6 +17,10 @@
 #else
 #include <intrin.h>
 #define BITOPS_INTEL
+#endif
+
+#ifdef  BITOPS_INTEL
+#define BITOPS_HAS_SCATTER_GATHER
 #endif
 
 // NOTE: there are additional bitops in carryless.h
@@ -180,14 +184,12 @@ static inline uint32_t bit_parity_mask_32(uint32_t x) { return -bit_parity_32(x)
 static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x); }
 
 // scatter/gather ops generically...skipping that ATM.
-#if defined(__ARM_ARCH)
-// fill in the blanks:
-#else
-#define BITOPS_HAS_SCATTER_GATHER
+#if defined(BITOPS_HAS_SCATTER_GATHER)
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
 static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32(x, m); } 
 static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64(x, m); }
+#else
 #endif
 
 
@@ -256,19 +258,37 @@ static inline uint64_t bit_lowest_clear_64(uint64_t x) { return ~x & (x+1); }
 static inline uint32_t bit_lowest_changed_32(uint32_t x) { return -x & (x+1); }
 static inline uint64_t bit_lowest_changed_64(uint32_t x) { return -x & (x+1); }
 
+static inline uint64_t bit_highest_set_64(uint64_t x)
+{
+  return (x != 0) ? UINT64_C(1) << (63-clz_64(x)) : 0;
+}
+
+static inline uint32_t bit_highest_set_32(uint32_t x)
+{
+  return (x != 0) ? 1 << (31-clz_32(x)) : 0;
+}
+
 // number of zero-one transitions
 static inline uint32_t bit_sequency_32(uint32_t x) { return pop_32(x^(x >> 1)); }
-static inline uint64_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); }
+static inline uint32_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); }
 
-// number of bit strings (runs of 1's)
-static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
-static inline uint64_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
+// bit string (runs of 1s) : bit_str_{x}
 
-// clears the highest/lowest bit of every bit string (runs of 1s)
+// clears the highest/lowest bit of every bit string
 static inline uint32_t bit_str_clear_hi_32(uint32_t x) { return x & (x>>1); }
 static inline uint64_t bit_str_clear_hi_64(uint64_t x) { return x & (x>>1); }
 static inline uint32_t bit_str_clear_lo_32(uint32_t x) { return x & (x<<1); }
 static inline uint64_t bit_str_clear_lo_64(uint64_t x) { return x & (x<<1); }
+
+// isolate hi/lo bit of each run (down/up transition)
+static inline uint64_t bit_str_hi_bit_64(uint64_t x) { return x & (x^(x>>1)); }
+static inline uint32_t bit_str_hi_bit_32(uint32_t x) { return x & (x^(x>>1)); }
+static inline uint64_t bit_str_lo_bit_64(uint64_t x) { return x & (x^(x<<1)); }
+static inline uint32_t bit_str_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
+
+// number of bit strings (runs of 1's)
+static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
+static inline uint32_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
 
 // isolate the lowest bit string (run of 1s)
 static inline uint32_t bit_str_lo_32(uint32_t x)
