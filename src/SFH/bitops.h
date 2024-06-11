@@ -272,32 +272,32 @@ static inline uint32_t bit_highest_set_32(uint32_t x)
 static inline uint32_t bit_sequency_32(uint32_t x) { return pop_32(x^(x >> 1)); }
 static inline uint32_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); }
 
-// bit string (runs of 1s) : bit_str_{x}
+// bit string (runs of 1s) : bit_run_{x}
 
 // clears the highest/lowest bit of every bit string
-static inline uint32_t bit_str_clear_hi_32(uint32_t x) { return x & (x>>1); }
-static inline uint64_t bit_str_clear_hi_64(uint64_t x) { return x & (x>>1); }
-static inline uint32_t bit_str_clear_lo_32(uint32_t x) { return x & (x<<1); }
-static inline uint64_t bit_str_clear_lo_64(uint64_t x) { return x & (x<<1); }
+static inline uint32_t bit_run_clear_hi_32(uint32_t x) { return x & (x>>1); }
+static inline uint64_t bit_run_clear_hi_64(uint64_t x) { return x & (x>>1); }
+static inline uint32_t bit_run_clear_lo_32(uint32_t x) { return x & (x<<1); }
+static inline uint64_t bit_run_clear_lo_64(uint64_t x) { return x & (x<<1); }
 
 // isolate hi/lo bit of each run (down/up transition)
-static inline uint64_t bit_str_hi_bit_64(uint64_t x) { return x & (x^(x>>1)); }
-static inline uint32_t bit_str_hi_bit_32(uint32_t x) { return x & (x^(x>>1)); }
-static inline uint64_t bit_str_lo_bit_64(uint64_t x) { return x & (x^(x<<1)); }
-static inline uint32_t bit_str_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
+static inline uint64_t bit_run_hi_bit_64(uint64_t x) { return x & (x^(x>>1)); }
+static inline uint32_t bit_run_hi_bit_32(uint32_t x) { return x & (x^(x>>1)); }
+static inline uint64_t bit_run_lo_bit_64(uint64_t x) { return x & (x^(x<<1)); }
+static inline uint32_t bit_run_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
 
 // number of bit strings (runs of 1's)
-static inline uint32_t bit_str_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
-static inline uint32_t bit_str_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
+static inline uint32_t bit_run_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
+static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
 
 // isolate the lowest bit string (run of 1s)
-static inline uint32_t bit_str_lo_32(uint32_t x)
+static inline uint32_t bit_run_lo_32(uint32_t x)
 {
   uint32_t t = x + (x & (-x));
   return x & (~t);
 }
 
-static inline uint64_t bit_str_lo_64(uint64_t x)
+static inline uint64_t bit_run_lo_64(uint64_t x)
 {
   uint64_t t = x + (x & (-x));
   return x & (~t);
@@ -377,6 +377,42 @@ static inline uint64_t bit_zip_64(uint64_t x)
   uint64_t L = bit_scatter_64(x,       m);
   uint64_t R = bit_scatter_64(x >> 32, m);
   return (R<<1)^L;
+}
+
+// generalized bit zip/unzip
+
+static inline uint32_t bit_gunzip_32(uint32_t v, uint32_t m)
+{
+  uint32_t p = pop_32(m) & 0x1f;
+  uint32_t L = bit_gather_32(v,  m);
+  uint32_t R = bit_gather_32(v, ~m);
+
+  return L ^ (R << p);
+}
+
+static inline uint64_t bit_gunzip_64(uint64_t v, uint64_t m)
+{
+  uint32_t p = pop_64(m) & 0x3f;
+  uint64_t L = bit_gather_64(v,  m);
+  uint64_t R = bit_gather_64(v, ~m);
+
+  return L ^ (R << p);
+}
+
+static inline uint32_t bit_gzip_32(uint32_t v, uint32_t m)
+{
+  uint32_t p = pop_32(m) & 0x1f;
+  uint32_t a = bit_scatter_32(v,    m);
+  uint32_t b = bit_scatter_32(v>>p,~m);
+  return a^b;
+}
+
+static inline uint64_t bit_gzip_64(uint64_t v, uint64_t m)
+{
+  uint32_t p = pop_64(m) & 0x3f;
+  uint64_t a = bit_scatter_64(v,    m);
+  uint64_t b = bit_scatter_64(v>>p,~m);
+  return a^b;
 }
 
 #endif
