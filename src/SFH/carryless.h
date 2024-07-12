@@ -1,12 +1,22 @@
 // Marc B. Reynolds, 2017-2024
 // Public Domain under http://unlicense.org, see link for details.
 
-// put links here
+// put blog link here once I complete it
 //
+// Brief: currently supports 3 commutative rings:
+//   cl_{func} - carryless product (standard)           : left  xorshifts
+//   cr_{func} - carryless product (right or reflected) : right xorshifts
+//   cc_{func} - carryless product (circular)           : rotates & xors
+//
+// As matrices of GF(2) elements:
+//   cl: lower triangular Toeplitz 
+//   cr: lower triangular Toeplitz
+//   cc: circulant (Toeplitz)
 // 
-// cl_{func} - carryless product (standard)           : left  xorshifts
-// cr_{func} - carryless product (right or reflected) : right xorshifts
-// cc_{func} - carryless product (circular)           : left rotates & xors
+// for cl/cr: invertiable elements are unitriangular
+//
+// A 4th (set of) ring(s) is possible by
+
 
 // NOTES:
 // * no real effort at portability
@@ -140,6 +150,16 @@ static inline uint64_t cl_pow2_64(uint64_t x) { return bit_scatter_64(x, bit_set
 static inline uint32_t cl_sqrt_32(uint32_t x) { return bit_gather_32(x, bit_set_even_1_32); }
 static inline uint64_t cl_sqrt_64(uint64_t x) { return bit_gather_64(x, bit_set_even_1_64); }
 
+
+static inline uint32_t cl_derivative_32(uint32_t x)
+{
+  return (x & 0xAAAAAAAA) >> 1;
+}
+
+static inline uint64_t cl_derivative_64(uint64_t x)
+{
+  return (x & UINT64_C(0xAAAAAAAAAAAAAAAA)) >> 1;
+}
 
 //-----------------------------------------------------------
 // right/reflect/reversed carryless product (cr_ prefix)
@@ -653,6 +673,25 @@ static inline uint64_t cl_div_64(uint64_t a, uint64_t b)
   return cl_divrem_64(a,b).q;
 }
 
+static inline uint32_t cl_lcm_32(uint32_t a, uint32_t b)
+{
+  uint32_t d = cl_gcd_32(a,b);
+
+  if (d != 0)
+    d = cl_mul_32(cl_div_32(a,d),b);
+  
+  return d;
+}
+
+static inline uint64_t cl_lcm_64(uint64_t a, uint64_t b)
+{
+  uint64_t d = cl_gcd_64(a,b);
+
+  if (d != 0)
+    d = cl_mul_64(cl_div_64(a,d),b);
+  
+  return d;
+}
 
 // summation of {0..n}
 static inline uint32_t cl_sum_32(uint32_t n)
@@ -676,10 +715,8 @@ static inline uint64_t cl_sum_64(uint64_t n)
 //-----------------------------------------------------------
 // bit operation built on carryless ops
 
-// TODO: switch for software carryless impl (not really planning on doing that)
+// TODO: switch for software carryless impl (not really planning on doing that ATM)
 #if 1
- // TODO: (wait! are these named backward?...need covind)
-
 // OEIS: A006068 
 static inline uint32_t bit_prefix_sum_32(uint32_t a) { return cr_mul_32(a, UINT32_C(~0)); }
 static inline uint32_t bit_suffix_sum_32(uint32_t a) { return cl_mul_32(a, UINT32_C(~0)); }
