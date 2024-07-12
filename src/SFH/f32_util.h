@@ -59,6 +59,7 @@
 
 // just say no
 #if (defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
+#warning "relaxed floating point operations breaks everything"
 #define FP32_LOL_NO
 #endif
 
