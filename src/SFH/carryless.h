@@ -626,20 +626,6 @@ uint64_t cr_gcd_64(uint64_t u, uint64_t v)
   return bit_reverse_64(cl_gcd_64(u,v));
 }
 
-uint32_t cr_lcm_32(uint32_t u, uint32_t v)
-{
-  u = bit_reverse_32(u);
-  v = bit_reverse_32(v);
-  return bit_reverse_32(cl_lcm_32(u,v));
-}
-
-uint64_t cr_lcm_64(uint64_t u, uint64_t v)
-{
-  u = bit_reverse_64(u);
-  v = bit_reverse_64(v);
-  return bit_reverse_64(cl_lcm_64(u,v));
-}
-
 uint32_t cr_mul_order_32(uint32_t x)
 {
   return cl_mul_order_32(bit_reverse_32(x));
@@ -712,6 +698,20 @@ static inline uint64_t cl_lcm_64(uint64_t a, uint64_t b)
     d = cl_mul_64(cl_div_64(a,d),b);
   
   return d;
+}
+
+static inline uint32_t cr_lcm_32(uint32_t u, uint32_t v)
+{
+  u = bit_reverse_32(u);
+  v = bit_reverse_32(v);
+  return bit_reverse_32(cl_lcm_32(u,v));
+}
+
+static inline uint64_t cr_lcm_64(uint64_t u, uint64_t v)
+{
+  u = bit_reverse_64(u);
+  v = bit_reverse_64(v);
+  return bit_reverse_64(cl_lcm_64(u,v));
 }
 
 // summation of {0..n}
