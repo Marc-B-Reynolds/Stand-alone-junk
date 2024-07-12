@@ -8,15 +8,22 @@
 //   cr_{func} - carryless product (right or reflected) : right xorshifts
 //   cc_{func} - carryless product (circular)           : rotates & xors
 //
+// all (can) utilize any hardware carryless product op
+//
 // As matrices of GF(2) elements:
-//   cl: lower triangular Toeplitz 
-//   cr: lower triangular Toeplitz
+//   cl: lower triangular Toeplitz
+//   cr: upper triangular Toeplitz 
 //   cc: circulant (Toeplitz)
 // 
 // for cl/cr: invertiable elements are unitriangular
 //
-// A 4th (set of) ring(s) is possible by
-
+// A 4th (set of) ring(s) is possible by treating the
+// result as fixed point (cr works this way) which
+// gives a band Toeplitz where the width is limited
+// by the size of the base carryless product input.
+// Given a 64x64 input -> 128 bit output then the
+// max width is 64. This is enough for a full
+// 32x32 Toeplitz.
 
 // NOTES:
 // * no real effort at portability
@@ -617,6 +624,20 @@ uint64_t cr_gcd_64(uint64_t u, uint64_t v)
   u = bit_reverse_64(u);
   v = bit_reverse_64(v);
   return bit_reverse_64(cl_gcd_64(u,v));
+}
+
+uint32_t cr_lcm_32(uint32_t u, uint32_t v)
+{
+  u = bit_reverse_32(u);
+  v = bit_reverse_32(v);
+  return bit_reverse_32(cl_lcm_32(u,v));
+}
+
+uint64_t cr_lcm_64(uint64_t u, uint64_t v)
+{
+  u = bit_reverse_64(u);
+  v = bit_reverse_64(v);
+  return bit_reverse_64(cl_lcm_64(u,v));
 }
 
 uint32_t cr_mul_order_32(uint32_t x)
