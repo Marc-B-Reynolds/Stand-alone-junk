@@ -126,6 +126,10 @@ static inline uint32_t ctz_32(uint32_t x) { return (uint32_t)_tzcnt_u32(x); }
 static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)_tzcnt_u64(x); }
 #endif
 
+// move both to __builtin_popcountg once has been supported in clang for a bit
+// (not in 18.1.0, but is in the trunk version at that time)
+// __builtin_stdc_count_ones would be better but it seems to be slower off
+// the mark in clang
 static inline uint32_t pop_32(uint32_t x) { return (uint32_t)__builtin_popcount(x);  }
 static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__builtin_popcountl(x); }
 #else
@@ -140,8 +144,8 @@ static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 // inverse function in "carryless.h" (move to approp place)
 #if defined(__ARM_ARCH)
 #if defined(__ARM_FEATURE_CRC32)
-uint32_t crc32c(uint32_t x, uint32_t k)    { return __crc32cw(x,k); }
-uint64_t crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
+static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return __crc32cw(x,k); }
+static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
 #endif
 #else
 static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return _mm_crc32_u32(x,k); }
@@ -184,6 +188,7 @@ static inline uint32_t bit_parity_mask_32(uint32_t x) { return -bit_parity_32(x)
 static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x); }
 
 // scatter/gather ops generically...skipping that ATM.
+// "Hacker's Delight" et al. call scatter/gather expand/compress
 #if defined(BITOPS_HAS_SCATTER_GATHER)
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
@@ -193,8 +198,38 @@ static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64
 #endif
 
 
-// Jasper Neumann : https://programming.sirrida.de/perm_fn.html#bit_permute_step_simple
+// swaps one or more pairs of (same length) fields:
+//   m = bit mask of right most field(s)
+//   s = left shift distance to match left pair
 
+// to perform the descriped op requires:
+// 1) fields can't overlap, so:  (m & (m<<s))==0
+// 2) can't discard hi bits, so: ((m<<s)>>s) ==m
+
+// if all bits are moved, (m|(m<<s) = ~0, then can used 'bit_permute_simple_step_{n}'
+// * Guy Steele's bit field swap. "Hacker's Delight, "Exchanging two
+//   fields of the same register"
+// * https://programming.sirrida.de/perm_fn.html#bit_permute_step
+static inline uint64_t bit_permute_step_64(uint64_t x, uint64_t m, uint32_t s)
+{
+  uint64_t t;
+  t  = (x & (x >> s)) & m;
+  x ^= t ^ (t << s);
+  return x;
+}
+
+static inline uint32_t bit_permute_step_32(uint32_t x, uint32_t m, uint32_t s)
+{
+  uint32_t t;
+  t  = (x & (x >> s)) & m;
+  x ^= t ^ (t << s);
+  return x;
+}
+
+// * "Hacker's Delight, "Exchanging two fields of the same register" (reduced).
+//   First method described but since all bits are moving (m') is zero.
+// * SEE: 'bit_permute_step_{n}' above.
+// * https://programming.sirrida.de/perm_fn.html#bit_permute_step_simple
 #define BIT_PERMUTE(X,M,S)    (((X & M) << S) | ((X >> S) & M))
 
 static inline uint32_t bit_permute_step_simple_32(uint32_t x, uint32_t m, uint32_t s)
@@ -222,6 +257,27 @@ static inline uint64_t bit_swap_8_64(uint64_t x)  { return byteswap_64(x); }
 static inline uint64_t bit_swap_16_64(uint64_t x) { return BIT_GROUP_SWAP(x,16,64);}
 static inline uint64_t bit_swap_32_64(uint64_t x) { return rot_64(x,32);  }
 
+
+// returns 'x' with the two bits in positions (p0,p1) swapped
+static inline uint32_t bit_pos_swap_32(uint32_t x, uint32_t p0, uint32_t p1)
+{
+  p0 &= 0x1f;
+  p1 &= 0x1f;
+  uint32_t t = ((x>>p0) ^ (x>>p1)) & 1;
+  x ^= (t<<p0);
+  x ^= (t<<p1);
+  return x;
+}
+
+static inline uint64_t bit_pos_swap_64(uint64_t x, uint32_t p0, uint32_t p1)
+{
+  p0 &= 0x3f;
+  p1 &= 0x3f;
+  uint64_t t = ((x>>p0) ^ (x>>p1)) & 1;
+  x ^= (t<<p0);
+  x ^= (t<<p1);
+  return x;
+}
 
 // if no intrinsic version is available
 #if defined(BITOPS_DEFINE_BIT_REVERSE)
@@ -274,7 +330,7 @@ static inline uint32_t bit_sequency_64(uint64_t x) { return pop_64(x^(x >> 1)); 
 
 // bit string (runs of 1s) : bit_run_{x}
 
-// clears the highest/lowest bit of every bit string
+// clears the highest/lowest bit of every bit run
 static inline uint32_t bit_run_clear_hi_32(uint32_t x) { return x & (x>>1); }
 static inline uint64_t bit_run_clear_hi_64(uint64_t x) { return x & (x>>1); }
 static inline uint32_t bit_run_clear_lo_32(uint32_t x) { return x & (x<<1); }
@@ -286,11 +342,11 @@ static inline uint32_t bit_run_hi_bit_32(uint32_t x) { return x & (x^(x>>1)); }
 static inline uint64_t bit_run_lo_bit_64(uint64_t x) { return x & (x^(x<<1)); }
 static inline uint32_t bit_run_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
 
-// number of bit strings (runs of 1's)
-static inline uint32_t bit_run_count_32(uint32_t x) { return pop_32(x & (x^(x >> 1))); }
-static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x >> 1))); }
+// number of bit runs
+static inline uint32_t bit_run_count_32(uint32_t x) { return pop_32(x & (x^(x>>1))); }
+static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x>>1))); }
 
-// isolate the lowest bit string (run of 1s)
+// isolate the lowest bit run
 static inline uint32_t bit_run_lo_32(uint32_t x)
 {
   uint32_t t = x + (x & (-x));
@@ -416,6 +472,28 @@ static inline uint64_t bit_gzip_64(uint64_t v, uint64_t m)
 }
 
 #endif
+
+// sheep and goats
+static inline uint32_t bit_sag_32(uint32_t v, uint32_t m)
+{
+  return bit_gunzip_32(v,~m);
+}
+
+static inline uint64_t bit_sag_64(uint64_t v, uint64_t m)
+{
+  return bit_gunzip_64(v,~m);
+}
+
+// inverse sheep and goats
+static inline uint32_t bit_gas_32(uint32_t v, uint32_t m)
+{
+  return bit_gzip_32(v,~m);
+}
+
+static inline uint64_t bit_gas_64(uint64_t v, uint64_t m)
+{
+  return bit_gzip_64(v,~m);
+}
 
 
 // pop_next_{32/64}: next number greater than 'x' with the
