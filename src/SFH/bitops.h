@@ -213,7 +213,7 @@ static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64
 static inline uint64_t bit_permute_step_64(uint64_t x, uint64_t m, uint32_t s)
 {
   uint64_t t;
-  t  = (x & (x >> s)) & m;
+  t  = (x ^ (x >> s)) & m;
   x ^= t ^ (t << s);
   return x;
 }
@@ -221,7 +221,7 @@ static inline uint64_t bit_permute_step_64(uint64_t x, uint64_t m, uint32_t s)
 static inline uint32_t bit_permute_step_32(uint32_t x, uint32_t m, uint32_t s)
 {
   uint32_t t;
-  t  = (x & (x >> s)) & m;
+  t  = (x ^ (x >> s)) & m;
   x ^= t ^ (t << s);
   return x;
 }
@@ -321,7 +321,7 @@ static inline uint64_t bit_highest_set_64(uint64_t x)
 
 static inline uint32_t bit_highest_set_32(uint32_t x)
 {
-  return (x != 0) ? 1 << (31-clz_32(x)) : 0;
+  return (x != 0) ? 1u << (31-clz_32(x)) : 0;
 }
 
 // number of zero-one transitions
