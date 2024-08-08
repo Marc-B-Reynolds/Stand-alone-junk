@@ -11,6 +11,12 @@
 #include <arm_acle.h>
 #define BITOPS_ARM
 #define BITOPS_SHIFT_SATURATES
+
+// indicate hardware support
+#define BITOPS_HAS_BIT_REVERSE 1
+#define BITOPS_HAS_BYTE_SWAP   1
+#define BITOPS_HAS_SCATTER_GATHER 0
+
 #elif  !defined(_MSC_VER)
 #include <x86intrin.h>
 #define BITOPS_INTEL
@@ -19,8 +25,11 @@
 #define BITOPS_INTEL
 #endif
 
+// indicate hardware support
 #ifdef  BITOPS_INTEL
-#define BITOPS_HAS_SCATTER_GATHER
+#define BITOPS_HAS_SCATTER_GATHER 1
+#define BITOPS_HAS_BIT_REVERSE 0
+#define BITOPS_HAS_BYTE_SWAP   1
 #endif
 
 // NOTE: there are additional bitops in carryless.h
@@ -82,9 +91,13 @@ static inline uint64_t bit_reverse_64(uint64_t x) { return __builtin_bitreverse6
 // seems like "pretty much" everybody (stern eyes) can match this pattern
 static inline uint32_t rot_32(uint32_t x, uint32_t n) { n &= 0x1f; return (x<<n) | (x>>(-n & 0x1f)); }
 static inline uint64_t rot_64(uint64_t x, uint32_t n) { n &= 0x3f; return (x<<n) | (x>>(-n & 0x3f)); }
+static inline uint32_t ror_32(uint32_t x, uint32_t n) { n &= 0x1f; return (x>>n) | (x<<(-n & 0x1f)); }
+static inline uint64_t ror_64(uint64_t x, uint32_t n) { n &= 0x3f; return (x>>n) | (x<<(-n & 0x3f)); }
 #else
 static inline uint32_t rot_32(uint32_t x, uint32_t n) { return (uint32_t)_rotl(x,n); }
 static inline uint64_t rot_64(uint64_t x, uint32_t n) { return (uint64_t)_rotl64(x,n); }
+static inline uint32_t ror_32(uint32_t x, uint32_t n) { return (uint32_t)_rotr(x,n); }
+static inline uint64_t ror_64(uint64_t x, uint32_t n) { return (uint64_t)_rotr64(x,n); }
 #endif
 
 // bit_set_even_N_T :
@@ -95,6 +108,7 @@ static const uint64_t bit_set_even_2_64  = UINT64_C(0x3333333333333333); // |001
 static const uint64_t bit_set_even_4_64  = UINT64_C(0x0f0f0f0f0f0f0f0f); // |0000ffff|
 static const uint64_t bit_set_even_8_64  = UINT64_C(0x00ff00ff00ff00ff); // etc
 static const uint64_t bit_set_even_16_64 = UINT64_C(0x0000ffff0000ffff); //... or as
+static const uint64_t bit_set_even_32_64 = UINT64_C(0x00000000ffffffff); //
 static const uint32_t bit_set_even_1_32  = (uint32_t)0x55555555;         // bits
 static const uint32_t bit_set_even_2_32  = (uint32_t)0x33333333;         // bit pairs 
 static const uint32_t bit_set_even_4_32  = (uint32_t)0x0f0f0f0f;         // nibbles
@@ -189,7 +203,7 @@ static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x)
 
 // scatter/gather ops generically...skipping that ATM.
 // "Hacker's Delight" et al. call scatter/gather expand/compress
-#if defined(BITOPS_HAS_SCATTER_GATHER)
+#if (BITOPS_HAS_SCATTER_GATHER)
 static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32(x, m); } 
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
 static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32(x, m); } 
@@ -197,6 +211,12 @@ static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64
 #else
 #endif
 
+// Given two registers (X,Y) swap the bits set in mask M
+// * Guy Steele's bit field swap between two registers.  "Hacker's Delight,
+//   Exchanging Corresponding Fields of Registers". Evil side effect macro.
+#define BIT_FIELD_SWAP2(T,X,Y,M)  { T t=(X^Y)&(M); X^=t; Y^=t; }
+#define BIT_FIELD_SWAP2_32(X,Y,M) BIT_FIELD_SWAP2(uint32_t, X,Y,M)
+#define BIT_FIELD_SWAP2_64(X,Y,M) BIT_FIELD_SWAP2(uint64_t, X,Y,M)
 
 // swaps one or more pairs of (same length) fields:
 //   m = bit mask of right most field(s)
@@ -244,18 +264,18 @@ static inline uint64_t bit_permute_step_simple_64(uint64_t x, uint64_t m, uint32
 
 #define  BIT_GROUP_SWAP(X,L,T) BIT_PERMUTE(X,bit_set_even_ ## L ## _ ## T,L)
 
-static inline uint32_t bit_swap_1_32(uint32_t x)  { return BIT_GROUP_SWAP(x,1,32); }
-static inline uint32_t bit_swap_2_32(uint32_t x)  { return BIT_GROUP_SWAP(x,2,32); }
-static inline uint32_t bit_swap_4_32(uint32_t x)  { return BIT_GROUP_SWAP(x,4,32); }
-static inline uint32_t bit_swap_8_32(uint32_t x)  { return byteswap_32(x); }
-static inline uint32_t bit_swap_16_32(uint32_t x) { return rot_32(x,16);  }
+static inline uint32_t bit_swap_1_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 1,32); }
+static inline uint32_t bit_swap_2_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 2,32); }
+static inline uint32_t bit_swap_4_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 4,32); }
+static inline uint32_t bit_swap_8_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 8,32); }
+static inline uint32_t bit_swap_16_32(uint32_t x) { return rot_32(x,16);            }
 
-static inline uint64_t bit_swap_1_64(uint64_t x)  { return BIT_GROUP_SWAP(x,1,64); }
-static inline uint64_t bit_swap_2_64(uint64_t x)  { return BIT_GROUP_SWAP(x,2,64); }
-static inline uint64_t bit_swap_4_64(uint64_t x)  { return BIT_GROUP_SWAP(x,4,64); }
-static inline uint64_t bit_swap_8_64(uint64_t x)  { return byteswap_64(x); }
-static inline uint64_t bit_swap_16_64(uint64_t x) { return BIT_GROUP_SWAP(x,16,64);}
-static inline uint64_t bit_swap_32_64(uint64_t x) { return rot_64(x,32);  }
+static inline uint64_t bit_swap_1_64 (uint64_t x) { return BIT_GROUP_SWAP(x, 1,64); }
+static inline uint64_t bit_swap_2_64 (uint64_t x) { return BIT_GROUP_SWAP(x, 2,64); }
+static inline uint64_t bit_swap_4_64 (uint64_t x) { return BIT_GROUP_SWAP(x, 4,64); }
+static inline uint64_t bit_swap_8_64 (uint64_t x) { return BIT_GROUP_SWAP(x, 8,64); }
+static inline uint64_t bit_swap_16_64(uint64_t x) { return BIT_GROUP_SWAP(x,16,64); }
+static inline uint64_t bit_swap_32_64(uint64_t x) { return rot_64(x,32);            }
 
 
 // returns 'x' with the two bits in positions (p0,p1) swapped
@@ -378,7 +398,7 @@ static inline uint64_t bit_match_lo_64(uint64_t x, uint64_t y)
 
 
 // temp hack
-#if defined(BITOPS_HAS_SCATTER_GATHER)
+#if (BITOPS_HAS_SCATTER_GATHER)
 
 // returns integer with the popcount of 'x' low bits set
 static inline uint32_t pop_to_mask_32(uint32_t x)
