@@ -100,6 +100,10 @@ static inline uint32_t ror_32(uint32_t x, uint32_t n) { return (uint32_t)_rotr(x
 static inline uint64_t ror_64(uint64_t x, uint32_t n) { return (uint64_t)_rotr64(x,n); }
 #endif
 
+// alias rot_n
+static inline uint32_t rol_32(uint32_t x, uint32_t n) { return rot_32(x,n); }
+static inline uint64_t rol_64(uint64_t x, uint32_t n) { return rot_64(x,n); }
+
 // bit_set_even_N_T :
 // * all even (lower) bits of 2N groups are set, otherwise clear
 // * bit (index i) set when (i & (1 << (N-1)))
@@ -243,6 +247,24 @@ static inline uint32_t bit_permute_step_32(uint32_t x, uint32_t m, uint32_t s)
   uint32_t t;
   t  = (x ^ (x >> s)) & m;
   x ^= t ^ (t << s);
+  return x;
+}
+
+// step with rotations instead of shifts. requires:
+// 1) no overlap (m & rol(m,s)) == 0
+static inline uint64_t bit_permute_rot_step_64(uint64_t x, uint64_t m, uint32_t s)
+{
+  uint64_t t;
+  t  = (x ^ rot_64(x,s)) & m;
+  x ^= t ^  ror_64(t,s);
+  return x;
+}
+
+static inline uint32_t bit_permute_rot_step_32(uint32_t x, uint32_t m, uint32_t s)
+{
+  uint32_t t;
+  t  = (x ^ rot_32(x,s)) & m;
+  x ^= t ^  ror_32(t,s);
   return x;
 }
 
