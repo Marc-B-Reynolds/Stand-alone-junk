@@ -47,6 +47,7 @@ typedef union {
   uint64_t u64[2];
 } pair_u64_t;
 
+
 // arithmetic/logical (asr/lsr) shifts for signed input by (n & (bitwidth-1))
 static inline int32_t  asr_s32(int32_t  x, uint32_t n) { return x >> (n & 0x1f); }
 static inline int64_t  asr_s64(int64_t  x, uint32_t n) { return x >> (n & 0x3f); }
@@ -76,6 +77,7 @@ static inline int64_t  lsr_s64(int64_t x,  uint32_t n) { return (int64_t) lsr_u6
 static inline uint32_t byteswap_32(uint32_t x) { return __builtin_bswap32(x); }
 static inline uint64_t byteswap_64(uint64_t x) { return __builtin_bswap64(x); }
 #else
+#pragma warning(disable:4146)  // unary minus applied to unsigned type, result is still unsigned
 static inline uint32_t byteswap_32(uint32_t x) { return _byteswap_ulong(x);   }
 static inline uint64_t byteswap_64(uint64_t x) { return _byteswap_uint64(x);  }
 #endif
@@ -212,8 +214,23 @@ static inline uint32_t bit_scatter_32(uint32_t x, uint32_t m) { return _pdep_u32
 static inline uint64_t bit_scatter_64(uint64_t x, uint64_t m) { return _pdep_u64(x, m); } 
 static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32(x, m); } 
 static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64(x, m); }
+
+// add reference
+uint64_t bit_permute_sg_step_64(uint64_t x, uint64_t m0, uint64_t m1)
+{
+  return bit_scatter_64(bit_gather_64(x,m0),m1)|bit_scatter_64(bit_gather_64(x,~m0),~m1);  
+}
+
+uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t m1)
+{
+  return bit_scatter_32(bit_gather_32(x,m0),m1)|bit_scatter_32(bit_gather_32(x,~m0),~m1);  
+}
+
 #else
+// general scatter/gather in software is a sad face. 
+
 #endif
+
 
 // Given two registers (X,Y) swap the bits set in mask M
 // * Guy Steele's bit field swap between two registers.  "Hacker's Delight,
