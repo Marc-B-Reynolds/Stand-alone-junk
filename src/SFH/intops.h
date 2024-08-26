@@ -187,8 +187,7 @@ static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
   __uint128_t r = (__uint128_t)a * (__uint128_t)b;
   hi = (uint64_t)(r >> 64);
   lo = (uint64_t)r;
-#elif defined(_MSC_VER) && defined(_M_IX64)
-#pragma intrinsic(_umul128)
+#elif defined(_MSC_VER)
   _umul128(a,b,&hi);
 #else
   static_assert(0);
