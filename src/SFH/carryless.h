@@ -14,8 +14,7 @@
 //   cl: lower triangular Toeplitz
 //   cr: upper triangular Toeplitz 
 //   cc: circulant (Toeplitz)
-// 
-// for cl/cr: invertiable elements are unitriangular
+//   for cl/cr: invertiable elements are unitriangular
 //
 // A 4th (set of) ring(s) is possible by treating the
 // result as fixed point (cr works this way) which
