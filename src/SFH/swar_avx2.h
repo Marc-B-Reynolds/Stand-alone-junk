@@ -4,213 +4,458 @@
 #ifndef SWAR_AVX2_H
 #define SWAR_AVX2_H
 
-static inline __m256i loadu_256 (void* a)            { return _mm256_loadu_si256 ((__m256i*)a);   }
-static inline void    storeu_256(void* a, __m256i v) { _mm256_storeu_si256((__m256i*)a,v); }
+//-------------------------------------------------------------------------------------------------------------
+// these a are bunch of trival wrappers. I hate stuff like this too. It's not just you. BUT:
+// * copypasta-a-rific. handy for scanning same op across different widths (IMHO)
+// * a babystep toward allowing usage of extern libraries like SIMDe less of a pain
+// * and they really aren't intended to external usage anywho
 
-typedef struct { __m256i lo,hi; } m256_pair_t;
+typedef __m256i u256_t;
 
-// lo/hi nibble PSHUFB lookup
-static inline m256_pair_t avx2_base_lut(__m256i x, __m256i lo, __m256i hi)
+static inline u256_t loadu_256 (void* a)           { return _mm256_loadu_si256 ((u256_t*)a);   }
+static inline void   storeu_256(void* a, u256_t v) { _mm256_storeu_si256((u256_t*)a,v); }
+
+static inline u256_t zero_256(void) { return _mm256_setzero_si256(); }
+
+// for clang/GCC we could just use the operators for these (sigh)
+static inline u256_t lor_256(u256_t a, u256_t b)   { return _mm256_or_si256 (a,b); }
+static inline u256_t xor_256(u256_t a, u256_t b)   { return _mm256_xor_si256(a,b); }
+static inline u256_t and_256(u256_t a, u256_t b)   { return _mm256_and_si256(a,b); }
+
+static inline u256_t add_8x32 (u256_t a, u256_t b) { return _mm256_add_epi8 (a,b); }
+static inline u256_t add_16x16(u256_t a, u256_t b) { return _mm256_add_epi16(a,b); }
+static inline u256_t add_32x8 (u256_t a, u256_t b) { return _mm256_add_epi32(a,b); }
+static inline u256_t add_64x4 (u256_t a, u256_t b) { return _mm256_add_epi64(a,b); }
+
+static inline u256_t sub_8x32 (u256_t a, u256_t b) { return _mm256_sub_epi8 (a,b); }
+static inline u256_t sub_16x16(u256_t a, u256_t b) { return _mm256_sub_epi16(a,b); }
+static inline u256_t sub_32x8 (u256_t a, u256_t b) { return _mm256_sub_epi32(a,b); }
+static inline u256_t sub_64x4 (u256_t a, u256_t b) { return _mm256_sub_epi64(a,b); }
+
+// min/max of unsigned elements
+static inline u256_t umin_8x32 (u256_t a, u256_t b) { return _mm256_min_epu8 (a,b); }
+static inline u256_t umin_16x16(u256_t a, u256_t b) { return _mm256_min_epu16(a,b); }
+static inline u256_t umin_32x8 (u256_t a, u256_t b) { return _mm256_min_epu32(a,b); }
+static inline u256_t umax_8x32 (u256_t a, u256_t b) { return _mm256_max_epu8 (a,b); }
+static inline u256_t umax_16x16(u256_t a, u256_t b) { return _mm256_max_epu16(a,b); }
+static inline u256_t umax_32x8 (u256_t a, u256_t b) { return _mm256_max_epu32(a,b); }
+
+// min/max of signed elements
+static inline u256_t smin_8x32 (u256_t a, u256_t b) { return _mm256_min_epi8 (a,b); }
+static inline u256_t smin_16x16(u256_t a, u256_t b) { return _mm256_min_epi16(a,b); }
+static inline u256_t smin_32x8 (u256_t a, u256_t b) { return _mm256_min_epi32(a,b); }
+static inline u256_t smax_8x32 (u256_t a, u256_t b) { return _mm256_max_epi8 (a,b); }
+static inline u256_t smax_16x16(u256_t a, u256_t b) { return _mm256_max_epi16(a,b); }
+static inline u256_t smax_32x8 (u256_t a, u256_t b) { return _mm256_max_epi32(a,b); }
+
+// compile time constant shifts (matching intrinsic naming scheme)
+static inline u256_t srli_16x16(u256_t x, int s) { return _mm256_srli_epi16(x,s); }
+static inline u256_t srli_32x8 (u256_t x, int s) { return _mm256_srli_epi32(x,s); }
+static inline u256_t srli_64x4 (u256_t x, int s) { return _mm256_srli_epi64(x,s); }
+
+static inline u256_t slli_16x16(u256_t x, int s) { return _mm256_slli_epi16(x,s); }
+static inline u256_t slli_32x8 (u256_t x, int s) { return _mm256_slli_epi32(x,s); }
+static inline u256_t slli_64x4 (u256_t x, int s) { return _mm256_slli_epi64(x,s); }
+
+
+// broadcast (scalar) 'k' to all elements
+static inline u256_t broadcast_8x32 (int8_t  k)  { return _mm256_set1_epi8 (k); }
+static inline u256_t broadcast_16x16(int16_t k)  { return _mm256_set1_epi16(k); }
+static inline u256_t broadcast_32x8 (int32_t k)  { return _mm256_set1_epi32(k); }
+static inline u256_t broadcast_64x4 (int64_t k)  { return _mm256_set1_epi64x(k);}
+
+// low element of 'x' broadcast to all (the 'cast' isn't a real operation)
+static inline u256_t broadcast_lo_8x32 (u256_t x)  { return _mm256_broadcastb_epi8 (_mm256_castsi256_si128(x)); }
+static inline u256_t broadcast_lo_16x16(u256_t x)  { return _mm256_broadcastw_epi16(_mm256_castsi256_si128(x)); }
+static inline u256_t broadcast_lo_32x8 (u256_t x)  { return _mm256_broadcastd_epi32(_mm256_castsi256_si128(x)); }
+static inline u256_t broadcast_lo_64x4 (u256_t x)  { return _mm256_broadcastq_epi64(_mm256_castsi256_si128(x)); }
+
+
+// (~a) & b
+static inline u256_t andnot_256(u256_t a, u256_t b) { return _mm256_andnot_si256(a,b); }
+
+//-------------------------------------------------------------------------------------------------------------
+// 
+
+static inline bool cmp_equal_256(u256_t a, u256_t b) { return ((uint32_t)_mm256_movemask_epi8(_mm256_cmpeq_epi8(a,b))) == 0xFFFFFFFF; }
+
+// all bits set : should lower to vpcmpeqd ymmR,ymmN,ymmN (ymmN is any)
+static inline u256_t bit_allset_256(void) { u256_t t = _mm256_setzero_si256(); return _mm256_cmpeq_epi32(t,t); }
+
+// ~x
+static inline u256_t bit_not_256(u256_t x) { return xor_256(x,bit_allset_256()); }
+
+// each element -1
+static inline u256_t dec_8x32 (u256_t x) { return add_8x32 (x,bit_allset_256()); }
+static inline u256_t dec_16x16(u256_t x) { return add_16x16(x,bit_allset_256()); }
+static inline u256_t dec_32x8 (u256_t x) { return add_32x8 (x,bit_allset_256()); }
+static inline u256_t dec_64x4 (u256_t x) { return add_64x4 (x,bit_allset_256()); }
+
+// each element +1
+static inline u256_t inc_8x32 (u256_t x) { return sub_8x32 (x,bit_allset_256()); }
+static inline u256_t inc_16x16(u256_t x) { return sub_16x16(x,bit_allset_256()); }
+static inline u256_t inc_32x8 (u256_t x) { return sub_32x8 (x,bit_allset_256()); }
+static inline u256_t inc_64x4 (u256_t x) { return sub_64x4 (x,bit_allset_256()); }
+
+// negate each element
+static inline u256_t negate_8x32 (u256_t x) { return sub_8x32 (zero_256(), x); }
+static inline u256_t negate_16x16(u256_t x) { return sub_16x16(zero_256(), x); }
+static inline u256_t negate_32x8 (u256_t x) { return sub_32x8 (zero_256(), x); }
+static inline u256_t negate_64x4 (u256_t x) { return sub_64x4 (zero_256(), x); }
+
+// returns the sum of bytes in each 64-bit element
+// * the cleverness of using SAD is from: "Faster Population Counts Using AVX2 Instructions", Mula, Kurz & Lemire
+//   (https://arxiv.org/pdf/1611.07612)
+static inline u256_t byte_sum_64x4(u256_t x) {return _mm256_sad_epu8(x, zero_256()); }
+
+//-------------------------------------------------------------------------------------------------------------
+
+// per element: x ^ (x >> s)
+static inline u256_t rxorshift_16x16(u256_t x, const int s) { return xor_256(x,srli_16x16(x,s)); }
+static inline u256_t rxorshift_32x8 (u256_t x, const int s) { return xor_256(x,srli_32x8 (x,s)); }
+static inline u256_t rxorshift_64x4 (u256_t x, const int s) { return xor_256(x,srli_64x4 (x,s)); }
+
+// per element: x ^ (x << s)
+static inline u256_t lxorshift_16x16(u256_t x, const int s) { return xor_256(x,slli_16x16(x,s)); }
+static inline u256_t lxorshift_32x8 (u256_t x, const int s) { return xor_256(x,slli_32x8 (x,s)); }
+static inline u256_t lxorshift_64x4 (u256_t x, const int s) { return xor_256(x,slli_64x4 (x,s)); }
+
+// isolate lowest set bit per element (bit set in location. all others clear)
+static inline u256_t bit_lowest_set_8x32 (u256_t x) { return and_256(x,negate_8x32 (x)); }
+static inline u256_t bit_lowest_set_16x16(u256_t x) { return and_256(x,negate_16x16(x)); }
+static inline u256_t bit_lowest_set_32x8 (u256_t x) { return and_256(x,negate_32x8 (x)); }
+static inline u256_t bit_lowest_set_64x4 (u256_t x) { return and_256(x,negate_64x4 (x)); }
+
+// isolate lowest clear bit per element (bit set in location. all others clear)
+static inline u256_t bit_lowest_clear_8x32 (u256_t x) { return and_256(inc_8x32 (x),bit_not_256(x)); }
+static inline u256_t bit_lowest_clear_16x16(u256_t x) { return and_256(inc_16x16(x),bit_not_256(x)); }
+static inline u256_t bit_lowest_clear_32x8 (u256_t x) { return and_256(inc_32x8 (x),bit_not_256(x)); }
+static inline u256_t bit_lowest_clear_64x4 (u256_t x) { return and_256(inc_64x4 (x),bit_not_256(x)); }
+
+// isolate lowest bit that differs from the LSB per element (bit set in location. all others clear)
+static inline u256_t bit_lowest_changed_8x32 (u256_t x) { return and_256(inc_8x32 (x),negate_8x32 (x)); }
+static inline u256_t bit_lowest_changed_16x16(u256_t x) { return and_256(inc_16x16(x),negate_16x16(x)); }
+static inline u256_t bit_lowest_changed_32x8 (u256_t x) { return and_256(inc_32x8 (x),negate_32x8 (x)); }
+static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x4 (x),negate_64x4 (x)); }
+
+
+//-------------------------------------------------------------------------------------------------------------
+
+// when table entries are duplicated per 128 bit lane
+#define pshufb_table(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF) _mm256_setr_epi8(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF)
+
+
+// pshufb wrapper for byte motion
+static inline u256_t byte_shuffle_128x2(u256_t x, u256_t table)
 {
-  __m256i m  = _mm256_set1_epi8(0x0f);
-  __m256i t;
+  return _mm256_shuffle_epi8(x,table);
+}
 
-  // nibble split
-  t = _mm256_andnot_si256(m,x);
-  x = _mm256_and_si256(m,x);
-  t = _mm256_srli_epi16(t,4);
 
-  // look-up and merge
-  x = _mm256_shuffle_epi8(lo,x);
-  t = _mm256_shuffle_epi8(hi,t);
+typedef struct { u256_t lo,hi; } m256_pair_t;
+
+// lo/hi nibble PSHUFB lookup worker. (r.lo = lo[low nibble], r.hi = hi[high nibble])
+static inline m256_pair_t pshufb_lookup(u256_t x, u256_t lo, u256_t hi)
+{
+  u256_t m  = broadcast_8x32(0x0f);
+  u256_t t;
+
+  t = andnot_256(m,x);
+  x = and_256   (m,x);
+  t = srli_16x16(t,4);
+  x = byte_shuffle_128x2(lo,x);
+  t = byte_shuffle_128x2(hi,t);
 
   return (m256_pair_t){.lo=x, .hi=t};
 }
 
 
-static inline __m256i pop_8x32(__m256i x)
+// add bit_swap_{1,2,4,8,16,32,64}_256 aliases
+
+static inline u256_t byte_reverse_16x16(u256_t x)
 {
+  u256_t k = pshufb_table(1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14);
 
-  __m256i k  = _mm256_setr_epi8(0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,
-				0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4);
-
-  m256_pair_t r = avx2_base_lut(x,k,k);
-
-  return _mm256_add_epi8(r.hi,r.lo);
+  return byte_shuffle_128x2(x,k);
 }
 
-static inline __m256i pop_16x16(__m256i x)
+static inline u256_t byte_reverse_32x8(u256_t x)
 {
-  __m256i m = _mm256_set1_epi16(0xff);
-  __m256i t;
+  u256_t k = pshufb_table(3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12);
+
+  return byte_shuffle_128x2(x,k);
+}
+
+static inline u256_t byte_reverse_64x4(u256_t x)
+{
+  u256_t k = pshufb_table(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
+  
+  return byte_shuffle_128x2(x,k);
+}
+
+static inline u256_t bit_reverse_8x32(u256_t x)
+{
+  u256_t      k = pshufb_table(0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15);
+  m256_pair_t r = pshufb_lookup(x,k,k);
+  u256_t      t = slli_16x16(r.lo,4);
+  
+  return xor_256(r.hi,t);
+}
+
+static inline u256_t bit_reverse_16x16(u256_t x) {  return byte_reverse_16x16(bit_reverse_8x32(x)); }
+static inline u256_t bit_reverse_32x8 (u256_t x) {  return byte_reverse_32x8 (bit_reverse_8x32(x)); }
+static inline u256_t bit_reverse_64x4 (u256_t x) {  return byte_reverse_64x4 (bit_reverse_8x32(x)); }
+
+
+// computes the population count of each data width
+static inline u256_t pop_8x32(u256_t x)
+{
+  u256_t k = pshufb_table(0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4);
+  
+  m256_pair_t r = pshufb_lookup(x,k,k);
+  
+  return add_8x32(r.hi,r.lo);
+}
+
+static inline u256_t pop_16x16(u256_t x)
+{
+  u256_t m = broadcast_16x16(0xff);
+  u256_t t;
 
   x = pop_8x32(x);
-  t = _mm256_srli_epi16(x,8);
-  x = _mm256_add_epi8(x,t);
+  t = srli_16x16(x,8);
+  x = add_8x32(x,t);
   
-  return _mm256_and_si256(m,x);
+  return and_256(m,x);
 }
 
-static inline __m256i pop_32x8(__m256i x)
+static inline u256_t pop_32x8(u256_t x)
 {
-  __m256i m = _mm256_set1_epi32(0xff);
-  __m256i t;
+  u256_t m = broadcast_32x8(0xff);
+  u256_t t;
 
   x = pop_8x32(x);
-  t = _mm256_srli_epi16(x,8);
-  x = _mm256_add_epi8(x,t);
-  t = _mm256_srli_epi32(x,16);
-  x = _mm256_add_epi8(x,t);
+  t = srli_16x16(x,8);
+  x = add_8x32(x,t);
+  t = srli_32x8(x,16);
+  x = add_8x32(x,t);
   
-  return _mm256_and_si256(m,x);
+  return and_256(m,x);
 }
 
-// returns the sum of bytes in each 64-bit element
-// * the cleverness of using SAD is from: "Faster Population Counts Using AVX2 Instructions", Mula, Kurz & Lemire
-//   (https://arxiv.org/pdf/1611.07612)
-static inline __m256i byte_sum_64x4(__m256i x) {return _mm256_sad_epu8(x, _mm256_setzero_si256()); }
 
-static inline __m256i pop_64x4(__m256i x) { return byte_sum_64x4(pop_8x32(x)); }
+static inline u256_t pop_64x4(u256_t x) { return byte_sum_64x4(pop_8x32(x)); }
 
-
-static inline __m256i bit_parity_8x32(__m256i x)
+// computes the parity of each data width. result is LSB in width
+static inline u256_t bit_parity_8x32(u256_t x)
 {
-  __m256i k  = _mm256_setr_epi8(0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0,
-				0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0);
+  u256_t k  = pshufb_table(0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0);
 
-  m256_pair_t r = avx2_base_lut(x,k,k);
+  m256_pair_t r = pshufb_lookup(x,k,k);
 
-  return _mm256_xor_si256(r.hi,r.lo);
+  return xor_256(r.hi,r.lo);
 }
 
-static inline __m256i bit_parity_16x16(__m256i x)
+static inline u256_t bit_parity_16x16(u256_t x)
 {
-  x = bit_parity_8x32(x);
-  x = _mm256_xor_si256(x,_mm256_srli_epi16(x,8));
+  x = bit_parity_8x32(x);                   // per byte parity
+  x = rxorshift_16x16(x,8);                 // add the 2 subresults
+  x = and_256(x,broadcast_16x16(1));        // isolate the final results
 
-  return _mm256_and_si256(x,_mm256_set1_epi16(1));
+  return x;
 }
 
-static inline __m256i bit_parity_32x8(__m256i x)
+static inline u256_t bit_parity_32x8(u256_t x)
 {
   x = bit_parity_8x32(x);
-  x = _mm256_xor_si256(x,_mm256_srli_epi16(x, 8));
-  x = _mm256_xor_si256(x,_mm256_srli_epi32(x,16));
+  x = rxorshift_16x16(x, 8);
+  x = rxorshift_32x8 (x,16);
+  x = and_256(x,broadcast_32x8(1));
 
-  return _mm256_and_si256(x,_mm256_set1_epi32(1));
+  return x;
 }
 
-static inline __m256i bit_parity_64x4(__m256i x)
+static inline u256_t bit_parity_64x4(u256_t x)
 {
   x = bit_parity_8x32(x);
-  x = _mm256_xor_si256(x,_mm256_srli_epi16(x, 8));
-  x = _mm256_xor_si256(x,_mm256_srli_epi32(x,16));
-  x = _mm256_xor_si256(x,_mm256_srli_epi64(x,32));
+  x = byte_sum_64x4(x);
+  x = and_256(x,broadcast_64x4(1));
 
-  return _mm256_and_si256(x,_mm256_set1_epi64x(1));
+  return x;
+}
+
+static inline u256_t bit_prefix_sum_16x16(u256_t x)
+{
+  x = rxorshift_16x16(x, 1);
+  x = rxorshift_16x16(x, 2);
+  x = rxorshift_16x16(x, 4);
+  x = rxorshift_16x16(x, 8);
+
+  return x;
+}
+
+static inline u256_t bit_suffix_sum_16x16(u256_t x)
+{
+  x = lxorshift_16x16(x, 1);
+  x = lxorshift_16x16(x, 2);
+  x = lxorshift_16x16(x, 4);
+  x = lxorshift_16x16(x, 8);
+
+  return x;
+}
+
+static inline u256_t bit_prefix_sum_32x8(u256_t x)
+{
+  x = rxorshift_32x8(x, 1);
+  x = rxorshift_32x8(x, 2);
+  x = rxorshift_32x8(x, 4);
+  x = rxorshift_32x8(x, 8);
+  x = rxorshift_32x8(x,16);
+
+  return x;
+}
+
+static inline u256_t bit_suffix_sum_32x8(u256_t x)
+{
+  x = lxorshift_32x8(x, 1);
+  x = lxorshift_32x8(x, 2);
+  x = lxorshift_32x8(x, 4);
+  x = lxorshift_32x8(x, 8);
+  x = lxorshift_32x8(x,16);
+
+  return x;
+}
+
+static inline u256_t bit_prefix_sum_64x4(u256_t x)
+{
+  x = rxorshift_64x4(x, 1);
+  x = rxorshift_64x4(x, 2);
+  x = rxorshift_64x4(x, 4);
+  x = rxorshift_64x4(x, 8);
+  x = rxorshift_64x4(x,16);
+  x = rxorshift_64x4(x,32);
+
+  return x;
+}
+
+static inline u256_t bit_suffix_sum_64x4(u256_t x)
+{
+  x = lxorshift_64x4(x, 1);
+  x = lxorshift_64x4(x, 2);
+  x = lxorshift_64x4(x, 4);
+  x = lxorshift_64x4(x, 8);
+  x = lxorshift_64x4(x,16);
+  x = lxorshift_64x4(x,32);
+
+  return x;
 }
 
 
 // number of leading zeros in each byte
-static inline __m256i clz_8x32(__m256i x)
+static inline u256_t clz_8x32(u256_t x)
 {
-  __m256i lo = _mm256_set_epi8(4,4,4,4,4,4,4,4,5,5,5,5,6,6,7,8,
-			       4,4,4,4,4,4,4,4,5,5,5,5,6,6,7,8);
-  __m256i hi = _mm256_set_epi8(0,0,0,0,0,0,0,0,1,1,1,1,2,2,3,8,
-			       0,0,0,0,0,0,0,0,1,1,1,1,2,2,3,8);
+  u256_t      lo = pshufb_table(8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4);
+  u256_t      hi = pshufb_table(8,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0);
+  m256_pair_t r  = pshufb_lookup(x,lo,hi);
 
-  m256_pair_t r = avx2_base_lut(x,lo,hi);
-
-  return _mm256_min_epu8(r.hi,r.lo);
+  return umin_8x32(r.hi,r.lo);
 }
 
 // number of trailing zeros in each byte
-static inline __m256i ctz_8x32(__m256i x)
+static inline u256_t ctz_8x32(u256_t x)
 {
-  __m256i lo = _mm256_set_epi8(0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,8,
-			       0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,8);
-  __m256i hi = _mm256_set_epi8(4,5,4,6,4,5,4,7,4,5,4,6,4,5,4,8,
-			       4,5,4,6,4,5,4,7,4,5,4,6,4,5,4,8);
+  u256_t      lo = pshufb_table(8,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0);
+  u256_t      hi = pshufb_table(8,4,5,4,6,4,5,4,7,4,5,4,6,4,5,4);
+  m256_pair_t r  = pshufb_lookup(x,lo,hi);
 
-  m256_pair_t r = avx2_base_lut(x,lo,hi);
-
-  return _mm256_min_epu8(r.hi,r.lo);
+  return umin_8x32(r.hi,r.lo);
 }
 
-static inline __m256i clz_16x16(__m256i x)
+static inline u256_t clz_16x16(u256_t x)
 {
-  __m256i t,s,m;
+  u256_t t,s,m;
 
   x = clz_8x32(x);
 
-  m = _mm256_set1_epi16(0xff);  
-  s = _mm256_set1_epi8(8);  
-  t = _mm256_srli_epi16(x,8);
-
-  s = _mm256_cmpeq_epi8(t,s);
-  x = _mm256_and_si256 (x,s);
+  m = broadcast_16x16(0xff);
+  s = broadcast_8x32(8);
+  t = srli_16x16(x,8);
   
-  x = _mm256_add_epi8(t,x);
-
-  return _mm256_and_si256(x,m);
+  s = _mm256_cmpeq_epi8(t,s);
+  x = and_256 (x,s);
+  
+  x = add_8x32(t,x);
+  
+  return and_256(x,m);
 }
 
-static inline __m256i ctz_16x16(__m256i x)
+static inline u256_t ctz_16x16(u256_t x)
 {
-  __m256i t,s,m;
+  u256_t t,s,m;
 
   x = ctz_8x32(x);
 
-  m = _mm256_set1_epi16(0xff);  
-  s = _mm256_set1_epi8(8);  
-  t = _mm256_srli_epi16(x,8);    
+  m = broadcast_16x16(0xff);  
+  s = broadcast_8x32(8);  
+  t = srli_16x16(x,8);    
 
   s = _mm256_cmpeq_epi8(x,s);  
-  t = _mm256_and_si256 (t,s);
+  t = and_256 (t,s);
 
-  x = _mm256_add_epi8(t,x);
+  x = add_8x32(t,x);
 
-  return _mm256_and_si256(x,m);  
+  return and_256(x,m);  
 }
 
 
 // per 128 lane (riffle 2x16)
-static inline __m256i byte_zip_2x128(__m256i x)
+static inline u256_t byte_zip_2x128(u256_t x)
 {
-  __m256i m = _mm256_setr_epi8(0x00,0x08,0x01,0x09,0x02,0x0a,0x03,0x0b,0x04,0x0c,0x05,0x0d,0x06,0x0e,0x07,0x0f,
-			       0x00,0x08,0x01,0x09,0x02,0x0a,0x03,0x0b,0x04,0x0c,0x05,0x0d,0x06,0x0e,0x07,0x0f);
+  u256_t m = pshufb_table(0x0,0x8,0x1,0x9,0x2,0xa,0x3,0xb,0x4,0xc,0x5,0xd,0x6,0xe,0x7,0xf);
   
-  return _mm256_shuffle_epi8(x,m);
+  return byte_shuffle_128x2(x,m);
 }
 
 // per 128-bit lane (unriffle 2x16)
-static inline __m256i byte_unzip_2x128(__m256i x)
+static inline u256_t byte_unzip_2x128(u256_t x)
 {
-  __m256i m = _mm256_setr_epi8(0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x01,0x03,0x05,0x07,0x09,0x0b,0x0d,0x0f,
-			       0x00,0x02,0x04,0x06,0x08,0x0a,0x0c,0x0e,0x01,0x03,0x05,0x07,0x09,0x0b,0x0d,0x0f);
+  u256_t m = pshufb_table(0x0,0x2,0x4,0x6,0x8,0xa,0xc,0xe,0x1,0x3,0x5,0x7,0x9,0xb,0xd,0xf);
   
-  return _mm256_shuffle_epi8(x,m);
+  return byte_shuffle_128x2(x,m);
 }
 
+#define DELTA_SWAP_4x64(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
+
+static inline m256_pair_t delta_swap_4x64(m256_pair_t p, u256_t m, const int s)
+{
+  u256_t t;
+  
+  t    = and_256(xor_256(p.lo, srli_64x4(p.hi,s)),m);
+  p.lo = xor_256(p.lo, t);
+  p.hi = xor_256(p.hi, slli_64x4(t,s));
+  
+  return p;
+}
 
 // perform a delta swap in each 64-bit lane: bits indicated by 'm' are swapped with the bits
-static inline __m256i bit_permute_step_4x64(__m256i x, __m256i m, const int s)
+static inline u256_t bit_permute_step_64x4(u256_t x, u256_t m, const int s)
 {
-  __m256i t;
+  u256_t t;
+  
+  t = xor_256(x, srli_64x4(x,s));
+  t = and_256(x, m);
+  t = xor_256(t, slli_64x4(t,s));
+  t = xor_256(t,x);
 
-  t = _mm256_xor_si256(x, _mm256_srli_epi64(x,s));
-  t = _mm256_and_si256(x, m);
-  t = _mm256_xor_si256(t , _mm256_slli_epi64(t,s));
-
-  return _mm256_xor_si256(t,x);
+  return t;
 }
 
-static inline __m256i bit_permute_step_simple_4x64(__m256i x, __m256i m, const int s)
+static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int s)
 {
-  __m256i t0 = _mm256_slli_epi64(_mm256_and_si256 (x,m),s);
-  __m256i t1 = _mm256_and_si256 (_mm256_srli_epi64(x,s),m);
-
-  return _mm256_xor_si256(t0,t1);
+  u256_t t0 = slli_64x4(and_256 (x,m),s);
+  u256_t t1 = and_256 (srli_64x4(x,s),m);
+  
+  return xor_256(t0,t1);
 }
 
 #endif
