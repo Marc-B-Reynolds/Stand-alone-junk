@@ -10,8 +10,6 @@
 // * a babystep toward allowing usage of extern libraries like SIMDe less of a pain
 // * and they really aren't intended to external usage anywho
 
-typedef __m256i u256_t;
-
 // it gets worse...C's macros!
 #pragma push_macro("W")
 #pragma push_macro("DEF")
