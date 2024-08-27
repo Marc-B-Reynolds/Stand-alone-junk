@@ -17,7 +17,7 @@ typedef __m256i u256_t;
 #pragma push_macro("DEF")
 
 #if defined(SIMDE_VERSION)
-#define W(X) simde ## _mm256_ ## X
+#define W(X) simde_ ## _mm256_ ## X
 typedef simde__m256i u256_t;
 #else
 #define W(X) _mm256_ ## X
