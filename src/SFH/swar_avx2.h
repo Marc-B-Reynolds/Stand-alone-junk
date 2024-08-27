@@ -22,10 +22,10 @@ typedef simde__m256i u256_t;
 typedef __m256i u256_t;
 #endif
 
-static inline u256_t loadu_256 (void* a)           { return _mm256_loadu_si256 ((u256_t*)a);   }
-static inline void   storeu_256(void* a, u256_t v) { _mm256_storeu_si256((u256_t*)a,v); }
+static inline u256_t loadu_256 (void* a)           { return W(loadu_si256) ((u256_t*)a);   }
+static inline void   storeu_256(void* a, u256_t v) { W(storeu_si256)((u256_t*)a,v); }
 
-static inline u256_t zero_256(void) { return _mm256_setzero_si256(); }
+static inline u256_t zero_256(void) { return W(setzero_si256)(); }
 
 static inline u256_t lor_256(u256_t a, u256_t b)   { return W(or_si256) (a,b); }
 static inline u256_t xor_256(u256_t a, u256_t b)   { return W(xor_si256)(a,b); }
