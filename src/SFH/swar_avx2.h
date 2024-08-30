@@ -83,17 +83,38 @@ typedef __m256i u256_t;
 
 #define sad_8x32       SFH_CAT(AVX2_PREFIX, sad_epu8)
 
-// compile time constant shifts
+// compile time constant shifts (all elems same shift amount)
 #define srli_16x16     SFH_CAT(AVX2_PREFIX, srli_epi16)
 #define srli_32x8      SFH_CAT(AVX2_PREFIX, srli_epi32)
 #define srli_64x4      SFH_CAT(AVX2_PREFIX, srli_epi64)
-
 #define slli_16x16     SFH_CAT(AVX2_PREFIX, slli_epi16)
 #define slli_32x8      SFH_CAT(AVX2_PREFIX, slli_epi32)
 #define slli_64x4      SFH_CAT(AVX2_PREFIX, slli_epi64)
 
 #define bslli_128x2    SFH_CAT(AVX2_PREFIX, bslli_epi128)
 #define bsrli_128x2    SFH_CAT(AVX2_PREFIX, bsrli_epi128)
+
+// all elems same shift amount (low 64-bit of count reg)
+#define srl_16x16      SFH_CAT(AVX2_PREFIX, srl_epi16)
+#define srl_32x8       SFH_CAT(AVX2_PREFIX, srl_epi32)
+#define srl_64x4       SFH_CAT(AVX2_PREFIX, srl_epi64)
+#define sll_16x16      SFH_CAT(AVX2_PREFIX, sll_epi16)
+#define sll_32x8       SFH_CAT(AVX2_PREFIX, sll_epi32)
+#define sll_64x4       SFH_CAT(AVX2_PREFIX, sll_epi64)
+
+
+#if 0
+#define sllv_32x8      SFH_CAT(AVX2_PREFIX, sllv_epi32)
+#define sllv_64x4      SFH_CAT(AVX2_PREFIX, sllv_epi64)
+#define srlv_32x8      SFH_CAT(AVX2_PREFIX, srlv_epi32)
+#define srlv_64x4      SFH_CAT(AVX2_PREFIX, srlv_epi64)
+
+#define sra_16x16      SFH_CAT(AVX2_PREFIX, sra_epi16)
+#define sra_32x8       SFH_CAT(AVX2_PREFIX, sra_epi32)
+#define srai_16x16     SFH_CAT(AVX2_PREFIX, srai_epi16)
+#define srai_32x8      SFH_CAT(AVX2_PREFIX, srai_epi32)
+#define srav_32x8      SFH_CAT(AVX2_PREFIX, srav_epi32)
+#endif
 
 #define cmpeq_8x32     SFH_CAT(AVX2_PREFIX, cmpeq_epi8)
 #define cmpeq_16x16    SFH_CAT(AVX2_PREFIX, cmpeq_epi16)
@@ -104,6 +125,10 @@ typedef __m256i u256_t;
 #define cmpgt_16x16    SFH_CAT(AVX2_PREFIX, cmpgt_epi16)
 #define cmpgt_32x8     SFH_CAT(AVX2_PREFIX, cmpgt_epi32)
 #define cmpgt_64x4     SFH_CAT(AVX2_PREFIX, cmpgt_epi64)
+
+#define blend_8x32     SFH_CAT(AVX2_PREFIX, blend_epi8)
+#define blend_16x16    SFH_CAT(AVX2_PREFIX, blend_epi16)
+#define blend_32x8     SFH_CAT(AVX2_PREFIX, blend_epi32)
 
 #define unpackhi_8x32  SFH_CAT(AVX2_PREFIX, unpackhi_epi8)
 #define unpacklo_8x32  SFH_CAT(AVX2_PREFIX, unpacklo_epi8)
@@ -128,6 +153,9 @@ static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX
 #define broadcast_16x16 SFH_CAT(AVX2_PREFIX, set1_epi16)
 #define broadcast_32x8  SFH_CAT(AVX2_PREFIX, set1_epi32)
 #define broadcast_64x4  SFH_CAT(AVX2_PREFIX, set1_epi64x)
+
+// the reversal is unfortunate
+#define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
 
 #define cast_128_256    SFH_CAT(AVX2_PREFIX, castsi256_si128)
 
@@ -174,10 +202,11 @@ static inline u256_t negate_64x4 (u256_t x) { return sub_64x4 (zero_256(), x); }
 static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 
 // alignr : amount compile time
-#define byte_barrel_shift(X,I) alignr_128x2(X,X,I)
+#define byte_barrel_shift_128x2(X,I) alignr_128x2(X,X,I)
 
 //------------------------------------------------------------------------------
 
+#if !defined(__ARM_ARCH)
 // per element: x ^ (x >> s)
 static inline u256_t rxorshift_16x16(u256_t x, const int s) { return xor_256(x,srli_16x16(x,s)); }
 static inline u256_t rxorshift_32x8 (u256_t x, const int s) { return xor_256(x,srli_32x8 (x,s)); }
@@ -187,6 +216,16 @@ static inline u256_t rxorshift_64x4 (u256_t x, const int s) { return xor_256(x,s
 static inline u256_t lxorshift_16x16(u256_t x, const int s) { return xor_256(x,slli_16x16(x,s)); }
 static inline u256_t lxorshift_32x8 (u256_t x, const int s) { return xor_256(x,slli_32x8 (x,s)); }
 static inline u256_t lxorshift_64x4 (u256_t x, const int s) { return xor_256(x,slli_64x4 (x,s)); }
+#else
+// temp hack. side effects on 'x'
+#define rxorshift_16x16(x,s) xor_256(x,srli_16x16(x,s))
+#define rxorshift_32x8 (x,s) xor_256(x,srli_32x8 (x,s))
+#define rxorshift_64x4 (x,s) xor_256(x,srli_64x4 (x,s))
+
+#define lxorshift_16x16(x,s) xor_256(x,slli_16x16(x,s))
+#define lxorshift_32x8 (x,s) xor_256(x,slli_32x8 (x,s))
+#define lxorshift_64x4 (x,s) xor_256(x,slli_64x4 (x,s))
+#endif
 
 // isolate lowest set bit per element (bit set in location. all others clear)
 static inline u256_t bit_lowest_set_8x32 (u256_t x) { return and_256(x,negate_8x32 (x)); }
@@ -241,8 +280,10 @@ static inline m256_pair_t pshufb_lookup(u256_t x, u256_t lo, u256_t hi)
 }
 
 
-// add bit_swap_{1,2,4,8,16,32,64}_256 aliases
+// swap upper/lower 128 bit lanes
+static inline u256_t swap_128x2(u256_t x) { return permute_64x4(x, _MM_SHUFFLE(1,0,3,2)); }
 
+// reverse the bytes in each element
 static inline u256_t byte_reverse_16x16(u256_t x) { return pshufb_128x2(x, pshufb_table_128x2(1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14)); }
 static inline u256_t byte_reverse_32x8 (u256_t x) { return pshufb_128x2(x, pshufb_table_128x2(3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12)); }
 static inline u256_t byte_reverse_64x4 (u256_t x) { return pshufb_128x2(x, pshufb_table_128x2(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8)); }
@@ -267,7 +308,7 @@ static inline u256_t bit_reverse_16x16(u256_t x) {  return byte_reverse_16x16(bi
 static inline u256_t bit_reverse_32x8 (u256_t x) {  return byte_reverse_32x8 (bit_reverse_8x32(x)); }
 static inline u256_t bit_reverse_64x4 (u256_t x) {  return byte_reverse_64x4 (bit_reverse_8x32(x)); }
 static inline u256_t bit_reverse_128x2(u256_t x) {  return byte_reverse_128x2(bit_reverse_8x32(x)); }
-static inline u256_t bit_reverse_256  (u256_t x) {  return byte_reverse_128x2(bit_reverse_8x32(x)); }
+static inline u256_t bit_reverse_256  (u256_t x) {  return byte_reverse_256  (bit_reverse_8x32(x)); }
 
 
 // computes the population count of each data width
