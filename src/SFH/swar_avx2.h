@@ -579,9 +579,8 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 ({                                           \
   u256_t mx = X;                             \
   u256_t mm = M;                             \
-  int    ms = (int)S;                        \
-  u256_t t0 = slli_64x4(and_256 (mx,mm),ms); \
-  u256_t t1 = and_256 (srli_64x4(mx,ms),mm); \
+  u256_t t0 = slli_64x4(and_256 (mx,mm), S); \
+  u256_t t1 = and_256 (srli_64x4(mx, S),mm); \
   xor_256(t0,t1);                            \
 })
 
@@ -589,9 +588,8 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 ({                                           \
   u256_t mx = X;                             \
   u256_t mm = M;                             \
-  int    ms = (int)S;                        \
-  u256_t t0 = slli_64x4(and_256 (mx,mm),ms); \
-  u256_t t1 = and_256 (srli_64x4(mx,ms),mm); \
+  u256_t t0 = slli_64x4(and_256 (mx,mm), S); \
+  u256_t t1 = and_256 (srli_64x4(mx, S),mm); \
   xor_256(t0,t1);                            \
 })
 
