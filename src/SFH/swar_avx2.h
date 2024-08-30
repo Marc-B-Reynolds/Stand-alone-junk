@@ -248,6 +248,7 @@ static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x
 
 //-------------------------------------------------------------------------------------------------------------
 
+#if !defined(__ARM_ARCH)
 // table entries are duplicated per 128 bit lane
 static inline u256_t
 pshufb_table_128x2(char B0,char B1,char B2,char B3,
@@ -258,6 +259,11 @@ pshufb_table_128x2(char B0,char B1,char B2,char B3,
   return SFH_CAT(AVX2_PREFIX, setr_epi8)(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF,
 		      B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF);
 }
+#else
+#define pshufb_table_128x2(B0,B1,B2,B3,B4,B5,B6,B7, \
+                           B8,B9,BA,BB,BC,BD,BE,BF) \
+  SFH_CAT(AVX2_PREFIX, setr_epi8)(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF)
+#endif
 
 // meh
 static inline u256_t byte_shuffle_128x2(u256_t x, u256_t table) { return SFH_CAT(AVX2_PREFIX, shuffle_epi8)(x,table); }
