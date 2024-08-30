@@ -25,7 +25,12 @@
 #if !defined(AVX_PREFIX)
 #if  defined(SIMDE_VERSION)
 #define AVX2_PREFIX simde_mm256_
+#define _MM_SHUFFLE SIMDE_MM_SHUFFLE
 typedef simde__m256i u256_t;
+
+
+// emit macros for intrinsics w required constant "input"
+#define AV2_MACRO_KOP
 #else
 #define AVX2_PREFIX _mm256_
 typedef __m256i u256_t;
@@ -36,6 +41,11 @@ typedef __m256i u256_t;
 #ifndef SFH_CAT
 #define SFH_CAT(a, ...) SFH_CAT_X(a, __VA_ARGS__)
 #define SFH_CAT_X(a, ...) a ## __VA_ARGS__
+#endif
+
+// punting to expression-statements in this case for the more involved
+#if defined(AV2_MACRO_KOP)
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
 #endif
 
 // just macros to have lower friction to nuke (like: preprocessor/copy/paste)
@@ -206,7 +216,7 @@ static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 
 //------------------------------------------------------------------------------
 
-#if !defined(__ARM_ARCH)
+#if !defined(AV2_MACRO_KOP)
 // per element: x ^ (x >> s)
 static inline u256_t rxorshift_16x16(u256_t x, const int s) { return xor_256(x,srli_16x16(x,s)); }
 static inline u256_t rxorshift_32x8 (u256_t x, const int s) { return xor_256(x,srli_32x8 (x,s)); }
@@ -248,7 +258,7 @@ static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x
 
 //-------------------------------------------------------------------------------------------------------------
 
-#if !defined(__ARM_ARCH)
+#if !defined(AV2_MACRO_KOP)
 // table entries are duplicated per 128 bit lane
 static inline u256_t
 pshufb_table_128x2(char B0,char B1,char B2,char B3,
@@ -533,19 +543,10 @@ static inline u256_t byte_unzip_128x2(u256_t x)
   return pshufb_128x2(x,m);
 }
 
-// backward named. my bad. fix
-#define DELTA_SWAP_4x64(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
+// macro version
+#define DELTA_SWAP_64x4(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
 
-static inline m256_pair_t delta_swap_4x64(m256_pair_t p, u256_t m, const int s)
-{
-  u256_t t;
-  
-  t    = and_256(xor_256(p.lo, srli_64x4(p.hi,s)),m);
-  p.lo = xor_256(p.lo, t);
-  p.hi = xor_256(p.hi, slli_64x4(t,s));
-  
-  return p;
-}
+#if !defined(AV2_MACRO_KOP)
 
 // perform a delta swap in each 64-bit lane: bits indicated by 'm' are swapped with the bits
 static inline u256_t bit_permute_step_64x4(u256_t x, u256_t m, const int s)
@@ -568,5 +569,28 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
   return xor_256(t0,t1);
 }
 
+#else
+
+#define bit_permute_step_64x4_(X,M,S)        \
+({                                           \
+  u256_t mx = X;                             \
+  u256_t mm = M;                             \
+  int    ms = (int)S;                        \
+  u256_t t0 = slli_64x4(and_256 (mx,mm),ms); \
+  u256_t t1 = and_256 (srli_64x4(mx,ms),mm); \
+  xor_256(t0,t1);                            \
+})
+
+#define bit_permute_step_simple_64x4_(X,M,S) \
+({                                           \
+  u256_t mx = X;                             \
+  u256_t mm = M;                             \
+  int    ms = (int)S;                        \
+  u256_t t0 = slli_64x4(and_256 (mx,mm),ms); \
+  u256_t t1 = and_256 (srli_64x4(mx,ms),mm); \
+  xor_256(t0,t1);                            \
+})
+
+#endif
 
 #endif
