@@ -232,13 +232,13 @@ static inline u256_t lxorshift_32x8 (u256_t x, const int s) { return xor_256(x,s
 static inline u256_t lxorshift_64x4 (u256_t x, const int s) { return xor_256(x,slli_64x4 (x,s)); }
 #else
 // temp hack. side effects on 'x'
-#define rxorshift_16x16(X,S) xor_256(x,srli_16x16(X,S))
-#define rxorshift_32x8 (X,S) xor_256(x,srli_32x8 (X,S))
-#define rxorshift_64x4 (X,S) xor_256(x,srli_64x4 (X,S))
+#define rxorshift_16x16(X,S) xor_256(X,srli_16x16(X,S))
+#define rxorshift_32x8 (X,S) xor_256(X,srli_32x8 (X,S))
+#define rxorshift_64x4 (X,S) xor_256(X,srli_64x4 (X,S))
 
-#define lxorshift_16x16(X,S) xor_256(x,slli_16x16(X,S))
-#define lxorshift_32x8 (X,S) xor_256(x,slli_32x8 (X,S))
-#define lxorshift_64x4 (X,S) xor_256(x,slli_64x4 (X,S))
+#define lxorshift_16x16(X,S) xor_256(X,slli_16x16(X,S))
+#define lxorshift_32x8 (X,S) xor_256(X,slli_32x8 (X,S))
+#define lxorshift_64x4 (X,S) xor_256(X,slli_64x4 (X,S))
 #endif
 
 // isolate lowest set bit per element (bit set in location. all others clear)
