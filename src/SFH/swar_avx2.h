@@ -25,7 +25,6 @@
 #if !defined(AVX_PREFIX)
 #if  defined(SIMDE_VERSION)
 #define AVX2_PREFIX simde_mm256_
-#define _MM_SHUFFLE SIMDE_MM_SHUFFLE
 typedef simde__m256i u256_t;
 
 
@@ -41,6 +40,11 @@ typedef __m256i u256_t;
 #ifndef SFH_CAT
 #define SFH_CAT(a, ...) SFH_CAT_X(a, __VA_ARGS__)
 #define SFH_CAT_X(a, ...) a ## __VA_ARGS__
+#endif
+
+// temp hack
+#ifndef SSE_MM_SHUFFLE
+#define SSE_MM_SHUFFLE(A,B,C,D) (((A)<<6)|((B)<<4)|((C) << 2)|(D))
 #endif
 
 // punting to expression-statements in this case for the more involved
@@ -228,13 +232,13 @@ static inline u256_t lxorshift_32x8 (u256_t x, const int s) { return xor_256(x,s
 static inline u256_t lxorshift_64x4 (u256_t x, const int s) { return xor_256(x,slli_64x4 (x,s)); }
 #else
 // temp hack. side effects on 'x'
-#define rxorshift_16x16(x,s) xor_256(x,srli_16x16(x,s))
-#define rxorshift_32x8 (x,s) xor_256(x,srli_32x8 (x,s))
-#define rxorshift_64x4 (x,s) xor_256(x,srli_64x4 (x,s))
+#define rxorshift_16x16(X,S) xor_256(x,srli_16x16(X,S))
+#define rxorshift_32x8 (X,S) xor_256(x,srli_32x8 (X,S))
+#define rxorshift_64x4 (X,S) xor_256(x,srli_64x4 (X,S))
 
-#define lxorshift_16x16(x,s) xor_256(x,slli_16x16(x,s))
-#define lxorshift_32x8 (x,s) xor_256(x,slli_32x8 (x,s))
-#define lxorshift_64x4 (x,s) xor_256(x,slli_64x4 (x,s))
+#define lxorshift_16x16(X,S) xor_256(x,slli_16x16(X,S))
+#define lxorshift_32x8 (X,S) xor_256(x,slli_32x8 (X,S))
+#define lxorshift_64x4 (X,S) xor_256(x,slli_64x4 (X,S))
 #endif
 
 // isolate lowest set bit per element (bit set in location. all others clear)
@@ -297,7 +301,7 @@ static inline m256_pair_t pshufb_lookup(u256_t x, u256_t lo, u256_t hi)
 
 
 // swap upper/lower 128 bit lanes
-static inline u256_t swap_128x2(u256_t x) { return permute_64x4(x, _MM_SHUFFLE(1,0,3,2)); }
+static inline u256_t swap_128x2(u256_t x) { return permute_64x4(x, SSE_MM_SHUFFLE(1,0,3,2)); }
 
 // reverse the bytes in each element
 static inline u256_t byte_reverse_16x16(u256_t x) { return pshufb_128x2(x, pshufb_table_128x2(1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14)); }
@@ -571,7 +575,7 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 
 #else
 
-#define bit_permute_step_64x4_(X,M,S)        \
+#define bit_permute_step_64x4(X,M,S)         \
 ({                                           \
   u256_t mx = X;                             \
   u256_t mm = M;                             \
@@ -581,7 +585,7 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
   xor_256(t0,t1);                            \
 })
 
-#define bit_permute_step_simple_64x4_(X,M,S) \
+#define bit_permute_step_simple_64x4(X,M,S)  \
 ({                                           \
   u256_t mx = X;                             \
   u256_t mm = M;                             \
