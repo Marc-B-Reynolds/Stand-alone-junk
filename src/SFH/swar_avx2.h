@@ -5,6 +5,11 @@
 #define SWAR_AVX2_H
 
 //------------------------------------------------------------------------------
+// the idea is to cover Intel some 256 bit integer ops (including scalar interactions)
+// so various AVX512 features should be added that simplify an otherwise AVX2
+// specific implementation. But anyway..just covering stuff that I need for other
+// stuff. Not a portability libray or somesuch. 
+//
 // these are bunch of trival wrappers. I hate stuff like this too. It's not
 // just you. BUT:
 //   * copypasta-a-rific. handy for scanning same op across different widths (IMHO)
@@ -27,9 +32,9 @@
 #define AVX2_PREFIX simde_mm256_
 typedef simde__m256i u256_t;
 
-
 // emit macros for intrinsics w required constant "input"
-#define AV2_MACRO_KOP
+// many of these require GCC expression statements though.
+#define AVX2_MACRO_KOP
 #else
 #define AVX2_PREFIX _mm256_
 typedef __m256i u256_t;
@@ -48,7 +53,7 @@ typedef __m256i u256_t;
 #endif
 
 // punting to expression-statements in this case for the more involved
-#if defined(AV2_MACRO_KOP)
+#if defined(AVX2_MACRO_KOP)
 #pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
 #endif
 
@@ -64,6 +69,10 @@ typedef __m256i u256_t;
 
 #define andnot_256     SFH_CAT(AVX2_PREFIX, andnot_si256)
 
+#define abs_8x32       SFH_CAT(AVX2_PREFIX, abs_epi8)
+#define abs_16x16      SFH_CAT(AVX2_PREFIX, abs_epi16)
+#define abs_32x8       SFH_CAT(AVX2_PREFIX, abs_epi32)
+
 #define add_8x32       SFH_CAT(AVX2_PREFIX, add_epi8)
 #define add_16x16      SFH_CAT(AVX2_PREFIX, add_epi16)
 #define add_32x8       SFH_CAT(AVX2_PREFIX, add_epi32)
@@ -73,6 +82,23 @@ typedef __m256i u256_t;
 #define sub_16x16      SFH_CAT(AVX2_PREFIX, sub_epi16)
 #define sub_32x8       SFH_CAT(AVX2_PREFIX, sub_epi32)
 #define sub_64x4       SFH_CAT(AVX2_PREFIX, sub_epi64)
+
+#define mullo_16x16    SFH_CAT(AVX2_PREFIX, mullo_epi16)
+#define mullo_32x32    SFH_CAT(AVX2_PREFIX, mullo_epi32)
+#define mulhi_16x16    SFH_CAT(AVX2_PREFIX, mulhi_epi16)
+#define mulhi_32x32    SFH_CAT(AVX2_PREFIX, mulhi_epi32)
+
+// r[i] = (a[i]+b[i]+1) >> 1 (without overflow)
+// aka: ceil((x+y)/2) = (x|y) - ((x^y)>>1)
+#define avg_8x32       SFH_CAT(AVX2_PREFIX, avg_epu8)
+#define avg_16x16      SFH_CAT(AVX2_PREFIX, avg_epu16)
+
+#define sad_8x32       SFH_CAT(AVX2_PREFIX, sad_epu8)
+
+#define hadd_16x16     SFH_CAT(AVX2_PREFIX, hadd_epi16)
+#define hadd_32x8      SFH_CAT(AVX2_PREFIX, hadd_epi32)
+#define hsub_16x16     SFH_CAT(AVX2_PREFIX, hsub_epi16)
+#define hsub_32x8      SFH_CAT(AVX2_PREFIX, hsub_epi32)
 
 // min/max of unsigned elements (add prefix u)
 #define umin_8x32      SFH_CAT(AVX2_PREFIX, min_epu8)
@@ -90,12 +116,18 @@ typedef __m256i u256_t;
 #define smax_16x16     SFH_CAT(AVX2_PREFIX, max_epi16)
 #define smax_32x8      SFH_CAT(AVX2_PREFIX, max_epi32)
 
+#if 0
+//  AVX512VL
+#define abs_64x4       SFH_CAT(AVX2_PREFIX, abs_epi64)
+#define umax_64x4      SFH_CAT(AVX2_PREFIX, max_epu64)
+#define smax_64x4      SFH_CAT(AVX2_PREFIX, max_epi64)
+#endif
+
 // sign(a,b) = a*sign(b): r[n] = (b[n]<0) ? -a[n] : ((b[n] != 0) ? a[n] : 0)
 #define sign_8x32      SFH_CAT(AVX2_PREFIX, sign_epi8)
 #define sign_16x16     SFH_CAT(AVX2_PREFIX, sign_epi16)
 #define sign_32x8      SFH_CAT(AVX2_PREFIX, sign_epi32)
 
-#define sad_8x32       SFH_CAT(AVX2_PREFIX, sad_epu8)
 
 // compile time constant shifts (all elems same shift amount)
 #define srli_16x16     SFH_CAT(AVX2_PREFIX, srli_epi16)
@@ -154,7 +186,7 @@ typedef __m256i u256_t;
 #define unpacklo_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 
 //------------------------------------------------------------------------------
-// these (to some extent) break the wrapper naming scheme
+// these (to some extent) break the wrapper naming scheme (beyond signed/unsigned prefixes)
 
 static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
 
@@ -220,7 +252,7 @@ static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 
 //------------------------------------------------------------------------------
 
-#if !defined(AV2_MACRO_KOP)
+#if !defined(AVX2_MACRO_KOP)
 // per element: x ^ (x >> s)
 static inline u256_t rxorshift_16x16(u256_t x, const int s) { return xor_256(x,srli_16x16(x,s)); }
 static inline u256_t rxorshift_32x8 (u256_t x, const int s) { return xor_256(x,srli_32x8 (x,s)); }
@@ -262,7 +294,7 @@ static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x
 
 //-------------------------------------------------------------------------------------------------------------
 
-#if !defined(AV2_MACRO_KOP)
+#if !defined(AVX2_MACRO_KOP)
 // table entries are duplicated per 128 bit lane
 static inline u256_t
 pshufb_table_128x2(char B0,char B1,char B2,char B3,
@@ -285,7 +317,7 @@ static inline u256_t byte_shuffle_128x2(u256_t x, u256_t table) { return SFH_CAT
 typedef struct { u256_t lo,hi; } m256_pair_t;
 
 // lo/hi nibble PSHUFB lookup worker. (r.lo = lo[low nibble], r.hi = hi[high nibble])
-static inline m256_pair_t pshufb_lookup(u256_t x, u256_t lo, u256_t hi)
+static inline m256_pair_t pshufb_lookup_256(u256_t x, u256_t lo, u256_t hi)
 {
   u256_t m  = broadcast_8x32(0x0f);
   u256_t t;
@@ -311,14 +343,14 @@ static inline u256_t byte_reverse_128x2(u256_t x) { return pshufb_128x2(x, pshuf
 
 static inline u256_t byte_reverse_256(u256_t x)
 {
-  return byte_reverse_128x2(x);
+  return swap_128x2(byte_reverse_128x2(x));
 }
 
 
 static inline u256_t bit_reverse_8x32(u256_t x)
 {
   u256_t      k = pshufb_table_128x2(0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15);
-  m256_pair_t r = pshufb_lookup(x,k,k);
+  m256_pair_t r = pshufb_lookup_256(x,k,k);
   u256_t      t = slli_16x16(r.lo,4);
   
   return xor_256(r.hi,t);
@@ -332,11 +364,13 @@ static inline u256_t bit_reverse_256  (u256_t x) {  return byte_reverse_256  (bi
 
 
 // computes the population count of each data width
+
+#if 1
 static inline u256_t pop_8x32(u256_t x)
 {
   u256_t k = pshufb_table_128x2(0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4);
   
-  m256_pair_t r = pshufb_lookup(x,k,k);
+  m256_pair_t r = pshufb_lookup_256(x,k,k);
   
   return add_8x32(r.hi,r.lo);
 }
@@ -369,12 +403,23 @@ static inline u256_t pop_32x8(u256_t x)
 
 static inline u256_t pop_64x4(u256_t x) { return byte_sum_64x4(pop_8x32(x)); }
 
+#else
+// AVX512_BITALG + AVX512VL
+#define pop_8x32     SFH_CAT(AVX2_PREFIX, popcnt_epi8)
+#define pop_16x16    SFH_CAT(AVX2_PREFIX, popcnt_epi16)
+#define pop_32x8     SFH_CAT(AVX2_PREFIX, popcnt_epi32)
+#define pop_64x4     SFH_CAT(AVX2_PREFIX, popcnt_epi64)
+#endif
+
+
+
+
 // computes the parity of each data width. result is LSB in width
 static inline u256_t bit_parity_8x32(u256_t x)
 {
   u256_t k  = pshufb_table_128x2(0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0);
 
-  m256_pair_t r = pshufb_lookup(x,k,k);
+  m256_pair_t r = pshufb_lookup_256(x,k,k);
 
   return xor_256(r.hi,r.lo);
 }
@@ -479,7 +524,7 @@ static inline u256_t clz_8x32(u256_t x)
 {
   u256_t      lo = pshufb_table_128x2(8,7,6,6,5,5,5,5,4,4,4,4,4,4,4,4);
   u256_t      hi = pshufb_table_128x2(8,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0);
-  m256_pair_t r  = pshufb_lookup(x,lo,hi);
+  m256_pair_t r  = pshufb_lookup_256(x,lo,hi);
 
   return umin_8x32(r.hi,r.lo);
 }
@@ -489,7 +534,7 @@ static inline u256_t ctz_8x32(u256_t x)
 {
   u256_t      lo = pshufb_table_128x2(8,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0);
   u256_t      hi = pshufb_table_128x2(8,4,5,4,6,4,5,4,7,4,5,4,6,4,5,4);
-  m256_pair_t r  = pshufb_lookup(x,lo,hi);
+  m256_pair_t r  = pshufb_lookup_256(x,lo,hi);
 
   return umin_8x32(r.hi,r.lo);
 }
@@ -530,6 +575,12 @@ static inline u256_t ctz_16x16(u256_t x)
   return and_256(x,m);  
 }
 
+#if 0
+// AVX512CD + AVX512VL
+#define ctz_32x8       SFH_CAT(AVX2_PREFIX, lzcnt_epi32)
+#define ctz_64x4       SFH_CAT(AVX2_PREFIX, lzcnt_epi64)
+#endif
+
 
 // per 128 lane (riffle 2x16)
 static inline u256_t byte_zip_128x2(u256_t x)
@@ -550,7 +601,7 @@ static inline u256_t byte_unzip_128x2(u256_t x)
 // macro version
 #define DELTA_SWAP_64x4(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
 
-#if !defined(AV2_MACRO_KOP)
+#if !defined(AVX2_MACRO_KOP)
 
 // perform a delta swap in each 64-bit lane: bits indicated by 'm' are swapped with the bits
 static inline u256_t bit_permute_step_64x4(u256_t x, u256_t m, const int s)
