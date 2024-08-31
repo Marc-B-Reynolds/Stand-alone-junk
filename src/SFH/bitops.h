@@ -216,12 +216,12 @@ static inline uint32_t bit_gather_32(uint32_t x, uint32_t m)  { return _pext_u32
 static inline uint64_t bit_gather_64(uint64_t x, uint64_t m)  { return _pext_u64(x, m); }
 
 // add reference
-uint64_t bit_permute_sg_step_64(uint64_t x, uint64_t m0, uint64_t m1)
+static inline uint64_t bit_permute_sg_step_64(uint64_t x, uint64_t m0, uint64_t m1)
 {
   return bit_scatter_64(bit_gather_64(x,m0),m1)|bit_scatter_64(bit_gather_64(x,~m0),~m1);  
 }
 
-uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t m1)
+static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t m1)
 {
   return bit_scatter_32(bit_gather_32(x,m0),m1)|bit_scatter_32(bit_gather_32(x,~m0),~m1);  
 }
