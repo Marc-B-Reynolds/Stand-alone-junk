@@ -60,9 +60,9 @@ static inline uint64_t prng_u64(prng_t* prng)
   uint64_t r  = prng_mix(s0 + s2);
   
   s1 ^= s0;
-  prng->state[PRNG_LCG_0] = prng_rot(s0,55) ^ s1 ^ (s1<<14);
-  prng->state[PRNG_XGB_L] = prng_rot(s1,36);
-  prng->state[PRNG_XGB_H] = prng_mul_k * s2 + prng_add_k;
+  prng->state[PRNG_LCG_0] = prng_mul_k * s2 + prng_add_k;
+  prng->state[PRNG_XGB_L] = prng_rot(s0,55) ^ s1 ^ (s1<<14);
+  prng->state[PRNG_XGB_H] = prng_rot(s1,36);
   
   return r;
 }
