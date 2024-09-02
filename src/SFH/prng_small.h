@@ -29,11 +29,11 @@ static inline uint64_t prng_rot(uint64_t x, uint32_t n) { return (uint64_t)_rotl
 
 // complete this
 #if defined(__ARM_ARCH) && defined(__ARM_FEATURE_CRC32)
-#include <arm_acle.h>
+#include <arm_acle.h>  // problem for SIMDe. rethink just need crc def
 static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
 #else
 #if !defined(_MSC_VER)
-#include <x86intrin.h>
+#include <x86intrin.h>  // problem for SIMDe. rethink just need crc def
 #else
 #include <intrin.h>
 #endif
@@ -41,6 +41,7 @@ static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return __crc32cd
 static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return _mm_crc32_u64(k,x); }
 #endif
 
+// temp hack. decide one of the the 
 static inline uint64_t prng_mix(uint64_t x) { return x; }
 
 #endif
@@ -54,9 +55,9 @@ static const uint64_t prng_add_k = UINT64_C(0x2545f4914f6cdd1d);
 
 static inline uint64_t prng_u64(prng_t* prng)
 {
-  uint64_t s0 = prng->state[PRNG_LCG_0];
-  uint64_t s1 = prng->state[PRNG_XGB_L];
-  uint64_t s2 = prng->state[PRNG_XGB_H];
+  uint64_t s0 = prng->state[PRNG_XGB_L];
+  uint64_t s1 = prng->state[PRNG_XGB_H];
+  uint64_t s2 = prng->state[PRNG_LCG_0];
   uint64_t r  = prng_mix(s0 + s2);
   
   s1 ^= s0;
