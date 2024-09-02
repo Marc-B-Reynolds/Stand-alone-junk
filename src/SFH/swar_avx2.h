@@ -84,9 +84,9 @@ typedef __m256i u256_t;
 #define sub_64x4       SFH_CAT(AVX2_PREFIX, sub_epi64)
 
 #define mullo_16x16    SFH_CAT(AVX2_PREFIX, mullo_epi16)
-#define mullo_32x32    SFH_CAT(AVX2_PREFIX, mullo_epi32)
+#define mullo_32x8     SFH_CAT(AVX2_PREFIX, mullo_epi32)
 #define mulhi_16x16    SFH_CAT(AVX2_PREFIX, mulhi_epi16)
-#define mulhi_32x32    SFH_CAT(AVX2_PREFIX, mulhi_epi32)
+#define mulhi_32x8     SFH_CAT(AVX2_PREFIX, mulhi_epi32)
 
 // r[i] = (a[i]+b[i]+1) >> 1 (without overflow)
 // aka: ceil((x+y)/2) = (x|y) - ((x^y)>>1)
@@ -148,8 +148,6 @@ typedef __m256i u256_t;
 #define sll_32x8       SFH_CAT(AVX2_PREFIX, sll_epi32)
 #define sll_64x4       SFH_CAT(AVX2_PREFIX, sll_epi64)
 
-
-#if 0
 #define sllv_32x8      SFH_CAT(AVX2_PREFIX, sllv_epi32)
 #define sllv_64x4      SFH_CAT(AVX2_PREFIX, sllv_epi64)
 #define srlv_32x8      SFH_CAT(AVX2_PREFIX, srlv_epi32)
@@ -160,7 +158,6 @@ typedef __m256i u256_t;
 #define srai_16x16     SFH_CAT(AVX2_PREFIX, srai_epi16)
 #define srai_32x8      SFH_CAT(AVX2_PREFIX, srai_epi32)
 #define srav_32x8      SFH_CAT(AVX2_PREFIX, srav_epi32)
-#endif
 
 #define cmpeq_8x32     SFH_CAT(AVX2_PREFIX, cmpeq_epi8)
 #define cmpeq_16x16    SFH_CAT(AVX2_PREFIX, cmpeq_epi16)
@@ -252,6 +249,35 @@ static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 
 //------------------------------------------------------------------------------
 
+
+#if !defined(rorv_32x8)
+static inline u256_t rorv_32x8(u256_t x, u256_t n)
+{
+  u256_t a = broadcast_32x8(32);
+  u256_t b = dec_32x8(a);
+
+  n = and_256(n,b); 
+  b = sub_32x8(a,n);
+
+  return xor_256(sllv_32x8(x,n), srlv_32x8(x,b));
+}
+#endif
+
+#if !defined(rorv_64x4)
+static inline u256_t rorv_64x4(u256_t x, u256_t n)
+{
+  u256_t a = broadcast_64x4(64);
+  u256_t b = dec_64x4(a);
+
+  n = and_256(n,b); 
+  b = sub_64x4(a,n);
+
+  return xor_256(sllv_64x4(x,n), srlv_64x4(x,b));
+}
+#endif
+
+
+
 #if !defined(AVX2_MACRO_KOP)
 // per element: x ^ (x >> s)
 static inline u256_t rxorshift_16x16(u256_t x, const int s) { return xor_256(x,srli_16x16(x,s)); }
@@ -263,7 +289,6 @@ static inline u256_t lxorshift_16x16(u256_t x, const int s) { return xor_256(x,s
 static inline u256_t lxorshift_32x8 (u256_t x, const int s) { return xor_256(x,slli_32x8 (x,s)); }
 static inline u256_t lxorshift_64x4 (u256_t x, const int s) { return xor_256(x,slli_64x4 (x,s)); }
 #else
-// temp hack. side effects on 'x'
 #define rxorshift_16x16(X,S) xor_256(X,srli_16x16(X,S))
 #define rxorshift_32x8(X,S)  xor_256(X,srli_32x8 (X,S))
 #define rxorshift_64x4(X,S)  xor_256(X,srli_64x4 (X,S))
