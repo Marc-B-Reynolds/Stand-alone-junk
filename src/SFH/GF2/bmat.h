@@ -123,5 +123,5 @@ typedef uint64_t (f2_bfunc_64_t)(uint64_t, uint64_t);
 
 extern uint32_t bmat_from_ufunc_32  (bmat_param_32(m), f2_ufunc_32_t* f);
 extern uint64_t bmat_from_ufunc_64  (bmat_param_64(m), f2_ufunc_64_t* f);
-extern uint32_t bmat_from_ufunc_p_32(bmat_param_64(m), f2_bfunc_32_t* f, uint32_t k);
+extern uint32_t bmat_from_ufunc_p_32(bmat_param_32(m), f2_bfunc_32_t* f, uint32_t k);
 extern uint64_t bmat_from_ufunc_p_64(bmat_param_64(m), f2_bfunc_64_t* f, uint64_t k);
