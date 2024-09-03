@@ -106,7 +106,7 @@ static inline uint64_t rot_16x4(uint64_t x, uint32_t n) { return rol_16x4(x,   n
 
 
 // rotate left each byte by pos: b[i] = rol(b[i],i)
-uint64_t rol_by_pos_8x8(uint64_t x)
+static inline uint64_t rol_by_pos_8x8(uint64_t x)
 {
 #if (BITOPS_HAS_SCATTER_GATHER)
   x = bit_permute_sg_step_64(x, 0xfefcf8f0e0c080ff, 0x7f3f1f0f070301ff);
@@ -120,7 +120,7 @@ uint64_t rol_by_pos_8x8(uint64_t x)
 }
 
 // rotate right each byte by pos: b[i] = ror(b[i],i)
-uint64_t ror_by_pos_8x8(uint64_t x)
+static inline uint64_t ror_by_pos_8x8(uint64_t x)
 {
 #if (BITOPS_HAS_SCATTER_GATHER)
   x = bit_permute_sg_step_64(x, 0x80c0e0f0f8fcfeff, 0x0103070f1f3f7fff);
@@ -134,7 +134,7 @@ uint64_t ror_by_pos_8x8(uint64_t x)
 }
 
 // gather the low bit each each byte
-uint64_t bit_gather_lsb_8x8(uint64_t x)
+static inline uint64_t bit_gather_lsb_8x8(uint64_t x)
 {
   const uint64_t m = UINT64_C(0x0101010101010101);
 
@@ -148,7 +148,7 @@ uint64_t bit_gather_lsb_8x8(uint64_t x)
 }
 
 // scatters low 8 bits to the lsb of each byte
-uint64_t bit_scatter_lsb_8x8(uint64_t x)
+static inline uint64_t bit_scatter_lsb_8x8(uint64_t x)
 {
   const uint64_t m = UINT64_C(0x0101010101010101);
 
