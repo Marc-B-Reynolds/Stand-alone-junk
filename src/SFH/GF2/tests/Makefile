@@ -2,9 +2,11 @@
 # 0) assumes clang/GCC like options
 # 1) every .c file is to be built into an executable
 
+CC     = clang-15  # forcing compiler: temp hack
+
 IDIRS  = -I../.. -I..
 CFLAGS = -g -O3 ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
-LDLIBS = -lm
+LDLIBS = -lbmat -lm4ri
 
 SRC     := ${wildcard *.c}
 HEADERS := ${wildcard *.h}
@@ -25,6 +27,6 @@ distclean:	clean
 
 
 %:%.c	Makefile
-	${CC} ${CFLAGS} $< ${LDLIBS} -o $@
+	${CC} ${CFLAGS} $< -L.. ${LDLIBS} -o $@
 
 -include .makedep
