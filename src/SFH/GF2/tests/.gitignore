@@ -1,1 +1,7 @@
-.makedep
+# ignore everything!
+*
+
+# except for these:
+!*.[ch]
+!Makefile
+!README.md
