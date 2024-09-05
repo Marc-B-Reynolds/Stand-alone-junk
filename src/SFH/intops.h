@@ -47,8 +47,6 @@ static inline uint64_t even_off_u64(uint64_t x) { return 2-(x&1); }
 static inline uint32_t odd_off_u32(uint32_t x)  { return 1+(x&1); }
 static inline uint64_t odd_off_u64(uint64_t x)  { return 1+(x&1); }
 
-
-
 static inline uint32_t min_u32(uint32_t x, uint32_t y) { return (x<y) ? x : y; }
 static inline uint32_t max_u32(uint32_t x, uint32_t y) { return (x>y) ? x : y; }
 static inline uint64_t min_u64(uint64_t x, uint64_t y) { return (x<y) ? x : y; }
