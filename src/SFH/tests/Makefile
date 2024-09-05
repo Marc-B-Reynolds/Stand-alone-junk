@@ -2,6 +2,11 @@
 # 0) assumes clang/GCC like options
 # 1) every .c file is to be built into an executable
 
+# if CC is the default (not environment varible nor supplied to make, then default
+ifeq ($(origin CC),default)
+  CC = clang-15
+endif
+
 IDIRS  = -I../.. -I..
 CFLAGS = -g -O3 ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function -fno-math-errno -ffp-contract=off
 LDLIBS = -lm
