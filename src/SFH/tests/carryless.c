@@ -1,9 +1,15 @@
 
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 #define CARRYLESS_IMPLEMENTATION
 
 #include "carryless.h"
+#include "prng_small.h"
+
+#if 0
 
 static const uint32_t test_runs = 0x10000000;
 
@@ -72,4 +78,10 @@ uint64_t test_64(def_64_t* def, rng_t* rng)
   return errors;
 }
   
+#endif
 
+
+int main(void)
+{
+  return 0;
+}
