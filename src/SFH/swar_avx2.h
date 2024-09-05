@@ -185,7 +185,7 @@ typedef __m256i u256_t;
 //------------------------------------------------------------------------------
 // these (to some extent) break the wrapper naming scheme (beyond signed/unsigned prefixes)
 
-static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
+//static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
 
 #define alignr_128x2    SFH_CAT(AVX2_PREFIX, alignr_epi8)
 #define zero_256        SFH_CAT(AVX2_PREFIX, setzero_si256)
@@ -631,14 +631,12 @@ static inline u256_t byte_unzip_128x2(u256_t x)
 // perform a delta swap in each 64-bit lane: bits indicated by 'm' are swapped with the bits
 static inline u256_t bit_permute_step_64x4(u256_t x, u256_t m, const int s)
 {
-  u256_t t;
+  u256_t a,b,c;
   
-  t = rxorshift_64x4(x,s);
-  t = and_256 (x,m);
-  t = lxorshift_64x4(t,s);
-  t = xor_256(t,x);
-
-  return t;
+  a = rxorshift_64x4(x,s); b = and_256(a,m);
+  c = lxorshift_64x4(b,s); x = xor_256(c,x);
+  
+  return x;
 }
 
 static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int s)
@@ -651,13 +649,14 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 
 #else
 
-#define bit_permute_step_64x4(X,M,S)         \
-({                                           \
-  u256_t mx = X;                             \
-  u256_t mm = M;                             \
-  u256_t t0 = slli_64x4(and_256 (mx,mm), S); \
-  u256_t t1 = and_256 (srli_64x4(mx, S),mm); \
-  xor_256(t0,t1);                            \
+#define bit_permute_step_64x4(X,M,S)   \
+({                                     \
+  u256_t x_ = X;                       \
+  u256_t m_ = M;                       \
+  u256_t a  = rxorshift_64x4(x_,S);    \
+  u256_t b  = and_256(a,m_);           \
+  u256_t c  = lxorshift_64x4(b,S);     \
+  xor_256(c,x_);                       \
 })
 
 #define bit_permute_step_simple_64x4(X,M,S)  \
