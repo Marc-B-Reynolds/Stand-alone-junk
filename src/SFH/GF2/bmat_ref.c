@@ -2,29 +2,148 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 #include "bmat_i.h"
+#include "bmat_ref.h"
 
 // a sub-set of reference functions live here (others are with the actual version).
 
+//****************************************************************************
+
+
+// set to identity matrix
+void bmat_set_unit_8_ref (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for_range(i,0, 8) { a[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
+void bmat_set_unit_16_ref(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for_range(i,0,16) { a[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
+void bmat_set_unit_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for_range(i,0,32) { a[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
+void bmat_set_unit_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for_range(i,0,64) { a[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
+
+// set to exchange matrix (a.k.a: J, bitreverse)
+void bmat_set_exchange_8_ref (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
+void bmat_set_exchange_16_ref(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
+void bmat_set_exchange_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
+void bmat_set_exchange_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
+
+
+void bmat_flip_h_8_ref (bmat_param_8(m))  { bmat_adup_8 (a,m); for_range(i,0, 8) a[0] = bit_reverse_8 (a[i]); array_to_bmat_8 (m,a); }
+void bmat_flip_h_16_ref(bmat_param_16(m)) { bmat_adup_16(a,m); for_range(i,0,16) a[i] = bit_reverse_16(a[i]); array_to_bmat_16(m,a); }
+void bmat_flip_h_32_ref(bmat_param_32(m)) { bmat_adup_32(a,m); for_range(i,0,32) a[i] = bit_reverse_32(a[i]); array_to_bmat_32(m,a); }
+void bmat_flip_h_64_ref(bmat_param_64(m)) { bmat_adup_64(a,m); for_range(i,0,64) a[i] = bit_reverse_64(a[i]); array_to_bmat_64(m,a); }
+
+
+//****************************************************************************
+
+// these are fine for reference. changing to SWAR is probably
+// the only thing (maybe) worth bothering with. can broadcast
+// the pivot 'p' in the same manner as broadcasting rows when
+// performing the product.
+
+uint32_t bmat_rank_8_ref(bmat_param_8(m))
+{
+  static const uint32_t D = 8;
+
+  uint8_t  a[8];
+  uint32_t r = 0;
+
+  bmat_to_array_8(a,m);
+  
+  for(uint32_t i=0; i<D; i++) {
+    uint8_t p = a[i];
+
+    if (p) {
+      uint8_t lsb = -p & p;
+      for(uint32_t j=i+1; j<D; j++) { if (a[j] & lsb) a[j] ^= p; }
+      r++;
+    }
+  }
+
+  return r;
+}
+
+uint32_t bmat_rank_16_ref(bmat_param_16(m))
+{
+  static const uint32_t D = 16;
+
+  uint16_t a[16];
+  uint32_t r = 0;
+
+  bmat_to_array_16(a,m);
+
+  for(uint32_t i=0; i<D; i++) {
+    uint16_t p = a[i];
+
+    if (p) {
+      uint16_t lsb = -p & p;
+      for(uint32_t j=i+1; j<D; j++) { if (a[j] & lsb) a[j] ^= p; }
+      r++;
+    }
+  }
+
+  return r;
+}
+
+uint32_t bmat_rank_32_ref(bmat_param_32(m))
+{
+  static const uint32_t D = 32;
+
+  uint32_t a[32];
+  uint32_t r = 0;
+
+  bmat_to_array_32(a,m);
+
+  for(uint32_t i=0; i<D; i++) {
+    uint32_t p = a[i];
+
+    if (p) {
+      uint32_t lsb = -p & p;
+      for(uint32_t j=i+1; j<D; j++) { if (a[j] & lsb) a[j] ^= p; }
+      r++;
+    }
+  }
+
+  return r;
+}
+
+uint32_t bmat_rank_64_ref(bmat_param_64(m))
+{
+  static const uint32_t D = 64;
+
+  uint64_t a[64];
+  uint32_t r = 0;
+
+  bmat_to_array_64(a,m);
+
+  for(uint32_t i=0; i<D; i++) {
+    uint64_t p = a[i];
+
+    if (p) {
+      uint64_t lsb = -p & p;
+      for(uint32_t j=i+1; j<D; j++) {if (a[j] & lsb) a[j] ^= p; }
+      r++;
+    }
+  }
+
+  return r;
+}
 
 
 //****************************************************************************
 // reference versions of transpose:
 // trivially modified variants of Warren (hackers delight)
 
-void bmat_transpose_8_ref(uint8_t d[static 8], uint8_t s[static 8])
+void bmat_transpose_8_ref(bmat_param_8(d), bmat_param_8(s))
 {
   uint8_t m = 0xf;
 
-  if (d != s) bmat_dup_8(d,s);
+  bmat_adup_8(a,s);
 
   for (uint32_t j=4; j!=0; j=j>>1, m=(uint8_t)(m^(m << j))) {
     for (uint32_t k=0; k<8; k = (k+j+1) & ~j) {
-      BMAT_DELTA_SWAP2_8(d[k+j], d[k], m, j);
+      BMAT_DELTA_SWAP2_8(a[k+j], a[k], m, j);
     }
   }
+
+  array_to_bmat_8(d,a);
 }
 
-void bmat_transpose_16_ref(uint16_t d[static 16], uint16_t s[static 16])
+void bmat_transpose_16_ref(bmat_param_16(d), bmat_param_16(s))
 {
   uint16_t m = 0xff;
 
@@ -35,8 +154,7 @@ void bmat_transpose_16_ref(uint16_t d[static 16], uint16_t s[static 16])
   // 0x3333  2 { 0  1  4  5  8  9 12 13 } 24
   // 0x5555  1 { 0  2  4  6  8 10 12 14 } 32
 
-  // copy source to destination (if not the same)
-  if (d != s) bmat_dup_16(d,s);
+  bmat_adup_16(a,s);
 
   // in-place transpose: see comments in the semi-portable
   // version of 'bmat_transpose_64' for code-golf 'k' computation
@@ -45,17 +163,20 @@ void bmat_transpose_16_ref(uint16_t d[static 16], uint16_t s[static 16])
 
   for (uint32_t j=8; j!=0; j=j>>1, m=(uint16_t)(m^(m << j))) {
     for (uint32_t k=0; k<16; k = (k+j+1) & ~j) {
-      BMAT_DELTA_SWAP2_16(d[k+j], d[k], m, j);
+      BMAT_DELTA_SWAP2_16(a[k+j], a[k], m, j);
     }
   }
+
+  array_to_bmat_16(d,a);
 }
 
-void bmat_transpose_32_ref(uint32_t d[static 32], uint32_t s[static 32])
+
+void bmat_transpose_32_ref(bmat_param_32(d), bmat_param_32(s))
 {
   uint32_t m = 0xffff;
 
-  if (d != s) bmat_dup_32(d,s);
-  
+  bmat_adup_32(a,s);
+
   //   m         j   k                         
   // 0x0000ffff 16 { 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 } 16
   // 0x00ff00ff  8 { 0  1  2  3  4  5  6  7 16 17 18 19 20 21 22 23 } 32
@@ -65,28 +186,33 @@ void bmat_transpose_32_ref(uint32_t d[static 32], uint32_t s[static 32])
   
   for (uint32_t j=16; j!=0; j=j>>1, m=(m^(m << j))) {
     for (uint32_t k=0; k<32; k = (k+j+1) & ~j) {
-      BMAT_DELTA_SWAP2_32(d[k+j], d[k], m, j);
+      BMAT_DELTA_SWAP2_32(a[k+j], a[k], m, j);
     }
 
     // dev hacks for arch specific variants
     //if (j==8) return;
     //if (j==4) return;
   }
+
+  array_to_bmat_32(d,a);
 }
 
-void bmat_transpose_64_ref(uint64_t d[static 64], uint64_t s[static 64])
+void bmat_transpose_64_ref(bmat_param_64(d), bmat_param_64(s))
 {
   uint64_t m = 0xffffffff;
 
-  if (d != s) bmat_dup_64(s,d);
+  bmat_adup_64(a,s);
   
   for (uint32_t j=32; j!=0; j=j>>1, m=(m^(m << j))) {
     for (uint32_t k=0; k<64; k = (k+j+1) & ~j) {
-      BMAT_DELTA_SWAP2_64(d[k+j], d[k], m, j);
+      BMAT_DELTA_SWAP2_64(a[k+j], a[k], m, j);
     }
   }
+  array_to_bmat_64(d,a);
 }
 
+
+#if 0
 //------------------------------------------------------------------
 
 void bmat_rot_cw_8_ref(uint8_t  d[static  8], uint8_t  s[static  8])
@@ -108,143 +234,24 @@ void bmat_rot_cw_64_ref(uint64_t d[static 64], uint64_t s[static 64])
 {
   bmat_transpose_64_ref(d,s); bmat_flip_h_64(d);
 }
+#endif
+
+// M' = JM : vertical flip (row reversal)
+//void bmat_flip_v_8 (uint8_t  m[static  8]) { for(int i=0; i< 4; i++) { uint8_t  t=m[i]; m[i]=m[ 7-i]; m[ 7-i]=t; }}
+//void bmat_flip_v_16(uint16_t m[static 16]) { for(int i=0; i< 8; i++) { uint16_t t=m[i]; m[i]=m[15-i]; m[15-i]=t; }}
+//void bmat_flip_v_32(uint32_t m[static 32]) { for(int i=0; i<16; i++) { uint32_t t=m[i]; m[i]=m[31-i]; m[31-i]=t; }}
+//void bmat_flip_v_64(uint64_t m[static 64]) { for(int i=0; i<32; i++) { uint64_t t=m[i]; m[i]=m[63-i]; m[63-i]=t; }}
+
 
 //****************************************************************************
-// reference versions of products:
+// reference versions of products: (row broadcast)
 
-// variants:
-// 1) textbook build a row at a time. very sad. performs transpose & n^2 parity
-// 2) row broadcast. these can be made reasonable if changed to SWAR.
-
-#if 0
-
-// C = AB^T
-
-// * sucky naming..re-think
-void bmat_mult_8_ref(uint8_t C[static 8], uint8_t A[static 8], uint8_t B[static 8])
-{
-
-  uint8_t S[8];
-  
-  for (uint32_t i=0; i<8; i++) {
-    uint8_t a = A[i];
-    uint8_t r = 0;
-    
-    for (uint32_t j=0; j<8; j++) {
-      uint8_t  b = B[j];
-      uint32_t p = bit_parity_32((uint32_t)(a & b));
-      r |= (uint8_t)(p << j);
-    }
-
-    S[i] = r;
-  }
-  
-  bmat_dup_8(C,S);
-}
-
-void bmat_mult_16_ref(uint16_t C[static 16], uint16_t A[static 16], uint16_t B[static 16])
-{
-  uint16_t S[16];
-  
-  for (uint32_t i=0; i<16; i++) {
-    uint16_t a = A[i];
-    uint16_t r = 0;
-    
-    for (uint32_t j=0; j<16; j++) {
-      uint16_t b = B[j];
-      uint32_t p = bit_parity_32((uint32_t)(a & b));
-      r |= (uint16_t)(p << j);
-    }
-
-    S[i] = r;
-  }
-  
-  bmat_dup_16(C,S);
-}
-
-void bmat_mult_32_ref(uint32_t C[static 32], uint32_t A[static 32], uint32_t B[static 32])
-{
-  uint32_t S[32];
-  
-  for (uint32_t i=0; i<32; i++) {
-    uint32_t a = A[i];
-    uint32_t r = 0;
-    
-    for (uint64_t j=0; j<32; j++) {
-      uint32_t b = B[j];
-      uint32_t p  = bit_parity_32(a & b);
-      r |= (p << j);
-    }
-
-    S[i] = r;
-  }
-  
-  bmat_dup_32(C,S);
-}
-
-void bmat_mult_64_ref(uint64_t C[static 64], uint64_t A[static 64], uint64_t B[static 64])
-{
-  uint64_t S[64];
-  
-  for (uint32_t i=0; i<64; i++) {
-    uint64_t a = A[i];
-    uint64_t r = 0;
-    
-    for (uint64_t j=0; j<64; j++) {
-      uint64_t b = B[j];
-      uint64_t p = bit_parity_64(a & b);
-      r |= (p << j);
-    }
-
-    S[i] = r;
-  }
-  
-  bmat_dup_64(C,S);
-}
-
-//-----------------------------------------------------------------------
-// C=AB
-
-void bmat_mul_8_ref(uint8_t C[static 8], uint8_t A[static 8], uint8_t B[static 8])
-{
-  uint8_t T[8];
-
-  bmat_transpose_8(T,B);
-  bmat_mult_8_ref(C,A,T);
-}
-
-
-void bmat_mul_16_ref(uint16_t C[static 16], uint16_t A[static 16], uint16_t B[static 16])
-{
-  uint16_t T[16];
-
-  bmat_transpose_16(T,B);
-  bmat_mult_16_ref(C,A,T);
-}
-
-void bmat_mul_32_ref(uint32_t C[static 32], uint32_t A[static 32], uint32_t B[static 32])
-{
-  uint32_t T[32];
-
-  bmat_transpose_32(T,B);
-  bmat_mult_32_ref(C,A,T);
-}
-
-void bmat_mul_64_ref(uint64_t C[static 64], uint64_t A[static 64], uint64_t B[static 64])
-{
-  uint64_t T[64];
-  bmat_transpose_64(T,B);
-  bmat_mult_64_ref(C,A,T);
-}
-
-#else
-
-//----------------------------------------------------------------------------------------
-// row broadcast variants
-
-void bmat_mul_8_ref(uint8_t C[static 8], uint8_t A[static 8], uint8_t B[static 8])
+void bmat_mul_8_ref(bmat_param_8(C), bmat_param_8(MA), bmat_param_8(MB))
 {
   uint8_t S[8];
+
+  bmat_adup_8(A,MA);
+  bmat_adup_8(B,MB);
 
   for (uint32_t i=0; i<8; i++) {
     uint8_t a = A[i];
@@ -258,12 +265,16 @@ void bmat_mul_8_ref(uint8_t C[static 8], uint8_t A[static 8], uint8_t B[static 8
     S[i] = r;
   }
 
-  bmat_dup_8(C,S);
+  array_to_bmat_8(C,S);
 }
 
-void bmat_mul_16_ref(uint16_t C[static 16], uint16_t A[static 16], uint16_t B[static 16])
+
+void bmat_mul_16_ref(bmat_param_16(C), bmat_param_16(MA), bmat_param_16(MB))
 {
   uint16_t S[16];
+
+  bmat_adup_16(A,MA);
+  bmat_adup_16(B,MB);
 
   for (uint32_t i=0; i<16; i++) {
     uint16_t a = A[i];
@@ -277,13 +288,16 @@ void bmat_mul_16_ref(uint16_t C[static 16], uint16_t A[static 16], uint16_t B[st
     S[i] = r;
   }
 
-  bmat_dup_16(C,S);
+  array_to_bmat_16(C,S);
 }
 
 
-void bmat_mul_32_ref(uint32_t C[static 32], uint32_t A[static 32], uint32_t B[static 32])
+void bmat_mul_32_ref(bmat_param_32(C), bmat_param_32(MA), bmat_param_32(MB))
 {
   uint32_t S[32];
+
+  bmat_adup_32(A,MA);
+  bmat_adup_32(B,MB);
 
   for (uint32_t i=0; i<32; i++) {
     uint32_t a = A[i];
@@ -297,12 +311,16 @@ void bmat_mul_32_ref(uint32_t C[static 32], uint32_t A[static 32], uint32_t B[st
     S[i] = r;
   }
 
-  bmat_dup_32(C,S);
+  array_to_bmat_32(C,S);
 }
 
-void bmat_mul_64_ref(uint64_t C[static 64], uint64_t A[static 64], uint64_t B[static 64])
+
+void bmat_mul_64_ref(bmat_param_64(C), bmat_param_64(MA), bmat_param_64(MB))
 {
   uint64_t S[64];
+
+  bmat_adup_64(A,MA);
+  bmat_adup_64(B,MB);
 
   for (uint32_t i=0; i<64; i++) {
     uint64_t a = A[i];
@@ -316,17 +334,5 @@ void bmat_mul_64_ref(uint64_t C[static 64], uint64_t A[static 64], uint64_t B[st
     S[i] = r;
   }
 
-  bmat_dup_64(C,S);
+  array_to_bmat_64(C,S);
 }
-
-
-#if 0
-// M' = JM : vertical flip (row reversal)
-void bmat_flip_v_8 (uint8_t  m[static  8]) { for(int i=0; i< 4; i++) { uint8_t  t=m[i]; m[i]=m[ 7-i]; m[ 7-i]=t; }}
-void bmat_flip_v_16(uint16_t m[static 16]) { for(int i=0; i< 8; i++) { uint16_t t=m[i]; m[i]=m[15-i]; m[15-i]=t; }}
-void bmat_flip_v_32(uint32_t m[static 32]) { for(int i=0; i<16; i++) { uint32_t t=m[i]; m[i]=m[31-i]; m[31-i]=t; }}
-void bmat_flip_v_64(uint64_t m[static 64]) { for(int i=0; i<32; i++) { uint64_t t=m[i]; m[i]=m[63-i]; m[63-i]=t; }}
-#endif
-
-#endif
-
