@@ -371,7 +371,7 @@ static inline uint64_t bit_lowest_clear_64(uint64_t x) { return ~x & (x+1); }
 // single set bit in the position of the first that differs
 // from the lowest bit
 static inline uint32_t bit_lowest_changed_32(uint32_t x) { return -x & (x+1); }
-static inline uint64_t bit_lowest_changed_64(uint32_t x) { return -x & (x+1); }
+static inline uint64_t bit_lowest_changed_64(uint64_t x) { return -x & (x+1); }
 
 static inline uint64_t bit_highest_set_64(uint64_t x)
 {

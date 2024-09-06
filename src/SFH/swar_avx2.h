@@ -247,6 +247,16 @@ static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 // alignr : amount compile time
 #define byte_barrel_shift_128x2(X,I) alignr_128x2(X,X,I)
 
+
+static inline u256_t shr_1_8x32(u256_t x)
+{
+  u256_t z = zero_256();
+  u256_t a = avg_8x32(x,z);
+  u256_t r = sub_8x32(x,a);
+  return r;
+}
+
+
 //------------------------------------------------------------------------------
 
 
@@ -623,8 +633,17 @@ static inline u256_t byte_unzip_128x2(u256_t x)
   return pshufb_128x2(x,m);
 }
 
+static inline u256_t byte_unzip_256(u256_t x)
+{
+  x = byte_unzip_128x2(x);
+  x = permute_64x4(x, SSE_MM_SHUFFLE(3,1,2,0));
+  return x;
+}
+
+
+
 // macro version
-#define DELTA_SWAP_64x4(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
+#define DELTA_SWAP2_64x4(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
 
 #if !defined(AVX2_MACRO_KOP)
 
