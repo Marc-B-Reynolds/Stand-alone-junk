@@ -86,6 +86,11 @@ extern bool bmat_equal_16(bmat_param_16(a), bmat_param_16(b));
 extern bool bmat_equal_32(bmat_param_32(a), bmat_param_32(b));
 extern bool bmat_equal_64(bmat_param_64(a), bmat_param_64(b));
 
+extern bool bmat_is_zero_8 (bmat_param_8(m));
+extern bool bmat_is_zero_16(bmat_param_16(m));
+extern bool bmat_is_zero_32(bmat_param_32(m));
+extern bool bmat_is_zero_64(bmat_param_64(m));
+
 extern void bmat_add_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b));
 extern void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b));
 extern void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b));
@@ -104,7 +109,34 @@ extern uint32_t bmat_trace_8 (bmat_param_8 (m));
 extern uint32_t bmat_trace_16(bmat_param_16(m));
 extern uint32_t bmat_trace_32(bmat_param_32(m));
 
-// bmat_gaussian.c
+// bmat_set.c
+extern void bmat_zero_8 (bmat_param_8 (m));
+extern void bmat_zero_16(bmat_param_16(m));
+extern void bmat_zero_32(bmat_param_32(m));
+extern void bmat_zero_64(bmat_param_64(m));
+
+extern void bmat_set_unit_8 (bmat_param_8 (d));
+extern void bmat_set_unit_16(bmat_param_16(d));
+extern void bmat_set_unit_32(bmat_param_32(d));
+extern void bmat_set_unit_64(bmat_param_64(d));
+
+extern void bmat_set_exchange_8 (bmat_param_8 (m));
+extern void bmat_set_exchange_16(bmat_param_16(m));
+extern void bmat_set_exchange_32(bmat_param_32(m));
+extern void bmat_set_exchange_64(bmat_param_64(m));
+
+// bmat_mul.c
+extern void bmat_mul_8 (bmat_param_8 (c),bmat_param_8 (a),bmat_param_8 (b));
+extern void bmat_mul_16(bmat_param_16(c),bmat_param_16(a),bmat_param_16(b));
+extern void bmat_mul_32(bmat_param_32(c),bmat_param_32(a),bmat_param_32(b));
+extern void bmat_mul_64(bmat_param_64(c),bmat_param_64(a),bmat_param_64(b));
+
+extern void bmat_mult_8 (bmat_param_8 (c),bmat_param_8 (a),bmat_param_8 (b));
+extern void bmat_mult_16(bmat_param_16(c),bmat_param_16(a),bmat_param_16(b));
+extern void bmat_mult_32(bmat_param_32(c),bmat_param_32(a),bmat_param_32(b));
+extern void bmat_mult_64(bmat_param_64(c),bmat_param_64(a),bmat_param_64(b));
+
+// bmat_gauss.c
 extern uint32_t bmat_rank_8 (bmat_param_8 (m));
 extern uint32_t bmat_rank_16(bmat_param_16(m));
 extern uint32_t bmat_rank_32(bmat_param_32(m));
@@ -114,6 +146,26 @@ extern bool bmat_is_full_rank_8 (bmat_param_8 (m));
 extern bool bmat_is_full_rank_16(bmat_param_16(m));
 extern bool bmat_is_full_rank_32(bmat_param_32(m));
 extern bool bmat_is_full_rank_64(bmat_param_64(m));
+
+extern void bmat_transpose_8 (bmat_param_8 (a), bmat_param_8 (b));
+extern void bmat_transpose_16(bmat_param_16(a), bmat_param_16(b));
+extern void bmat_transpose_32(bmat_param_32(a), bmat_param_32(b));
+extern void bmat_transpose_64(bmat_param_64(a), bmat_param_64(b));
+
+// bmat_random.c
+extern void bmat_random_8 (bmat_param_8 (m), prng_t*);
+extern void bmat_random_16(bmat_param_16(m), prng_t*);
+extern void bmat_random_32(bmat_param_32(m), prng_t*);
+extern void bmat_random_64(bmat_param_64(m), prng_t*);
+
+extern void bmat_block_xform_16(bmat_param_16(d), bmat_param_16(s));
+
+//
+extern void bmat_print_8 (char* prefix, bmat_param_8 (m));
+extern void bmat_print_16(char* prefix, bmat_param_16(m));
+extern void bmat_print_32(char* prefix, bmat_param_32(m));
+extern void bmat_print_64(char* prefix, bmat_param_64(m));
+
 
 // F_2 unary & binary function types
 typedef uint32_t (f2_ufunc_32_t)(uint32_t);
