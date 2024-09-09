@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "bmat.h"
+#include "bitops.h"
 #include "carryless.h"
 #include "bitops_small.h"
 #include "swar.h"
@@ -22,7 +23,6 @@ typedef union {
   uint32_t u32[ 8];
   uint64_t u64[ 4];
 } u256_data_t;
-
 
 extern const uint64_t bmat_main_diagonal_mask_8;
 extern const uint64_t bmat_main_diagonal_mask_16;
@@ -53,8 +53,63 @@ extern const u256_data_t bmat_md_256_64;
 #define bmat_adup_32(A,M) uint32_t A[32]; bmat_to_array_32(A,M)
 #define bmat_adup_64(A,M) uint64_t A[64]; bmat_to_array_64(A,M)
 
+// * Guy Steele's shifted bit field swap between two registers. (misplaced..clean up vs. bitops.h)
+#define BMAT_DELTA_SWAP2_8(X,Y,M,S)  { uint8_t  t = (X^(Y>>S)) & M; X=(uint8_t) (X^t); Y=(uint8_t) (Y^(t<<S)); }
+#define BMAT_DELTA_SWAP2_16(X,Y,M,S) { uint16_t t = (X^(Y>>S)) & M; X=(uint16_t)(X^t); Y=(uint16_t)(Y^(t<<S)); }
+#define BMAT_DELTA_SWAP2_32(X,Y,M,S) { uint32_t t = (X^(Y>>S)) & M; X=(uint32_t)(X^t); Y=(uint32_t)(Y^(t<<S)); }
+#define BMAT_DELTA_SWAP2_64(X,Y,M,S) { uint64_t t = (X^(Y>>S)) & M; X=(uint64_t)(X^t); Y=(uint64_t)(Y^(t<<S)); }
 
 
+#if defined(SWAR_AVX2_H)
+
+static inline u256_t bmat_load_256(uint64_t* s)
+{
+  u256_t* p = (u256_t*)s;
+  return loadu_256(p);
+}
+
+static inline void bmat_store_256(uint64_t* d, u256_t r)
+{
+  u256_t* p = (u256_t*)d;
+  storeu_256(p, r);
+}
+
+static inline void bmat_load_256xn(u256_t* r, uint64_t* s, uint32_t n)
+{
+  u256_t* p = (u256_t*)s;
+
+  for(uint32_t i=0; i<n; i++)
+    r[i] = loadu_256(p+i);
+}
+
+static inline void bmat_store_256xn(uint64_t* d, u256_t* s, uint32_t n)
+{
+  u256_t* p = (u256_t*)d;
+
+  for(uint32_t i=0; i<n; i++)
+    storeu_256(p+i, s[i]);
+}
+
+
+static inline void bmat_load_256x4(u256_t* r, uint64_t* s)
+{
+  u256_t* p = (u256_t*)s;
+  r[0] = loadu_256(p  );
+  r[1] = loadu_256(p+1);
+  r[2] = loadu_256(p+2);
+  r[3] = loadu_256(p+3);
+}
+
+static inline void bmat_storex_256x4(uint64_t* d, u256_t r0, u256_t r1, u256_t r2, u256_t r3)
+{
+  u256_t* p = (u256_t*)d;
+  storeu_256(p,   r0);
+  storeu_256(p+1, r1);
+  storeu_256(p+2, r2);
+  storeu_256(p+3, r3);
+}
+
+#endif
 
 
 
