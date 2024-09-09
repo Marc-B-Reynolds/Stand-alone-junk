@@ -3,9 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "bmat_i.h"
-#include "bmat_m4ri.h"
-#include "bmat_ref.h"
+
+#include "../bmat_everything.h"
 #include "bmat_test.h"
 
 /***
