@@ -6,21 +6,43 @@
 
 #pragma once
 
-extern void bmat_mul_8_ref (uint8_t  C[static  8], uint8_t  A[static  8], uint8_t  B[static  8])
-extern void bmat_mul_16_ref(uint16_t C[static 16], uint16_t A[static 16], uint64_t B[static 16])
-extern void bmat_mul_32_ref(uint32_t C[static 32], uint32_t A[static 32], uint64_t B[static 32])
-extern void bmat_mul_64_ref(uint64_t C[static 64], uint64_t A[static 64], uint64_t B[static 64])
+extern void bmat_set_unit_8_ref (bmat_param_8 (m));
+extern void bmat_set_unit_16_ref(bmat_param_16(m));
+extern void bmat_set_unit_32_ref(bmat_param_32(m));
+extern void bmat_set_unit_64_ref(bmat_param_64(m));
 
-extern void bmat_transpose_8_ref (uint8_t  d[static  8], uint8_t  s[static  8]);
-extern void bmat_transpose_16_ref(uint16_t d[static 16], uint16_t s[static 16]);
-extern void bmat_transpose_32_ref(uint32_t d[static 32], uint32_t s[static 32]);
-extern void bmat_transpose_64_ref(uint64_t d[static 64], uint64_t s[static 64]);
+extern void bmat_set_exchange_8_ref (bmat_param_8 (m));
+extern void bmat_set_exchange_16_ref(bmat_param_16(m));
+extern void bmat_set_exchange_32_ref(bmat_param_32(m));
+extern void bmat_set_exchange_64_ref(bmat_param_64(m));
 
-extern void bmat_rot_cw_8_ref  (uint8_t  d[static  8], uint8_t  s[static  8]);
-extern void bmat_rot_cw_16_ref (uint16_t d[static 16], uint16_t s[static 16]);
-extern void bmat_rot_cw_32_ref (uint32_t d[static 32], uint32_t s[static 32]);
-extern void bmat_rot_cw_64_ref (uint64_t d[static 64], uint64_t s[static 64]);
-extern void bmat_rot_ccw_8_ref (uint8_t  d[static  8], uint8_t  s[static  8]);
-extern void bmat_rot_ccw_16_ref(uint16_t d[static 16], uint16_t s[static 16]);
-extern void bmat_rot_ccw_32_ref(uint32_t d[static 32], uint32_t s[static 32]);
-extern void bmat_rot_ccw_64_ref(uint64_t d[static 64], uint64_t s[static 64]);
+extern uint32_t bmat_rank_8_ref (bmat_param_8 (m));
+extern uint32_t bmat_rank_16_ref(bmat_param_16(m));
+extern uint32_t bmat_rank_32_ref(bmat_param_32(m));
+extern uint32_t bmat_rank_64_ref(bmat_param_64(m));
+
+extern void bmat_transpose_8_ref (bmat_param_8 (a), bmat_param_8 (s));
+extern void bmat_transpose_16_ref(bmat_param_16(a), bmat_param_16(s));
+extern void bmat_transpose_32_ref(bmat_param_32(a), bmat_param_32(s));
+extern void bmat_transpose_64_ref(bmat_param_64(a), bmat_param_64(s));
+
+extern void bmat_mul_8_ref (bmat_param_8 (r), bmat_param_8 (a), bmat_param_8 (b));
+extern void bmat_mul_16_ref(bmat_param_16(r), bmat_param_16(a), bmat_param_16(b));
+extern void bmat_mul_32_ref(bmat_param_32(r), bmat_param_32(a), bmat_param_32(b));
+extern void bmat_mul_64_ref(bmat_param_64(r), bmat_param_64(a), bmat_param_64(b));
+
+extern void bmat_mult_8_ref (bmat_param_8 (c), bmat_param_8 (a), bmat_param_8 (b));
+extern void bmat_mult_16_ref(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b));
+extern void bmat_mult_32_ref(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b));
+extern void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b));
+
+#if 0
+extern void bmat_rot_cw_8_ref  (bmat_param_8 (d), bmat_param_8 (s));
+extern void bmat_rot_cw_16_ref (bmat_param_16(d), bmat_param_16(s));
+extern void bmat_rot_cw_32_ref (bmat_param_32(d), bmat_param_32(s));
+extern void bmat_rot_cw_64_ref (bmat_param_64(d), bmat_param_64(s));
+extern void bmat_rot_ccw_8_ref (bmat_param_8 (d), bmat_param_8 (s));
+extern void bmat_rot_ccw_16_ref(bmat_param_16(d), bmat_param_16(s));
+extern void bmat_rot_ccw_32_ref(bmat_param_32(d), bmat_param_32(s));
+extern void bmat_rot_ccw_64_ref(bmat_param_64(d), bmat_param_64(s));
+#endif
