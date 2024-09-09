@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2021-2024
 // Public Domain under http://unlicense.org, see link for details.
 
-#pramga once
+#pragma once
 #define PRNG_SMALL_H
 
 // small feature pseudorandom number generator
