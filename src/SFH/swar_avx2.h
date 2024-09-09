@@ -652,6 +652,13 @@ static inline u256_t u16_unzip_128x2(u256_t x)
   return pshufb_128x2(x,m);
 }
 
+static inline u256_t u16_zip_128x2(u256_t x)
+{
+  u256_t m = pshufb_table_128x2(0,1,8,9,2,3,10,11,4,5,12,13,6,7,14,15);
+  
+  return pshufb_128x2(x,m);
+}
+
 static inline u256_t u64_unzip_256(u256_t x)
 {
   return _mm256_permute4x64_epi64(x, SSE_MM_SHUFFLE(3,1,2,0));
