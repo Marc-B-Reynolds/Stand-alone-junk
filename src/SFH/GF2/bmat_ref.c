@@ -244,7 +244,7 @@ void bmat_rot_cw_64_ref(uint64_t d[static 64], uint64_t s[static 64])
 
 
 //****************************************************************************
-// reference versions of products: (row broadcast)
+// reference versions of products: row broadcasting. see bmat_mul.c if that's WTF?
 
 void bmat_mul_8_ref(bmat_param_8(C), bmat_param_8(MA), bmat_param_8(MB))
 {
@@ -336,3 +336,15 @@ void bmat_mul_64_ref(bmat_param_64(C), bmat_param_64(MA), bmat_param_64(MB))
 
   array_to_bmat_64(C,S);
 }
+
+
+// naive thing using reference mul and transpose
+void bmat_mult_8_ref (bmat_param_8 (c), bmat_param_8 (a), bmat_param_8 (b)) { bmat_def_8 (t); bmat_transpose_8_ref (t,b); bmat_mul_8_ref (c,a,t); }
+void bmat_mult_16_ref(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b)) { bmat_def_16(t); bmat_transpose_16_ref(t,b); bmat_mul_16_ref(c,a,t); }
+void bmat_mult_32_ref(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_def_32(t); bmat_transpose_32_ref(t,b); bmat_mul_32_ref(c,a,t); }
+void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b)) { bmat_def_64(t); bmat_transpose_64_ref(t,b); bmat_mul_64_ref(c,a,t); }
+
+
+//***************************************************************************
+
+
