@@ -9,20 +9,33 @@ endif
 
 IDIRS  = -I../.. -I..
 CFLAGS = -g -O3 -flto ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
-LDLIBS = -lbmat
+LDLIBS = 
 
 # add filtering into two groups w/o and w m4ri
 SRC     := ${wildcard *.c}
 HEADERS := ${wildcard *.h}
 TARGETS := ${SRC:.c=}
+SIMDE   := ${SRC:.c=_simde}
 
 all:    ${TARGETS}
 
+SIMDe:	${SIMDE}
+
 spew:
-	@echo ${CC}
+	@echo ${SRC:.c=_simde}
+
+
+.DEFAULT help:
+	@echo "help            : there is no buildsystem"
+	@echo " make           : builds all the test"
+	@echo " make SIMDe     : builds all the test (with SIMDe)"
+	@echo " make clean     : deletes all executables"
+	@echo " make distclean : clean + kill emacs tempfiles and makedep file"
+
+.PHONY: clean
 
 clean:
-	-${RM} ${TARGETS}
+	-${RM} ${TARGETS} ${SIMDE}
 
 distclean:	clean
 	-${RM} .makedep *~
@@ -33,10 +46,16 @@ distclean:	clean
 	@$(foreach file, $(SRC), ${CC} ${IDIRS} -MM -MQ${file:.c=}  $(file) >> .makedep;)
 
 # anything with a m4ri suffix requires m4ri
-%_m4ri: %_m4ri.c Makefile  ../libbmat.a
+%_m4ri_simde: %_m4ri.c Makefile
+	${CC} -DSFH_USE_SIMDE ${CFLAGS} $< -L.. ${LDLIBS} -lm4ri -o $@
+
+%_m4ri: %_m4ri.c Makefile
 	${CC} ${CFLAGS} $< -L.. ${LDLIBS} -lm4ri -o $@
 
-%:%.c	Makefile ../libbmat.a
+%_simde:%.c	Makefile
+	${CC} -DSFH_USE_SIMDE ${CFLAGS} $< -L.. ${LDLIBS} -o $@
+
+%:%.c	Makefile
 	${CC} ${CFLAGS} $< -L.. ${LDLIBS} -o $@
 
 -include .makedep
