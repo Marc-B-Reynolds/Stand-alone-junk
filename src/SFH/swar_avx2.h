@@ -256,6 +256,10 @@ static inline u256_t shr_1_8x32(u256_t x)
   return r;
 }
 
+// alias for action clarity
+static inline u256_t unpacklo_128x2(u256_t a, u256_t b) { return _mm256_permute2x128_si256(a,b, (2<<4)|0); }
+static inline u256_t unpackhi_128x2(u256_t a, u256_t b) { return _mm256_permute2x128_si256(a,b, (3<<4)|1); }
+
 
 //------------------------------------------------------------------------------
 
@@ -640,7 +644,18 @@ static inline u256_t byte_unzip_256(u256_t x)
   return x;
 }
 
+// per 128-bit lane (unriffle 2x16)
+static inline u256_t u16_unzip_128x2(u256_t x)
+{
+  u256_t m = pshufb_table_128x2(0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15);
+  
+  return pshufb_128x2(x,m);
+}
 
+static inline u256_t u64_unzip_256(u256_t x)
+{
+  return _mm256_permute4x64_epi64(x, SSE_MM_SHUFFLE(3,1,2,0));
+}
 
 // macro version
 #define DELTA_SWAP2_64x4(X,Y,M,S) { u256_t t; t = and_256(xor_256(X, srli_64x4(Y,S)),M); X = xor_256(X, t); Y = xor_256(Y, slli_64x4(t,S));}
