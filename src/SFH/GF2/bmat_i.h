@@ -90,6 +90,11 @@ static inline void bmat_store_256xn(uint64_t* d, u256_t* s, uint32_t n)
     storeu_256(p+i, s[i]);
 }
 
+static inline void bmat_store_256x4(uint64_t* d, u256_t* s)
+{
+  bmat_store_256xn(d,s,4);
+}
+
 
 static inline void bmat_load_256x4(u256_t* r, uint64_t* s)
 {
