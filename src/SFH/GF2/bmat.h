@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifndef  PRNG_SMALL_H
 #include "prng_small.h" // temp hack
+#endif
 
 // hide your eyes
 
