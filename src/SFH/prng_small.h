@@ -1,8 +1,7 @@
 // Marc B. Reynolds, 2021-2024
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef PRNG_H
-#define PRNG_H
+#pramga once
 
 // small feature pseudorandom number generator
 // * 
@@ -72,5 +71,3 @@ static inline uint32_t prng_u32(prng_t* prng)
 {
   return (uint32_t)prng_u64(prng);
 }
-
-#endif
