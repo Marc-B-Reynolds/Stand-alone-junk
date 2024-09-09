@@ -2,6 +2,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 #pramga once
+#define PRNG_SMALL_H
 
 // small feature pseudorandom number generator
 // * 
