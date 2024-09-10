@@ -1,12 +1,15 @@
 // Marc B. Reynolds, 2016-2024
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef BITOPS_H
-#define BITOPS_H
+#pragma once
+#define BITOPS_H    // needed as marker
 
 //  name_(u|s)?(d+)
 
-// what? nope
+// Note: some of the strangeness about includes is:
+// 1) allowing SIMDe to be used instead of native
+// 2) allowing 
+
 #if     defined(__ARM_ARCH)
 #include <arm_acle.h>
 #define BITOPS_ARM
@@ -17,6 +20,7 @@
 #define BITOPS_HAS_BYTE_SWAP   1
 #define BITOPS_HAS_SCATTER_GATHER 0
 
+// sloppy. no.
 #elif  !defined(_MSC_VER)
 #include <x86intrin.h>
 #define BITOPS_INTEL
@@ -164,12 +168,22 @@ static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 // inverse function in "carryless.h" (move to approp place)
 #if defined(__ARM_ARCH)
 #if defined(__ARM_FEATURE_CRC32)
+#if !defined(SFH_USE_SIMDE)
 static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return __crc32cw(x,k); }
 static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
+#else
+static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return simde__crc32cw(x,k); }
+static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return simde__crc32cd(k,x); }
+#endif
 #endif
 #else
+#if !defined(SFH_USE_SIMDE)
 static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return _mm_crc32_u32(x,k); }
 static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return _mm_crc32_u64(k,x); }
+#else
+static inline uint32_t crc32c(uint32_t x, uint32_t k)    { return simde_mm_crc32_u32(x,k); }
+static inline uint64_t crc32c_64(uint64_t x, uint32_t k) { return simde_mm_crc32_u64(k,x); }
+#endif
 #endif
 
 #if !defined(BITOPS_MISSING_POPCOUNT)
@@ -604,5 +618,3 @@ static inline uint64_t pop_prev_64(uint64_t x)
   return b^d;
 }
 
-
-#endif
