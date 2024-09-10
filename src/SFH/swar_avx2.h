@@ -31,6 +31,7 @@
 #if  defined(SIMDE_VERSION)
 #define AVX2_PREFIX simde_mm256_
 typedef simde__m256i u256_t;
+typedef simde__m128i u128_t;
 
 // emit macros for intrinsics w required constant "input"
 // many of these require GCC expression statements though.
@@ -38,6 +39,7 @@ typedef simde__m256i u256_t;
 #else
 #define AVX2_PREFIX _mm256_
 typedef __m256i u256_t;
+typedef __m128i u128_t;
 #endif
 #endif
 
@@ -199,8 +201,15 @@ typedef __m256i u256_t;
 
 // the reversal is unfortunate
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
+#define permute_128x2   SFH_CAT(AVX2_PREFIX, permute2x128_si256)
 
 #define cast_128_256    SFH_CAT(AVX2_PREFIX, castsi256_si128)
+
+
+#define broadcast_lo_8x32_128  SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )
+#define broadcast_lo_16x16_128 SFH_CAT(AVX2_PREFIX, broadcastw_epi16)
+#define broadcast_lo_32x8_128  SFH_CAT(AVX2_PREFIX, broadcastd_epi32)
+#define broadcast_lo_64x4_128  SFH_CAT(AVX2_PREFIX, broadcastq_epi64)
 
 // low element of 'x' broadcast to all (the 'cast' isn't a real operation)
 static inline u256_t broadcast_lo_8x32 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )(cast_128_256(x)); }
@@ -209,11 +218,20 @@ static inline u256_t broadcast_lo_32x8 (u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastq_epi64)(cast_128_256(x)); }
 
 
+
+
 //------------------------------------------------------------------------------
 // start of composed functions
 
 // return (scalar) true/false if all elements of a & b are equal
 static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpeq_8x32(a,b)) == 0xFFFFFFFF; }
+
+// returns true if all elements are the same value
+static inline bool   is_rep_8x32 (u256_t x) { return cmp_equal_256(x, broadcast_lo_8x32 (x)); }
+static inline bool   is_rep_16x16(u256_t x) { return cmp_equal_256(x, broadcast_lo_16x16(x)); }
+static inline bool   is_rep_32x8 (u256_t x) { return cmp_equal_256(x, broadcast_lo_32x8 (x)); }
+static inline bool   is_rep_64x6 (u256_t x) { return cmp_equal_256(x, broadcast_lo_64x4 (x)); }
+
 
 // all bits set : should lower to vpcmpeqd ymmR,ymmN,ymmN (ymmN is any)
 static inline u256_t bit_allset_256(void) { u256_t t = zero_256(); return cmpeq_8x32(t,t); }
@@ -257,8 +275,8 @@ static inline u256_t shr_1_8x32(u256_t x)
 }
 
 // alias for action clarity
-static inline u256_t unpacklo_128x2(u256_t a, u256_t b) { return _mm256_permute2x128_si256(a,b, (2<<4)|0); }
-static inline u256_t unpackhi_128x2(u256_t a, u256_t b) { return _mm256_permute2x128_si256(a,b, (3<<4)|1); }
+static inline u256_t unpacklo_128x2(u256_t a, u256_t b) { return permute_128x2(a,b, (2<<4)|0); }
+static inline u256_t unpackhi_128x2(u256_t a, u256_t b) { return permute_128x2(a,b, (3<<4)|1); }
 
 
 //------------------------------------------------------------------------------
