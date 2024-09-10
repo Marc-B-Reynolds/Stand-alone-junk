@@ -44,14 +44,6 @@ void bmat_transpose_8(bmat_param_8(d), bmat_param_8(m))
 //*******************************************************************
 // 16-bit
 
-// temp hack
-void bmat_block_transpose_16(bmat_rparam_16(d), bmat_param_16(s))
-{
-  d[0] = bmat_transpose_8x8_i(s[0]);
-  d[2] = bmat_transpose_8x8_i(s[1]);
-  d[1] = bmat_transpose_8x8_i(s[2]);
-  d[3] = bmat_transpose_8x8_i(s[3]);
-}
 
 #if defined(BITOPS_INTEL)
 
@@ -167,7 +159,10 @@ void bmat_transpose_16(bmat_param_16(d), bmat_param_16(m))
 
 #if defined(SWAR_AVX2_H)
 
-// temp hack version. way too much data motion. 
+// less than ideal version. simply converts to 16x16 blocks
+// perform the block transpose and restores. less bad than
+// I would have expected though. half-heartedly goofying
+// with some alternate ideas in tests/dev_transpose_32.c
 void bmat_transpose_32(bmat_param_32(d), bmat_param_32(s))
 {
   u256_t r[4];
@@ -189,7 +184,7 @@ void bmat_transpose_32(bmat_param_32(d), bmat_param_32(s))
   t[2] = unpacklo_128x2(r[2],r[3]);     // C
   t[3] = unpackhi_128x2(r[2],r[3]);     // D
 
-  // perform the block transpose
+  // perform the block transpose.
   r[0] = bmat_transpose_16_i(t[0]);     // A^T
   r[1] = bmat_transpose_16_i(t[2]);     // C^T
   r[2] = bmat_transpose_16_i(t[1]);     // B^T
@@ -275,6 +270,18 @@ void bmat_transpose_32(bmat_param_32(D), bmat_param_32(S))
   for(uint32_t i=0; i<16; i++) {
     D[i] = bit_permute_step_64(D[i], M,31);
   }
+}
+
+
+void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
+{
+  // this is disallowing d=s. rework.
+  bmat_transpose_16(d,     s);
+  bmat_transpose_16(d+3*4, s+3*4);
+
+  // need of copy of src B for step 1 & use for 2
+  bmat_transpose_16(d+1*4, s+2*4);
+  bmat_transpose_16(d+2*4, s+1*4);
 }
 
 #endif
