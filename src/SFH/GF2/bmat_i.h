@@ -22,6 +22,9 @@ typedef union {
   uint16_t u16[16];
   uint32_t u32[ 8];
   uint64_t u64[ 4];
+#if defined(SWAR_AVX2_H)
+  u256_t   p;
+#endif  
 } u256_data_t;
 
 extern const uint64_t bmat_main_diagonal_mask_8;
@@ -59,6 +62,7 @@ extern const u256_data_t bmat_md_256_64;
 #define BMAT_DELTA_SWAP2_32(X,Y,M,S) { uint32_t t = (X^(Y>>S)) & M; X=(uint32_t)(X^t); Y=(uint32_t)(Y^(t<<S)); }
 #define BMAT_DELTA_SWAP2_64(X,Y,M,S) { uint64_t t = (X^(Y>>S)) & M; X=(uint64_t)(X^t); Y=(uint64_t)(Y^(t<<S)); }
 
+#define BMAT_REP_SHIFT_4(X,S) {X,X<<S,X<<(2*S),X<<(3*S)}
 
 #if defined(SWAR_AVX2_H)
 
