@@ -8,10 +8,13 @@
 #include <string.h>
 #include "bmat.h"
 
+// temp hack 4 godbolt
+#if !defined(BITOPS_H)
 #include "bitops.h"
 #include "carryless.h"
 #include "bitops_small.h"
 #include "swar.h"
+#endif
 
 #if defined(BITOPS_INTEL) && !defined(SWAR_AVX2_H)
 #include "swar_avx2.h"
