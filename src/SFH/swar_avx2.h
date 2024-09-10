@@ -29,6 +29,7 @@
 // base expansion: adds any needed prefix for the intrinsic
 #if !defined(AVX_PREFIX)
 #if  defined(SIMDE_VERSION)
+#define AVX_PREFIX  simde_mm_
 #define AVX2_PREFIX simde_mm256_
 typedef simde__m256i u256_t;
 typedef simde__m128i u128_t;
@@ -37,6 +38,7 @@ typedef simde__m128i u128_t;
 // many of these require GCC expression statements though.
 #define AVX2_MACRO_KOP
 #else
+#define AVX_PREFIX _mm_
 #define AVX2_PREFIX _mm256_
 typedef __m256i u256_t;
 typedef __m128i u128_t;
@@ -63,6 +65,7 @@ typedef __m128i u128_t;
 #define loadu_256      SFH_CAT(AVX2_PREFIX, loadu_si256)
 #define storeu_256     SFH_CAT(AVX2_PREFIX, storeu_si256)
 
+#define setr_8x32      SFH_CAT(AVX2_PREFIX, setr_epi8)
 #define movemask_8x32  (uint32_t)SFH_CAT(AVX2_PREFIX, movemask_epi8)
 
 #define or_256         SFH_CAT(AVX2_PREFIX, or_si256)
@@ -187,17 +190,20 @@ typedef __m128i u128_t;
 //------------------------------------------------------------------------------
 // these (to some extent) break the wrapper naming scheme (beyond signed/unsigned prefixes)
 
-//static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
-
 #define alignr_128x2    SFH_CAT(AVX2_PREFIX, alignr_epi8)
 #define zero_256        SFH_CAT(AVX2_PREFIX, setzero_si256)
 #define pshufb_128x2    SFH_CAT(AVX2_PREFIX, shuffle_epi8)
 
+#define set1_8x32  SFH_CAT(AVX2_PREFIX, set1_epi8 )
+#define set1_16x16 SFH_CAT(AVX2_PREFIX, set1_epi16)
+#define set1_32x8  SFH_CAT(AVX2_PREFIX, set1_epi32)
+#define set1_64x4  SFH_CAT(AVX2_PREFIX, set1_epi64x)
+
 // broadcast (scalar) 'k' to all elements
-#define broadcast_8x32  SFH_CAT(AVX2_PREFIX, set1_epi8 )
-#define broadcast_16x16 SFH_CAT(AVX2_PREFIX, set1_epi16)
-#define broadcast_32x8  SFH_CAT(AVX2_PREFIX, set1_epi32)
-#define broadcast_64x4  SFH_CAT(AVX2_PREFIX, set1_epi64x)
+static inline u256_t broadcast_8x32 (uint8_t  x) { return set1_8x32 ((int8_t) x); }
+static inline u256_t broadcast_16x16(uint16_t x) { return set1_16x16((int16_t)x); }
+static inline u256_t broadcast_32x8 (uint32_t x) { return set1_32x8 ((int32_t)x); }
+static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x); }
 
 // the reversal is unfortunate
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
@@ -205,6 +211,8 @@ typedef __m128i u128_t;
 
 #define cast_128_256    SFH_CAT(AVX2_PREFIX, castsi256_si128)
 
+static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
+static inline uint64_t movq_256(u256_t a) { return (uint64_t)SFH_CAT(AVX_PREFIX,  cvtsi128_si64)(cast_128_256(a)); }
 
 #define broadcast_lo_8x32_128  SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )
 #define broadcast_lo_16x16_128 SFH_CAT(AVX2_PREFIX, broadcastw_epi16)
@@ -217,7 +225,7 @@ static inline u256_t broadcast_lo_16x16(u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 static inline u256_t broadcast_lo_32x8 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastd_epi32)(cast_128_256(x)); }
 static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastq_epi64)(cast_128_256(x)); }
 
-
+// should have the converts
 
 
 //------------------------------------------------------------------------------
