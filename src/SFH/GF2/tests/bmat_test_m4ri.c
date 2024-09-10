@@ -57,6 +57,9 @@ typedef struct {
   mzd_t* a;
   mzd_t* b;
   mzd_t* c;
+
+  mzd_t* v;
+  mzd_t* rv;
 } m4ri_set_t;
 
 m4ri_set_t m4ri_set_8  = {.to_m4ri=bmat_to_m4ri_8,  .from_m4ri=bmat_from_m4ri_8};
@@ -71,6 +74,9 @@ void m4ri_set_init(m4ri_set_t* set, uint32_t n)
   set->a = m4ri_alloc_n(n);
   set->b = m4ri_alloc_n(n);
   set->c = m4ri_alloc_n(n);
+
+  set->v  = mzd_init((rci_t)n,(rci_t)1);
+  set->rv = mzd_init((rci_t)n,(rci_t)1);
 }
 
 
@@ -425,6 +431,70 @@ uint32_t test_mm_mult(prng_t* prng, uint32_t n)
   
   return errors;
 }
+
+//----------------------------------------------------
+// c = vM
+
+uint64_t bmvm_w8 (uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_8 ((uint8_t) v, m); }
+uint64_t bmvm_w16(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_16((uint16_t)v, m); }
+uint64_t bmvm_w32(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_32((uint32_t)v, m); }
+uint64_t bmvm_w64(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_64((uint64_t)v, m); }
+
+void mr_vm_mul(mzd_t* c, mzd_t* v, mzd_t* M) { _mzd_mul_va(c,v,M,1); }
+
+#if 0
+
+static inline uint32_t vmmul_driver(prng_t*        prng,
+				    test_fn_set_t* mset,
+				    m4ri_set_t*    m4ri,
+				    void     (*f0)(mzd_t*,   mzd_t*, mzd_t*)
+				    uint64_t (*f1)(uint64_t, uint64_t*)
+				    uint32_t       n)
+{
+  uint64_t a[64],b[64],r0[64],r1[64];
+  
+  mset->rsize();
+  
+  for(uint32_t i=0; i<n; i++) {
+    mset->random(a,prng);
+    mset->random(b,prng);
+
+    f0(r0,a,b);
+
+    m4ri->to_m4ri(m4ri->a, a);
+    m4ri->to_m4ri(m4ri->b, b);
+
+    f1(m4ri->c,m4ri->a,m4ri->b);
+
+    m4ri->from_m4ri(r1, m4ri->c);
+
+    if (mset->equal(r0,r1)) continue;
+    
+    return test_fail();
+  }
+  return test_pass();
+}
+
+
+uint32_t t_vm_mul_8 (prng_t* prng, uint32_t n) { return MR_EQ_BTEST(8,  bmat_mul_8_ref,  mr_mm_mul); }
+uint32_t t_vm_mul_16(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(16, bmat_mul_16_ref, mr_mm_mul); }
+uint32_t t_vm_mul_32(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(32, bmat_mul_32_ref, mr_mm_mul); }
+uint32_t t_vm_mul_64(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(64, bmat_mul_64_ref, mr_mm_mul); }
+
+uint32_t test_vm_mul(prng_t* prng, uint32_t n)
+{
+  uint32_t errors = 0;
+
+  test_banner("bmat_vmul_n_ref");
+  errors += t_vm_mul_8 (prng,n);
+  errors += t_vm_mul_16(prng,n);
+  errors += t_vm_mul_32(prng,n);
+  errors += t_vm_mul_64(prng,n);
+  
+  return errors;
+}
+#endif
+
 
 //----------------------------------------------------
 // 
