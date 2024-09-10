@@ -7,12 +7,13 @@
 #include <stdbool.h>
 #include <string.h>
 #include "bmat.h"
+
 #include "bitops.h"
 #include "carryless.h"
 #include "bitops_small.h"
 #include "swar.h"
 
-#if defined(BITOPS_INTEL)
+#if defined(BITOPS_INTEL) && !defined(SWAR_AVX2_H)
 #include "swar_avx2.h"
 #endif
 
