@@ -111,6 +111,16 @@ extern uint32_t bmat_trace_8 (bmat_param_8 (m));
 extern uint32_t bmat_trace_16(bmat_param_16(m));
 extern uint32_t bmat_trace_32(bmat_param_32(m));
 
+extern void bmat_flip_h_8 (bmat_param_8 (d), bmat_param_8 (m));
+extern void bmat_flip_h_16(bmat_param_16(d), bmat_param_16(m));
+extern void bmat_flip_h_32(bmat_param_32(d), bmat_param_32(m));
+extern void bmat_flip_h_64(bmat_param_64(d), bmat_param_64(m));
+
+extern void bmat_flip_v_8 (bmat_param_8 (d), bmat_param_8 (m));
+extern void bmat_flip_v_16(bmat_param_16(d), bmat_param_16(m));
+extern void bmat_flip_v_32(bmat_param_32(d), bmat_param_32(m));
+extern void bmat_flip_v_64(bmat_param_64(d), bmat_param_64(m));
+
 // bmat_set.c
 extern void bmat_zero_8 (bmat_param_8 (m));
 extern void bmat_zero_16(bmat_param_16(m));
