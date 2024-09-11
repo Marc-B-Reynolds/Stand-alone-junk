@@ -187,6 +187,12 @@ typedef __m128i u128_t;
 #define unpackhi_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 #define unpacklo_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 
+// inside each 128-bit lane
+#define shuffle_32x8  SFH_CAT(AVX2_PREFIX, shuffle_epi32)
+
+#define shuffle_lo_16x16 SFH_CAT(AVX2_PREFIX, shufflelo_epi16)
+#define shuffle_hi_16x16 SFH_CAT(AVX2_PREFIX, shufflehi_epi16)
+
 //------------------------------------------------------------------------------
 // these (to some extent) break the wrapper naming scheme (beyond signed/unsigned prefixes)
 
@@ -409,6 +415,17 @@ static inline u256_t byte_reverse_128x2(u256_t x) { return pshufb_128x2(x, pshuf
 static inline u256_t byte_reverse_256(u256_t x)
 {
   return swap_128x2(byte_reverse_128x2(x));
+}
+
+// reverse n-bit elements (across the 128-bit lanes)
+static inline u256_t u32_swap_256(u256_t x) { return swap_128x2(shuffle_32x8(x, SSE_MM_SHUFFLE(0,1,2,3))); }
+static inline u256_t u64_swap_256(u256_t x) { return permute_64x4(x, SSE_MM_SHUFFLE(0,1,2,3)); }
+
+static inline u256_t u16_swap_256(u256_t x)
+{
+  x = shuffle_lo_16x16(x, SSE_MM_SHUFFLE(0,1,2,3));
+  x = shuffle_hi_16x16(x, SSE_MM_SHUFFLE(0,1,2,3));
+  return u64_swap_256(x);
 }
 
 
