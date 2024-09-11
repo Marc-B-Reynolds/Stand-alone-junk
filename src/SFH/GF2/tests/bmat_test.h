@@ -86,7 +86,6 @@ typedef struct {
   TEST_FN_E(rank,W),        \
   TEST_FN_E(random,W),      \
 }
-
        
 test_fn_set_t test_fn_set_8  = TEST_FN_SET( 8);
 test_fn_set_t test_fn_set_16 = TEST_FN_SET(16);
