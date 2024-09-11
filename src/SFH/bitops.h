@@ -245,6 +245,12 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 
 #endif
 
+// typeof is nice. VC though
+#define BIT_SWAP2_T(T,X,Y)  { T t = (X); X=(T)(Y); Y=(T)(X); }
+#define BIT_SWAP2_8(X,Y)    BIT_SWAP2_T(uint8_t, X,Y)
+#define BIT_SWAP2_16(X,Y)   BIT_SWAP2_T(uint16_t,X,Y)
+#define BIT_SWAP2_32(X,Y)   BIT_SWAP2_T(uint32_t,X,Y)
+#define BIT_SWAP2_64(X,Y)   BIT_SWAP2_T(uint64_t,X,Y)
 
 // Given two registers (X,Y) swap the bits set in mask M
 // * Guy Steele's bit field swap between two registers.  "Hacker's Delight,
@@ -544,8 +550,6 @@ static inline uint64_t bit_gzip_64(uint64_t v, uint64_t m)
   return a^b;
 }
 
-#endif
-
 // sheep and goats
 static inline uint32_t bit_sag_32(uint32_t v, uint32_t m)
 {
@@ -567,6 +571,8 @@ static inline uint64_t bit_gas_64(uint64_t v, uint64_t m)
 {
   return bit_gzip_64(v,~m);
 }
+
+#endif
 
 
 // pop_next_{32/64}: next number greater than 'x' with the
