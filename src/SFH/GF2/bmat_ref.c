@@ -343,6 +343,106 @@ void bmat_mult_16_ref(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b)) { bm
 void bmat_mult_32_ref(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_def_32(t); bmat_transpose_32_ref(t,b); bmat_mul_32_ref(c,a,t); }
 void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b)) { bmat_def_64(t); bmat_transpose_64_ref(t,b); bmat_mul_64_ref(c,a,t); }
 
+//***************************************************************************
+
+uint8_t bmat_vmul_8_ref(uint8_t v, bmat_param_8(M))
+{
+  bmat_adup_8(m,M);
+
+  uint32_t r = 0;
+  
+  for_range(i,0,8) { r ^= m[i] & (-(v&1)); v >>= 1; } return (uint8_t)r;
+}
+
+uint16_t bmat_vmul_16_ref(uint16_t v, bmat_param_16(M))
+{
+  bmat_adup_16(m,M);
+
+  uint32_t r = 0;
+  
+  for_range(i,0,16) { r ^= m[i] & (-(v&1)); v >>= 1; } return (uint16_t)r;
+}
+
+uint32_t bmat_vmul_32_ref(bmat_param_32(M), uint32_t v)
+{
+  bmat_adup_32(m,M);
+
+  uint32_t r = 0;
+  
+  for_range(i,0,32) { r ^= m[i] & (-(v&1)); v >>= 1; } return r;
+}
+
+uint64_t bmat_vmul_64_ref(bmat_param_64(M), uint64_t v)
+{
+  bmat_adup_64(m,M);
+
+  uint64_t r = 0;
+  
+  for_range(i,0,64) { r ^= m[i] & (-(v&1));  v >>= 1; } return r;
+}
+
+
+//***************************************************************************
+
+uint8_t bmat_mulv_8_ref(bmat_param_8(M), uint8_t v)
+{
+  bmat_adup_8(m,M);
+
+  uint32_t r = 0;
+  uint32_t b = 1;
+  
+  for_range(i,0,8) {
+    r ^= b & bit_parity_mask_32(m[i] & v);
+    b <<= 1;
+  }
+
+  return (uint8_t)r;
+}
+
+uint16_t bmat_mulv_16_ref(bmat_param_16(M), uint16_t v)
+{
+  bmat_adup_16(m,M);
+
+  uint32_t r = 0;
+  uint32_t b = 1;
+  
+  for_range(i,0,16) {
+    r ^= b & bit_parity_mask_32(m[i] & v);
+    b <<= 1;
+  }
+
+  return (uint16_t)r;
+}
+
+uint32_t bmat_mulv_32_ref(bmat_param_32(M), uint32_t v)
+{
+  bmat_adup_32(m,M);
+
+  uint32_t r = 0;
+  uint32_t b = 1;
+  
+  for_range(i,0,32) {
+    r ^= b & bit_parity_mask_32(m[i] & v);
+    b <<= 1;
+  }
+
+  return r;
+}
+
+uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v)
+{
+  bmat_adup_64(m,M);
+
+  uint64_t r = 0;
+  uint64_t b = 1;
+  
+  for_range(i,0,64) {
+    r ^= b & bit_parity_mask_64(m[i] & v);
+    b <<= 1;
+  }
+
+  return r;
+}
 
 //***************************************************************************
 
