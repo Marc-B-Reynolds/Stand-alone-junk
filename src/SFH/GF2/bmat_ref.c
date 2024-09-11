@@ -21,12 +21,17 @@ void bmat_set_exchange_16_ref(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; f
 void bmat_set_exchange_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
 void bmat_set_exchange_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
 
+// D = SJ : horizontal flip (column reversal/row bit reverse)
+void bmat_flip_h_8_ref (bmat_param_8 (d),bmat_param_8 (s)) { bmat_adup_8 (a,s); for_range(i,0, 8) a[i] = bit_reverse_8 (a[i]); array_to_bmat_8 (d,a); }
+void bmat_flip_h_16_ref(bmat_param_16(d),bmat_param_16(s)) { bmat_adup_16(a,s); for_range(i,0,16) a[i] = bit_reverse_16(a[i]); array_to_bmat_16(d,a); }
+void bmat_flip_h_32_ref(bmat_param_32(d),bmat_param_32(s)) { bmat_adup_32(a,s); for_range(i,0,32) a[i] = bit_reverse_32(a[i]); array_to_bmat_32(d,a); }
+void bmat_flip_h_64_ref(bmat_param_64(d),bmat_param_64(s)) { bmat_adup_64(a,s); for_range(i,0,64) a[i] = bit_reverse_64(a[i]); array_to_bmat_64(d,a); }
 
-void bmat_flip_h_8_ref (bmat_param_8(m))  { bmat_adup_8 (a,m); for_range(i,0, 8) a[0] = bit_reverse_8 (a[i]); array_to_bmat_8 (m,a); }
-void bmat_flip_h_16_ref(bmat_param_16(m)) { bmat_adup_16(a,m); for_range(i,0,16) a[i] = bit_reverse_16(a[i]); array_to_bmat_16(m,a); }
-void bmat_flip_h_32_ref(bmat_param_32(m)) { bmat_adup_32(a,m); for_range(i,0,32) a[i] = bit_reverse_32(a[i]); array_to_bmat_32(m,a); }
-void bmat_flip_h_64_ref(bmat_param_64(m)) { bmat_adup_64(a,m); for_range(i,0,64) a[i] = bit_reverse_64(a[i]); array_to_bmat_64(m,a); }
-
+// D = JS : vertical flip (row reversal) : use a swap2 macro silly rabbit
+void bmat_flip_v_8_ref (bmat_param_8 (d),bmat_param_8 (s)) { bmat_adup_8 (a,s); for_range(i,0, 4) { uint8_t  t=a[i]; a[i]=a[ 7-i]; a[ 7-i]=t; } array_to_bmat_8 (d,a); }
+void bmat_flip_v_16_ref(bmat_param_16(d),bmat_param_16(s)) { bmat_adup_16(a,s); for_range(i,0, 8) { uint16_t t=a[i]; a[i]=a[15-i]; a[15-i]=t; } array_to_bmat_16(d,a); }
+void bmat_flip_v_32_ref(bmat_param_32(d),bmat_param_32(s)) { bmat_adup_32(a,s); for_range(i,0,16) { uint32_t t=a[i]; a[i]=a[31-i]; a[31-i]=t; } array_to_bmat_32(d,a); }
+void bmat_flip_v_64_ref(bmat_param_64(d),bmat_param_64(s)) { bmat_adup_64(a,s); for_range(i,0,32) { uint64_t t=a[i]; a[i]=a[63-i]; a[63-i]=t; } array_to_bmat_64(d,a); }
 
 //****************************************************************************
 
@@ -235,12 +240,6 @@ void bmat_rot_cw_64_ref(uint64_t d[static 64], uint64_t s[static 64])
   bmat_transpose_64_ref(d,s); bmat_flip_h_64(d);
 }
 #endif
-
-// M' = JM : vertical flip (row reversal)
-//void bmat_flip_v_8 (uint8_t  m[static  8]) { for(int i=0; i< 4; i++) { uint8_t  t=m[i]; m[i]=m[ 7-i]; m[ 7-i]=t; }}
-//void bmat_flip_v_16(uint16_t m[static 16]) { for(int i=0; i< 8; i++) { uint16_t t=m[i]; m[i]=m[15-i]; m[15-i]=t; }}
-//void bmat_flip_v_32(uint32_t m[static 32]) { for(int i=0; i<16; i++) { uint32_t t=m[i]; m[i]=m[31-i]; m[31-i]=t; }}
-//void bmat_flip_v_64(uint64_t m[static 64]) { for(int i=0; i<32; i++) { uint64_t t=m[i]; m[i]=m[63-i]; m[63-i]=t; }}
 
 
 //****************************************************************************
