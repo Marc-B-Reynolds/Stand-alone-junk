@@ -64,6 +64,8 @@ static inline uint32_t test_unary_2param(prng_t*        prng,
 // table of 2 parameter unary functions
 ufunc_set_t ufuncs[] = {
   FUNC_SET(transpose),
+  FUNC_SET(flip_h),
+  FUNC_SET(flip_v),
 };
 
 uint32_t test_all_unary_2param(prng_t* prng, uint32_t trials)
@@ -210,7 +212,6 @@ uint32_t test_all_binary_3param(prng_t* prng, uint32_t trials)
 
 
 //******************************************************************************
-
 
 int main(void)
 {
