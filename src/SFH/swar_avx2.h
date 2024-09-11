@@ -687,7 +687,7 @@ static inline u256_t u16_zip_128x2(u256_t x)
 
 static inline u256_t u64_unzip_256(u256_t x)
 {
-  return _mm256_permute4x64_epi64(x, SSE_MM_SHUFFLE(3,1,2,0));
+  return permute_64x4(x, SSE_MM_SHUFFLE(3,1,2,0));
 }
 
 // macro version
