@@ -336,6 +336,7 @@ static inline uint64_t bit_swap_8_64 (uint64_t x) { return BIT_GROUP_SWAP(x, 8,6
 static inline uint64_t bit_swap_16_64(uint64_t x) { return BIT_GROUP_SWAP(x,16,64); }
 static inline uint64_t bit_swap_32_64(uint64_t x) { return rot_64(x,32);            }
 
+static inline uint64_t u16_swap_64(uint64_t x) { return bit_swap_8_64(byteswap_64(x)); }
 
 // returns 'x' with the two bits in positions (p0,p1) swapped
 static inline uint32_t bit_pos_swap_32(uint32_t x, uint32_t p0, uint32_t p1)
