@@ -348,37 +348,29 @@ void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b)) { bm
 uint8_t bmat_vmul_8_ref(uint8_t v, bmat_param_8(M))
 {
   bmat_adup_8(m,M);
-
   uint32_t r = 0;
-  
-  for_range(i,0,8) { r ^= m[i] & (-(v&1)); v >>= 1; } return (uint8_t)r;
+  for_range(i,0,8) { r ^= (m[i] & (-(v & 1))); v >>= 1; } return (uint8_t)r;
 }
 
 uint16_t bmat_vmul_16_ref(uint16_t v, bmat_param_16(M))
 {
   bmat_adup_16(m,M);
-
   uint32_t r = 0;
-  
-  for_range(i,0,16) { r ^= m[i] & (-(v&1)); v >>= 1; } return (uint16_t)r;
+  for_range(i,0,16) { r ^= (m[i] & (-(v&1))); v >>= 1; } return (uint16_t)r;
 }
 
-uint32_t bmat_vmul_32_ref(bmat_param_32(M), uint32_t v)
+uint32_t bmat_vmul_32_ref(uint32_t v, bmat_param_32(M))
 {
   bmat_adup_32(m,M);
-
   uint32_t r = 0;
-  
-  for_range(i,0,32) { r ^= m[i] & (-(v&1)); v >>= 1; } return r;
+  for_range(i,0,32) { r ^= (m[i] & (-(v&1))); v >>= 1; } return r;
 }
 
-uint64_t bmat_vmul_64_ref(bmat_param_64(M), uint64_t v)
+uint64_t bmat_vmul_64_ref(uint64_t v, bmat_param_64(M))
 {
   bmat_adup_64(m,M);
-
   uint64_t r = 0;
-  
-  for_range(i,0,64) { r ^= m[i] & (-(v&1));  v >>= 1; } return r;
+  for_range(i,0,64) { r ^= (m[i] & (-(v&1)));  v >>= 1; } return r;
 }
 
 
