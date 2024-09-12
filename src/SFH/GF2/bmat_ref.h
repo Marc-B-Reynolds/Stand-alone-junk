@@ -36,13 +36,12 @@ extern void bmat_mult_16_ref(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b
 extern void bmat_mult_32_ref(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b));
 extern void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b));
 
-#if 0
-extern void bmat_rot_cw_8_ref  (bmat_param_8 (d), bmat_param_8 (s));
-extern void bmat_rot_cw_16_ref (bmat_param_16(d), bmat_param_16(s));
-extern void bmat_rot_cw_32_ref (bmat_param_32(d), bmat_param_32(s));
-extern void bmat_rot_cw_64_ref (bmat_param_64(d), bmat_param_64(s));
-extern void bmat_rot_ccw_8_ref (bmat_param_8 (d), bmat_param_8 (s));
-extern void bmat_rot_ccw_16_ref(bmat_param_16(d), bmat_param_16(s));
-extern void bmat_rot_ccw_32_ref(bmat_param_32(d), bmat_param_32(s));
-extern void bmat_rot_ccw_64_ref(bmat_param_64(d), bmat_param_64(s));
-#endif
+extern uint8_t  bmat_vmul_8_ref (uint8_t,  bmat_param_8 (m));
+extern uint16_t bmat_vmul_16_ref(uint16_t, bmat_param_16(m));
+extern uint32_t bmat_vmul_32_ref(uint32_t, bmat_param_32(m));
+extern uint64_t bmat_vmul_64_ref(uint64_t, bmat_param_64(m));
+
+extern uint8_t  bmat_mulv_8_ref (bmat_param_8 (m), uint8_t);
+extern uint16_t bmat_mulv_16_ref(bmat_param_16(m), uint16_t);
+extern uint32_t bmat_mulv_32_ref(bmat_param_32(m), uint32_t);
+extern uint64_t bmat_mulv_64_ref(bmat_param_64(m), uint64_t);
