@@ -219,9 +219,9 @@ int main(void)
 
   uint32_t trials = 0xffff; // temp hack
   
-  prng.state[0] = 0x1234567;
-  prng.state[1] = 0x89abcd1;
-  prng.state[2] = __rdtsc();
+  prng.state[0] = __rdtsc();
+  prng.state[1] = UINT64_C(0x3ba0d900b9aaf028);
+  prng.state[2] = UINT64_C(0xab7837b9aa423d86);
   prng_u64(&prng);
 
   printf(HEADER "BMAT TESTING:\n" ENDC);
