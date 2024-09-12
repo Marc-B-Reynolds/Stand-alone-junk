@@ -48,10 +48,18 @@ typedef uint32_t (mr_test_fn_d1p_t)(mzd_t*);
 typedef void (to_m4ri_t)(mzd_t*, uint64_t*);
 typedef void (from_m4ri_t)(uint64_t*, mzd_t*);
 
+
+
+				   
 typedef struct {
+  uint32_t n;
+  
   // conversion routines for the size
   to_m4ri_t*   to_m4ri;
   from_m4ri_t* from_m4ri;
+
+  void     (*set_vec)(mzd_t*, uint64_t);
+  uint64_t (*get_vec)(mzd_t*);
 
   // preallocated scratch matrices 
   mzd_t* a;
@@ -62,10 +70,21 @@ typedef struct {
   mzd_t* rv;
 } m4ri_set_t;
 
-m4ri_set_t m4ri_set_8  = {.to_m4ri=bmat_to_m4ri_8,  .from_m4ri=bmat_from_m4ri_8};
-m4ri_set_t m4ri_set_16 = {.to_m4ri=bmat_to_m4ri_16, .from_m4ri=bmat_from_m4ri_16};
-m4ri_set_t m4ri_set_32 = {.to_m4ri=bmat_to_m4ri_32, .from_m4ri=bmat_from_m4ri_32};
-m4ri_set_t m4ri_set_64 = {.to_m4ri=bmat_to_m4ri_64, .from_m4ri=bmat_from_m4ri_64};
+
+void mr_set_v8 (mzd_t* v, uint64_t x) { m4ri_set_rv_8 (v,(uint8_t) x); }
+void mr_set_v16(mzd_t* v, uint64_t x) { m4ri_set_rv_16(v,(uint16_t)x); }
+void mr_set_v32(mzd_t* v, uint64_t x) { m4ri_set_rv_32(v,(uint32_t)x); }
+void mr_set_v64(mzd_t* v, uint64_t x) { m4ri_set_rv_64(v,          x); }
+
+uint64_t mr_get_v8 (mzd_t* v) { return (uint64_t)m4ri_get_rv_8 (v); }
+uint64_t mr_get_v16(mzd_t* v) { return (uint64_t)m4ri_get_rv_16(v); }
+uint64_t mr_get_v32(mzd_t* v) { return (uint64_t)m4ri_get_rv_32(v); }
+uint64_t mr_get_v64(mzd_t* v) { return           m4ri_get_rv_64(v); }
+
+m4ri_set_t m4ri_set_8  = {.n =  8, .to_m4ri=bmat_to_m4ri_8,  .from_m4ri=bmat_from_m4ri_8,  .set_vec=mr_set_v8,  .get_vec=mr_get_v8};
+m4ri_set_t m4ri_set_16 = {.n = 16, .to_m4ri=bmat_to_m4ri_16, .from_m4ri=bmat_from_m4ri_16, .set_vec=mr_set_v16, .get_vec=mr_get_v16};
+m4ri_set_t m4ri_set_32 = {.n = 32, .to_m4ri=bmat_to_m4ri_32, .from_m4ri=bmat_from_m4ri_32, .set_vec=mr_set_v32, .get_vec=mr_get_v32};
+m4ri_set_t m4ri_set_64 = {.n = 64, .to_m4ri=bmat_to_m4ri_64, .from_m4ri=bmat_from_m4ri_64, .set_vec=mr_set_v64, .get_vec=mr_get_v64};
 
 extern mzd_t* m4ri_alloc_n(uint32_t n);
 
@@ -75,8 +94,8 @@ void m4ri_set_init(m4ri_set_t* set, uint32_t n)
   set->b = m4ri_alloc_n(n);
   set->c = m4ri_alloc_n(n);
 
-  set->v  = mzd_init((rci_t)n,(rci_t)1);
-  set->rv = mzd_init((rci_t)n,(rci_t)1);
+  set->v  = mzd_init((rci_t)1,(rci_t)n);
+  set->rv = mzd_init((rci_t)1,(rci_t)n);
 }
 
 
@@ -270,10 +289,7 @@ static inline uint32_t roundtrip_n(test_fn_set_t* mset, m4ri_set_t* rset, prng_t
 
   mset->rsize();
 
-  // add checking identity matrix? the fact that we back-n-forth w/o error
-  // doesn't prove that they represent the same matrix. other test will
-  // catch this case but in a less clear manner.
-  
+  // matrix back-n-forth
   for(uint32_t i=0; i<rt_trials; i++) {
     mset->random(m,prng);
     rset->to_m4ri  (rset->a, m);
@@ -283,6 +299,22 @@ static inline uint32_t roundtrip_n(test_fn_set_t* mset, m4ri_set_t* rset, prng_t
     
     return test_fail();
   }
+
+  // row vector back-n-forth
+  uint64_t mask = UINT64_C(~0) >> (64-(rset->n));
+
+  for(uint32_t i=0; i<rt_trials; i++) {
+    uint64_t v = prng_u64(prng) & mask;
+    uint64_t r;
+
+    rset->set_vec(rset->v, v);
+    r = rset->get_vec(rset->v);
+
+    if (v == r) continue;
+
+    return test_fail();
+  }
+
   return test_pass();
 }
 
@@ -435,51 +467,53 @@ uint32_t test_mm_mult(prng_t* prng, uint32_t n)
 //----------------------------------------------------
 // c = vM
 
-uint64_t bmvm_w8 (uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_8 ((uint8_t) v, m); }
-uint64_t bmvm_w16(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_16((uint16_t)v, m); }
-uint64_t bmvm_w32(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_32((uint32_t)v, m); }
-uint64_t bmvm_w64(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_64((uint64_t)v, m); }
-
-void mr_vm_mul(mzd_t* c, mzd_t* v, mzd_t* M) { _mzd_mul_va(c,v,M,1); }
-
-#if 0
+#define MR_VM_TEST(W,BFUNC,MFUNC) vmmul_driver(prng, &test_fn_set_##W, &m4ri_set_##W, BFUNC, MFUNC, n);
 
 static inline uint32_t vmmul_driver(prng_t*        prng,
 				    test_fn_set_t* mset,
 				    m4ri_set_t*    m4ri,
-				    void     (*f0)(mzd_t*,   mzd_t*, mzd_t*)
-				    uint64_t (*f1)(uint64_t, uint64_t*)
+				    uint64_t (*f1)(uint64_t, uint64_t*),
+				    uint64_t (*f0)(uint64_t, uint64_t*),
 				    uint32_t       n)
 {
-  uint64_t a[64],b[64],r0[64],r1[64];
+  uint64_t a[64];
   
   mset->rsize();
+
+  uint64_t mask = UINT64_C(~0) >> (64-(m4ri->n));
   
   for(uint32_t i=0; i<n; i++) {
     mset->random(a,prng);
-    mset->random(b,prng);
 
-    f0(r0,a,b);
+    //mset->set_unit(a);
 
-    m4ri->to_m4ri(m4ri->a, a);
-    m4ri->to_m4ri(m4ri->b, b);
+    uint64_t v  = prng_u64(prng) & mask;
+    uint64_t r0 = f0(v,a);
+    uint64_t r1 = f1(v,a);
 
-    f1(m4ri->c,m4ri->a,m4ri->b);
+    if (r0==r1) continue;
 
-    m4ri->from_m4ri(r1, m4ri->c);
+    printf("%016lx %016lx\n", r0,r1);
 
-    if (mset->equal(r0,r1)) continue;
-    
     return test_fail();
   }
   return test_pass();
 }
 
+uint64_t bmvm_8 (uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_8_ref ((uint8_t) v, m); }
+uint64_t bmvm_16(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_16_ref((uint16_t)v, m); }
+uint64_t bmvm_32(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_32_ref((uint32_t)v, m); }
+uint64_t bmvm_64(uint64_t v, uint64_t* m) { return (uint64_t)bmat_vmul_64_ref((uint64_t)v, m); }
 
-uint32_t t_vm_mul_8 (prng_t* prng, uint32_t n) { return MR_EQ_BTEST(8,  bmat_mul_8_ref,  mr_mm_mul); }
-uint32_t t_vm_mul_16(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(16, bmat_mul_16_ref, mr_mm_mul); }
-uint32_t t_vm_mul_32(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(32, bmat_mul_32_ref, mr_mm_mul); }
-uint32_t t_vm_mul_64(prng_t* prng, uint32_t n) { return MR_EQ_BTEST(64, bmat_mul_64_ref, mr_mm_mul); }
+uint64_t mmvm_8 (uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_vm_8 ((uint32_t)v, m); }
+uint64_t mmvm_16(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_vm_16((uint32_t)v, m); }
+uint64_t mmvm_32(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_vm_32((uint32_t)v, m); }
+uint64_t mmvm_64(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_vm_64((uint64_t)v, m); }
+
+uint32_t t_vm_mul_8 (prng_t* prng, uint32_t n) { return MR_VM_TEST(8,  bmvm_8,  mmvm_8);  }
+uint32_t t_vm_mul_16(prng_t* prng, uint32_t n) { return MR_VM_TEST(16, bmvm_16, mmvm_16); }
+uint32_t t_vm_mul_32(prng_t* prng, uint32_t n) { return MR_VM_TEST(32, bmvm_32, mmvm_32); }
+uint32_t t_vm_mul_64(prng_t* prng, uint32_t n) { return MR_VM_TEST(64, bmvm_64, mmvm_64); }
 
 uint32_t test_vm_mul(prng_t* prng, uint32_t n)
 {
@@ -493,8 +527,36 @@ uint32_t test_vm_mul(prng_t* prng, uint32_t n)
   
   return errors;
 }
-#endif
 
+#if 1
+
+uint64_t bmmv_8 (uint64_t v, uint64_t* m) { return (uint64_t)bmat_mulv_8_ref (m,(uint8_t) v); }
+uint64_t bmmv_16(uint64_t v, uint64_t* m) { return (uint64_t)bmat_mulv_16_ref(m,(uint16_t)v); }
+uint64_t bmmv_32(uint64_t v, uint64_t* m) { return (uint64_t)bmat_mulv_32_ref(m,(uint32_t)v); }
+uint64_t bmmv_64(uint64_t v, uint64_t* m) { return (uint64_t)bmat_mulv_64_ref(m,(uint64_t)v); }
+uint64_t mmmv_8 (uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_mv_8 (m,(uint32_t)v); }
+uint64_t mmmv_16(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_mv_16(m,(uint32_t)v); }
+uint64_t mmmv_32(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_mv_32(m,(uint32_t)v); }
+uint64_t mmmv_64(uint64_t v, uint64_t* m) { return (uint64_t)m4ri_wrap_mv_64(m,(uint64_t)v); }
+
+uint32_t t_mv_mul_8 (prng_t* prng, uint32_t n) { return MR_VM_TEST(8,  bmmv_8,  mmmv_8);  }
+uint32_t t_mv_mul_16(prng_t* prng, uint32_t n) { return MR_VM_TEST(16, bmmv_16, mmmv_16); }
+uint32_t t_mv_mul_32(prng_t* prng, uint32_t n) { return MR_VM_TEST(32, bmmv_32, mmmv_32); }
+uint32_t t_mv_mul_64(prng_t* prng, uint32_t n) { return MR_VM_TEST(64, bmmv_64, mmmv_64); }
+
+uint32_t test_mv_mul(prng_t* prng, uint32_t n)
+{
+  uint32_t errors = 0;
+
+  test_banner("bmat_mulv_n_ref");
+  errors += t_mv_mul_8 (prng,n);
+  errors += t_mv_mul_16(prng,n);
+  errors += t_mv_mul_32(prng,n);
+  errors += t_mv_mul_64(prng,n);
+  
+  return errors;
+}
+#endif
 
 //----------------------------------------------------
 // 
@@ -503,7 +565,9 @@ int main(void)
 {
   prng_t prng;
 
-  uint32_t trials = 100; // temp hack: add minimal command line processing
+  uint32_t trials = 0xffff; // temp hack: add minimal command line processing
+
+  trials = 255;
   
   prng.state[0] = 0x1234567;
   prng.state[1] = 0x89abcd1;
@@ -531,6 +595,8 @@ int main(void)
       errors += test_mm_mul(&prng, trials);
       errors += test_mm_mult(&prng, trials);
       errors += test_rank(&prng, trials);
+      errors += test_vm_mul(&prng, trials);
+      errors += test_mv_mul(&prng, trials);
     }
   }
 
