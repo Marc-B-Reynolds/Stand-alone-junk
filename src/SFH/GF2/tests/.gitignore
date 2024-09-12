@@ -5,3 +5,6 @@
 !*.[ch]
 !Makefile
 !README.md
+
+# OK: skip these for now as well
+dev*
