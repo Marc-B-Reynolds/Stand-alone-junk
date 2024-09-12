@@ -178,8 +178,14 @@ extern void bmat_print_16(char* prefix, bmat_param_16(m));
 extern void bmat_print_32(char* prefix, bmat_param_32(m));
 extern void bmat_print_64(char* prefix, bmat_param_64(m));
 
+extern uint32_t f2_ufunc_validate_32_i   (uint32_t (*)(uint32_t), uint32_t (*)(uint32_t));
+extern uint64_t f2_ufunc_validate_64_i   (uint64_t (*)(uint64_t), uint64_t (*)(uint64_t));
+extern uint32_t f2_ufunc_p_validate_32_i (uint32_t (*)(uint32_t), uint32_t (*)(uint32_t,uint32_t), uint32_t);
+extern uint32_t f2_ufunc_p_validate_64_i (uint64_t (*)(uint64_t), uint64_t (*)(uint64_t,uint64_t), uint64_t);
+extern uint32_t f2_ufunc_p2_validate_32_i(uint32_t (*)(uint32_t,uint32_t), uint32_t (*)(uint32_t, uint32_t), uint32_t);
+extern uint64_t f2_ufunc_p2_validate_64_i(uint64_t (*)(uint64_t,uint64_t), uint64_t (*)(uint64_t, uint64_t), uint64_t);
 
-// F_2 unary & binary function types
+// F_2 unary & binary function types (kill these)
 typedef uint32_t (f2_ufunc_32_t)(uint32_t);
 typedef uint64_t (f2_ufunc_64_t)(uint64_t);
 typedef uint32_t (f2_bfunc_32_t)(uint32_t, uint32_t);
