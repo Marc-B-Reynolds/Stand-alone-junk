@@ -60,6 +60,7 @@ typedef struct {
   test_fn_vv_t* rsize;
   
   test_fn_v2p_t* dup;
+  test_fn_v1p_t* set_unit;
 
   test_fn_v3p_t* add;
   test_fn_v2p_t* sum;
@@ -79,6 +80,7 @@ typedef struct {
   .n     = W,         	    \
   .rsize = test_header_##W, \
   TEST_FN_E(dup,W),	    \
+  TEST_FN_E(set_unit,W),    \
   TEST_FN_E(add,W),	    \
   TEST_FN_E(sum,W),	    \
   TEST_FN_E(equal,W),	    \
