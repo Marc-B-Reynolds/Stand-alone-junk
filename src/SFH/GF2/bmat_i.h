@@ -123,8 +123,7 @@ static inline void bmat_storex_256x4(uint64_t* d, u256_t r0, u256_t r1, u256_t r
 }
 
 // carryless sum of the packed elements
-
-uint16_t bmat_hsum_8x32(u256_t x)
+static inline uint16_t bmat_hsum_8x32(u256_t x)
 {
   x = xor_256(x, swap_128x2(x));     // 128
   x = xor_256(x, bsrli_128x2(x,8));  //  64
@@ -135,7 +134,7 @@ uint16_t bmat_hsum_8x32(u256_t x)
   return (uint8_t)extract_8_256(x,0);
 }
 
-uint16_t bmat_hsum_16x16(u256_t x)
+static inline uint16_t bmat_hsum_16x16(u256_t x)
 {
   x = xor_256(x, swap_128x2(x));     // 128
   x = xor_256(x, bsrli_128x2(x,8));  //  64
@@ -145,7 +144,7 @@ uint16_t bmat_hsum_16x16(u256_t x)
   return (uint16_t)extract_16_256(x,0);
 }
 
-uint32_t bmat_hsum_32x8(u256_t x)
+static inline uint32_t bmat_hsum_32x8(u256_t x)
 {
   x = xor_256(x, swap_128x2(x));     // 128
   x = xor_256(x, bsrli_128x2(x,8));  //  64
@@ -154,7 +153,7 @@ uint32_t bmat_hsum_32x8(u256_t x)
   return (uint32_t)extract_32_256(x,0);
 }
 
-uint64_t bmat_hsum_64x4(u256_t x)
+static inline uint64_t bmat_hsum_64x4(u256_t x)
 {
   x = xor_256(x, swap_128x2(x));     // 128
   x = xor_256(x, bsrli_128x2(x,8));  //  64
