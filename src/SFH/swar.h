@@ -165,4 +165,28 @@ static inline uint64_t bit_scatter_lsb_8x8(uint64_t x)
 #endif  
 }
 
+
+// scatters low 4 bits to the lsb of each 16-bit element
+static inline uint64_t bit_scatter_lsb_16x4(uint64_t x)
+{
+  const uint64_t m = UINT64_C(0x0101010101010101);
+
+#if (BITOPS_HAS_SCATTER_GATHER)
+  return bit_scatter_64(x,m);
+#else
+  return (x & 1) | (((x & 0xfe) * 0x2040810204080) & m);
+#endif  
+}
+
+static inline uint64_t bit_gather_lsb_16x4(uint64_t x)
+{
+  const uint64_t m = UINT64_C(0x0101010101010101);
+
+#if (BITOPS_HAS_SCATTER_GATHER)
+  return bit_gather_64(x,m);
+#else
+  return (((x & m) * 0x0002040810204081) >> 49) & 0xff;
+#endif  
+}
+
 #endif
