@@ -177,6 +177,8 @@ typedef __m128i u128_t;
 #define blend_8x32     SFH_CAT(AVX2_PREFIX, blend_epi8)
 #define blend_16x16    SFH_CAT(AVX2_PREFIX, blend_epi16)
 #define blend_32x8     SFH_CAT(AVX2_PREFIX, blend_epi32)
+#define blend_pd_256   SFH_CAT(AVX2_PREFIX, blend_pd)
+// blend_64x4 hacky macro below
 
 #define unpackhi_8x32  SFH_CAT(AVX2_PREFIX, unpackhi_epi8)
 #define unpacklo_8x32  SFH_CAT(AVX2_PREFIX, unpacklo_epi8)
@@ -188,7 +190,7 @@ typedef __m128i u128_t;
 #define unpacklo_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 
 // inside each 128-bit lane
-#define shuffle_32x8  SFH_CAT(AVX2_PREFIX, shuffle_epi32)
+#define shuffle_32x8     SFH_CAT(AVX2_PREFIX, shuffle_epi32)
 
 #define shuffle_lo_16x16 SFH_CAT(AVX2_PREFIX, shufflelo_epi16)
 #define shuffle_hi_16x16 SFH_CAT(AVX2_PREFIX, shufflehi_epi16)
@@ -196,14 +198,50 @@ typedef __m128i u128_t;
 //------------------------------------------------------------------------------
 // these (to some extent) break the wrapper naming scheme (beyond signed/unsigned prefixes)
 
-#define alignr_128x2    SFH_CAT(AVX2_PREFIX, alignr_epi8)
-#define zero_256        SFH_CAT(AVX2_PREFIX, setzero_si256)
-#define pshufb_128x2    SFH_CAT(AVX2_PREFIX, shuffle_epi8)
+#define alignr_128x2  SFH_CAT(AVX2_PREFIX, alignr_epi8)
+#define zero_256      SFH_CAT(AVX2_PREFIX, setzero_si256)
+#define pshufb_128x2  SFH_CAT(AVX2_PREFIX, shuffle_epi8)
 
-#define set1_8x32  SFH_CAT(AVX2_PREFIX, set1_epi8 )
-#define set1_16x16 SFH_CAT(AVX2_PREFIX, set1_epi16)
-#define set1_32x8  SFH_CAT(AVX2_PREFIX, set1_epi32)
-#define set1_64x4  SFH_CAT(AVX2_PREFIX, set1_epi64x)
+#define set1_8x32     SFH_CAT(AVX2_PREFIX, set1_epi8 )
+#define set1_16x16    SFH_CAT(AVX2_PREFIX, set1_epi16)
+#define set1_32x8     SFH_CAT(AVX2_PREFIX, set1_epi32)
+#define set1_64x4     SFH_CAT(AVX2_PREFIX, set1_epi64x)
+
+#define extract_8_256  SFH_CAT(AVX2_PREFIX, extract_epi8)
+#define extract_16_256 SFH_CAT(AVX2_PREFIX, extract_epi16)
+#define extract_32_256 SFH_CAT(AVX2_PREFIX, extract_epi32)
+#define extract_64_256 SFH_CAT(AVX2_PREFIX, extract_epi64)
+
+#define extract_128_256 SFH_CAT(AVX2_PREFIX, extracti128_si256)
+
+//--- leverage FP ops
+#define movedup_pd    SFH_CAT(AVX2_PREFIX, movedup_pd)
+#define moveldup_ps   SFH_CAT(AVX2_PREFIX, moveldup_ps)
+#define movehdup_ps   SFH_CAT(AVX2_PREFIX, movehdup_ps)
+
+#define to_f32_256    SFH_CAT(AVX2_PREFIX, castsi256_ps)
+#define to_f64_256    SFH_CAT(AVX2_PREFIX, castsi256_pd)
+#define from_f32_256  SFH_CAT(AVX2_PREFIX, castps_si256)
+#define from_f64_256  SFH_CAT(AVX2_PREFIX, castpd_si256)
+
+// duplicate even/odd elements
+// {e[0],e[0],e[2],e[2]...}
+static inline u256_t dup_even_32x8(u256_t x)
+{
+  return from_f32_256(moveldup_ps(to_f32_256(x)));
+}
+// {e[1],e[1],e[3],e[3]...}
+static inline u256_t dup_odd_32x8(u256_t x)
+{
+  return from_f32_256(movehdup_ps(to_f32_256(x)));
+}
+
+static inline u256_t dup_even_64x4(u256_t x)
+{
+  return from_f64_256(movedup_pd(to_f64_256(x)));
+}
+
+#define blend_64x4(A,B,S) from_f64_256(blend_pd(to_f64_256(A),to_f64_256(B),S))
 
 // broadcast (scalar) 'k' to all elements
 static inline u256_t broadcast_8x32 (uint8_t  x) { return set1_8x32 ((int8_t) x); }
@@ -212,6 +250,8 @@ static inline u256_t broadcast_32x8 (uint32_t x) { return set1_32x8 ((int32_t)x)
 static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x); }
 
 // the reversal is unfortunate
+#define permutev_32x8   SFH_CAT(AVX2_PREFIX, permutevar8x32_epi32)
+
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
 #define permute_128x2   SFH_CAT(AVX2_PREFIX, permute2x128_si256)
 
