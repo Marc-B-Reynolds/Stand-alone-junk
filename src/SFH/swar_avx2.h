@@ -280,8 +280,12 @@ static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 // return (scalar) true/false if all elements of a & b are equal
 static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpeq_8x32(a,b)) == 0xFFFFFFFF; }
 
-// attempted to hint to the complier not to promote 'v
-// and stuff derived from 'v' to constant loads.
+// attempted to hint to the complier not to promote a computation
+// with 'v' into a constant load. use with care and only at point
+// of the computation with 'v' to not potentially break constant
+// propogation.
+//   other_value = op(no_const_fold_256(v))
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #if !defined(__clang__)
