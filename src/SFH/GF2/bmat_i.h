@@ -20,6 +20,15 @@
 #include "swar_avx2.h"
 #endif
 
+// LaTeX commands in comments are triggering this warning. sigh.
+#if defined(__GNUC__)
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wbackslash-newline-escape"
+#else
+#pragma GCC diagnostic ignored "-Wcomment"
+#endif
+#endif
+
 // for constant defs
 typedef union {
   uint8_t  u8[32];
