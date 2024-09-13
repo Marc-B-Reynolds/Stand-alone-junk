@@ -288,7 +288,7 @@ static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpe
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
-#if !defined(__clang__)
+#if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
 #endif
 static inline u256_t no_const_fold_256(u256_t v)
