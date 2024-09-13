@@ -53,10 +53,10 @@ void bmat_set_unit_32(bmat_param_32(m)) { bmat_fill_ksl_n(m, bmat_main_diagonal_
 void bmat_set_unit_64(bmat_param_64(m)) { uint64_t n=1; for_range(i,0,64) { m[i] = n; n <<= 1; } }
 
 // set to exchange matrix (a.k.a: J, bitreverse) TEMP HACK
-void bmat_set_exchange_8 (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
-void bmat_set_exchange_16(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
-void bmat_set_exchange_32(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
-void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
+void bmat_set_exchange_8 (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
+void bmat_set_exchange_16(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
+void bmat_set_exchange_32(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
+void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
 
 #if 0
 
