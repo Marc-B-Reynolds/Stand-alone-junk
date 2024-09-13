@@ -280,6 +280,24 @@ static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 // return (scalar) true/false if all elements of a & b are equal
 static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpeq_8x32(a,b)) == 0xFFFFFFFF; }
 
+// attempted to hint to the complier not to promote 'v
+// and stuff derived from 'v' to constant loads.
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#if !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wlanguage-extension-token"
+#endif
+static inline u256_t no_const_fold_256(u256_t v)
+{
+  asm volatile ("" : "+x" (v));
+  return v;  
+}
+#pragma GCC diagnostic pop
+#else
+static inline u256_t no_const_fold_256(u256_t v) { return v; }
+#endif
+
+
 // returns true if all elements are the same value
 static inline bool   is_rep_8x32 (u256_t x) { return cmp_equal_256(x, broadcast_lo_8x32 (x)); }
 static inline bool   is_rep_16x16(u256_t x) { return cmp_equal_256(x, broadcast_lo_16x16(x)); }
