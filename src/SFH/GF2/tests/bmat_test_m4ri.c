@@ -485,8 +485,6 @@ static inline uint32_t vmmul_driver(prng_t*        prng,
   for(uint32_t i=0; i<n; i++) {
     mset->random(a,prng);
 
-    //mset->set_unit(a);
-
     uint64_t v  = prng_u64(prng) & mask;
     uint64_t r0 = f0(v,a);
     uint64_t r1 = f1(v,a);
