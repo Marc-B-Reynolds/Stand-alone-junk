@@ -16,10 +16,10 @@ void bmat_set_unit_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for_r
 void bmat_set_unit_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for_range(i,0,64) { a[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
 
 // set to exchange matrix (a.k.a: J, bitreverse)
-void bmat_set_exchange_8_ref (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
-void bmat_set_exchange_16_ref(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
-void bmat_set_exchange_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
-void bmat_set_exchange_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { m[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
+void bmat_set_exchange_8_ref (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
+void bmat_set_exchange_16_ref(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
+void bmat_set_exchange_32_ref(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
+void bmat_set_exchange_64_ref(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
 
 // D = SJ : horizontal flip (column reversal/row bit reverse)
 void bmat_flip_h_8_ref (bmat_param_8 (d),bmat_param_8 (s)) { bmat_adup_8 (a,s); for_range(i,0, 8) a[i] = bit_reverse_8 (a[i]); array_to_bmat_8 (d,a); }
