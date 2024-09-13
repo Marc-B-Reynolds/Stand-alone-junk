@@ -90,7 +90,7 @@ uint64_t bmat_mul_8_i(uint64_t a, uint64_t b)
 #endif
 
 
-void bmat_mul_8(bmat_rparam_8(c), bmat_param_8(a), bmat_rparam_8(b))
+void bmat_mul_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
 {
   c[0] = bmat_mul_8_i(a[0],b[0]);
 }
@@ -140,7 +140,7 @@ u256_t bmat_mul_16_i(u256_t a, u256_t b)
   return c;
 }
 
-void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_rparam_16(b))
+void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
 {
   bmat_store_256(c, bmat_mul_16_i(bmat_load_256(a),bmat_load_256(b)));
 }
@@ -149,7 +149,7 @@ void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_rparam_16(b))
 
 // fall-back 64-bit SWAR versions
 
-void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_rparam_16(B))
+void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
 {
   const uint64_t rm = UINT64_C(0x000000000000ffff);
   const uint64_t cm = UINT64_C(0x0001000100010001);
@@ -199,7 +199,7 @@ static inline uint64_t bmat_mult_16_row(uint64_t p)
   return r;
 }
 
-void bmat_mult_16_(bmat_rparam_16(c), bmat_param_16(a), bmat_rparam_16(B))
+void bmat_mult_16_(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
 {
   const uint64_t cm = UINT64_C(0x0001000100010001);
 
@@ -236,7 +236,7 @@ void bmat_mult_16_(bmat_rparam_16(c), bmat_param_16(a), bmat_rparam_16(B))
 // 32-bit
 
 #if 0
-void bmat_mul_32_avx2(bmat_rparam_32(C), bmat_param_32(A), bmat_rparam_32(B))
+void bmat_mul_32_avx2(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
 {
   bmat_def_64(r);
 }
@@ -252,7 +252,7 @@ void bmat_mul_32(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_mu
 
 extern void bmat_mul_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b));
 
-void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_rparam_64(b))
+void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
 {
   bmat_mul_64_ref(c,a,b);
 }
@@ -298,7 +298,7 @@ static inline uint64_t bmat_mult_8_i(uint64_t a, uint64_t b)
 }
 #endif
 
-void bmat_mult_8(bmat_rparam_8(c), bmat_param_8(a), bmat_rparam_8(b))
+void bmat_mult_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
 {
   c[0] = bmat_mult_8_i(a[0],b[0]);
 }
@@ -322,7 +322,7 @@ void bmat_mult_32(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b))
 #endif
 
 #ifndef BMAT_HAS_MULT_64
-void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_rparam_64(b))
+void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
 {
   bmat_def_64(t);
   bmat_transpose_64(t,b);
@@ -365,7 +365,48 @@ void bmat_sq_64(bmat_rparam_64(c), bmat_param_64(a))
 //*******************************************************************
 // d = vM  : vector/matrix product
 
-// generic 64-bit arch versions
+/**
+ Long variable names and/or copious code comments doesn't seem
+ an effective way to explain how these routines work. They are
+ pretty much all the same for generic and AVX2 versions and are
+ (like the matrix product) based on row broadcasting.
+
+ Given a nxn matrix where we can fit 'i' rows per register and
+ using a 4x4 as an example:
+
+            M 
+          |abcd|          
+   |xyzw|.|efgh|
+          |ijkl|
+          |mnop|
+
+      3   2    1    0        (e = element index)
+0) |....|....|....|....|  r = initial result (. = 0)
+1) |1...|.1..|..1.|...1|  c = first 'i' rows of I (all here) to select
+2) |wxyx|wzyx|wzyx|wzyx|  v = vector V broadcast to each 'i' element
+3) |ponm|lkji|hgfe|dcba|  m = first/next 'i' rows of M (all here)
+4) |w...|.z..|..y.|...x|  s = v & c : non-zero if row needs selecting
+5) |    |    |    |    |  s = cmp(s,0) : s[e] = s[e]!=0 ~0 : 0 (select mask)
+6) |    |    |    |    |  r = r ^ (m & s) (add selected rows to running sum)
+
+7) loop (n/i) times:
+   * shift v right by 'i' for next set of rows
+   * update load pointer next set of row
+   * goto 3
+8) complete the result by performing a horiztonal
+   add (XOR) of the 'i' partial results (r)
+
+example: V = {1,1,0,1}
+1) |1...|.1..|..1.|...1|  c
+2) |1.11|1.11|1.11|1.11|  v
+4) |1...|....|..1.|...1|  s = v & c
+5) |1111|....|1111|1111|  s = cmp(s,0)
+   |ponm|....|hgfe|dcba|  m & s <- selected rows
+
+ generic versions using integer products to perform the broadcast
+ (32/64 'n' not because 2/1 rows per reg)
+ */
+
 uint8_t bmat_vmul_8(uint8_t v, bmat_param_8(M))
 {
   uint64_t m = M[0];
@@ -509,8 +550,63 @@ uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(M))
 //*******************************************************************
 // d = Mv matrix/vector product (these blow. quick hack)
 
-uint8_t  bmat_mulv_8 (uint8_t  v, bmat_param_8 (m)) { bmat_def_8 (t); bmat_transpose_8 (t,m); return bmat_vmul_8 (v,t); }
-uint16_t bmat_mulv_16(uint16_t v, bmat_param_16(m)) { bmat_def_16(t); bmat_transpose_16(t,m); return bmat_vmul_16(v,t); }
-uint32_t bmat_mulv_32(uint32_t v, bmat_param_32(m)) { bmat_def_32(t); bmat_transpose_32(t,m); return bmat_vmul_32(v,t); }
-uint64_t bmat_mulv_64(uint64_t v, bmat_param_64(m)) { bmat_def_64(t); bmat_transpose_64(t,m); return bmat_vmul_64(v,t); }
+uint8_t bmat_mulv_8(bmat_param_8(M), uint8_t V)
+{
+  uint64_t m = M[0];
+  uint64_t v = broadcast_8x8(V);
+  uint64_t r = m & v;
+
+  r ^= r >> 4;
+  r ^= r >> 2;
+  r ^= r >> 1;
+
+  return (uint8_t)bit_gather_lsb_8x8(r);
+}
+
+uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t V)
+{
+  uint64_t v = broadcast_16x4(V);
+  uint64_t r = 0;
+
+  for(uint32_t i=0; i<4; i++) {
+    uint64_t t = m[3-i] & v;
+
+    t ^= t >> 8;
+    t ^= t >> 4;
+    t ^= t >> 2;
+    t ^= t >> 1;
+
+    r = bit_gather_lsb_16x4(t) | (r<<4);
+  }
+  return (uint16_t)r;
+}
+
+uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
+{
+  // only two elements per register. nothing interesting
+  // to do here. could use a carryless product but if we
+  // have that then I assume we have SIMD registers.
+  uint64_t v = (uint64_t)V;
+  uint64_t r = 0;
+  
+  v ^= v << 32;
+  
+  for(uint32_t i=0; i<16; i++) {
+    uint64_t t = m[i] & v;
+    
+    t  = ((pop_64((uint32_t)t) & 1)|
+	  ((pop_64(t>>32) & 1)<<1));
+    r ^= t << (i+i);
+  }
+  
+  return (uint32_t)r;
+}
+
+
+extern uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v);
+
+uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v)
+{
+  return bmat_mulv_64_ref(m,v);
+}
 
