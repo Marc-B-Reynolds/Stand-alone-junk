@@ -189,6 +189,9 @@ typedef __m128i u128_t;
 #define unpackhi_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 #define unpacklo_64x4  SFH_CAT(AVX2_PREFIX, unpackhi_epi64)
 
+#define packus_32x8    SFH_CAT(AVX2_PREFIX, packus_epi32)
+#define packus_16x16   SFH_CAT(AVX2_PREFIX, packus_epi16)
+
 // inside each 128-bit lane
 #define shuffle_32x8     SFH_CAT(AVX2_PREFIX, shuffle_epi32)
 
