@@ -138,15 +138,15 @@ extern void bmat_set_exchange_32(bmat_param_32(m));
 extern void bmat_set_exchange_64(bmat_param_64(m));
 
 // bmat_mul.c
-extern void bmat_mul_8 (bmat_param_8 (c),bmat_param_8 (a),bmat_param_8 (b));
-extern void bmat_mul_16(bmat_param_16(c),bmat_param_16(a),bmat_param_16(b));
-extern void bmat_mul_32(bmat_param_32(c),bmat_param_32(a),bmat_param_32(b));
-extern void bmat_mul_64(bmat_param_64(c),bmat_param_64(a),bmat_param_64(b));
+extern void bmat_mul_8 (bmat_rparam_8 (c),bmat_param_8 (a),bmat_param_8 (b));
+extern void bmat_mul_16(bmat_rparam_16(c),bmat_param_16(a),bmat_param_16(b));
+extern void bmat_mul_32(bmat_rparam_32(c),bmat_param_32(a),bmat_param_32(b));
+extern void bmat_mul_64(bmat_rparam_64(c),bmat_param_64(a),bmat_param_64(b));
 
-extern void bmat_mult_8 (bmat_param_8 (c),bmat_param_8 (a),bmat_param_8 (b));
-extern void bmat_mult_16(bmat_param_16(c),bmat_param_16(a),bmat_param_16(b));
-extern void bmat_mult_32(bmat_param_32(c),bmat_param_32(a),bmat_param_32(b));
-extern void bmat_mult_64(bmat_param_64(c),bmat_param_64(a),bmat_param_64(b));
+extern void bmat_mult_8 (bmat_rparam_8 (c),bmat_param_8 (a),bmat_param_8 (b));
+extern void bmat_mult_16(bmat_rparam_16(c),bmat_param_16(a),bmat_param_16(b));
+extern void bmat_mult_32(bmat_rparam_32(c),bmat_param_32(a),bmat_param_32(b));
+extern void bmat_mult_64(bmat_rparam_64(c),bmat_param_64(a),bmat_param_64(b));
 
 // bmat_gauss.c
 extern uint32_t bmat_rank_8 (bmat_param_8 (m));
@@ -159,10 +159,10 @@ extern bool bmat_is_full_rank_16(bmat_param_16(m));
 extern bool bmat_is_full_rank_32(bmat_param_32(m));
 extern bool bmat_is_full_rank_64(bmat_param_64(m));
 
-extern void bmat_transpose_8 (bmat_param_8 (a), bmat_param_8 (b));
-extern void bmat_transpose_16(bmat_param_16(a), bmat_param_16(b));
-extern void bmat_transpose_32(bmat_param_32(a), bmat_param_32(b));
-extern void bmat_transpose_64(bmat_param_64(a), bmat_param_64(b));
+extern void bmat_transpose_8 (bmat_rparam_8 (a), bmat_param_8 (b));
+extern void bmat_transpose_16(bmat_rparam_16(a), bmat_param_16(b));
+extern void bmat_transpose_32(bmat_rparam_32(a), bmat_param_32(b));
+extern void bmat_transpose_64(bmat_rparam_64(a), bmat_param_64(b));
 
 // bmat_random.c
 extern void bmat_random_8 (bmat_param_8 (m), prng_t*);
