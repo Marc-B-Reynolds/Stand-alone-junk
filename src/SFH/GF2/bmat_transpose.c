@@ -35,7 +35,7 @@ static inline uint64_t bmat_transpose_8x8_i(uint64_t x)
 }
 
 
-void bmat_transpose_8(bmat_param_8(d), bmat_param_8(m))
+void bmat_transpose_8(bmat_rparam_8(d), bmat_param_8(m))
 {
   d[0] = bmat_transpose_8x8_i(m[0]);
 }
@@ -85,7 +85,7 @@ static inline u256_t bmat_transpose_16_i(u256_t m)
   return m;
 }
 
-void bmat_transpose_16(bmat_param_16(d), bmat_param_16(m))
+void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
 {
   u256_t x= loadu_256((void*)m);
 
@@ -96,7 +96,7 @@ void bmat_transpose_16(bmat_param_16(d), bmat_param_16(m))
 
 #else
 
-void bmat_transpose_16(bmat_param_16(d), bmat_param_16(m))
+void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
 {
   // divide and conquer: hierarchically perform swaps on blocks. For
   // 16-bit we have 4 division steps (16 = 2^4). Need to perform 4
@@ -163,7 +163,7 @@ void bmat_transpose_16(bmat_param_16(d), bmat_param_16(m))
 // perform the block transpose and restores. less bad than
 // I would have expected though. half-heartedly goofying
 // with some alternate ideas in tests/dev_transpose_32.c
-void bmat_transpose_32(bmat_param_32(d), bmat_param_32(s))
+void bmat_transpose_32(bmat_rparam_32(d), bmat_param_32(s))
 {
   u256_t r[4];
   u256_t t[4];
@@ -207,7 +207,7 @@ void bmat_transpose_32(bmat_param_32(d), bmat_param_32(s))
   bmat_store_256x4(d,t);
 }
 
-void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
+void bmat_block_transpose_32(bmat_rparam_32(d), bmat_param_32(s))
 {
   u256_t r[4];
   
@@ -221,7 +221,7 @@ void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
 
 #else
 
-void bmat_transpose_32(bmat_param_32(D), bmat_param_32(S))
+void bmat_transpose_32(bmat_rparam_32(D), bmat_param_32(S))
 {
   uint64_t  M = UINT64_C(0x0000ffff0000ffff);
   
@@ -292,6 +292,7 @@ void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
 //*******************************************************************
 // 64-bit
 
+// 49.00
 void bmat_transpose_64(bmat_param_64(D), bmat_param_64(S))
 {
   uint64_t m = 0xffffffff;
