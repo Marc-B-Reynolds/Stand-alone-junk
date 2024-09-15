@@ -433,18 +433,18 @@ static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x
 #if !defined(AVX2_MACRO_KOP)
 // table entries are duplicated per 128 bit lane
 static inline u256_t
-pshufb_table_128x2(char B0,char B1,char B2,char B3,
-		   char B4,char B5,char B6,char B7,
-		   char B8,char B9,char BA,char BB,
-		   char BC,char BD,char BE,char BF)
+pshufb_table_128x2(uint8_t B0,uint8_t B1,uint8_t B2,uint8_t B3,
+		   uint8_t B4,uint8_t B5,uint8_t B6,uint8_t B7,
+		   uint8_t B8,uint8_t B9,uint8_t BA,uint8_t BB,
+		   uint8_t BC,uint8_t BD,uint8_t BE,uint8_t BF)
 {
-  return SFH_CAT(AVX2_PREFIX, setr_epi8)(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF,
-		      B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF);
+  return SFH_CAT(AVX2_PREFIX, setr_epi8)((int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF,
+		      (int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF);
 }
 #else
 #define pshufb_table_128x2(B0,B1,B2,B3,B4,B5,B6,B7, \
                            B8,B9,BA,BB,BC,BD,BE,BF) \
-  SFH_CAT(AVX2_PREFIX, setr_epi8)(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF,B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF)
+  SFH_CAT(AVX2_PREFIX, setr_epi8)((int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF,(int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF)
 #endif
 
 // meh
@@ -566,9 +566,30 @@ static inline u256_t bit_parity_8x32(u256_t x)
 {
   u256_t k  = pshufb_table_128x2(0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0);
 
-  m256_pair_t r = pshufb_lookup_256(x,k,k);
+  // add nibble pairs and lookup
+  x = and_256(xor_256(x,srli_32x8(x,4)), broadcast_8x32(0xf));
+  x = pshufb_128x2(k,x);
+  return x;
+}
 
-  return xor_256(r.hi,r.lo);
+static inline u256_t bit_parity_mask_8x32(u256_t x)
+{
+  u256_t k  = pshufb_table_128x2(0,0xff,0xff,0,0xff,0,0,0xff,0xff,0,0,0xff,0,0xff,0xff,0);
+
+  // add nibble pairs and lookup
+  x = and_256(xor_256(x,srli_32x8(x,4)), broadcast_8x32(0xf));
+  x = pshufb_128x2(k,x);
+  return x;
+}
+
+static inline uint32_t bit_parity_packed_8x32(u256_t x)
+{
+  u256_t k  = pshufb_table_128x2(0,0xff,0xff,0,0xff,0,0,0xff,0xff,0,0,0xff,0,0xff,0xff,0);
+
+  // add nibble pairs and lookup
+  x = and_256(xor_256(x,srli_32x8(x,4)), broadcast_8x32(0xf));
+  x = pshufb_128x2(k,x);
+  return movemask_8x32(x);
 }
 
 static inline u256_t bit_parity_16x16(u256_t x)
