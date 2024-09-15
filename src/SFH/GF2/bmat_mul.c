@@ -31,6 +31,8 @@
 
 const u256_data_t bmat_cm_8_256  = {.u64 = BMAT_REP_SHIFT_4(UINT64_C(0x0101010101010101),1) };
 
+// worker with both matrices in register
+// 10.00
 uint64_t bmat_mul_8_i(uint64_t a, uint64_t B)
 {
   u256_t t  = setr_8x32(0,0,0,0,0,0,0,0,
@@ -62,6 +64,7 @@ uint64_t bmat_mul_8_i(uint64_t a, uint64_t B)
 #else
 
 // worker with both matrices in register
+// 14.75
 uint64_t bmat_mul_8_i(uint64_t a, uint64_t b)
 {
   // use integer multiplier to broadcast rows of B
@@ -109,6 +112,7 @@ static inline u256_t bmat_mul_step_16(u256_t a, u256_t b, u256_t cm, u256_t z)
   return and_256(broadcast_lo_16x16(b), cmpgt_16x16(and_256(a,cm),z));
 }
 
+// 53.75
 u256_t bmat_mul_16_i(u256_t a, u256_t b)
 {
   u256_t cm = broadcast_16x16(0x1);
@@ -149,6 +153,7 @@ void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
 
 // fall-back 64-bit SWAR versions
 
+// 104.25
 void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
 {
   const uint64_t rm = UINT64_C(0x000000000000ffff);
@@ -283,6 +288,7 @@ void bmat_mult_64_(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
 
 #ifndef BMAT_HAS_MULT_8
 
+// 26.38
 static inline uint64_t bmat_mult_8_i(uint64_t a, uint64_t b)
 {
   const uint64_t cm = UINT64_C(0x0101010101010101);
@@ -407,6 +413,7 @@ example: V = {1,1,0,1}
  (32/64 'n' not because 2/1 rows per reg)
  */
 
+// 5.23
 uint8_t bmat_vmul_8(uint8_t v, bmat_param_8(M))
 {
   uint64_t m = M[0];
@@ -423,6 +430,7 @@ uint8_t bmat_vmul_8(uint8_t v, bmat_param_8(M))
 
 #if defined(SWAR_AVX2_H)
 
+// 6.87
 uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(M))
 {
   u256_t s,r,m;
@@ -438,13 +446,13 @@ uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(M))
   
   m = bmat_load_256(M);
   s = and_256(bmat_md_256_16.p, broadcast_16x16(v));
-//s = cmpgt_16x16(s, zero_256());
   s = xor_256(cmpeq_16x16(s, zero_256()), bit_allset_256());
   r = and_256(m,s);
 
   return bmat_hsum_16x16(r);
 }
 
+// 9.67
 uint32_t bmat_vmul_32(uint32_t V, bmat_param_32(M))
 {
   u256_t c = bmat_md_256_32.p;
@@ -464,6 +472,7 @@ uint32_t bmat_vmul_32(uint32_t V, bmat_param_32(M))
   return bmat_hsum_32x8(r);
 }
 
+// 32.67
 uint64_t bmat_vmul_64(uint64_t V, bmat_param_64(M))
 {
   u256_t c = bmat_md_256_64.p;
@@ -486,6 +495,8 @@ uint64_t bmat_vmul_64(uint64_t V, bmat_param_64(M))
 #else
 
 // generic 64-bit hardware versions
+
+// 10.14
 uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(M))
 {
   uint64_t m = M[0];
@@ -513,6 +524,7 @@ uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(M))
   return (uint16_t)p;
 }
 
+// 24.12
 uint32_t bmat_vmul_32(uint32_t v, bmat_param_32(M))
 {
   const uint64_t mask = UINT64_C(0xffffffff);
@@ -550,6 +562,7 @@ uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(M))
 //*******************************************************************
 // d = Mv matrix/vector product (these blow. quick hack)
 
+// 6.0
 uint8_t bmat_mulv_8(bmat_param_8(M), uint8_t V)
 {
   uint64_t m = M[0];
@@ -563,6 +576,28 @@ uint8_t bmat_mulv_8(bmat_param_8(M), uint8_t V)
   return (uint8_t)bit_gather_lsb_8x8(r);
 }
 
+
+#if defined(SWAR_AVX2_H)
+
+// 5.53
+uint16_t bmat_mulv_16(bmat_param_16(M), uint16_t V)
+{
+  u256_t v = broadcast_16x16(V);
+  u256_t m = bmat_load_256(M);
+
+  m = and_256(m,v);
+  m = bit_parity_mask_8x32(m);
+
+  uint32_t r = movemask_8x32(m);
+
+  r ^= (r >> 1);
+
+  return (uint16_t)bit_gather_32(r,0x55555555);
+}
+
+#else
+
+// 21.89
 uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t V)
 {
   uint64_t v = broadcast_16x4(V);
@@ -581,6 +616,9 @@ uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t V)
   return (uint16_t)r;
 }
 
+#endif
+
+// 51.00
 uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
 {
   // only two elements per register. nothing interesting
