@@ -610,6 +610,19 @@ uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
   m[2] = and_256(m[2],v);
   m[3] = and_256(m[3],v);
 
+  // there are multiple possible strategies so this
+  // could quite possible be improved. below the
+  // permutes (*) are greedy reordering to handle
+  // the pack ops working in each 128-bit lane. there's
+  // probably a better one time (instead of 3)
+  // reordering. A different method of attack would
+  // be to peform one xorshift by 4, AND mask the
+  // nibble and pshufb. This gives all of the byte
+  // info step as single bit per byte. This would
+  // replace the first 4 xorshifts below. Couldn't
+  // come up with a faster overall colapse from there.
+  // Seems promising but brain fail.
+  
   m[0] = xor_256(m[0], srli_32x8(m[0],16));
   m[1] = xor_256(m[1], srli_32x8(m[1],16));
   m[2] = xor_256(m[2], srli_32x8(m[2],16));
@@ -617,8 +630,8 @@ uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
 
   m[0] = packus_32x8(and_256(m[0],mask), and_256(m[1],mask));
   m[1] = packus_32x8(and_256(m[2],mask), and_256(m[3],mask));
-  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));
-  m[1] = permute_64x4(m[1], SSE_MM_SHUFFLE(3,1,2,0));
+  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));  // *
+  m[1] = permute_64x4(m[1], SSE_MM_SHUFFLE(3,1,2,0));  // *
   
   m[0] = xor_256(m[0], srli_16x16(m[0],8));
   m[1] = xor_256(m[1], srli_16x16(m[1],8));
@@ -626,10 +639,54 @@ uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
 
   m[0] = packus_16x16(and_256(m[0],mask), and_256(m[1],mask));
   m[0] = bit_parity_mask_8x32(m[0]);
-  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));
+  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));  // *
   
   return movemask_8x32(m[0]);
 }
+
+// 69.50
+uint64_t bmat_mulv_64(bmat_param_64(M), uint64_t V)
+{
+  u256_t v = broadcast_64x4(V);
+  u256_t c = broadcast_8x32(1);
+  u256_t z = zero_256();
+  u256_t m[16];
+  
+  bmat_load_256xn(m,M,16);
+
+  // The 64-bit version does start by performing a PSHUFB
+  // byte parity computation (see 32-bit notes). This fits
+  // nicely with the next step of using SAD to sum them up.
+  // After that I lacked motionation/inspiration and just
+  // kick the bits into place with almost certainly too much
+  // work.
+  
+  for(uint32_t i=0; i<16; i+=2) {
+    m[i   ] = sad_8x32(bit_parity_8x32(and_256(m[i  ],v)),z);
+    m[i+1 ] = sad_8x32(bit_parity_8x32(and_256(m[i+1],v)),z);
+
+    // start of not-great
+    m[i>>1] = packus_16x16(m[i],m[i+1]);
+    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+  }
+
+  // continued: not-great
+  for(uint32_t i=0; i<8; i+=2) {
+    m[i>>1] = packus_16x16(m[i],m[i+1]);
+    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+  }
+
+  for(uint32_t i=0; i<4; i+=2) {
+    m[i>>1] = packus_16x16(m[i],m[i+1]);
+    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+  }
+  
+  uint32_t t0 = movemask_8x32(negate_8x32(and_256(m[ 0],c)));
+  uint32_t t1 = movemask_8x32(negate_8x32(and_256(m[ 1],c)));
+  
+  return ((uint64_t)t1<<32)|t0;
+}
+
 
 #else
 
@@ -674,13 +731,13 @@ uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
   return (uint32_t)r;
 }
 
-#endif
-
-
 extern uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v);
 
 uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v)
 {
   return bmat_mulv_64_ref(m,v);
 }
+#endif
+
+
 
