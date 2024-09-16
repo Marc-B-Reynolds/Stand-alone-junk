@@ -93,10 +93,6 @@ uint64_t bmat_mul_8_i(uint64_t a, uint64_t b)
 #endif
 
 
-void bmat_mul_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
-{
-  c[0] = bmat_mul_8_i(a[0],b[0]);
-}
 
 
 //*******************************************************************
@@ -112,41 +108,29 @@ static inline u256_t bmat_mul_step_16(u256_t a, u256_t b, u256_t cm, u256_t z)
   return and_256(broadcast_lo_16x16(b), cmpgt_16x16(and_256(a,cm),z));
 }
 
-// 53.75
-u256_t bmat_mul_16_i(u256_t a, u256_t b)
+// 35.20
+void bmat_mul_16(bmat_rparam_16(C), bmat_param_16(A), bmat_param_16(B))
 {
-  u256_t cm = broadcast_16x16(0x1);
+  u256_t a  = bmat_load_256(A);
+  u256_t cm = broadcast_16x16(0x8000);
   u256_t z  = zero_256();
-  u256_t c;
-  u256_t r;
+  u256_t c  = z;
 
-  // cookie-cutter written with one long dep chain: let the compiler rework
-  r = b;
-  c =         bmat_mul_step_16(a,r,cm,z);    a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1);
+  // should be: do nothing, goes nowhere (strict aliasing compat)
+  uint16_t b[16];
+  bmat_to_array_16(b,B);
 
-  r = unpackhi_128x2(b,b);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c); a = srli_16x16(a,1); r = bsrli_128x2(r,2);
-  c = xor_256(bmat_mul_step_16(a,r,cm,z),c);
+  // flip bits of A so we can compare against eq to zero for broadcast
+  a = xor_256(a,bit_allset_256());
 
-  return c;
-}
+  // work backwards so we can use add instead of shift (take pressure
+  // off of port 5)
+  for(int i=15; i>=0; i--) {
+    c = xor_256(and_256(broadcast_16x16(b[i]), cmpeq_16x16(and_256(a,cm),z)),c);
+    a = add_16x16(a,a);
+  }
 
-void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
-{
-  bmat_store_256(c, bmat_mul_16_i(bmat_load_256(a),bmat_load_256(b)));
+  bmat_store_256(C,c);
 }
 
 #else
@@ -189,183 +173,96 @@ void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
 
 #endif
 
-// need to write bit_gather_lsb_16x4
-#if 0
-
-// gather the values to be broadcast. 
-static inline uint64_t bmat_mult_16_row(uint64_t p)
-{
-  // 0 1 2 3 16 17 18 19 32 33 34 35 48 49 50 51 **
-  const uint64_t k = UINT64_C(0x0000001001001001);
-  const uint64_t m = UINT64_C(0x000f000f000f000f);
-
-  uint64_t r = k*(b0 & m); r >>= 36; r &= 0xffff;
-  
-  return r;
-}
-
-void bmat_mult_16_(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
-{
-  const uint64_t cm = UINT64_C(0x0001000100010001);
-
-  c[0]=0; c[1]=0; c[2]=0; c[3]=0;
-
-  // nothing done yet
-  uint64_t a0 = a[0], b0 = b[0];
-  uint64_t a1 = a[1], b1 = b[1];
-  uint64_t a2 = a[2], b2 = b[2];
-  uint64_t a3 = a[3], b3 = b[3];
-
-  uint64_t r,t;
-  
-  for (uint32_t j=0; j<4; j++) {
-
-    r = ((r & (cm*0xf)) * cm);
-    r = rol_64(r, 28) & 0xffff; // nope..see above
-    
-    for (uint32_t i=0; i<4; i++) {
-      
-      c[0] ^= (cm & a0)*r; a0 >>= 1;
-      c[1] ^= (cm & a1)*r; a1 >>= 1;
-      c[2] ^= (cm & a2)*r; a2 >>= 1;
-      c[3] ^= (cm & a3)*r; a3 >>= 1;
-    }
-  }
-}
-#endif
-
-// WIP HACKS
-
-
 //*******************************************************************
 // 32-bit
 
-#if 0
-void bmat_mul_32_avx2(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
+#if defined(SWAR_AVX2_H)
+
+#define BMAT_HAS_MUL_32
+
+void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
 {
-  bmat_def_64(r);
+  u256_t cm = broadcast_32x8(0x80000000);
+  u256_t z  = zero_256();
+  u256_t r;
+
+  u256_t c[4];
+  u256_t a[4];
+  
+  uint32_t b[32];
+  bmat_to_array_32(b,B);
+  bmat_load_256xn(a,A,4);
+
+  // broadcast the first row
+  r = broadcast_32x8(b[31]);
+
+  for(uint32_t j=0; j<4; j++) {
+    // complement 'a' so we're checking for zeroes
+    // instead of ones. 
+    a[j] = xor_256(a[j], bit_allset_256());
+    c[j] = and_256(r, cmpeq_32x8(and_256(a[j],cm),z));
+    a[j] = add_32x8(a[j],a[j]);
+  }
+  
+  // broadcast the remaining rows
+  for(int i=30; i>=0; i--) {
+    r = broadcast_32x8(b[i]);
+    
+    for(uint32_t j=0; j<4; j++) {
+      c[j] = xor_256(and_256(r, cmpeq_32x8(and_256(a[j],cm),z)),c[j]);
+      a[j] = add_32x8(a[j],a[j]);
+    }
+  }
+  
+  bmat_store_256xn(C,c,4);
 }
+#else
+// not motived. with only two rows/register doesn't seem
+// worth the effort ATM.
 #endif
-
-// wip hack
-extern void bmat_mul_32_ref(bmat_param_32(C), bmat_param_32(MA), bmat_param_32(MB));
-void bmat_mul_32(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_mul_32_ref(c,a,b); }
-
 
 //*******************************************************************
 // 64-bit
 
-extern void bmat_mul_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b));
+#if defined(SWAR_AVX2_H)
 
-void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+#define BMAT_HAS_MUL_64
+
+void bmat_mul_64(bmat_rparam_64(C), bmat_param_64(A), bmat_param_64(B))
 {
-  bmat_mul_64_ref(c,a,b);
-}
+  u256_t cm = broadcast_64x4(0x8000000000000000);
+  u256_t z  = zero_256();
+  u256_t r;
 
-
-#if 0
-void bmat_mult_64_(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
-{
+  u256_t c[16];
+  u256_t a[16];
   
+  uint64_t b[64];
+  bmat_to_array_64(b,B);
+  bmat_load_256xn(a,A,16);
 
-  for (uint32_t i=0; i<64; i++) {
-    uint64_t a = A[i];
-    uint64_t r = (-(a & 1)) & B[0];
+  r = broadcast_64x4(b[63]);
+  
+  for(uint32_t j=0; j<16; j++) {
+    a[j] = xor_256(a[j], bit_allset_256());
+    c[j] = and_256(r, cmpeq_64x4(and_256(a[j],cm),z));
+    a[j] = add_64x4(a[j],a[j]);
+  }
+      
+  for(int i=62; i>=0; i--) {
+    r = broadcast_64x4(b[i]);
     
-    for (uint32_t j=1; j<64; j++) {
-      a >>= 1;
-      r ^= (-(a & 1)) & B[j];
+    for(uint32_t j=0; j<16; j++) {
+      c[j] = xor_256(and_256(r, cmpeq_64x4(and_256(a[j],cm),z)),c[j]);
+      a[j] = add_64x4(a[j],a[j]);
     }
-    
-    S[i] = r;
   }
-}
-#else
-#endif
-
-//*******************************************************************
-// default expansions: transpose. default 8 & 16 aren't too bad
-
-#ifndef BMAT_HAS_MULT_8
-
-// 26.38
-static inline uint64_t bmat_mult_8_i(uint64_t a, uint64_t b)
-{
-  const uint64_t cm = UINT64_C(0x0101010101010101);
   
-  uint64_t r = 0;
-
-  for (uint32_t i=0; i<8; i++) {
-    r ^= bit_gather_lsb_8x8(cm & b) * (cm & a);
-    a >>= 1;
-    b >>= 1;
-  }
-  return r;
-}
-#endif
-
-void bmat_mult_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
-{
-  c[0] = bmat_mult_8_i(a[0],b[0]);
+  bmat_store_256xn(C,c,16);
 }
 
-
-#ifndef BMAT_HAS_MULT_16
-void bmat_mult_16(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b))
-{
-  bmat_def_16(t);
-  bmat_transpose_16(t,b);
-  bmat_mul_16(c,a,t);
-}
 #endif
 
-#ifndef BMAT_HAS_MULT_32
-void bmat_mult_32(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b))
-{
-  bmat_def_32(t);
-  bmat_transpose_32(t,b);
-  bmat_mul_32(c,a,t); }
-#endif
-
-#ifndef BMAT_HAS_MULT_64
-void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
-{
-  bmat_def_64(t);
-  bmat_transpose_64(t,b);
-  bmat_mul_64(c,a,t);
-}
-#endif
-
-
-//*******************************************************************
-// default expansions: square
-
-#ifndef BMAT_HAS_SQ_8
-void bmat_sq_8(bmat_param_16(c), bmat_param_16(a))
-{
-  bmat_mul_8(c,a,a);
-}
-#endif
-
-#ifndef BMAT_HAS_SQ_16
-void bmat_sq_16(bmat_param_16(c), bmat_param_16(a))
-{
-  bmat_mul_16(c,a,a);
-}
-#endif
-
-#ifndef BMAT_HAS_SQ_32
-void bmat_sq_32(bmat_param_32(c), bmat_param_32(a))
-{
-  bmat_mul_32(c,a,a); }
-#endif
-
-#ifndef BMAT_HAS_SQ_64
-void bmat_sq_64(bmat_rparam_64(c), bmat_param_64(a))
-{
-  bmat_mul_64(c,a,a);
-}
-#endif
 
 
 //*******************************************************************
@@ -549,6 +446,7 @@ uint32_t bmat_vmul_32(uint32_t v, bmat_param_32(M))
   return (uint32_t)r0;
 }
 
+// one element per register: use reference version
 extern uint64_t bmat_vmul_64_ref(uint64_t v, bmat_param_64(M));
 
 uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(M))
@@ -736,6 +634,7 @@ uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
   return (uint32_t)r;
 }
 
+// one element per register: use reference version
 extern uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v);
 
 uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v)
@@ -745,4 +644,188 @@ uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v)
 #endif
 
 
+
+//*******************************************************************
+// default expansions: AB
+//
+
+#ifndef BMAT_HAS_MUL_32
+#ifndef BMAT_MUL_DEF_REF_32
+
+void bmat_mul_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+{
+  uint32_t m[32];
+  uint32_t r[32];
+
+  bmat_to_array_32(m,a);
+
+  for(uint32_t i=0; i<32; i++)
+    r[i] = bmat_vmul_32(m[i],b);
+
+  array_to_bmat_32(c,r);
+}
+
+#else
+extern void bmat_mul_32_ref(bmat_param_32(C), bmat_param_32(MA), bmat_param_32(MB));
+void bmat_mul_32(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_mul_32_ref(c,a,b); }
+#endif
+#endif
+
+
+#ifndef BMAT_HAS_MUL_64
+#ifndef BMAT_MUL_DEF_REF_64
+
+void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+{
+  uint64_t m[64];
+  uint64_t r[64];
+
+  bmat_to_array_64(m,a);
+
+  for(uint32_t i=0; i<64; i++)
+    r[i] = bmat_vmul_64(m[i],b);
+
+  array_to_bmat_64(c,r);
+}
+
+#else
+
+extern void bmat_mul_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b));
+
+void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+{
+  bmat_mul_64_ref(c,a,b);
+}
+#endif
+#endif
+
+
+
+
+//*******************************************************************
+// default expansions: AB^T
+//
+// assuming porting then building a specialized vector/matrix products
+// should probably happen before jumping into full matrix product
+
+
+#ifndef BMAT_HAS_MULT_8
+
+// 26.38
+static inline uint64_t bmat_mult_8_i(uint64_t a, uint64_t b)
+{
+  const uint64_t cm = UINT64_C(0x0101010101010101);
+  
+  uint64_t r = 0;
+
+  for (uint32_t i=0; i<8; i++) {
+    r ^= bit_gather_lsb_8x8(cm & b) * (cm & a);
+    a >>= 1;
+    b >>= 1;
+  }
+  return r;
+}
+#endif
+
+
+// for a default 16-bit using the transpose could be reasonable
+#ifndef BMAT_HAS_MULT_16
+#ifndef BMAT_MULT_TRANSPOSE_16
+void bmat_mult_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+{
+  uint16_t m[16];
+  uint16_t r[16];
+
+  bmat_to_array_16(m,a);
+
+  for(uint32_t i=0; i<16; i++)
+    r[i] = bmat_mulv_16(b,m[i]);
+
+  array_to_bmat_16(c,r);
+}
+#else
+void bmat_mult_16(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b))
+{
+  bmat_def_16(t);
+  bmat_transpose_16(t,b);
+  bmat_mul_16(c,a,t);
+}
+#endif
+#endif
+
+#ifndef BMAT_HAS_MULT_32
+void bmat_mult_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+{
+  uint32_t m[32];
+  uint32_t r[32];
+
+  bmat_to_array_32(m,a);
+
+  for(uint32_t i=0; i<32; i++)
+    r[i] = bmat_mulv_32(b,m[i]);
+
+  array_to_bmat_32(c,r);
+}
+#endif
+
+#ifndef BMAT_HAS_MULT_64
+void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+{
+  uint64_t m[64];
+  uint64_t r[64];
+
+  bmat_to_array_64(m,a);
+
+  for(uint32_t i=0; i<64; i++)
+    r[i] = bmat_mulv_64(b,m[i]);
+
+  array_to_bmat_64(c,r);
+}
+#endif
+
+
+//*******************************************************************
+// default expansions: square
+
+#ifndef BMAT_HAS_SQ_8
+void bmat_sq_8(bmat_param_16(c), bmat_param_16(a))
+{
+  bmat_mul_8(c,a,a);
+}
+#endif
+
+#ifndef BMAT_HAS_SQ_16
+void bmat_sq_16(bmat_param_16(c), bmat_param_16(a))
+{
+  bmat_mul_16(c,a,a);
+}
+#endif
+
+#ifndef BMAT_HAS_SQ_32
+void bmat_sq_32(bmat_param_32(c), bmat_param_32(a))
+{
+  bmat_mul_32(c,a,a); }
+#endif
+
+#ifndef BMAT_HAS_SQ_64
+void bmat_sq_64(bmat_rparam_64(c), bmat_param_64(a))
+{
+  bmat_mul_64(c,a,a);
+}
+#endif
+
+
+//*******************************************************************
+// 8x8 "standard" functions wrap inner routines that work directly
+// on 64-bit integers.
+
+void bmat_mul_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
+{
+  c[0] = bmat_mul_8_i(a[0],b[0]);
+}
+
+void bmat_mult_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
+{
+  c[0] = bmat_mult_8_i(a[0],b[0]);
+}
 
