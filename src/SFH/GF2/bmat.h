@@ -148,6 +148,17 @@ extern void bmat_mult_16(bmat_rparam_16(c),bmat_param_16(a),bmat_param_16(b));
 extern void bmat_mult_32(bmat_rparam_32(c),bmat_param_32(a),bmat_param_32(b));
 extern void bmat_mult_64(bmat_rparam_64(c),bmat_param_64(a),bmat_param_64(b));
 
+extern uint8_t  bmat_vmul_8 (uint8_t  v, bmat_param_8 (m));
+extern uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(m));
+extern uint32_t bmat_vmul_32(uint32_t v, bmat_param_32(m));
+extern uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(m));
+
+extern uint8_t  bmat_mulv_8 (bmat_param_8 (m), uint8_t  v);
+extern uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t v);
+extern uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t v);
+extern uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v);
+
+
 // bmat_gauss.c
 extern uint32_t bmat_rank_8 (bmat_param_8 (m));
 extern uint32_t bmat_rank_16(bmat_param_16(m));
