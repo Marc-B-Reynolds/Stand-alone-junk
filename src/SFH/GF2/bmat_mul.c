@@ -658,8 +658,13 @@ uint64_t bmat_mulv_64(bmat_param_64(M), uint64_t V)
   // byte parity computation (see 32-bit notes). This fits
   // nicely with the next step of using SAD to sum them up.
   // After that I lacked motionation/inspiration and just
-  // kick the bits into place with almost certainly too much
-  // work.
+  // kicked the bits into place with almost certainly too
+  // much work. Also (like a ton of the code here) it's
+  // putting WAY too much pressure on port-5. 
+  // 1) after the SAD each register is mostly empty.
+  //    the bottom of each 64-bit element has 5 bits
+  //    that may not be zero and only the low bit needs
+  //    to be preserved.
   
   for(uint32_t i=0; i<16; i+=2) {
     m[i   ] = sad_8x32(bit_parity_8x32(and_256(m[i  ],v)),z);
