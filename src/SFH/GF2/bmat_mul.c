@@ -595,6 +595,42 @@ uint16_t bmat_mulv_16(bmat_param_16(M), uint16_t V)
   return (uint16_t)bit_gather_32(r,0x55555555);
 }
 
+// 16.00
+uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
+{
+  u256_t v    = broadcast_32x8(V);
+  u256_t mask = broadcast_32x8(0xffff);
+  
+  u256_t m[4];
+  
+  bmat_load_256xn(m,M,4);
+
+  m[0] = and_256(m[0],v);
+  m[1] = and_256(m[1],v);
+  m[2] = and_256(m[2],v);
+  m[3] = and_256(m[3],v);
+
+  m[0] = xor_256(m[0], srli_32x8(m[0],16));
+  m[1] = xor_256(m[1], srli_32x8(m[1],16));
+  m[2] = xor_256(m[2], srli_32x8(m[2],16));
+  m[3] = xor_256(m[3], srli_32x8(m[3],16));
+
+  m[0] = packus_32x8(and_256(m[0],mask), and_256(m[1],mask));
+  m[1] = packus_32x8(and_256(m[2],mask), and_256(m[3],mask));
+  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));
+  m[1] = permute_64x4(m[1], SSE_MM_SHUFFLE(3,1,2,0));
+  
+  m[0] = xor_256(m[0], srli_16x16(m[0],8));
+  m[1] = xor_256(m[1], srli_16x16(m[1],8));
+  mask = broadcast_16x16(0xff);
+
+  m[0] = packus_16x16(and_256(m[0],mask), and_256(m[1],mask));
+  m[0] = bit_parity_mask_8x32(m[0]);
+  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));
+  
+  return movemask_8x32(m[0]);
+}
+
 #else
 
 // 21.89
@@ -615,8 +651,6 @@ uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t V)
   }
   return (uint16_t)r;
 }
-
-#endif
 
 // 51.00
 uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
@@ -639,6 +673,8 @@ uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t V)
   
   return (uint32_t)r;
 }
+
+#endif
 
 
 extern uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v);
