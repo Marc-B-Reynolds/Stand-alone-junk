@@ -29,7 +29,7 @@
 #endif
 #endif
 
-// for constant defs
+// for (endian independent) constant defs
 typedef union {
   uint8_t  u8[32];
   uint16_t u16[16];
