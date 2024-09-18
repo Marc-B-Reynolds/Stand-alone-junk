@@ -137,7 +137,38 @@ extern void bmat_set_exchange_16(bmat_param_16(m));
 extern void bmat_set_exchange_32(bmat_param_32(m));
 extern void bmat_set_exchange_64(bmat_param_64(m));
 
+// bmat_toeplitz.c
+extern void bmat_set_toeplitz_8 (bmat_param_8 (m), uint8_t  r, uint8_t  c);
+extern void bmat_set_toeplitz_16(bmat_param_16(m), uint16_t r, uint16_t c);
+extern void bmat_set_toeplitz_32(bmat_param_32(m), uint32_t r, uint32_t c);
+extern void bmat_set_toeplitz_64(bmat_param_64(m), uint64_t r, uint64_t c);
+
+extern void bmat_set_cl_mul_8 (bmat_param_8 (m), uint8_t  n);
+extern void bmat_set_cl_mul_16(bmat_param_16(m), uint16_t n);
+extern void bmat_set_cl_mul_32(bmat_param_32(m), uint32_t n);
+extern void bmat_set_cl_mul_64(bmat_param_64(m), uint64_t n);
+
+extern void bmat_set_cr_mul_8 (bmat_param_8 (m), uint8_t  n);
+extern void bmat_set_cr_mul_16(bmat_param_16(m), uint16_t n);
+extern void bmat_set_cr_mul_32(bmat_param_32(m), uint32_t n);
+extern void bmat_set_cr_mul_64(bmat_param_64(m), uint64_t n);
+
+extern void bmat_set_cc_mul_8 (bmat_param_8 (m), uint8_t  n);
+extern void bmat_set_cc_mul_16(bmat_param_16(m), uint16_t n);
+extern void bmat_set_cc_mul_32(bmat_param_32(m), uint32_t n);
+extern void bmat_set_cc_mul_64(bmat_param_64(m), uint64_t n);
+
 // bmat_mul.c
+extern uint8_t  bmat_vmul_8 (uint8_t  v, bmat_param_8 (m));
+extern uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(m));
+extern uint32_t bmat_vmul_32(uint32_t v, bmat_param_32(m));
+extern uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(m));
+
+extern uint8_t  bmat_mulv_8 (bmat_param_8 (m), uint8_t  v);
+extern uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t v);
+extern uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t v);
+extern uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v);
+
 extern void bmat_mul_8 (bmat_rparam_8 (c),bmat_param_8 (a),bmat_param_8 (b));
 extern void bmat_mul_16(bmat_rparam_16(c),bmat_param_16(a),bmat_param_16(b));
 extern void bmat_mul_32(bmat_rparam_32(c),bmat_param_32(a),bmat_param_32(b));
@@ -148,15 +179,15 @@ extern void bmat_mult_16(bmat_rparam_16(c),bmat_param_16(a),bmat_param_16(b));
 extern void bmat_mult_32(bmat_rparam_32(c),bmat_param_32(a),bmat_param_32(b));
 extern void bmat_mult_64(bmat_rparam_64(c),bmat_param_64(a),bmat_param_64(b));
 
-extern uint8_t  bmat_vmul_8 (uint8_t  v, bmat_param_8 (m));
-extern uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(m));
-extern uint32_t bmat_vmul_32(uint32_t v, bmat_param_32(m));
-extern uint64_t bmat_vmul_64(uint64_t v, bmat_param_64(m));
+extern void bmat_madd_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b), bmat_param_8 (c));
+extern void bmat_madd_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b), bmat_param_16(c));
+extern void bmat_madd_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b), bmat_param_32(c));
+extern void bmat_madd_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b), bmat_param_64(c));
 
-extern uint8_t  bmat_mulv_8 (bmat_param_8 (m), uint8_t  v);
-extern uint16_t bmat_mulv_16(bmat_param_16(m), uint16_t v);
-extern uint32_t bmat_mulv_32(bmat_param_32(m), uint32_t v);
-extern uint64_t bmat_mulv_64(bmat_param_64(m), uint64_t v);
+extern void bmat_bracket_8 (bmat_rparam_8 (c), bmat_param_8 (a), bmat_param_8 (b));
+extern void bmat_bracket_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b));
+extern void bmat_bracket_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b));
+extern void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b));
 
 
 // bmat_gauss.c
@@ -196,13 +227,10 @@ extern uint32_t f2_ufunc_p_validate_64_i (uint64_t (*)(uint64_t), uint64_t (*)(u
 extern uint32_t f2_ufunc_p2_validate_32_i(uint32_t (*)(uint32_t,uint32_t), uint32_t (*)(uint32_t, uint32_t), uint32_t);
 extern uint64_t f2_ufunc_p2_validate_64_i(uint64_t (*)(uint64_t,uint64_t), uint64_t (*)(uint64_t, uint64_t), uint64_t);
 
-// F_2 unary & binary function types (kill these)
-typedef uint32_t (f2_ufunc_32_t)(uint32_t);
-typedef uint64_t (f2_ufunc_64_t)(uint64_t);
-typedef uint32_t (f2_bfunc_32_t)(uint32_t, uint32_t);
-typedef uint64_t (f2_bfunc_64_t)(uint64_t, uint64_t);
+extern uint8_t  bmat_from_ufunc_8 (bmat_param_8 (a), uint8_t  (*f)(uint8_t));
+extern uint16_t bmat_from_ufunc_16(bmat_param_16(a), uint16_t (*f)(uint16_t));
+extern uint32_t bmat_from_ufunc_32(bmat_param_32(a), uint32_t (*f)(uint32_t));
+extern uint64_t bmat_from_ufunc_64(bmat_param_64(a), uint64_t (*f)(uint64_t));
 
-extern uint32_t bmat_from_ufunc_32  (bmat_param_32(m), f2_ufunc_32_t* f);
-extern uint64_t bmat_from_ufunc_64  (bmat_param_64(m), f2_ufunc_64_t* f);
-extern uint32_t bmat_from_ufunc_p_32(bmat_param_32(m), f2_bfunc_32_t* f, uint32_t k);
-extern uint64_t bmat_from_ufunc_p_64(bmat_param_64(m), f2_bfunc_64_t* f, uint64_t k);
+extern uint32_t bmat_from_ufunc_p_32(bmat_param_32(a), uint32_t (*f)(uint32_t,uint32_t), uint32_t);
+extern uint64_t bmat_from_ufunc_p_64(bmat_param_64(a), uint64_t (*f)(uint64_t,uint64_t), uint64_t);
