@@ -294,14 +294,14 @@ static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpe
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
 #endif
-static inline u256_t no_const_fold_256(u256_t v)
+static inline u256_t hint_no_const_fold_256(u256_t v)
 {
   asm volatile ("" : "+x" (v));
   return v;  
 }
 #pragma GCC diagnostic pop
 #else
-static inline u256_t no_const_fold_256(u256_t v) { return v; }
+static inline u256_t hint_no_const_fold_256(u256_t v) { return v; }
 #endif
 
 
@@ -561,7 +561,7 @@ static inline u256_t pop_64x4(u256_t x) { return byte_sum_64x4(pop_8x32(x)); }
 
 
 
-// computes the parity of each data width. result is LSB in width
+// computes the parity of each element width. result is LSB in element
 static inline u256_t bit_parity_8x32(u256_t x)
 {
   u256_t k  = pshufb_table_128x2(0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0);
@@ -749,6 +749,20 @@ static inline u256_t ctz_16x16(u256_t x)
 #define ctz_64x4       SFH_CAT(AVX2_PREFIX, lzcnt_epi64)
 #endif
 
+// leading/trailing byte count across whole register
+static inline uint32_t clz_u8_256(u256_t x)
+{
+  uint32_t r = movemask_8x32(cmpeq_8x32(x, zero_256()));
+
+  return clz_32(r ^ UINT32_C(~0));
+}
+
+static inline uint32_t ctz_u8_256(u256_t x)
+{
+  uint32_t r = movemask_8x32(cmpeq_8x32(x, zero_256()));
+
+  return ctz_32(r ^ UINT32_C(~0));
+}
 
 // per 128 lane (riffle 2x16)
 static inline u256_t byte_zip_128x2(u256_t x)
