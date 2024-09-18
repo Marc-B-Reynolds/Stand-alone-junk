@@ -8,6 +8,7 @@
 #include "bmat_i.h"
 #include "bmat_basics.c"
 #include "bmat_set.c"
+#include "bmat_toeplitz.c"
 #include "bmat_block.c"
 #include "bmat_gauss.c"
 #include "bmat_mul.c"
