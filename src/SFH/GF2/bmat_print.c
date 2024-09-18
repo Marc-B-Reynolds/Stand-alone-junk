@@ -41,7 +41,7 @@ void bmprt_elems(uint64_t v, uint32_t b)
 void bmprt_row_8 (uint64_t v) { bmprt_elems(v, 8); printf(" : %02lx │", v); }
 void bmprt_row_16(uint64_t v) { bmprt_elems(v,16); printf(" : %04lx │", v); }
 void bmprt_row_32(uint64_t v) { bmprt_elems(v,32); printf(" : %08lx │", v); }
-void bmprt_row_64(uint64_t v) { bmprt_elems(v,64); printf(" : %08lx │", v); }
+void bmprt_row_64(uint64_t v) { bmprt_elems(v,64); printf(" : %016lx │", v); }
 
 void bmprt_row_8_end (char* prefix, uint32_t i, char* marker) { printf("%s",prefix); bmprt_row_end(i, 8,marker); }
 void bmprt_row_16_end(char* prefix, uint32_t i, char* marker) { printf("%s",prefix); bmprt_row_end(i,16,marker); }
