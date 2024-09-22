@@ -184,6 +184,8 @@ static inline uint64_t cr_mul_64(uint64_t a, uint64_t b)
   return r;
 }
 
+// todo: change both of these away from direct scatter
+// like the cl_ versions
 static inline uint32_t cr_pow2_32(uint32_t x)
 {
   return bit_scatter_32(x>>16, bit_set_even_1_32<<1);
