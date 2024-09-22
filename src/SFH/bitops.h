@@ -323,6 +323,65 @@ static inline uint64_t bit_permute_step_simple_64(uint64_t x, uint64_t m, uint32
 
 #define  BIT_GROUP_SWAP(X,L,T) BIT_PERMUTE(X,bit_set_even_ ## L ## _ ## T,L)
 
+
+uint32_t bit_scatter_even_32(uint32_t x)
+{
+#if BITOPS_HAS_SCATTER_GATHER
+  return bit_scatter_32(x, bit_set_even_1_32);
+#else  
+  x = bit_permute_step(x, 0x0000aaaa, 15);
+  x = bit_permute_step(x, 0x0000cccc, 14);
+  x = bit_permute_step(x, 0x0000f0f0, 12);
+  x = bit_permute_step(x, 0x0000ff00,  8);
+
+  return x;
+#endif  
+}
+
+uint32_t bit_gather_even_32(uint32_t x)
+{
+#if BITOPS_HAS_SCATTER_GATHER
+  return bit_gather_32(x, bit_set_even_1_32);
+#else  
+  x = bit_permute_step_32(x, 0x22222222, 1);
+  x = bit_permute_step_32(x, 0x0c0c0c0c, 2);
+  x = bit_permute_step_32(x, 0x00f000f0, 4);
+  x = bit_permute_step_32(x, 0x0000ff00, 8);
+
+  return x;
+#endif  
+}
+
+uint64_t bit_gather_even_64(uint64_t x)
+{
+#if BITOPS_HAS_SCATTER_GATHER
+  return bit_gather_64(x, bit_set_even_1_64);
+#else  
+  x = bit_permute_step_64(x, 0x2222222222222222, 1);
+  x = bit_permute_step_64(x, 0x0c0c0c0c0c0c0c0c, 2);
+  x = bit_permute_step_64(x, 0x00f000f000f000f0, 4);
+  x = bit_permute_step_64(x, 0x0000ff000000ff00, 8);
+  x = bit_permute_step_64(x, 0x00000000ffff0000, 16);
+
+  return x;
+#endif  
+}
+
+uint64_t bit_scatter_even_64(uint64_t x)
+{
+#if BITOPS_HAS_SCATTER_GATHER
+  return bit_scatter_64(x, bit_set_even_1_64); }
+#else  
+  x = bit_permute_step_64(x, 0x00000000aaaaaaaa, 31);
+  x = bit_permute_step_64(x, 0x00000000cccccccc, 30);
+  x = bit_permute_step_64(x, 0x00000000f0f0f0f0, 28);
+  x = bit_permute_step_64(x, 0x00000000ff00ff00, 24);
+  x = bit_permute_step_64(x, 0x00000000ffff0000, 16);
+
+  return x & 0x5555555555555555;
+#endif  
+}
+
 static inline uint32_t bit_swap_1_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 1,32); }
 static inline uint32_t bit_swap_2_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 2,32); }
 static inline uint32_t bit_swap_4_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 4,32); }
