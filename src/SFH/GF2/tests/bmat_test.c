@@ -52,7 +52,8 @@ static inline uint32_t test_gen(prng_t*        prng,
 				void (*f1)(uint64_t*, uint64_t),
 				uint32_t       n)
 {
-  uint64_t r0[64],r1[64];
+  bmat_def_64(r0);
+  bmat_def_64(r1);
   
   mset->rsize();
 
@@ -183,7 +184,9 @@ static inline uint32_t test_unary_2param(prng_t*        prng,
 					 void (*f1)(uint64_t*, uint64_t*),
 					 uint32_t       n)
 {
-  uint64_t m0[64],r0[64],r1[64];
+  bmat_def_64(m0);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
   
   mset->rsize();
   
@@ -251,7 +254,8 @@ static inline uint32_t test_unary_1param(prng_t*        prng,
 					 void (*f1)(uint64_t*),
 					 uint32_t       n)
 {
-  uint64_t m0[64],m1[64];
+  bmat_def_64(m0);
+  bmat_def_64(m1);
   
   mset->rsize();
   
@@ -308,8 +312,10 @@ static inline uint32_t test_binary_3param(prng_t*        prng,
 					  void (*f1)(uint64_t*, uint64_t*, uint64_t*),
 					  uint32_t       n)
 {
-  uint64_t m0[64],m1[64];
-  uint64_t r0[64],r1[64];
+  bmat_def_64(m0);
+  bmat_def_64(m1);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
 
   mset->rsize();
   
@@ -390,7 +396,7 @@ static inline uint32_t test_mvprod(prng_t*        prng,
 				   uint64_t (*f1)(uint64_t, uint64_t*),
 				   uint32_t       n)
 {
-  uint64_t a[64];
+  bmat_def_64(a);
 
   mset->rsize();
 
