@@ -370,7 +370,7 @@ uint64_t bit_gather_even_64(uint64_t x)
 uint64_t bit_scatter_even_64(uint64_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
-  return bit_scatter_64(x, bit_set_even_1_64); }
+  return bit_scatter_64(x, bit_set_even_1_64); 
 #else  
   x = bit_permute_step_64(x, 0x00000000aaaaaaaa, 31);
   x = bit_permute_step_64(x, 0x00000000cccccccc, 30);
