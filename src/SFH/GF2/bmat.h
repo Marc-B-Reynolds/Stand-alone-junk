@@ -18,14 +18,14 @@
 #define BMAT_WSIZE_32 16
 #define BMAT_WSIZE_64 64
 
-#define bmat_def_8(X)  uint64_t X[ 1]
-#define bmat_def_16(X) uint64_t X[ 4]
-#define bmat_def_32(X) uint64_t X[16]
-#define bmat_def_64(X) uint64_t X[64]
-
 #if !defined(_MSC_VER)
 #define bmat_rparam_n(X)  uint64_t* restrict X
 
+#define BMAT_ALIGN   __attribute__((aligned(32)))
+#define BMAT_FLATTEN __attribute__((flatten))
+
+// define paramater macros. mainly to handle visual C not
+// supporting array[static n] syntax.
 #define bmat_rparam_8(X)  uint64_t X[restrict static  1]
 #define bmat_rparam_16(X) uint64_t X[restrict static  4]
 #define bmat_rparam_32(X) uint64_t X[restrict static 16]
@@ -36,12 +36,19 @@
 #define bmat_param_32(X) uint64_t X[static 16]
 #define bmat_param_64(X) uint64_t X[static 64]
 
+// these are poorly named and should be changed. For
+// reference versions look at the data as "natural"
+// width integers.
 #define bmat_array_8(X)  uint8_t  X[static  8]
 #define bmat_array_16(X) uint16_t X[static 16]
 #define bmat_array_32(X) uint32_t X[static 32]
 #define bmat_array_64(X) uint64_t X[static 64]
 
 #else
+
+#define BMAT_ALIGN  __declspec(align(32))
+#define BMAT_FLATTEN
+
 #define bmat_rparam_n(X)  uint64_t* X
 
 #define bmat_rparam_8(X)  uint64_t* X
@@ -60,10 +67,26 @@
 #define bmat_array_64(X) uint64_t* X
 #endif
 
-static inline void bmat_dup_8      (bmat_param_8(a),  bmat_param_8(m))  { memcpy(a, m,   8); }
-static inline void bmat_dup_16     (bmat_param_16(a), bmat_param_16(m)) { memcpy(a, m,  32); }
-static inline void bmat_dup_32     (bmat_param_32(a), bmat_param_32(m)) { memcpy(a, m, 128); }
-static inline void bmat_dup_64     (bmat_param_64(a), bmat_param_64(m)) { memcpy(a, m, 512); }
+
+// -Wpedantic enables this
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
+
+// C macro crime (spiting on sidewalk) in progress: 
+//   bmat_def_n(name)   -> variable 'name' with space for 1 matrix
+//   bmat_def_n(name,N) -> variable 'name' with space for N matrices
+#define bmat_def_n(NAME,W,...)  BMAT_ALIGN uint64_t NAME[W __VA_OPT__(* __VA_ARGS__)]
+#define bmat_def_8(NAME,...)    bmat_def_n(NAME, 1,__VA_ARGS__)
+#define bmat_def_16(NAME,...)   bmat_def_n(NAME, 4,__VA_ARGS__)
+#define bmat_def_32(NAME,...)   bmat_def_n(NAME,16,__VA_ARGS__)
+#define bmat_def_64(NAME,...)   bmat_def_n(NAME,64,__VA_ARGS__)
+
+
+static inline void bmat_dup_8 (bmat_param_8(a),  bmat_param_8(m))  { memcpy(a, m,   8); }
+static inline void bmat_dup_16(bmat_param_16(a), bmat_param_16(m)) { memcpy(a, m,  32); }
+static inline void bmat_dup_32(bmat_param_32(a), bmat_param_32(m)) { memcpy(a, m, 128); }
+static inline void bmat_dup_64(bmat_param_64(a), bmat_param_64(m)) { memcpy(a, m, 512); }
 
 // bmat_to_array_n/array_to_bmat_n :
 // * for type-punning between array types (for strict aliasing)
