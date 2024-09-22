@@ -81,6 +81,27 @@ uint64_t test_64(def_64_t* def, rng_t* rng)
 #endif
 
 
+#if 0
+void test_foo(prng_t* prng)
+{
+  for(uint32_t i=0; i<0xffffff; i++) {
+    uint64_t a  = prng_u64(prng);
+    uint64_t b  = prng_u64(prng);
+    uint64_t r0 = cl_gcd_64(a,b);
+
+    cl_gcd_u64_t p = cl_extended_gcd_64(a,b);
+
+    uint64_t r1 = cl_mul_64(a,p.x) ^ cl_mul_64(b,p.y);
+
+    if (r0 != r1 || r0 != p.r) {
+      printf("%016lx,%016lx = %016lx %016lx\n",a,b,r0,r1);
+    }
+
+  }
+}
+#endif
+
+
 int main(void)
 {
   return 0;
