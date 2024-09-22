@@ -2,7 +2,9 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // internal file for reference versions (self testing). unless I forget the
-// reference version should be good on big-endian.
+// reference version should be good on big-endian. Specifically they should
+// all be non SWAR and be using on the primitive integer type that corresponds
+// to 'n' (e.g. bmat_func_8 works on uint8_t)
 
 #pragma once
 
