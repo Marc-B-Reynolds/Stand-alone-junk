@@ -1,24 +1,32 @@
+// Marc B. Reynolds, 2011-2024
+// Public Domain under http://unlicense.org, see link for details.
+
+// for pthread_setaffinity_np which I'm not using ATM.
+//#define _GNU_SOURCE
+//#define __USE_GNU
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
-
-#define _GNU_SOURCE
-#define __USE_GNU
-#include <errno.h> // sigh
+//#include <errno.h> // sigh
 #include <pthread.h>
 #include <sched.h>
 
 #include "../bmat_everything.h"
 
+#include "bmat_test.h"
+
 
 #define LENGTHOF(X) (sizeof(X)/sizeof(X[0]))
 
-uint64_t sink_data[1024];   // temp hack
-uint64_t fake_data_0[1024]; // temp hack
-uint64_t fake_data_1[1024]; // temp hack
-uint64_t fake_data_2[1024]; // temp hack
+// number of 64x64 matrices in arrays below
+#define SINK_CHUNKS 1024
+
+bmat_def_64(sink_data,   SINK_CHUNKS);
+bmat_def_64(fake_data_0, SINK_CHUNKS);
+bmat_def_64(fake_data_1, SINK_CHUNKS);
+bmat_def_64(fake_data_2, SINK_CHUNKS);
 
 uint64_t* m0;
 uint64_t* m1;
@@ -31,43 +39,59 @@ uint64_t* m2;
 
 // f(array,array) calls
 #define FOR_2M_FUNCS(DO) \
-    DO(transpose_8)      \
-    DO(transpose_16)     \
-    DO(transpose_32)	 \
-    DO(transpose_64)
+    DO(bmat_transpose_8)      \
+    DO(bmat_transpose_16)     \
+    DO(bmat_transpose_32)	 \
+    DO(bmat_transpose_64)
 
 #define FOR_2R_FUNCS(DO) \
-    DO(transpose_8_ref)  \
-    DO(transpose_16_ref) \
-    DO(transpose_32_ref) \
-    DO(transpose_64_ref)
+    DO(bmat_transpose_8_ref)  \
+    DO(bmat_transpose_16_ref) \
+    DO(bmat_transpose_32_ref) \
+    DO(bmat_transpose_64_ref)
 
 // f(array,array,array) calls
+#if 1
 #define FOR_3M_FUNCS(DO) \
-    DO(mul_8)            \
-    DO(mul_16)           \
-    DO(mul_32)	         \
-    DO(mul_64)           \
-    DO(mult_8)           \
-    DO(mult_16)          \
-    DO(mult_32)	         \
-    DO(mult_64)
+    DO(bmat_mul_8)            \
+    DO(bmat_mul_16)           \
+    DO(bmat_mul_32)	         \
+    DO(bmat_mul_64)           \
+    DO(bmat_mult_8)           \
+    DO(bmat_mult_16)          \
+    DO(bmat_mult_32)	         \
+    DO(bmat_mult_64)
+#else
+#define FOR_3M_FUNCS(DO) \
+    DO(bmat_mul_8)            \
+    DO(m4ri_wrap_mm_8)   \
+    DO(bmat_mul_16)           \
+    DO(m4ri_wrap_mm_16)  \
+    DO(bmat_mul_32)	         \
+    DO(m4ri_wrap_mm_32)  \
+    DO(bmat_mul_64)           \
+    DO(m4ri_wrap_mm_64)  \
+    DO(bmat_mult_8)           \
+    DO(bmat_mult_16)          \
+    DO(bmat_mult_32)	         \
+    DO(bmat_mult_64)
+#endif
 
 #define FOR_3R_FUNCS(DO) \
-    DO(mul_8_ref)        \
-    DO(mul_16_ref)       \
-    DO(mul_32_ref)	 \
-    DO(mul_64_ref)       \
-    DO(mult_8_ref)       \
-    DO(mult_16_ref)      \
-    DO(mult_32_ref)	 \
-    DO(mult_64_ref)
+    DO(bmat_mul_8_ref)        \
+    DO(bmat_mul_16_ref)       \
+    DO(bmat_mul_32_ref)	 \
+    DO(bmat_mul_64_ref)       \
+    DO(bmat_mult_8_ref)       \
+    DO(bmat_mult_16_ref)      \
+    DO(bmat_mult_32_ref)	 \
+    DO(bmat_mult_64_ref)
 
 
 //--------------------------------------------------
 
-#define WRAP_2M(N) void N(void) { bmat_##N(m0,m1); }
-#define WRAP_3M(N) void N(void) { bmat_##N(m0,m1,m2); }
+#define WRAP_2M(N) BMAT_FLATTEN void w_##N(void) { N(m0,m1); }
+#define WRAP_3M(N) BMAT_FLATTEN void w_##N(void) { N(m0,m1,m2); }
 
 // expand wrappers for f(matrix,matrix) calls
 FOR_2M_FUNCS(WRAP_2M)
@@ -75,20 +99,22 @@ FOR_2R_FUNCS(WRAP_2M)
 FOR_3M_FUNCS(WRAP_3M)
 FOR_3R_FUNCS(WRAP_3M)
 
+// add flags and such for better ergo
+// (selective running, etc)
 typedef struct {
   void (*f)(void);
   char*   name;
 } func_entry_t;
 
      
-#define ENTRY(X) { .f=&X, .name=STRINGIFY(X) },
+#define ENTRY(X) { .f=&w_##X, .name=STRINGIFY(X) },
      
 func_entry_t func_table[] =
 {
+  FOR_3M_FUNCS(ENTRY)
 //FOR_2R_FUNCS(ENTRY)
   FOR_2M_FUNCS(ENTRY)
-  FOR_3R_FUNCS(ENTRY)
-  FOR_3M_FUNCS(ENTRY)
+ //FOR_3R_FUNCS(ENTRY)
 };
 
 //--------------------------------------------------------------------------
@@ -109,19 +135,22 @@ const  int32_t time_retry  =    15;   // max number of retries
 const  int32_t time_rerun  =     0;   // max number of retries
 const   double time_rlimit =  0.10;   // mean/std threshold (meh)
 
+// 
+char*  time_string_cycles = "mean ± std (cycles) ";
+char*  time_string_ns     = "  mean ± std (ns)   ";
+bool   time_cycles = false;
+char*  time_string;
+
 const double time_scale = 1.0/((double)time_count);
 
 static inline uint64_t time_get(void)
 {
-#if 1
-  #define TIME_STR "cycles"
-  return _rdtsc();
-#else  
-  #define TIME_STR "ns"
+  if (time_cycles)
+    return _rdtsc();
+
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   return (1000*1000*1000*(uint64_t)ts.tv_sec + (uint64_t)ts.tv_nsec);
-#endif  
 }
 
 static inline double doubletime(void)
@@ -130,7 +159,8 @@ static inline double doubletime(void)
 }
 
 // Welford's method for streaming mean/variance/stdev
-// --- just being lazy
+// --- just being lazy. no "streaming" is involved
+// here.
 typedef struct { double n,m,s; } seq_stats_t;
 
 static inline void seq_stats_init(seq_stats_t* d)
@@ -160,7 +190,14 @@ void time_func(void (*f)(void), int32_t n)
   m1 = fake_data_1;
   m2 = fake_data_2;
   
-  while(n-- > 0) { f(); m0 += 0; m1 += 0; m2 += 0;}
+  while(n-- > 0) {
+    f();
+#if 0    
+    m0 = fake_data_0 + (n & (SINK_CHUNKS-1));
+    m1 = fake_data_1 + (n & (SINK_CHUNKS-1));
+    m2 = fake_data_2 + (n & (SINK_CHUNKS-1));
+#endif    
+  }
 }
 
 int cmp_u64(const void * a, const void * b)
@@ -231,11 +268,28 @@ void timing_test(func_entry_t* entry, int len)
 
   printf("┌───────────────────┬"
 	 "──────────────────────────────┬"
-	 "────────────────┐\n");
-  printf("│ %-18s│ %27s   │ %14s │\n", "function", "mean ± std (cycles) ","");
+	 "────────────────┬"
+	 "─────────┬"
+	 "─────────┬"
+	 "─────────┐"
+	 "\n");
+  
+  printf(WARNING "│ %-18s│ %27s   │ %14s │%8s │%8s │%8s │\n" ENDC,
+	 "function",
+	 time_string,
+	 "",
+	 "min ",
+	 "median",
+	 "max "
+	 );
+  
   printf("├───────────────────┼"
 	 "──────────────────────────────┼"
-	 "────────────────┤\n");
+	 "────────────────┼"
+	 "─────────┼"
+	 "─────────┼"
+	 "─────────┤"
+	 "\n");
 
   while(len--) {
     printf("│ %-18s", entry->name);
@@ -245,7 +299,7 @@ void timing_test(func_entry_t* entry, int len)
     
     double std = f64_sqrt(seq_stats_variance(&stats));
     
-    printf("│%14f ±%14f│ (1 ± %-8f) │%8.2f│%8.2f│%8.2f│",
+    printf("│%14f ±%14f│ (1 ± %-8f) │%9.2f│%9.2f│%9.2f│",
 	   stats.m, std,
 	   std/stats.m,
 	   (double)data[0] * time_scale,
@@ -261,7 +315,10 @@ void timing_test(func_entry_t* entry, int len)
 
   printf("└───────────────────┴"
 	 "──────────────────────────────┴"
-	 "────────────────┘\n");
+	 "────────────────┴"
+	 "─────────┴"
+	 "─────────┴"
+	 "─────────┘\n");
 }
 
 //4) │    8089.56   12876.60   12949.44
@@ -270,7 +327,8 @@ void timing_test(func_entry_t* entry, int len)
 //********************************************************
 
 
-#if (__GLIBC__ > 2) && (__GLIBC_MINOR__ >= 30)
+// meh: or not
+#if 0//(__GLIBC__ > 2) && (__GLIBC_MINOR__ >= 30)
 bool set_thread_affinity(pthread_t thread, int cpu_id)
 {
   cpu_set_t cpuset;
@@ -305,7 +363,6 @@ int set_thread_max_priority(pthread_t thread)
   return false;
 }
 
-
 int main(void)
 {
   prng_t prng;
@@ -315,11 +372,20 @@ int main(void)
   prng.state[2] = UINT64_C(0xab7837b9aa423d86);
   prng_u64(&prng);
 
+  time_string = time_string_ns;
+  
   memset(sink_data, 0, sizeof(sink_data));
 
+  for(uint32_t i=0; i<SINK_CHUNKS; i++) {
+    fake_data_0[i] = prng_u64(&prng);
+    fake_data_1[i] = prng_u64(&prng);
+    fake_data_2[i] = prng_u64(&prng);
+  }
+  
   // doesn't matter if it fails. just a hack
-  // using __rdtsc (complete comment..not
-  // thinking of wording)
+  // when using __rdtsc to have less fails
+  // of counter reads (if thread switches
+  // and comes back to a different CPU).
   set_thread_affinity(pthread_self(), 0);
   
   if (!set_thread_max_priority(pthread_self()))
