@@ -261,6 +261,9 @@ static inline cl_128_t cl_mul_inv_k(cl_128_t x, uint32_t e)
   return r;
 }
 
+typedef struct {uint64_t r; uint64_t x,y; } cl_gcd_64_t;
+typedef struct {uint32_t r; uint32_t x,y; } cl_gcd_32_t;
+
 #if !defined(CARRYLESS_IMPLEMENTATION)
 
 extern uint32_t cl_mul_inv_32(uint32_t v);
@@ -273,6 +276,9 @@ extern uint32_t cl_gcd_32(uint32_t u, uint32_t v);
 extern uint64_t cl_gcd_64(uint64_t u, uint64_t v);
 extern uint32_t cl_rem_32(uint32_t a, uint32_t b);
 extern uint64_t cl_rem_64(uint64_t a, uint64_t b);
+
+extern cl_gcd_32_t cl_extended_gcd_32(uint32_t a, uint32_t b);
+extern cl_gcd_64_t cl_extended_gcd_64(uint64_t a, uint64_t b);
 
 extern pair_u32_t cl_divrem_32(uint32_t a, uint32_t b);
 extern pair_u64_t cl_divrem_64(uint64_t a, uint64_t b);
@@ -312,49 +318,6 @@ uint64_t cl_mul_inv_64(uint64_t v)
 {
   return cl_lo_64(cl_mul_inv_k(cl_load_64(v),5));
 }
-
-#define CL_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
-
-uint32_t cl_gcd_32(uint32_t u, uint32_t v)
-{
-  uint32_t s;
-  
-  if (u != 0 && v != 0) {
-    s   = ctz_32(u|v);
-    u >>= ctz_32(u);
-    
-    do {
-      v >>= ctz_32(v);
-      if (u > v) { CL_SWAP(uint32_t, u,v); }
-      v = v ^ u;
-    } while (v != 0);
-    
-    return u<<s;
-  }
-  
-  return u^v;
-}
-
-uint64_t cl_gcd_64(uint64_t u, uint64_t v)
-{
-  uint64_t s;
-  
-  if (u != 0 && v != 0) {
-    s   = ctz_64(u|v);
-    u >>= ctz_64(u);
-    
-    do {
-      v >>= ctz_64(v);
-      if (u > v) { CL_SWAP(uint64_t, u,v); }
-      v = v ^ u;
-    } while (v != 0);
-    
-    return u<<s;
-  }
-  
-  return u^v;
-}
-
 
 pair_u32_t cl_divrem_32(uint32_t a, uint32_t b)
 {
@@ -421,6 +384,114 @@ uint64_t cl_rem_64(uint64_t a, uint64_t b)
   }
     
   return a;
+}
+
+
+#define CL_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
+
+uint32_t cl_gcd_32(uint32_t u, uint32_t v)
+{
+  uint32_t s;
+  
+  if (u != 0 && v != 0) {
+    s   = ctz_32(u|v);
+    u >>= ctz_32(u);
+    
+    do {
+      v >>= ctz_32(v);
+      if (u > v) { CL_SWAP(uint32_t, u,v); }
+      v = v ^ u;
+    } while (v != 0);
+    
+    return u<<s;
+  }
+  
+  return u^v;
+}
+
+uint64_t cl_gcd_64(uint64_t u, uint64_t v)
+{
+  uint64_t s;
+  
+  if (u != 0 && v != 0) {
+    s   = ctz_64(u|v);
+    u >>= ctz_64(u);
+    
+    do {
+      v >>= ctz_64(v);
+      if (u > v) { CL_SWAP(uint64_t, u,v); }
+      v = v ^ u;
+    } while (v != 0);
+    
+    return u<<s;
+  }
+  
+  return u^v;
+}
+
+#if 0
+// why did I choose binary method instead of
+// euclidean remanider? I'm tired ATM so putting this
+// here place to think about again when I'm not.
+uint64_t cl_gcd_64(uint64_t a, uint64_t b)
+{
+  uint64_t t = a|b;
+
+  if (t) {
+    if (a<b) { t=a; a=b; b=t; }
+
+    while(b) {
+      t = cl_rem_64(a,b);
+      a = b;
+      b = t;
+    }
+  }
+
+  return a;
+}
+#endif
+
+// GCD(a,b) = r = a*x + b*y
+cl_gcd_32_t cl_extended_gcd_32(uint32_t a, uint32_t b)
+{
+  uint32_t x0 = 1, y0 = 0;
+  uint32_t x1 = 0, y1 = 1;
+  uint32_t x2,     y2;
+
+  pair_u32_t p;
+  
+  while (b!=0) {
+    p  = cl_divrem_32(a,b);
+    x2 = x0 ^ cl_mul_32(x1, p.q);
+    y2 = y0 ^ cl_mul_32(y1, p.q);
+    
+    x0 = x1; y0 = y1;
+    x1 = x2; y1 = y2;
+    a  = b;  b  = p.r;
+  }
+  
+  return (cl_gcd_32_t){.r=a, .x=x0, .y=y0};
+}
+
+cl_gcd_64_t cl_extended_gcd_64(uint64_t a, uint64_t b)
+{
+  uint64_t x0 = 1, y0 = 0;
+  uint64_t x1 = 0, y1 = 1;
+  uint64_t x2,     y2;
+
+  pair_u64_t p;
+  
+  while (b!=0) {
+    p  = cl_divrem_64(a,b);
+    x2 = x0 ^ cl_mul_64(x1, p.q);
+    y2 = y0 ^ cl_mul_64(y1, p.q);
+    
+    x0 = x1; y0 = y1;
+    x1 = x2; y1 = y2;
+    a  = b;  b  = p.r;
+  }
+  
+  return (cl_gcd_64_t){.r=a, .x=x0, .y=y0};
 }
 
 
