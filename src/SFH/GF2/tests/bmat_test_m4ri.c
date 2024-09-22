@@ -111,8 +111,9 @@ static inline uint32_t mr_test_eq_iufunc_n(prng_t*        prng,
 					   mr_test_fn_v1p_t* f1,
 					   uint32_t       n)
 {
-  uint64_t m0[64];
-  uint64_t r0[64],r1[64];
+  bmat_def_64(m0);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
   
   mset->rsize();
   
@@ -145,7 +146,7 @@ static inline uint32_t mr_test_eq_dfunc_n(prng_t*        prng,
 					  mr_test_fn_d1p_t* f1,
 					  uint32_t       n)
 {
-  uint64_t m0[64];
+  bmat_def_64(m0);
   uint32_t r0,r1;
   
   mset->rsize();
@@ -179,7 +180,9 @@ static inline uint32_t mr_test_eq_ufunc_n(prng_t*        prng,
 					  mr_test_fn_v2p_t* f1,
 					  uint32_t       n)
 {
-  uint64_t m0[64],r0[64],r1[64];
+  bmat_def_64(m0);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
   
   mset->rsize();
   
@@ -213,7 +216,10 @@ static inline uint32_t mr_test_eq_bfunc_n(prng_t*        prng,
 					  mr_test_fn_v3p_t* f1,
 					  uint32_t       n)
 {
-  uint64_t a[64],b[64],r0[64],r1[64];
+  bmat_def_64(a);
+  bmat_def_64(b);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
   
   mset->rsize();
   
@@ -245,8 +251,8 @@ static inline uint32_t mr_test_eq_bfunc_n(prng_t*        prng,
 
 uint32_t prng_sanity(prng_t* prng)
 {
-  uint64_t a[64];
-  uint64_t b[64];
+  bmat_def_64(a);
+  bmat_def_64(b);
 
   uint32_t zmats = 0;
 
@@ -284,8 +290,8 @@ static const uint32_t rt_trials = 1024;
 static inline uint32_t roundtrip_n(test_fn_set_t* mset, m4ri_set_t* rset, prng_t* prng)
 {
   // big enough for all
-  uint64_t m[64];
-  uint64_t r[64];
+  bmat_def_64(m);
+  bmat_def_64(r);
 
   mset->rsize();
 
@@ -476,7 +482,7 @@ static inline uint32_t vmmul_driver(prng_t*        prng,
 				    uint64_t (*f0)(uint64_t, uint64_t*),
 				    uint32_t       n)
 {
-  uint64_t a[64];
+  bmat_def_64(a);
   
   mset->rsize();
 
