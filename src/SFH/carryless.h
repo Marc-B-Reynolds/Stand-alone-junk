@@ -148,23 +148,22 @@ static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
   return cl_hi_64(cl_mul_full_64(a,b));
 }
 
+static inline uint32_t cl_pow2_32(uint32_t x) { return bit_scatter_even_32(x); }
+static inline uint64_t cl_pow2_64(uint64_t x) { return bit_scatter_even_64(x); }
 
-static inline uint32_t cl_pow2_32(uint32_t x) { return bit_scatter_32(x, bit_set_even_1_32); }
-static inline uint64_t cl_pow2_64(uint64_t x) { return bit_scatter_64(x, bit_set_even_1_64); }
-
-// misnamed: only if 'x' is a square
-static inline uint32_t cl_sqrt_32(uint32_t x) { return bit_gather_32(x, bit_set_even_1_32); }
-static inline uint64_t cl_sqrt_64(uint64_t x) { return bit_gather_64(x, bit_set_even_1_64); }
+// misnamed: only if 'x' is a perfect square.
+static inline uint32_t cl_sqrt_32(uint32_t x) { return bit_gather_even_32(x); }
+static inline uint64_t cl_sqrt_64(uint64_t x) { return bit_gather_even_64(x); }
 
 
 static inline uint32_t cl_derivative_32(uint32_t x)
 {
-  return (x & 0xAAAAAAAA) >> 1;
+  return (x & 0xaaaaaaaa) >> 1;
 }
 
 static inline uint64_t cl_derivative_64(uint64_t x)
 {
-  return (x & UINT64_C(0xAAAAAAAAAAAAAAAA)) >> 1;
+  return (x & UINT64_C(0xaaaaaaaaaaaaaaaa)) >> 1;
 }
 
 //-----------------------------------------------------------
