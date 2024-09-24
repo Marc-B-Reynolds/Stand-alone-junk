@@ -324,7 +324,7 @@ static inline uint64_t bit_permute_step_simple_64(uint64_t x, uint64_t m, uint32
 #define  BIT_GROUP_SWAP(X,L,T) BIT_PERMUTE(X,bit_set_even_ ## L ## _ ## T,L)
 
 
-uint32_t bit_scatter_even_32(uint32_t x)
+static inline uint32_t bit_scatter_even_32(uint32_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
   return bit_scatter_32(x, bit_set_even_1_32);
@@ -338,7 +338,7 @@ uint32_t bit_scatter_even_32(uint32_t x)
 #endif  
 }
 
-uint32_t bit_gather_even_32(uint32_t x)
+static inline uint32_t bit_gather_even_32(uint32_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
   return bit_gather_32(x, bit_set_even_1_32);
@@ -352,7 +352,7 @@ uint32_t bit_gather_even_32(uint32_t x)
 #endif  
 }
 
-uint64_t bit_gather_even_64(uint64_t x)
+static inline uint64_t bit_gather_even_64(uint64_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
   return bit_gather_64(x, bit_set_even_1_64);
@@ -367,7 +367,7 @@ uint64_t bit_gather_even_64(uint64_t x)
 #endif  
 }
 
-uint64_t bit_scatter_even_64(uint64_t x)
+static inline uint64_t bit_scatter_even_64(uint64_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
   return bit_scatter_64(x, bit_set_even_1_64); 
