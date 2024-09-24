@@ -3,6 +3,8 @@
 
 #include "bmat_i.h"
 
+// TODO: The PRNG (probably) should be pulled into here instead of being a single header file include.
+
 
 /// Random matrices
 ///==============================================================
@@ -73,7 +75,8 @@ void bmat_random_stu_64(bmat_param_64(m),prng_t* prng)
 /// ## bmat_random_fr_*n*(m,prng)
 ///
 /// Generates a full rank random matrix. The current implementation is a rejection method which
-/// requires slightly less that 3.5 iterations to complete. So it's slow.
+/// requires slightly less that 3.5 iterations to complete. So it's slow (but uniform!). There
+/// are transform methods et. al that could replace or supliment.
 //
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
