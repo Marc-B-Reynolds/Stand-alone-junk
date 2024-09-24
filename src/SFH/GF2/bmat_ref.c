@@ -338,7 +338,7 @@ void bmat_mul_64_ref(bmat_param_64(C), bmat_param_64(MA), bmat_param_64(MB))
 
 
 // naive thing using reference mul and transpose
-void bmat_mult_8_ref (bmat_param_8 (c), bmat_param_8 (a), bmat_param_8 (b)) { bmat_def_8 (t); bmat_transpose_8_ref (t,b); bmat_mul_8_ref (c,a,t); }
+void bmat_mult_8_ref (bmat_param_8(c),  bmat_param_8(a),  bmat_param_8(b))  { bmat_def_8(t);  bmat_transpose_8_ref(t,b);  bmat_mul_8_ref(c,a,t);  }
 void bmat_mult_16_ref(bmat_param_16(c), bmat_param_16(a), bmat_param_16(b)) { bmat_def_16(t); bmat_transpose_16_ref(t,b); bmat_mul_16_ref(c,a,t); }
 void bmat_mult_32_ref(bmat_param_32(c), bmat_param_32(a), bmat_param_32(b)) { bmat_def_32(t); bmat_transpose_32_ref(t,b); bmat_mul_32_ref(c,a,t); }
 void bmat_mult_64_ref(bmat_param_64(c), bmat_param_64(a), bmat_param_64(b)) { bmat_def_64(t); bmat_transpose_64_ref(t,b); bmat_mul_64_ref(c,a,t); }
