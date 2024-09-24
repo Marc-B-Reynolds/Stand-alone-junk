@@ -27,6 +27,24 @@
  */
 
 
+
+//*******************************************************************
+/// ----------
+///
+/// ## bmat_mul_*n*(c,a,b)
+///
+/// Computes $ C = AB $
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_mul_8 (bmat_rparam_8 (c), bmat_param_8(a),  bmat_param_8 (b))
+/// void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+/// void bmat_mul_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+/// void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
 #if defined(SWAR_AVX2_H)
 
 const u256_data_t bmat_cm_8_256  = {.u64 = BMAT_REP_SHIFT_4(UINT64_C(0x0101010101010101),1) };
@@ -180,7 +198,7 @@ void bmat_mul_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(B))
 
 #define BMAT_HAS_MUL_32
 
-void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
+void bmat_mul_32_(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
 {
   u256_t cm = broadcast_32x8(0x80000000);
   u256_t z  = zero_256();
@@ -216,6 +234,119 @@ void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
   
   bmat_store_256xn(C,c,4);
 }
+
+
+// meh.
+static inline void bmat_mul_32_step_avx2(uint32_t i, u256_t r, u256_t* c, u256_t* a, u256_t cm)
+{
+  u256_t t = loadu_256(a+i);
+  u256_t z = zero_256();
+
+  t = and_256(r, cmpeq_32x8(and_256(t,cm),z));
+  
+  storeu_256(c+i, t);
+}    
+
+void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
+{
+#if 0
+  u256_t cm = broadcast_32x8(0x80000000);
+  u256_t z  = zero_256();
+  u256_t r;
+  u256_t c[4];
+
+
+#if 1
+  u256_t a[4];
+  bmat_load_256xn(a,A,4);
+#else
+  u256_t* a = (u256_t*)A;
+#endif  
+  
+  uint32_t b[32];
+  bmat_to_array_32(b,B);
+
+  // broadcast the last row
+  r = broadcast_32x8(b[31]);
+
+  for(uint32_t j=0; j<4; j++) {
+    // complement 'a' so we're checking for zeroes
+    // instead of ones.
+    a[j] = xor_256(a[j], bit_allset_256());
+    c[j] = and_256(r, cmpeq_32x8(and_256(a[j],cm),z));
+    a[j] = add_32x8(a[j],a[j]);
+  }
+  
+  // broadcast the remaining rows
+  for(int i=30; i>=0; i--) {
+    r = broadcast_32x8(b[i]);
+    
+    for(uint32_t j=0; j<4; j++) {
+      c[j] = xor_256(and_256(r, cmpeq_32x8(and_256(a[j],cm),z)),c[j]);
+      a[j] = add_32x8(a[j],a[j]);
+    }
+  }
+
+  bmat_store_256xn(C,c,4);
+
+#else
+  u256_t cm = broadcast_32x8(0x80000000);
+  u256_t z  = zero_256();
+  u256_t r;
+  u256_t c0,c1,c2,c3;
+  u256_t a0,a1,a2,a3;
+
+  uint32_t b[32];
+  bmat_to_array_32(b,B);
+
+  a0 = bmat_load_256(A   );
+  a1 = bmat_load_256(A+ 4);
+  a2 = bmat_load_256(A+ 8);
+  a3 = bmat_load_256(A+12);
+  
+  // broadcast the last row
+  r = broadcast_32x8(b[31]);
+
+  // complement 'a' so we're checking for zeroes
+  // instead of ones.
+  a0 = xor_256(a0, bit_allset_256());
+  c0 = and_256(r, cmpeq_32x8(and_256(a0,cm),z));
+  a0 = add_32x8(a0,a0);
+
+  a1 = xor_256(a1, bit_allset_256());
+  c1 = and_256(r, cmpeq_32x8(and_256(a1,cm),z));
+  a1 = add_32x8(a1,a1);
+
+  a2 = xor_256(a2, bit_allset_256());
+  c2 = and_256(r, cmpeq_32x8(and_256(a2,cm),z));
+  a2 = add_32x8(a2,a2);
+
+  a3 = xor_256(a3, bit_allset_256());
+  c3 = and_256(r, cmpeq_32x8(and_256(a3,cm),z));
+  a3 = add_32x8(a3,a3);
+  
+  // broadcast the remaining rows
+  for(int i=30; i>=0; i--) {
+    r  = broadcast_32x8(b[i]);
+
+    c0 = xor_256(and_256(r, cmpeq_32x8(and_256(a0,cm),z)),c0);
+    a0 = add_32x8(a0,a0);
+
+    c1 = xor_256(and_256(r, cmpeq_32x8(and_256(a1,cm),z)),c1);
+    a1 = add_32x8(a1,a1);
+
+    c2 = xor_256(and_256(r, cmpeq_32x8(and_256(a2,cm),z)),c2);
+    a2 = add_32x8(a2,a2);
+
+    c3 = xor_256(and_256(r, cmpeq_32x8(and_256(a3,cm),z)),c3);
+    a3 = add_32x8(a3,a3);
+  }
+
+  bmat_storex_256x4(C,c0,c1,c2,c3);
+#endif  
+}
+
+
 #else
 // not motived. with only two rows/register doesn't seem
 // worth the effort ATM.
@@ -226,9 +357,11 @@ void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
 
 #if defined(SWAR_AVX2_H)
 
-#define BMAT_HAS_MUL_64
+// compiling like garbage? super slow. using matrix/vector fallback
+// is faster. need to examine. strat seems reasonable. humm...
+// bad timing? check for line tearing. clean up defs for this.
 
-void bmat_mul_64(bmat_rparam_64(C), bmat_param_64(A), bmat_param_64(B))
+void bmat_mul_64_avx2(bmat_rparam_64(C), bmat_param_64(A), bmat_param_64(B))
 {
   u256_t cm = broadcast_64x4(0x8000000000000000);
   u256_t z  = zero_256();
@@ -703,6 +836,22 @@ void bmat_mul_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
 
 
 //*******************************************************************
+/// ----------
+///
+/// ## bmat_mult_*n*(c,a,b)
+///
+/// Computes $ C = AB^T $
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_mult_8 (bmat_rparam_8 (c), bmat_param_8(a),  bmat_param_8 (b))
+/// void bmat_mult_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+/// void bmat_mult_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+/// void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
 // default expansions: AB^T
 //
 // assuming porting then building a specialized vector/matrix products
@@ -785,6 +934,21 @@ void bmat_mult_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
 
 
 //*******************************************************************
+/// ----------
+///
+/// ## bmat_sq_*n*(c,a)
+///
+/// Computes $ C = A^2 $
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_sq_8 (bmat_rparam_8 (c), bmat_param_8 (a))
+/// void bmat_sq_16(bmat_rparam_16(c), bmat_param_16(a))
+/// void bmat_sq_32(bmat_rparam_32(c), bmat_param_32(a))
+/// void bmat_sq_64(bmat_rparam_64(c), bmat_param_64(a))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
 // default expansions: square
 
 #ifndef BMAT_HAS_SQ_8
@@ -828,4 +992,96 @@ void bmat_mult_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
 {
   c[0] = bmat_mult_8_i(a[0],b[0]);
 }
+
+
+
+//*******************************************************************
+/// ----------
+///
+/// ## bmat_madd_*n*(c,a,b)
+///
+/// Computes $ D = AB+C $
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_madd_8 (bmat_rparam_8 (d), bmat_param_8(a),  bmat_param_8 (b), bmat_param_8 (c))
+/// void bmat_madd_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b), bmat_param_16(c))
+/// void bmat_madd_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b), bmat_param_32(c))
+/// void bmat_madd_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b), bmat_param_64(c))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// D = AB+C
+
+void bmat_madd_8(bmat_rparam_8(d), bmat_param_8(a), bmat_param_8(b), bmat_param_8(c))
+{
+  bmat_mul_8(d,a,b);
+  bmat_sum_8(d,c);
+}
+
+void bmat_madd_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b), bmat_param_16(c))
+{
+  bmat_mul_16(d,a,b);
+  bmat_sum_16(d,c);
+}
+
+void bmat_madd_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b), bmat_param_32(c))
+{
+  bmat_mul_32(d,a,b);
+  bmat_sum_32(d,c);
+}
+
+void bmat_madd_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b), bmat_param_64(c))
+{
+  bmat_mul_64(d,a,b);
+  bmat_sum_64(d,c);
+}
+
+
+//*******************************************************************
+/// ----------
+///
+/// ## bmat_bracket_*n*(c,a,b)
+///
+/// Computes $ C = \left[ A,B \right] = AB+BA $
+///
+/// Calling this the [commutator](https://en.wikipedia.org/wiki/Commutator#Ring_theory) seems a bit akward since the *anticommutator* is the same operation. It makes sense since $M=-M$ and $A+B=A-B$ but still.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_bracket_8 (bmat_rparam_8 (c), bmat_param_8(a),  bmat_param_8 (b))
+/// void bmat_bracket_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+/// void bmat_bracket_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+/// void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+void bmat_bracket_8(bmat_rparam_8(c), bmat_param_8(a), bmat_param_8(b))
+{
+  bmat_def_8(t);
+  bmat_mul_8(t,a,b);
+  bmat_madd_8(c,b,a,t);
+}
+
+void bmat_bracket_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+{
+  bmat_def_16(t);
+  bmat_mul_16(t,a,b);
+  bmat_madd_16(c,b,a,t);
+}
+
+void bmat_bracket_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+{
+  bmat_def_32(t);
+  bmat_mul_32(t,a,b);
+  bmat_madd_32(c,b,a,t);
+}
+
+void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+{
+  bmat_def_64(t);
+  bmat_mul_64(t,a,b);
+  bmat_madd_64(c,b,a,t);
+}
+
 
