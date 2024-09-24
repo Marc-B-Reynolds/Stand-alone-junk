@@ -34,18 +34,15 @@ static inline uint64_t bmat_transpose_8x8_i(uint64_t x)
   return x;
 }
 
-
-void bmat_transpose_8(bmat_rparam_8(d), bmat_param_8(m))
+void bmat_transpose_8_gen(bmat_rparam_8(d), bmat_param_8(m))
 {
   d[0] = bmat_transpose_8x8_i(m[0]);
 }
 
-
 //*******************************************************************
 // 16-bit
 
-
-#if defined(BITOPS_INTEL)
+#if defined(SWAR_AVX2_H)
 
 // perform 8x8 bit matrix transpose in each 64-bit lane (one matrix per lane)
 static inline u256_t bmat_transpose_8x8_x4(u256_t x)
@@ -85,7 +82,7 @@ static inline u256_t bmat_transpose_16_i(u256_t m)
   return m;
 }
 
-void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
+void bmat_transpose_16_avx2(bmat_rparam_16(d), bmat_param_16(m))
 {
   u256_t x= loadu_256((void*)m);
 
@@ -94,9 +91,9 @@ void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
   storeu_256((void*)d,x);
 }
 
-#else
+#endif
 
-void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
+void bmat_transpose_16_gen(bmat_rparam_16(d), bmat_param_16(m))
 {
   // divide and conquer: hierarchically perform swaps on blocks. For
   // 16-bit we have 4 division steps (16 = 2^4). Need to perform 4
@@ -150,8 +147,6 @@ void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
   d[3] = r3;
 }
 
-#endif
-
 
 
 //*******************************************************************
@@ -163,7 +158,7 @@ void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m))
 // perform the block transpose and restores. less bad than
 // I would have expected though. half-heartedly goofying
 // with some alternate ideas in tests/dev_transpose_32.c
-void bmat_transpose_32(bmat_rparam_32(d), bmat_param_32(s))
+void bmat_transpose_32_avx2(bmat_rparam_32(d), bmat_param_32(s))
 {
   u256_t r[4];
   u256_t t[4];
@@ -219,9 +214,9 @@ void bmat_block_transpose_32(bmat_rparam_32(d), bmat_param_32(s))
   bmat_store_256x4(d,r);
 }
 
-#else
+#endif
 
-void bmat_transpose_32(bmat_rparam_32(D), bmat_param_32(S))
+void bmat_transpose_32_gen(bmat_rparam_32(D), bmat_param_32(S))
 {
   uint64_t  M = UINT64_C(0x0000ffff0000ffff);
   
@@ -272,7 +267,7 @@ void bmat_transpose_32(bmat_rparam_32(D), bmat_param_32(S))
   }
 }
 
-
+#if 0
 void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
 {
   // this is disallowing d=s. rework.
@@ -293,7 +288,7 @@ void bmat_block_transpose_32(bmat_param_32(d), bmat_param_32(s))
 // 64-bit
 
 // 49.00
-void bmat_transpose_64(bmat_param_64(D), bmat_param_64(S))
+void bmat_transpose_64_gen(bmat_rparam_64(D), bmat_param_64(S))
 {
   uint64_t m = 0xffffffff;
   uint32_t d;
@@ -329,3 +324,29 @@ void bmat_transpose_64(bmat_param_64(D), bmat_param_64(S))
   }
   while (d != 0);
 }
+
+//*******************************************************************
+// default expansions (all temp hacks)
+
+BMAT_FLATTEN
+void bmat_transpose_8 (bmat_rparam_8 (d), bmat_param_8 (m)) { bmat_transpose_8_gen (d,m); }
+
+BMAT_FLATTEN
+void bmat_transpose_64(bmat_rparam_64(d), bmat_param_64(m)) { bmat_transpose_64_gen(d,m); }
+
+#if defined(SWAR_AVX2_H)
+
+BMAT_FLATTEN
+void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m)) { bmat_transpose_16_avx2(d,m); }
+
+BMAT_FLATTEN
+void bmat_transpose_32(bmat_rparam_32(d), bmat_param_32(m)) { bmat_transpose_32_avx2(d,m); }
+
+#else
+
+BMAT_FLATTEN
+void bmat_transpose_16(bmat_rparam_16(d), bmat_param_16(m)) { bmat_transpose_16_gen(d,m); }
+
+BMAT_FLATTEN
+void bmat_transpose_32(bmat_rparam_32(d), bmat_param_32(m)) { bmat_transpose_32_gen(d,m); }
+#endif
