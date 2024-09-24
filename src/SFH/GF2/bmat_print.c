@@ -18,7 +18,7 @@ void bmprt_row_end(uint32_t i, uint32_t w, char* marker)
   printf("%s\n", marker);
 }
 
-// hi-bit first (for matrix rows) - rename
+// hi-bit first - rename
 void bvec_elems(uint64_t v, uint32_t b)
 {
   uint64_t m = UINT64_C(1) << (b-1);
