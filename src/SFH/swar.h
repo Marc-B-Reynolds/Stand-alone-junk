@@ -20,7 +20,7 @@ static inline uint64_t broadcast_32x2(uint64_t x) { uint64_t t = (x & 0xffffffff
 // returns the high bit of the field (byte,etc) set if the field is non-zero/zero
 // SEE: Wojciech Muła (http://0x80.pl/articles/mask-zero-nonzero-bytes.html)
 static inline uint64_t nonzero_test_64(uint64_t x, uint64_t k) { return ((x|((x & k) + k)) & (~k)); }
-static inline uint64_t zero_test_64   (uint64_t x, uint64_t k) { return ((x|((x & k) + k)) & (~k)) ^ k; }
+static inline uint64_t zero_test_64   (uint64_t x, uint64_t k) { return ((x|((x & k) + k)) & (~k)) ^ (~k); }
 
 static inline uint64_t nonzero_test_8x8 (uint64_t x) { return nonzero_test_64(x, broadcast_8x8 (0x0000007f)); }
 static inline uint64_t nonzero_test_16x4(uint64_t x) { return nonzero_test_64(x, broadcast_16x4(0x00007fff)); }
