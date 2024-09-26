@@ -9,12 +9,9 @@
 ///==============================================================
 ///
 
-
-// row reduction to upper triangular. not REF
-// because zero rows are not all at the end.
-// * if row 'i' is zero and there are no forward
-//   rows with column 'i' set it never gets
-//   moved.
+// performs elementary row operations to
+// get an upper triangular matrix but isn't
+// quite row echelon form (REF).
 void bmat_reduce_ut_8(bmat_param_8(M))
 {
   uint64_t cmask = 0x0101010101010101;
@@ -27,11 +24,15 @@ void bmat_reduce_ut_8(bmat_param_8(M))
     //         with column 'i' set (for row swap)
     
     uint64_t select = m & cmask;
-    uint32_t shift  = ctz_64(select) & 0x3f;
+    uint32_t shift  = ctz_64(select);
 
-    // GCC will introduce a branch to avoid the
-    // delta-swap without this hint. 
-    shift = hint_no_const_fold_32((shift) ? shift - 9*i : 0);
+    // perform a row swap:
+    // 1) if there's a row with column 'i' set then swap
+    //    with the first (if this row then NOP is performed)
+    // 2) if none then swap this row with next
+    // * hint : GCC will introduce a branch to avoid
+    //          the delta-swap without it.
+    shift = hint_no_const_fold_32((shift != 64) ? shift - 9*i : 8);
 
     // perform the row swap (NOP if none)
     m = bit_permute_step_64(m, rmask, shift);
