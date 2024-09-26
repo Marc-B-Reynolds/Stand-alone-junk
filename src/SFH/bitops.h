@@ -246,7 +246,7 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 #endif
 
 // typeof is nice. VC though
-#define BIT_SWAP2_T(T,X,Y)  { T t = (X); X=(T)(Y); Y=(T)(X); }
+#define BIT_SWAP2_T(T,X,Y)  { T t = (X); X=(T)(Y); Y=(T)(t); }
 #define BIT_SWAP2_8(X,Y)    BIT_SWAP2_T(uint8_t, X,Y)
 #define BIT_SWAP2_16(X,Y)   BIT_SWAP2_T(uint16_t,X,Y)
 #define BIT_SWAP2_32(X,Y)   BIT_SWAP2_T(uint32_t,X,Y)
