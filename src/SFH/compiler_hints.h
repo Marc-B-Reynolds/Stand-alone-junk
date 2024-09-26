@@ -33,7 +33,7 @@
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
-#if !defined(__clang__)
+#if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
 #endif
 static inline uint32_t hint_no_const_fold_32(uint32_t v)
