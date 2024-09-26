@@ -385,7 +385,6 @@ uint64_t m4ri_wrap_vm_64(uint64_t V, bmat_param_64(M))
   return R;
 }
 
-
 uint32_t m4ri_wrap_mv_8(bmat_param_8(M), uint32_t V)
 {
   mzd_t* m = m4ri_make_8(M);
@@ -432,6 +431,47 @@ uint64_t m4ri_wrap_mv_64(bmat_param_64(M), uint64_t V)
   uint64_t R = ((uint64_t)m4ri_get_rv_64(r));
   mzd_free(m); mzd_free(v); mzd_free(r); mzd_free(t);
   return R;
+}
+
+
+void m4ri_wrap_rref_8(bmat_param_8(m))
+{
+  mzd_t* mm = m4ri_make_8(m);
+
+  mzd_echelonize(mm,1);
+  bmat_from_m4ri_8(m,mm);
+
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_rref_16(bmat_param_16(m))
+{
+  mzd_t* mm = m4ri_make_16(m);
+
+  mzd_echelonize(mm,1);
+  bmat_from_m4ri_16(m,mm);
+
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_rref_32(bmat_param_32(m))
+{
+  mzd_t* mm = m4ri_make_32(m);
+
+  mzd_echelonize(mm,1);
+  bmat_from_m4ri_32(m,mm);
+
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_rref_64(bmat_param_64(m))
+{
+  mzd_t* mm = m4ri_make_64(m);
+
+  mzd_echelonize(mm,1);
+  bmat_from_m4ri_64(m,mm);
+
+  m4ri_free(mm);
 }
 
 
