@@ -14,6 +14,7 @@
 #include "carryless.h"
 #include "bitops_small.h"
 #include "swar.h"
+#include "compiler_hints.h"
 #endif
 
 #if defined(BITOPS_INTEL) && !defined(SWAR_AVX2_H)
