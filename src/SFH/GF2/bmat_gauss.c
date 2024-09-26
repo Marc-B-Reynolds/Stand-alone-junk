@@ -9,6 +9,50 @@
 ///==============================================================
 ///
 
+
+// row reduction to upper triangular. not REF
+// because zero rows are not all at the end.
+// * if row 'i' is zero and there are no forward
+//   rows with column 'i' set it never gets
+//   moved.
+void bmat_reduce_ut_8(bmat_param_8(M))
+{
+  uint64_t cmask = 0x0101010101010101;
+  uint64_t rmask = 0xff;
+  uint64_t m     = M[0];
+
+  for(uint32_t i=0; i<7; i++) {
+    // select: sets LSB of bytes of rows with column 'i' set
+    // shift:  bit distance from row 'i' to the first row
+    //         with column 'i' set (for row swap)
+    
+    uint64_t select = m & cmask;
+    uint32_t shift  = ctz_64(select) & 0x3f;
+
+    // GCC will introduce a branch to avoid the
+    // delta-swap without this hint. 
+    shift = hint_no_const_fold_32((shift) ? shift - 9*i : 0);
+
+    // perform the row swap (NOP if none)
+    m = bit_permute_step_64(m, rmask, shift);
+
+    // * clear the low set bit of select and shift
+    //   into for position for the row broadcast.
+    // * update the column mask for next
+    select = (select ^ (-select & select)) >> 9*i;
+    cmask  = cmask << 9;
+
+    uint64_t broadcast = select * (m & rmask);
+    
+    m ^= broadcast;
+
+    rmask <<= 8;
+  }
+
+  M[0] = m;
+}
+
+
 /// ## bmat_rank_*n*(m)
 ///
 /// Returns the [rank](https://en.wikipedia.org/wiki/Rank_(linear_algebra)) of `m`
@@ -82,7 +126,10 @@ bool bmat_is_full_rank_64(bmat_param_64(m)) { return bmat_rank_64(m) == 64; }
 /// 
 /// [kernel](https://en.wikipedia.org/wiki/Kernel_(linear_algebra)) (aka *nullspace*)
 ///
-///  $$ Ax=0 $$ 
+///  $$ Av=0 $$
+///
+///  A\left(x+v\right) = Ax + Av = Ax = b
+///
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
 /// uint32_t bmat_kernel_8 (bmat_rparam_8 (m), bmat_rparam_8 (v))
@@ -101,7 +148,7 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
   uint64_t bi   = 1;
   uint32_t nullity = 0;
 
-  // bits
+  // defect row index 
   uint8_t  mark[64];
 
   // walk the rows
@@ -125,7 +172,7 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
 	c ^= t;
 	mark[id] = (uint8_t)i;
 
-	// exit and move to next row (outter loop)
+	// exit and move to next row (outer loop)
 	break;
       }
       
