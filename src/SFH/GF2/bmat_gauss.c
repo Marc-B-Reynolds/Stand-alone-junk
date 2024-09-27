@@ -29,10 +29,9 @@ void bmat_reduce_ut_8(bmat_param_8(M))
     // perform a row swap:
     // 1) if there's a row with column 'i' set then swap
     //    with the first (if this row then NOP is performed)
-    // 2) if none then swap this row with next
     // * hint : GCC will introduce a branch to avoid
     //          the delta-swap without it.
-    shift = hint_no_const_fold_32((shift != 64) ? shift - 9*i : 8);
+    shift = hint_no_const_fold_32((shift != 64) ? shift - 9*i : 0);
 
     // perform the row swap (NOP if none)
     m = bit_permute_step_64(m, rmask, shift);
@@ -190,13 +189,10 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
       do {
 	uint64_t t  = -cc & cc;
 	uint32_t id = ctz_64(t);
+	uint64_t x  = (M[id] & bi) ? 1 : 0;
 	
 	cc ^= t;
-
-	// flip to branch free?
-	if ((M[id] & bi)==0) continue;
-	
-	v ^= UINT64_C(1) << mark[id];
+	v  ^= x << mark[id];
       } while(cc);
       
       V[nullity++] = v;
@@ -269,7 +265,6 @@ bmat_kernel_64(bmat_rparam_64(m), bmat_array_64(k))
 }
 
 
-/// doc disabled
 /// ## bmat_cokernel_*n*(m,v)
 /// 
 /// [cokernel](https://en.wikipedia.org/wiki/Cokernel) (aka *left nullspace*)
@@ -293,7 +288,6 @@ uint32_t bmat_cokernel_64(bmat_param_64(m), bmat_param_64(v)) { bmat_def_64(t); 
 #endif
 
 
-/// doc disabled
 /// ## bmat_fixed_points_*n*(m,v)
 ///
 /// $$ Ax=x $$ 
