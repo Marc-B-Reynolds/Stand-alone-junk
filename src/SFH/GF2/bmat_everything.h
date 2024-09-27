@@ -14,6 +14,7 @@
 #include "bmat_mul.c"
 #include "bmat_transpose.c"
 #include "bmat_random.c"
+#include "bmat_func.c"
 
 #include "bmat_ref.c"
 #include "bmat_m4ri.c"
