@@ -38,13 +38,13 @@
 #endif
 static inline uint32_t hint_no_const_fold_32(uint32_t v)
 {
-  asm volatile ("" : "+x" (v));
+  asm ("" : "+r" (v));
   return v;  
 }
 
 static inline uint64_t hint_no_const_fold_64(uint64_t v)
 {
-  asm volatile ("" : "+x" (v));
+  asm ("" : "+r" (v));
   return v;  
 }
 #pragma GCC diagnostic pop
