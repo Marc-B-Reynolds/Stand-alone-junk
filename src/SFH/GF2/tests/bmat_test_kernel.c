@@ -65,6 +65,65 @@ bool test_kernel_64(bmat_param_64(m), bmat_array_64(k), uint32_t n)
 }
 
 //-----------------------------------------------------------------
+// runs through the 'n' vectors 'k' and checks that kM = 0
+
+bool test_cokernel_8(bmat_param_8(m), bmat_array_8(k), uint32_t n)
+{
+  for (uint32_t i=0; i<n; i++) {
+    uint8_t v = k[i];
+    uint8_t r = bmat_vmul_8(v,m);
+
+    if (r == 0) continue;
+    printf("  got: nullity = %u, v(%u) = %02x : vM = %02x\n", n,i,v,r);
+    return false;
+  }
+  
+  return true;
+}
+
+bool test_cokernel_16(bmat_param_16(m), bmat_array_16(k), uint32_t n)
+{
+  for (uint32_t i=0; i<n; i++) {
+    uint16_t v = k[i];
+    uint16_t r = bmat_vmul_16(v,m);
+
+    if (r == 0) continue;
+    printf("  got: nullity = %u, v(%u) = %04x : vM = %04x\n", n,i,v,r);
+    return false;
+  }
+  
+  return true;
+}
+
+bool test_cokernel_32(bmat_param_32(m), bmat_array_32(k), uint32_t n)
+{
+  for (uint32_t i=0; i<n; i++) {
+    uint32_t v = k[i];
+    uint32_t r = bmat_vmul_32(v,m);
+
+    if (r == 0) continue;
+    printf("  got: nullity = %u, v(%u) = %08x : vM = %08x\n", n,i,v,r);
+    return false;
+  }
+  
+  return true;
+}
+
+bool test_cokernel_64(bmat_param_64(m), bmat_array_64(k), uint32_t n)
+{
+  for (uint32_t i=0; i<n; i++) {
+    uint64_t v = k[i];
+    uint64_t r = bmat_vmul_64(v,m);
+
+    if (r == 0) continue;
+    printf(" got: nullity = %u, v(%u) = %016lx : vM = %016lx\n", n,i,v,r);
+    return false;
+  }
+  
+  return true;
+}
+
+//-----------------------------------------------------------------
 // runs through the 'n' vectors 'k' and checks that Mk = k
 
 bool test_fixed_points_8(bmat_param_8(m), bmat_array_8(k), uint32_t n)
@@ -200,7 +259,65 @@ int main(void)
   }
 
   //--------------------------------------------
-  
+
+  {
+    printf(" 8-bit: cokernel\n");
+    uint8_t  k[8];
+    uint32_t error = 0;
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_8(m, &prng);
+      uint32_t n = bmat_cokernel_8(m,k);
+      if (test_cokernel_8(m,k,n)) continue;
+      if (error++ < 10)           continue;
+      break;
+    }
+  }
+
+  {  
+    printf("16-bit: cokernel\n");
+    uint16_t k[16];
+    uint32_t error = 0;
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_16(m, &prng);
+      uint32_t n = bmat_cokernel_16(m,k);
+      if (test_cokernel_16(m,k,n)) continue;
+      if (error++ < 10)            continue;
+      break;
+    }
+  }
+
+  {
+    printf("32-bit: cokernel\n");
+    uint32_t k[32];
+    uint32_t error = 0;
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_32(m, &prng);
+      uint32_t n = bmat_cokernel_32(m,k);
+      if (test_cokernel_32(m,k,n)) continue;
+      if (error++ < 10)            continue;
+      break;
+    }
+  }
+
+  {
+    printf("64-bit: cokernel\n");
+    uint64_t k[64];
+    uint32_t error = 0;
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_64(m, &prng);
+      uint32_t n = bmat_cokernel_64(m,k);
+      if (test_cokernel_64(m,k,n)) continue;
+      if (error++ < 10)            continue;
+      break;
+    }
+  }
+
+  //--------------------------------------------
+
   {
     printf(" 8-bit: fixed points\n");
     uint8_t  k[8];
