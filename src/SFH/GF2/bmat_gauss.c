@@ -9,6 +9,7 @@
 ///==============================================================
 ///
 
+// ....
 // performs elementary row operations to
 // get an upper triangular matrix but isn't
 // quite row echelon form (REF).
@@ -50,6 +51,201 @@ void bmat_reduce_ut_8(bmat_param_8(M))
   }
 
   M[0] = m;
+}
+
+
+/// ## bmat_echelon_*n*(m)
+/// 
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// uint32_t bmat_echelon_8 (bmat_param_8 (m))
+/// uint32_t bmat_echelon_16(bmat_param_16(m))
+/// uint32_t bmat_echelon_32(bmat_param_32(m))
+/// uint32_t bmat_echelon_64(bmat_param_64(m))
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
+// textbook like. could be sped up quit a bit. plus SIMD
+// version obviously.
+uint32_t bmat_echelon_n(uint64_t* A, uint32_t n, uint32_t m)
+{
+  uint32_t e    = m <= n ? m : n;
+  uint32_t rank = 0;
+  uint32_t j    = 0;
+  uint64_t bj   = 1;
+
+  while ((j < m) && (rank < e)) {
+    
+    // pivot search
+    for (uint32_t i=rank; i<n; i++) {
+
+      // found and perform elimination
+      if (A[i] & bj) {
+        uint64_t row = A[i];                // row of pivot
+        BIT_SWAP2_64(A[i],A[rank]);         // swap
+        rank += 1;
+
+        // forward eliminiation
+        for (uint32_t l=rank; l<n; l++) {
+          A[l] ^= (A[l] & bj) ? row : 0;
+        }
+
+        // pivot was found: exit search loop
+        break;
+      }
+    }
+
+    // move to next column
+    j   += 1;
+    bj <<= 1;
+  }
+  return rank;
+}
+
+uint32_t bmat_echelon_64(bmat_param_64(m))
+{
+  return bmat_echelon_n(m,64,64);
+}
+
+// versions that wrapper generic
+uint32_t bmat_echelon_8(bmat_param_8(m))
+{
+  uint64_t M[8];
+  
+  bmat_widen_8(M,m);
+  uint32_t r = bmat_echelon_n(M,8,8);
+  bmat_narrow_8(m,M);
+  return r;
+}
+
+uint32_t bmat_echelon_16(bmat_param_16(m))
+{
+  uint64_t M[16];
+
+  bmat_widen_16(M,m);
+  uint32_t r = bmat_echelon_n(M,16,16);
+  bmat_narrow_16(m,M);
+  return r;
+}
+
+uint32_t bmat_echelon_32(bmat_param_32(m))
+{
+  uint64_t M[32];
+
+  bmat_widen_32(M,m);
+  uint32_t r = bmat_echelon_n(M,32,32);
+  bmat_narrow_32(m,M);
+  return r;
+}
+
+
+/// ## bmat_rref_*n*(m)
+/// In place computes the *reduced row echelon form* of `m`.
+/// Returns the *rank* of `m`
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// uint32_t bmat_rref_8 (bmat_param_8 (m))
+/// uint32_t bmat_rref_16(bmat_param_16(m))
+/// uint32_t bmat_rref_32(bmat_param_32(m))
+/// uint32_t bmat_rref_64(bmat_param_64(m))
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
+#if 0
+void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t t, uint32_t n)
+{
+  for (uint32_t j=0; j<n; j++) {
+    m[j] ^= (m[j] & t) ? row : 0;
+  }
+}
+#else
+// temp hack. caller should be SIMDified as well. also breaks strict aliasing
+void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t test, uint32_t n)
+{
+  u256_t*  M = (u256_t*)m;
+  u256_t   v = broadcast_64x4(row);
+  u256_t   s = broadcast_64x4(test);
+  uint32_t e = n >> 2;
+
+  for(uint32_t i=0; i<e; i++) {
+    u256_t t = cmpeq_64x4(and_256(M[i],s),s);
+    M[i] = xor_256(M[i], and_256(t,v));
+  }
+}
+#endif
+
+// get this cleaned-up before making specialized smaller
+// & SIMD versions.
+uint32_t bmat_rref_n(uint64_t* A, uint32_t n, uint32_t m)
+{
+  uint32_t e    = m <= n ? m : n;
+  uint32_t rank = 0;
+  uint32_t j    = 0;
+  uint64_t bj   = 1;
+
+  while ((j < m) && (rank < e)) {
+    
+    // pivot search
+    for (uint32_t i=rank; i<n; i++) {
+
+      // found and perform elimination
+      if (A[i] & bj) {
+        uint64_t row = A[i];                // row of pivot
+	A[i] = A[rank];                     // part 1 of logical swap
+        bmat_match_row_add_64(A,row,bj,n);  // eliminate on whole matrix
+        A[rank] = row;                      // complete the swap
+        rank += 1;
+        break;                              // exit search loop
+      }
+    }
+
+    // move to next column
+    j   += 1;
+    bj <<= 1;
+  }
+
+  return rank;
+}
+
+
+uint32_t bmat_rref_64(bmat_rparam_64(m))
+{
+  return bmat_rref_n(m,64,64);
+}
+
+// versions that wrapper generic
+uint32_t bmat_rref_8(bmat_param_8(m))
+{
+  uint64_t M[8];
+  
+  bmat_widen_8(M,m);
+  uint32_t r = bmat_rref_n(M,8,8);
+  bmat_narrow_8(m,M);
+  return r;
+}
+
+uint32_t bmat_rref_16(bmat_rparam_16(m))
+{
+  uint64_t M[16];
+
+  bmat_widen_16(M,m);
+  uint32_t r = bmat_rref_n(M,16,16);
+  bmat_narrow_16(m,M);
+  return r;
+}
+
+uint32_t bmat_rref_32(bmat_rparam_32(m))
+{
+  uint64_t M[32];
+
+  bmat_widen_32(M,m);
+  uint32_t r = bmat_rref_n(M,32,32);
+  bmat_narrow_32(m,M);
+  return r;
 }
 
 
@@ -164,16 +360,16 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
       cc ^= t;
       
       if (row & bi) {
-	for (uint32_t j=0; j<n; j++) {
-	  if (j != id)
-	    if (M[j] & bi) M[j] ^= row;
-	}
-	
-	c ^= t;
-	mark[id] = (uint8_t)i;
+        for (uint32_t j=0; j<n; j++) {
+          if (j != id)
+            if (M[j] & bi) M[j] ^= row;
+        }
+        
+        c ^= t;
+        mark[id] = (uint8_t)i;
 
-	// exit and move to next row (outer loop)
-	break;
+        // exit and move to next row (outer loop)
+        break;
       }
       
       // move to the next candidate if any remain
@@ -187,12 +383,12 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
       cc = c ^ mask;
 
       do {
-	uint64_t t  = -cc & cc;
-	uint32_t id = ctz_64(t);
-	uint64_t x  = (M[id] & bi) ? 1 : 0;
-	
-	cc ^= t;
-	v  ^= x << mark[id];
+        uint64_t t  = -cc & cc;
+        uint32_t id = ctz_64(t);
+        uint64_t x  = (M[id] & bi) ? 1 : 0;
+        
+        cc ^= t;
+        v  ^= x << mark[id];
       } while(cc);
       
       V[nullity++] = v;
