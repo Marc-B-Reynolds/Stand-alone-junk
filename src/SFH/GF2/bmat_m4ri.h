@@ -57,7 +57,12 @@ extern uint32_t m4ri_wrap_mv_16(bmat_param_16(M), uint32_t V);
 extern uint32_t m4ri_wrap_mv_32(bmat_param_32(M), uint32_t V);
 extern uint64_t m4ri_wrap_mv_64(bmat_param_64(M), uint64_t V);
 
-extern void m4ri_wrap_rref_8 (bmat_param_8 (m));
-extern void m4ri_wrap_rref_16(bmat_param_16(m));
-extern void m4ri_wrap_rref_32(bmat_param_32(m));
-extern void m4ri_wrap_rref_64(bmat_param_64(m));
+extern uint32_t m4ri_wrap_rref_8 (bmat_param_8 (m));
+extern uint32_t m4ri_wrap_rref_16(bmat_param_16(m));
+extern uint32_t m4ri_wrap_rref_32(bmat_param_32(m));
+extern uint32_t m4ri_wrap_rref_64(bmat_param_64(m));
+
+extern bool m4ri_wrap_inverse_8 (bmat_param_8 (m));
+extern bool m4ri_wrap_inverse_16(bmat_param_16(m));
+extern bool m4ri_wrap_inverse_32(bmat_param_32(m));
+extern bool m4ri_wrap_inverse_64(bmat_param_64(m));
