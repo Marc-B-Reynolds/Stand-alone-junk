@@ -209,9 +209,7 @@ bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
   uint64_t M[8];
   uint64_t K[8];
 
-  bmat_adup_8(a,m);
-
-  for (uint32_t i=0; i<8; i++)  M[i] = a[i];
+  bmat_widen_8(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,8);
 
@@ -226,9 +224,7 @@ bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
   uint64_t M[16];
   uint64_t K[16];
 
-  bmat_adup_16(a,m);
-
-  for (uint32_t i=0; i<16; i++)  M[i] = a[i];
+  bmat_widen_16(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,16);
 
@@ -243,9 +239,7 @@ bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
   uint64_t M[32];
   uint64_t K[32];
 
-  bmat_adup_32(a,m);
-
-  for (uint32_t i=0; i<32; i++)  M[i] = a[i];
+  bmat_widen_32(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,32);
 
