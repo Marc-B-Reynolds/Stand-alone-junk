@@ -79,7 +79,47 @@ extern const u256_data_t bmat_md_256_64;
 
 #define BMAT_REP_SHIFT_4(X,S) {X,X<<S,X<<(2*S),X<<(3*S)}
 
+static inline void bmat_widen_8(uint64_t* M, bmat_param_8(m))
+{
+  bmat_adup_8(a,m);
+  for (uint32_t i=0; i<8; i++)  M[i] = a[i];
+}
+
+static inline void bmat_widen_16(uint64_t* M, bmat_param_16(m))
+{
+  bmat_adup_16(a,m);
+  for (uint32_t i=0; i<16; i++)  M[i] = a[i];
+}
+
+static inline void bmat_widen_32(uint64_t* M, bmat_param_32(m))
+{
+  bmat_adup_32(a,m);
+  for (uint32_t i=0; i<32; i++)  M[i] = a[i];
+}
+
+static inline void bmat_narrow_8(bmat_param_8(m), uint64_t* M)
+{
+  uint8_t a[8];
+  for (uint32_t i=0; i<8; i++)  a[i] = (uint8_t)M[i];
+  array_to_bmat_8(m,a);
+}
+
+static inline void bmat_narrow_16(bmat_param_16(m), uint64_t* M)
+{
+  uint16_t a[16];
+  for (uint32_t i=0; i<16; i++)  a[i] = (uint16_t)M[i];
+  array_to_bmat_16(m,a);
+}
+
+static inline void bmat_narrow_32(bmat_param_32(m), uint64_t* M)
+{
+  uint32_t a[32];
+  for (uint32_t i=0; i<32; i++)  a[i] = (uint32_t)M[i];
+  array_to_bmat_32(m,a);
+}
+
 #if defined(SWAR_AVX2_H)
+
 
 static inline u256_t bmat_load_256(uint64_t* s)
 {
