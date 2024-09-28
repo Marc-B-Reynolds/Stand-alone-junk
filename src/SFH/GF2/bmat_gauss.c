@@ -164,6 +164,7 @@ void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t t, uint32_t n)
 }
 #else
 // temp hack. caller should be SIMDified as well. also breaks strict aliasing
+// maybe on SIMDe ARM? Needs checking (probably not since common pattern)
 void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t test, uint32_t n)
 {
   u256_t*  M = (u256_t*)m;
@@ -470,12 +471,10 @@ bmat_kernel_64(bmat_rparam_64(m), bmat_array_64(k))
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
-#if 0
-uint32_t bmat_cokernel_8 (bmat_param_8 (m), bmat_param_8 (v)) { bmat_def_8 (t); bmat_transpose_8(t,m);  return bmat_kernel_8 (t,v); }
-uint32_t bmat_cokernel_16(bmat_param_16(m), bmat_param_16(v)) { bmat_def_16(t); bmat_transpose_16(t,m); return bmat_kernel_16(t,v); }
-uint32_t bmat_cokernel_32(bmat_param_32(m), bmat_param_32(v)) { bmat_def_32(t); bmat_transpose_32(t,m); return bmat_kernel_32(t,v); }
-uint32_t bmat_cokernel_64(bmat_param_64(m), bmat_param_64(v)) { bmat_def_64(t); bmat_transpose_64(t,m); return bmat_kernel_64(t,v); }
-#endif
+uint32_t bmat_cokernel_8 (bmat_rparam_8 (m), bmat_array_8 (v)) { bmat_def_8 (t); bmat_transpose_8(t,m);  return bmat_kernel_8 (t,v); }
+uint32_t bmat_cokernel_16(bmat_rparam_16(m), bmat_array_16(v)) { bmat_def_16(t); bmat_transpose_16(t,m); return bmat_kernel_16(t,v); }
+uint32_t bmat_cokernel_32(bmat_rparam_32(m), bmat_array_32(v)) { bmat_def_32(t); bmat_transpose_32(t,m); return bmat_kernel_32(t,v); }
+uint32_t bmat_cokernel_64(bmat_rparam_64(m), bmat_array_64(v)) { bmat_def_64(t); bmat_transpose_64(t,m); return bmat_kernel_64(t,v); }
 
 
 /// ## bmat_fixed_points_*n*(m,v)
