@@ -154,7 +154,7 @@ uint32_t bmat_echelon_32(bmat_param_32(m))
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
-
+// temp hack
 #if 0
 void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t t, uint32_t n)
 {
@@ -180,7 +180,11 @@ void bmat_match_row_add_64(uint64_t* m, uint64_t row, uint64_t test, uint32_t n)
 #endif
 
 // get this cleaned-up before making specialized smaller
-// & SIMD versions.
+// & SIMD versions. NOTE: this is passing over the whole
+// matrix each time. this is more for "doing it the way"
+// the SIMD one will instead of how might be reasonable
+// for "this" function to behave. (but then again should
+// peek at how this autovectorizes at some point)
 uint32_t bmat_rref_n(uint64_t* A, uint32_t n, uint32_t m)
 {
   uint32_t e    = m <= n ? m : n;
