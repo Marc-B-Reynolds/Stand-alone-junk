@@ -214,15 +214,20 @@ extern void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b
 
 
 // bmat_gauss.c
+extern uint32_t bmat_echelon_8 (bmat_param_8 (m));
+extern uint32_t bmat_echelon_16(bmat_param_16(m));
+extern uint32_t bmat_echelon_32(bmat_param_32(m));
+extern uint32_t bmat_echelon_64(bmat_param_64(m));
+
+extern uint32_t bmat_rref_8 (bmat_param_8 (m));
+extern uint32_t bmat_rref_16(bmat_param_16(m));
+extern uint32_t bmat_rref_32(bmat_param_32(m));
+extern uint32_t bmat_rref_64(bmat_param_64(m));
+
 extern uint32_t bmat_rank_8 (bmat_param_8 (m));
 extern uint32_t bmat_rank_16(bmat_param_16(m));
 extern uint32_t bmat_rank_32(bmat_param_32(m));
 extern uint32_t bmat_rank_64(bmat_param_64(m));
-
-extern bool bmat_is_full_rank_8 (bmat_param_8 (m));
-extern bool bmat_is_full_rank_16(bmat_param_16(m));
-extern bool bmat_is_full_rank_32(bmat_param_32(m));
-extern bool bmat_is_full_rank_64(bmat_param_64(m));
 
 extern uint32_t bmat_kernel_8 (bmat_rparam_8 (m), bmat_array_8 (k));
 extern uint32_t bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k));
@@ -238,6 +243,11 @@ extern uint32_t bmat_fixed_points_8 (bmat_rparam_8 (m), bmat_array_8 (k));
 extern uint32_t bmat_fixed_points_16(bmat_rparam_16(m), bmat_array_16(k));
 extern uint32_t bmat_fixed_points_32(bmat_rparam_32(m), bmat_array_32(k));
 extern uint32_t bmat_fixed_points_64(bmat_rparam_64(m), bmat_array_64(k));
+
+extern bool bmat_is_full_rank_8 (bmat_param_8 (m));
+extern bool bmat_is_full_rank_16(bmat_param_16(m));
+extern bool bmat_is_full_rank_32(bmat_param_32(m));
+extern bool bmat_is_full_rank_64(bmat_param_64(m));
 
 extern void bmat_transpose_8 (bmat_rparam_8 (a), bmat_param_8 (b));
 extern void bmat_transpose_16(bmat_rparam_16(a), bmat_param_16(b));
