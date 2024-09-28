@@ -433,50 +433,7 @@ uint64_t m4ri_wrap_mv_64(bmat_param_64(M), uint64_t V)
   return R;
 }
 
-
-void m4ri_wrap_rref_8(bmat_param_8(m))
-{
-  mzd_t* mm = m4ri_make_8(m);
-
-  mzd_echelonize(mm,1);
-  bmat_from_m4ri_8(m,mm);
-
-  m4ri_free(mm);
-}
-
-void m4ri_wrap_rref_16(bmat_param_16(m))
-{
-  mzd_t* mm = m4ri_make_16(m);
-
-  mzd_echelonize(mm,1);
-  bmat_from_m4ri_16(m,mm);
-
-  m4ri_free(mm);
-}
-
-void m4ri_wrap_rref_32(bmat_param_32(m))
-{
-  mzd_t* mm = m4ri_make_32(m);
-
-  mzd_echelonize(mm,1);
-  bmat_from_m4ri_32(m,mm);
-
-  m4ri_free(mm);
-}
-
-void m4ri_wrap_rref_64(bmat_param_64(m))
-{
-  mzd_t* mm = m4ri_make_64(m);
-
-  mzd_echelonize(mm,1);
-  bmat_from_m4ri_64(m,mm);
-
-  m4ri_free(mm);
-}
-
-
 //*****************************************************
-
 
 // add comments
 uint32_t m4ri_full_echelon(mzd_t* m)
@@ -489,6 +446,100 @@ uint32_t m4ri_partial_echelon(mzd_t* m)
 {
   return (uint32_t)mzd_echelonize(m,0);
 }
+
+uint32_t m4ri_wrap_rref_8(bmat_param_8(m))
+{
+  mzd_t*   mm = m4ri_make_8(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_8(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+uint32_t m4ri_wrap_rref_16(bmat_param_16(m))
+{
+  mzd_t*   mm = m4ri_make_16(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_16(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+uint32_t m4ri_wrap_rref_32(bmat_param_32(m))
+{
+  mzd_t*   mm = m4ri_make_32(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_32(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+uint32_t m4ri_wrap_rref_64(bmat_param_64(m))
+{
+  mzd_t*   mm = m4ri_make_64(m);
+  uint32_t r  = (uint32_t) mzd_echelonize(mm,1);
+  bmat_from_m4ri_64(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+//*****************************************************
+
+#if 0
+uint32_t m4ri_wrap_rref_8(bmat_param_8(m))
+{
+  mzd_t*   mm = m4ri_make_8(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_8(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+uint32_t m4ri_wrap_rref_16(bmat_param_16(m))
+{
+  mzd_t*   mm = m4ri_make_16(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_16(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+uint32_t m4ri_wrap_rref_32(bmat_param_32(m))
+{
+  mzd_t*   mm = m4ri_make_32(m);
+  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
+  bmat_from_m4ri_32(m,mm);
+  m4ri_free(mm);
+
+  return r;
+}
+
+#endif
+
+bool m4ri_wrap_inverse_64(bmat_param_64(m))
+{
+  mzd_t* mm = m4ri_make_64(m);
+  mzd_t* r  = mzd_inv_m4ri(0,mm,0);
+
+  m4ri_free(mm);
+
+  if (r) {
+    bmat_from_m4ri_64(m,r);
+    m4ri_free(r);
+    return true;
+  }
+  return false;
+}
+
+
+
+//*****************************************************
 
 void m4ri_zero(mzd_t* m) { mzd_add(m,m,m); }
 
