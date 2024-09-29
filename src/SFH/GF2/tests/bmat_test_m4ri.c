@@ -562,8 +562,97 @@ uint32_t test_mv_mul(prng_t* prng, uint32_t n)
 }
 #endif
 
-//----------------------------------------------------
-// 
+//******************************************************************************
+
+uint32_t test_rref(prng_t* prng, uint32_t trials)
+{
+  uint32_t errors = 0;
+  
+  bmat_def_64(m0);
+  bmat_def_64(m1);
+
+  test_banner("bmat_rref_n (reduced row echelon form)");
+
+  {
+    test_header_8();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_8(m0, prng);
+      bmat_dup_8(m1,m0);
+
+      m4ri_wrap_rref_8(m0);
+      bmat_rref_8(m1);
+      
+      if (bmat_equal_8(m0,m1)) continue;
+      test_fail();
+      errors++;
+      goto test_16;
+    }
+  }
+  test_pass();
+
+ test_16: {
+    test_header_16();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_16(m0, prng);
+      bmat_dup_16(m1,m0);
+
+      m4ri_wrap_rref_16(m0);
+      bmat_rref_16(m1);
+      
+      if (bmat_equal_16(m0,m1)) continue;
+      test_fail();
+      errors++;
+      goto test_32;
+    }
+  }
+  test_pass();
+
+  
+ test_32: {
+    test_header_32();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_32(m0, prng);
+      bmat_dup_32(m1,m0);
+
+      m4ri_wrap_rref_32(m0);
+      bmat_rref_32(m1);
+
+      if (bmat_equal_32(m0,m1)) continue;
+      test_fail();
+      errors++;
+      goto test_64;
+    }
+  }
+  test_pass();
+
+ test_64: {
+    test_header_64();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      bmat_random_64(m0, prng);
+      bmat_dup_64(m1,m0);
+
+      m4ri_wrap_rref_64(m0);
+      bmat_rref_64(m1);
+
+      if (bmat_equal_64(m0,m1)) continue;
+      test_fail();
+      errors++;
+      goto test_done;
+    }
+  }
+  test_pass();
+
+ test_done:
+  return errors;
+}
+
+
+
+//******************************************************************************
 
 int main(void)
 {
@@ -571,7 +660,7 @@ int main(void)
 
   uint32_t trials = 0xffff; // temp hack: add minimal command line processing
 
-  trials = 255;
+  //trials = 255;
   
   prng.state[0] = __rdtsc();
   prng.state[1] = UINT64_C(0x3ba0d900b9aaf028);
@@ -601,6 +690,7 @@ int main(void)
       errors += test_rank(&prng, trials);
       errors += test_vm_mul(&prng, trials);
       errors += test_mv_mul(&prng, trials);
+      errors += test_rref(&prng, trials);
     }
   }
 
