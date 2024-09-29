@@ -81,15 +81,19 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 
 #if defined(__GNUC__)
 #define hint_expect(expression) __builtin_expect(expression)
-#define hint_unpredictable()    __builtin_unpredictable()
 #define hint_unreachable()      __builtin_unreachable()
+#if defined(__clang__)
+#define hint_unpredictable(X)   __builtin_unpredictable(X)
+#else
+#define hint_unpredictable(X)   __builtin_expect_with_probability(X,1,0.5)
+#endif
 #elif defined(_MSC_VER)
-#define hint_expect(expression) 
-#define hint_unpredictable()
+#define hint_expect(expression) expression
+#define hint_unpredictable(X)   X
 #define hint_unreachable()      __assume(0)
 #else
-#define hint_expect(expression) 
-#define hint_unpredictable()
+#define hint_expect(expression) expression
+#define hint_unpredictable(X)   X
 #define hint_unreachable()
 #endif
 
