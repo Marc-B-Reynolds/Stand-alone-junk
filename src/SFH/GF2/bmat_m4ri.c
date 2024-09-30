@@ -489,54 +489,139 @@ uint32_t m4ri_wrap_rref_64(bmat_param_64(m))
 
 //*****************************************************
 
-#if 0
-uint32_t m4ri_wrap_rref_8(bmat_param_8(m))
+uint32_t m4ri_wrap_rref2_8(bmat_param_8(a),bmat_param_8(b))
 {
-  mzd_t*   mm = m4ri_make_8(m);
-  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
-  bmat_from_m4ri_8(m,mm);
-  m4ri_free(mm);
+  mzd_t*   ma = m4ri_make_8(a);
+  mzd_t*   mb = m4ri_make_8(b);
+  mzd_t*   mc = mzd_concat(0,ma,mb);
+  uint32_t r  = (uint32_t)mzd_echelonize(mc,1);
+
+  mzd_submatrix(ma,mc,0,0,8, 8);
+  mzd_submatrix(mb,mc,0,8,8,16);
+  bmat_from_m4ri_8(a,ma);
+  bmat_from_m4ri_8(b,mb);
+  m4ri_free(ma);
+  m4ri_free(mb);
+  m4ri_free(mc);
+  
+  return r;
+}
+
+uint32_t m4ri_wrap_rref2_16(bmat_param_16(a),bmat_param_16(b))
+{
+  mzd_t*   ma = m4ri_make_16(a);
+  mzd_t*   mb = m4ri_make_16(b);
+  mzd_t*   mc = mzd_concat(0,ma,mb);
+  uint32_t r  = (uint32_t)mzd_echelonize(mc,1);
+
+  mzd_submatrix(ma,mc,0,0,16, 16);
+  mzd_submatrix(mb,mc,0,16,16,32);
+  bmat_from_m4ri_16(a,ma);
+  bmat_from_m4ri_16(b,mb);
+  m4ri_free(ma);
+  m4ri_free(mb);
+  m4ri_free(mc);
+  
+  return r;
+}
+
+uint32_t m4ri_wrap_rref2_32(bmat_param_32(a),bmat_param_32(b))
+{
+  mzd_t*   ma = m4ri_make_32(a);
+  mzd_t*   mb = m4ri_make_32(b);
+  mzd_t*   mc = mzd_concat(0,ma,mb);
+  uint32_t r  = (uint32_t)mzd_echelonize(mc,1);
+
+  mzd_submatrix(ma,mc,0,0,32, 32);
+  mzd_submatrix(mb,mc,0,32,32,64);
+  bmat_from_m4ri_32(a,ma);
+  bmat_from_m4ri_32(b,mb);
+  m4ri_free(ma);
+  m4ri_free(mb);
+  m4ri_free(mc);
+  
+  return r;
+}
+
+uint32_t m4ri_wrap_rref2_64(bmat_param_64(a),bmat_param_64(b))
+{
+  mzd_t* ma = m4ri_make_64(a);
+  mzd_t* mb = m4ri_make_64(b);
+  mzd_t* mc = mzd_concat(0,ma,mb);
+  uint32_t r  = (uint32_t)mzd_echelonize(mc,1);
+
+  mzd_submatrix(ma,mc,0, 0,64, 64);
+  mzd_submatrix(mb,mc,0,64,64,128);
+  bmat_from_m4ri_64(a,ma);
+  bmat_from_m4ri_64(b,mb);
+  m4ri_free(ma);
+  m4ri_free(mb);
+  m4ri_free(mc);
 
   return r;
 }
 
-uint32_t m4ri_wrap_rref_16(bmat_param_16(m))
+//*****************************************************
+
+bool m4ri_wrap_inverse_8(bmat_param_8(m))
 {
-  mzd_t*   mm = m4ri_make_16(m);
-  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
-  bmat_from_m4ri_16(m,mm);
+  mzd_t* mm = m4ri_make_8(m);
+  mzd_t* im = mzd_inv_m4ri(0,mm,0);
+
   m4ri_free(mm);
 
-  return r;
+  if (im != 0) {
+    bmat_from_m4ri_8(m,im);
+    m4ri_free(im);
+  }
+
+  return im != 0;
 }
 
-uint32_t m4ri_wrap_rref_32(bmat_param_32(m))
+bool m4ri_wrap_inverse_16(bmat_param_16(m))
 {
-  mzd_t*   mm = m4ri_make_32(m);
-  uint32_t r  = (uint32_t)mzd_echelonize(mm,1);
-  bmat_from_m4ri_32(m,mm);
+  mzd_t* mm = m4ri_make_16(m);
+  mzd_t* im = mzd_inv_m4ri(0,mm,0);
+
   m4ri_free(mm);
 
-  return r;
+  if (im != 0) {
+    bmat_from_m4ri_16(m,im);
+    m4ri_free(im);
+  }
+
+  return im != 0;
 }
 
-#endif
+bool m4ri_wrap_inverse_32(bmat_param_32(m))
+{
+  mzd_t* mm = m4ri_make_32(m);
+  mzd_t* im = mzd_inv_m4ri(0,mm,0);
+
+  m4ri_free(mm);
+
+  if (im != 0) {
+    bmat_from_m4ri_32(m,im);
+    m4ri_free(im);
+  }
+
+  return im != 0;
+}
 
 bool m4ri_wrap_inverse_64(bmat_param_64(m))
 {
   mzd_t* mm = m4ri_make_64(m);
-  mzd_t* r  = mzd_inv_m4ri(0,mm,0);
+  mzd_t* im = mzd_inv_m4ri(0,mm,0);
 
   m4ri_free(mm);
 
-  if (r) {
-    bmat_from_m4ri_64(m,r);
-    m4ri_free(r);
-    return true;
+  if (im != 0) {
+    bmat_from_m4ri_64(m,im);
+    m4ri_free(im);
   }
-  return false;
-}
 
+  return im != 0;
+}
 
 
 //*****************************************************
