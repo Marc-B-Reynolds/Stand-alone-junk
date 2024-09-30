@@ -76,7 +76,7 @@ void bmat_random_stu_64(bmat_param_64(m),prng_t* prng)
 ///
 /// Generates a full rank random matrix. The current implementation is a rejection method which
 /// requires slightly less that 3.5 iterations to complete. So it's slow (but uniform!). There
-/// are transform methods et. al that could replace or supliment.
+/// are transform methods et. al that could replace or supplement.
 //
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
