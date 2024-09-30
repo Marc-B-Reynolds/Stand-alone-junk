@@ -9,6 +9,9 @@
 ///==============================================================
 ///
 
+// Tons of hack-o-rific code in here. Lazy forwarding to reference
+// like versions, etc. 
+
 // ....
 // performs elementary row operations to
 // get an upper triangular matrix but isn't
@@ -260,7 +263,9 @@ uint32_t bmat_rref_32(bmat_rparam_32(m))
 ///
 ///
 /// 
-/// Returns the *rank* of `m`
+/// Returns the *rank* of `m`. blah. may not complete the
+/// operation if $A$ is not full rank. currently all
+/// except the 64 do. (see source..yo!)
 ///
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
@@ -341,6 +346,55 @@ uint32_t bmat_rref2_32(bmat_param_32(a), bmat_param_32(b))
   return r;
 }
 
+void bmat_match_row2_add_64(uint64_t* A, uint64_t* B, uint64_t rowa, uint64_t rowb, uint64_t t)
+{
+  for (uint32_t j=0; j<64; j++) {
+    B[j] ^= (A[j] & t) ? rowb : 0;
+    A[j] ^= (A[j] & t) ? rowa : 0;
+  }
+}
+
+uint32_t bmat_rref2_64(bmat_rparam_64(A), bmat_rparam_64(B))
+{
+  static const uint32_t D = 64;
+  
+  uint32_t rank = 0;
+  uint64_t bj   = 1;
+  
+  do {
+    // pivot search
+    for (uint32_t i=rank; i<D; i++) {
+      
+      // found and perform elimination
+      if (A[i] & bj) {
+        uint64_t rowa = A[i];           // row of pivot (A)
+        uint64_t rowb = B[i];           // row of pivot (B)
+        
+	A[i] = A[rank];                 // start of logical
+	B[i] = B[rank];                 // row swap.
+
+	// eliminate on whole matrix
+        bmat_match_row2_add_64(A,B,rowa,rowb,bj);
+
+        A[rank] = rowa;                 // complete the swap
+        B[rank] = rowb;                 // (was zeroed out by eliminate)
+        rank += 1;
+        break;                          // exit search loop
+      }
+    }
+
+    // move to next column
+    bj <<= 1;
+  } while(bj);
+
+  // if not full rank then the reduction isn't
+  // completed. Doesn't seem worth "fixing" since
+  // only intended as a worker where full rank is
+  // required to get a result. 
+  
+  return rank;
+}
+
 
 /// ## bmat_rank_*n*(m)
 ///
@@ -365,11 +419,33 @@ extern uint32_t bmat_rank_16_ref(bmat_param_16(m));
 extern uint32_t bmat_rank_32_ref(bmat_param_32(m));
 extern uint32_t bmat_rank_64_ref(bmat_param_64(m));
 
-uint32_t bmat_rank_8 (bmat_param_8 (m)) { return bmat_rank_8_ref(m);  }
 uint32_t bmat_rank_16(bmat_param_16(m)) { return bmat_rank_16_ref(m); }
 uint32_t bmat_rank_32(bmat_param_32(m)) { return bmat_rank_32_ref(m); }
 uint32_t bmat_rank_64(bmat_param_64(m)) { return bmat_rank_64_ref(m); }
 
+uint32_t bmat_rank_8(bmat_param_8(M))
+{
+  uint64_t cmask = 0x0101010101010101;
+  uint64_t rmask = 0xff;
+  uint32_t rank  = 0;
+  uint64_t m     = M[0];
+
+  hint_unroll(2)
+  for(uint32_t i=0; i<8; i++) {
+    uint64_t select = m & cmask;
+    uint32_t shift  = ctz_64(select);
+    uint32_t inc    = (select != 0) ? 1 : 0;
+    
+    rank  += inc;
+
+    uint64_t row       = ((m>>shift) & rmask);
+    uint64_t broadcast = select * row;
+    
+    m = (m ^ broadcast) >> 1;
+  }
+  
+  return rank;
+}
 
 
 /// ## bmat_nullity_*n*(m)
@@ -431,6 +507,7 @@ bool bmat_is_full_rank_64(bmat_param_64(m)) { return bmat_rank_64(m) == 64; }
 /// </details>
 
 // kernel worker: handles up to 64-bit rows
+// TODO: compare against using full elimination instead.
 
 uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
 {
@@ -494,6 +571,7 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
   return nullity;
 }
 
+// temp hacks.
 uint32_t
 bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
 {
@@ -583,6 +661,7 @@ uint32_t bmat_cokernel_64(bmat_rparam_64(m), bmat_array_64(v)) { bmat_def_64(t);
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
+// more temp hacks
 uint32_t
 bmat_fixed_points_8(bmat_rparam_8(m), bmat_array_8(k))
 {
@@ -662,3 +741,74 @@ bmat_fixed_points_64(bmat_rparam_64(m), bmat_array_64(k))
 // uint64_t bmat_solve_k_64(bmat_param_64(m), uint64_t k)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 // </details>
+
+
+/// ## bmat_inverse_*n*(d,m)
+///
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// bool bmat_inverse_8 (bmat_rparam_8 (d), bmat_rparam_8 (m))
+/// bool bmat_inverse_16(bmat_rparam_16(d), bmat_rparam_16(m))
+/// bool bmat_inverse_32(bmat_rparam_32(d), bmat_rparam_32(m))
+/// bool bmat_inverse_64(bmat_rparam_64(d), bmat_rparam_64(m))
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// more temp hacks
+
+bool bmat_inverse_8(bmat_param_8(d), bmat_param_8(m))
+{
+#if 1
+  bmat_def_n(M,8);
+  bmat_adup_8(a,m);
+
+  uint64_t u = 1UL << 8;
+  
+  for (uint32_t i=0; i<8; i++, u<<=1)  {
+    M[i] = (uint64_t)(a[i]) | u;
+  }
+
+  uint32_t r = bmat_rref_n(M,8,16);
+
+  if (r == 8) {
+    for (uint32_t i=0; i<8; i++)  {
+      a[i] = (uint8_t)(M[i] >> 8);
+    }
+    
+    array_to_bmat_8(d,a);
+    return true;
+  }
+  
+  return false;
+#else
+  bmat_def_8(a);
+  bmat_dup_8(a,m);
+  bmat_set_unit_8(d);
+  return (bmat_rref2_8(a,d) == 8);
+#endif  
+}
+
+bool bmat_inverse_16(bmat_param_16(d), bmat_param_16(m))
+{
+  bmat_def_16(a);
+  bmat_dup_16(a,m);
+  bmat_set_unit_16(d);
+  return (bmat_rref2_16(a,d) == 16);
+}
+
+bool bmat_inverse_32(bmat_param_32(d), bmat_param_32(m))
+{
+  bmat_def_32(a);
+  bmat_dup_32(a,m);
+  bmat_set_unit_32(d);
+  return (bmat_rref2_32(a,d) == 32);
+}
+
+bool bmat_inverse_64(bmat_param_64(d), bmat_param_64(m))
+{
+  bmat_def_64(a);
+  bmat_dup_64(a,m);
+  bmat_set_unit_64(d);
+  return (bmat_rref2_64(a,d) == 64);
+}
