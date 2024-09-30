@@ -224,6 +224,11 @@ extern uint32_t bmat_rref_16(bmat_param_16(m));
 extern uint32_t bmat_rref_32(bmat_param_32(m));
 extern uint32_t bmat_rref_64(bmat_param_64(m));
 
+extern uint32_t bmat_rref2_8 (bmat_param_8 (a), bmat_param_8 (b));
+extern uint32_t bmat_rref2_16(bmat_param_16(a), bmat_param_16(b));
+extern uint32_t bmat_rref2_32(bmat_param_32(a), bmat_param_32(b));
+extern uint32_t bmat_rref2_64(bmat_param_64(a), bmat_param_64(b));
+
 extern uint32_t bmat_rank_8 (bmat_param_8 (m));
 extern uint32_t bmat_rank_16(bmat_param_16(m));
 extern uint32_t bmat_rank_32(bmat_param_32(m));
