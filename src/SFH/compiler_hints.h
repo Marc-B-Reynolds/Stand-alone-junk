@@ -66,6 +66,16 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_rw_barrier()       atomic_signal_fence(memory_order_acq_rel)
 #endif
 
+#define hint_pragma(X) _Pragma(#X)
+
+#if defined(__clang__)
+#define hint_unroll(X) hint_pragma(clang loop unroll_count(X))
+#elif defined(__GNUC__)
+#define hint_unroll(X) hint_pragma(GCC unroll X)
+#else
+#define hint_unroll(X)
+#endif
+
 // because clang loses it's mind about loop unrolling
 #if defined(__clang__)
 #define hint_no_unroll _Pragma("clang loop unroll(disable)")
