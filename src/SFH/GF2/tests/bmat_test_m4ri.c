@@ -650,6 +650,113 @@ uint32_t test_rref(prng_t* prng, uint32_t trials)
   return errors;
 }
 
+//******************************************************************************
+
+uint32_t test_inverse(prng_t* prng, uint32_t trials)
+{
+  uint32_t errors = 0;
+  
+  bmat_def_64(m);
+  bmat_def_64(i0);
+  bmat_def_64(i1);
+  bmat_def_64(t);
+
+  test_banner("bmat_inverse_n");
+  
+  test_header_8();
+  for(uint32_t i=0; i<trials; i++) {
+    bmat_random_fr_8(m,prng);
+    bmat_dup_8(i0,m);
+    bmat_dup_8(i1,m);
+
+    bool r0 = m4ri_wrap_inverse_8(i0);
+    bmat_mul_8(t,i0,m);
+    
+    bool r1 = bmat_inverse_8(i1,m);
+    bmat_mul_8(t,m,i1);
+    
+    if ((r0 == r1) && bmat_equal_8(i0,i1))
+      continue;
+    if (r0 != r1) printf("invertiable swabble\n");
+    test_fail();
+
+    bmat_print2_8("  ",i0,i1); printf("\n");
+    bmat_print_8("  ",m);
+    errors++;
+    goto test_16;
+  }
+  test_pass();
+
+ test_16:
+  test_header_16();
+  for(uint32_t i=0; i<trials; i++) {
+    bmat_random_fr_16(m,prng);
+    bmat_dup_16(i0,m);
+    bmat_dup_16(i1,m);
+
+    bool r0 = m4ri_wrap_inverse_16(i0);
+    bool r1 = bmat_inverse_16(i1,m);
+    
+    if ((r0 == r1) && bmat_equal_16(i0,i1))
+      continue;
+
+    test_fail();
+    if (r0 != r1) printf("  invertiable squabble\n");
+
+    bmat_print2_16("  ",i0,i1); printf("\n");
+    bmat_print_16("  ",m);
+    errors++;
+    goto test_32;
+  }
+  test_pass();
+
+ test_32:
+  test_header_32();
+  for(uint32_t i=0; i<trials; i++) {
+    bmat_random_fr_32(m,prng);
+    bmat_dup_32(i0,m);
+    bmat_dup_32(i1,m);
+
+    bool r0 = m4ri_wrap_inverse_32(i0);
+    bool r1 = bmat_inverse_32(i1,m);
+    
+    if ((r0 == r1) && bmat_equal_32(i0,i1))
+      continue;
+
+    test_fail();
+    if (r0 != r1) printf("  invertiable squabble\n");
+
+    bmat_print2_32("  ",i0,i1); printf("\n");
+    bmat_print_32("  ",m);
+    errors++;
+    goto test_64;
+  }
+  test_pass();
+
+ test_64:
+
+  test_header_64();
+  for(uint32_t i=0; i<trials; i++) {
+    bmat_random_fr_64(m,prng);
+    bmat_dup_64(i0,m);
+    bmat_dup_64(i1,m);
+
+    bool r0 = m4ri_wrap_inverse_64(i0);
+    bool r1 = bmat_inverse_64(i1,m);
+    
+    if ((r0 == r1) && bmat_equal_64(i0,i1))
+      continue;
+    if (r0 != r1) printf("  invertiable squabble\n");
+    test_fail();
+    errors++;
+    goto test_done;
+  }
+  test_pass();
+
+ test_done:
+
+  return errors;
+}
 
 
 //******************************************************************************
@@ -683,6 +790,7 @@ int main(void)
     errors = roundtrip(&prng);
 
     if (errors == 0) {
+      errors += test_inverse(&prng, trials);
       errors += test_set_unit(&prng, trials);
       errors += test_transpose(&prng, trials);
       errors += test_mm_mul(&prng, trials);
