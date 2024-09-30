@@ -4,6 +4,10 @@
 #include "bmat_i.h"
 #include <string.h>
 
+/// Stuff
+///==============================================================
+///
+
 /// ## bmat_zero_*n*(m)
 ///
 /// Sets all the elements of matrix $m$ to zero.
@@ -94,11 +98,8 @@ void bmat_set_unit_64(bmat_param_64(m)) { uint64_t n=1; for_range(i,0,64) { m[i]
 ///
 /// ## bmat_set_exchange_*n*(m)
 ///
-/// Initializes matrix $m$ to $J$ (the [exchange matrix](https://en.wikipedia.org/wiki/Exchange_matrix)). $Jv$ performs a bit reversal of $v$ (and so does $vJ$ for nerdy row vectors). Pre and post multiplication by $J$ have specialized functions:
+/// Initializes matrix $M$ to $J$ (the [exchange matrix](https://en.wikipedia.org/wiki/Exchange_matrix)).
 ///
-/// * $JM$ link row exchange
-/// * $MJ$ link column exchange
-/// 
 /// $$
 ///   \left[ {\begin{array}{cccc}
 ///     0 & 0 & 0 & 1 \				\
@@ -107,8 +108,14 @@ void bmat_set_unit_64(bmat_param_64(m)) { uint64_t n=1; for_range(i,0,64) { m[i]
 ///    1 & 0 & \cdots & 0 \\
 ///  \end{array} } \right]
 /// $$
-///
+/// 
+///  $Jv$ performs a bit reversal of $v$ (and so does $vJ$ for nerdy row vectors). Pre and post multiplication by $J$ have specialized functions:
 /// <details markdown="1"><summary>function list:</summary>
+/// 
+/// * $JM$ link row exchange
+/// * $MJ$ link column exchange
+/// 
+/// 
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
 /// void bmat_set_exchange_8 ((bmat_param_8 (m))
 /// void bmat_set_exchange_16((bmat_param_16(m))
