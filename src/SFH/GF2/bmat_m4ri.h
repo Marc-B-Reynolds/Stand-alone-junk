@@ -62,6 +62,11 @@ extern uint32_t m4ri_wrap_rref_16(bmat_param_16(m));
 extern uint32_t m4ri_wrap_rref_32(bmat_param_32(m));
 extern uint32_t m4ri_wrap_rref_64(bmat_param_64(m));
 
+extern uint32_t m4ri_wrap_rref2_8 (bmat_param_8 (a),bmat_param_8 (b));
+extern uint32_t m4ri_wrap_rref2_16(bmat_param_16(a),bmat_param_16(b));
+extern uint32_t m4ri_wrap_rref2_32(bmat_param_32(a),bmat_param_32(b));
+extern uint32_t m4ri_wrap_rref2_64(bmat_param_64(a),bmat_param_64(b));
+
 extern bool m4ri_wrap_inverse_8 (bmat_param_8 (m));
 extern bool m4ri_wrap_inverse_16(bmat_param_16(m));
 extern bool m4ri_wrap_inverse_32(bmat_param_32(m));
