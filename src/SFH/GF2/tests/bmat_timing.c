@@ -37,67 +37,85 @@ uint64_t* m2;
 
 //--------------------------------------------------
 
-// f(array,array) calls
-#define FOR_2M_FUNCS(DO) \
-    DO(bmat_transpose_8)      \
-    DO(bmat_transpose_16)     \
-    DO(bmat_transpose_32)	 \
+// f(m) calls
+
+
+// f(m,m) calls
+#define FOR_2M_FUNCS(DO)     \
+    DO(bmat_inverse_8)       \
+    DO(bmat_inverse_16)      \
+    DO(bmat_inverse_32)      \
+    DO(bmat_inverse_64)      \
+    DO(bmat_transpose_8)     \
+    DO(bmat_transpose_16)    \
+    DO(bmat_transpose_32)    \
     DO(bmat_transpose_64)
 
-#define FOR_2R_FUNCS(DO) \
+#define FOR_2R_FUNCS(DO)      \
     DO(bmat_transpose_8_ref)  \
     DO(bmat_transpose_16_ref) \
     DO(bmat_transpose_32_ref) \
     DO(bmat_transpose_64_ref)
 
-// f(array,array,array) calls
+// f(m,m,m) calls
 #if 1
 #define FOR_3M_FUNCS(DO) \
-    DO(bmat_mul_8)            \
-    DO(bmat_mul_16)           \
-    DO(bmat_mul_32)	         \
-    DO(bmat_mul_64)           \
-    DO(bmat_mult_8)           \
-    DO(bmat_mult_16)          \
-    DO(bmat_mult_32)	         \
+    DO(bmat_mul_8)       \
+    DO(bmat_mul_16)      \
+    DO(bmat_mul_32)      \
+    DO(bmat_mul_64)      \
+    DO(bmat_mult_8)      \
+    DO(bmat_mult_16)     \
+    DO(bmat_mult_32)     \
     DO(bmat_mult_64)
 #else
 #define FOR_3M_FUNCS(DO) \
-    DO(bmat_mul_8)            \
+    DO(bmat_mul_8)       \
     DO(m4ri_wrap_mm_8)   \
-    DO(bmat_mul_16)           \
+    DO(bmat_mul_16)      \
     DO(m4ri_wrap_mm_16)  \
-    DO(bmat_mul_32)	         \
+    DO(bmat_mul_32)      \
     DO(m4ri_wrap_mm_32)  \
-    DO(bmat_mul_64)           \
+    DO(bmat_mul_64)      \
     DO(m4ri_wrap_mm_64)  \
-    DO(bmat_mult_8)           \
-    DO(bmat_mult_16)          \
-    DO(bmat_mult_32)	         \
+    DO(bmat_mult_8)      \
+    DO(bmat_mult_16)     \
+    DO(bmat_mult_32)     \
     DO(bmat_mult_64)
 #endif
 
 #define FOR_3R_FUNCS(DO) \
-    DO(bmat_mul_8_ref)        \
-    DO(bmat_mul_16_ref)       \
-    DO(bmat_mul_32_ref)	 \
-    DO(bmat_mul_64_ref)       \
-    DO(bmat_mult_8_ref)       \
-    DO(bmat_mult_16_ref)      \
-    DO(bmat_mult_32_ref)	 \
+    DO(bmat_mul_8_ref)   \
+    DO(bmat_mul_16_ref)  \
+    DO(bmat_mul_32_ref)  \
+    DO(bmat_mul_64_ref)  \
+    DO(bmat_mult_8_ref)  \
+    DO(bmat_mult_16_ref) \
+    DO(bmat_mult_32_ref) \
     DO(bmat_mult_64_ref)
 
+#define FOR_1MI_FUNCS(DO) \
+    DO(bmat_rank_8)       \
+    DO(bmat_rank_16)      \
+    DO(bmat_rank_32)      \
+    DO(bmat_rank_64)
 
 //--------------------------------------------------
+volatile uint32_t sink32 = 0;
 
-#define WRAP_2M(N) BMAT_FLATTEN void w_##N(void) { N(m0,m1); }
-#define WRAP_3M(N) BMAT_FLATTEN void w_##N(void) { N(m0,m1,m2); }
+#define WRAP_1M(N)  BMAT_FLATTEN void w_##N(void) { N(m0); }
+#define WRAP_2M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,m1); }
+#define WRAP_3M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,m1,m2); }
 
-// expand wrappers for f(matrix,matrix) calls
+#define WRAP_1MI(N) BMAT_FLATTEN void w_##N(void) { sink32 += N(m0); }
+
+// expand wrappers
+//FOR_1M_FUNCS(WRAP_1M)
 FOR_2M_FUNCS(WRAP_2M)
 FOR_2R_FUNCS(WRAP_2M)
 FOR_3M_FUNCS(WRAP_3M)
 FOR_3R_FUNCS(WRAP_3M)
+FOR_1MI_FUNCS(WRAP_1MI)
 
 // add flags and such for better ergo
 // (selective running, etc)
@@ -111,6 +129,8 @@ typedef struct {
      
 func_entry_t func_table[] =
 {
+//FOR_1M_FUNCS(ENTRY)
+  FOR_1MI_FUNCS(ENTRY)
   FOR_3M_FUNCS(ENTRY)
 //FOR_2R_FUNCS(ENTRY)
   FOR_2M_FUNCS(ENTRY)
@@ -267,29 +287,29 @@ void timing_test(func_entry_t* entry, int len)
   seq_stats_t stats;
 
   printf("┌───────────────────┬"
-	 "──────────────────────────────┬"
-	 "────────────────┬"
-	 "─────────┬"
-	 "─────────┬"
-	 "─────────┐"
-	 "\n");
+         "──────────────────────────────┬"
+         "────────────────┬"
+         "─────────┬"
+         "─────────┬"
+         "─────────┐"
+         "\n");
   
   printf(WARNING "│ %-18s│ %27s   │ %14s │%8s │%8s │%8s │\n" ENDC,
-	 "function",
-	 time_string,
-	 "",
-	 "min ",
-	 "median",
-	 "max "
-	 );
+         "function",
+         time_string,
+         "",
+         "min ",
+         "median",
+         "max "
+         );
   
   printf("├───────────────────┼"
-	 "──────────────────────────────┼"
-	 "────────────────┼"
-	 "─────────┼"
-	 "─────────┼"
-	 "─────────┤"
-	 "\n");
+         "──────────────────────────────┼"
+         "────────────────┼"
+         "─────────┼"
+         "─────────┼"
+         "─────────┤"
+         "\n");
 
   while(len--) {
     printf("│ %-18s", entry->name);
@@ -300,12 +320,12 @@ void timing_test(func_entry_t* entry, int len)
     double std = f64_sqrt(seq_stats_variance(&stats));
     
     printf("│%14f ±%14f│ (1 ± %-8f) │%9.2f│%9.2f│%9.2f│",
-	   stats.m, std,
-	   std/stats.m,
-	   (double)data[0] * time_scale,
-	   (double)data[time_trials>>1] * time_scale,
-	   (double)data[time_trials-1] * time_scale
-	   );
+           stats.m, std,
+           std/stats.m,
+           (double)data[0] * time_scale,
+           (double)data[time_trials>>1] * time_scale,
+           (double)data[time_trials-1] * time_scale
+           );
     
     //if (gof > time_vlimit) printf(" <-- garbage timing (retry)");
     printf("\n");
@@ -314,11 +334,11 @@ void timing_test(func_entry_t* entry, int len)
   }
 
   printf("└───────────────────┴"
-	 "──────────────────────────────┴"
-	 "────────────────┴"
-	 "─────────┴"
-	 "─────────┴"
-	 "─────────┘\n");
+         "──────────────────────────────┴"
+         "────────────────┴"
+         "─────────┴"
+         "─────────┴"
+         "─────────┘\n");
 }
 
 //4) │    8089.56   12876.60   12949.44
