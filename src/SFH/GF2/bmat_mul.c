@@ -3,6 +3,10 @@
 
 #include "bmat_i.h"
 
+/// Products
+///==============================================================
+///
+
 /**
    Textbook matrix multiplication (row times column) is based on
    working with scalars. Since we need to work in parallel we'll
