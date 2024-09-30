@@ -5,7 +5,7 @@
 
 #include <stdio.h> // TEMP HACK
 
-/// Stuff
+/// Gaussian elimination related stuff
 ///==============================================================
 ///
 
@@ -56,6 +56,10 @@ void bmat_reduce_ut_8(bmat_param_8(M))
 
 /// ## bmat_echelon_*n*(m)
 /// 
+/// In place computes the *row echelon form* (not reduced)
+/// of `m`.
+/// <br>
+/// Returns the *rank* of `m`
 ///
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
@@ -112,7 +116,7 @@ uint32_t bmat_echelon_64(bmat_param_64(m))
 // versions that wrapper generic
 uint32_t bmat_echelon_8(bmat_param_8(m))
 {
-  uint64_t M[8];
+  BMAT_ALIGN uint64_t M[8];
   
   bmat_widen_8(M,m);
   uint32_t r = bmat_echelon_n(M,8,8);
@@ -122,7 +126,7 @@ uint32_t bmat_echelon_8(bmat_param_8(m))
 
 uint32_t bmat_echelon_16(bmat_param_16(m))
 {
-  uint64_t M[16];
+  BMAT_ALIGN uint64_t M[16];
 
   bmat_widen_16(M,m);
   uint32_t r = bmat_echelon_n(M,16,16);
@@ -132,7 +136,7 @@ uint32_t bmat_echelon_16(bmat_param_16(m))
 
 uint32_t bmat_echelon_32(bmat_param_32(m))
 {
-  uint64_t M[32];
+  BMAT_ALIGN uint64_t M[32];
 
   bmat_widen_32(M,m);
   uint32_t r = bmat_echelon_n(M,32,32);
@@ -225,8 +229,7 @@ uint32_t bmat_rref_64(bmat_rparam_64(m))
 // versions that wrapper generic
 uint32_t bmat_rref_8(bmat_param_8(m))
 {
-  uint64_t M[8];
-  
+  bmat_def_n(M,8);
   bmat_widen_8(M,m);
   uint32_t r = bmat_rref_n(M,8,8);
   bmat_narrow_8(m,M);
@@ -235,8 +238,7 @@ uint32_t bmat_rref_8(bmat_param_8(m))
 
 uint32_t bmat_rref_16(bmat_rparam_16(m))
 {
-  uint64_t M[16];
-
+  bmat_def_n(M,16);
   bmat_widen_16(M,m);
   uint32_t r = bmat_rref_n(M,16,16);
   bmat_narrow_16(m,M);
@@ -245,11 +247,97 @@ uint32_t bmat_rref_16(bmat_rparam_16(m))
 
 uint32_t bmat_rref_32(bmat_rparam_32(m))
 {
-  uint64_t M[32];
-
+  bmat_def_n(M,32);
   bmat_widen_32(M,m);
   uint32_t r = bmat_rref_n(M,32,32);
   bmat_narrow_32(m,M);
+  return r;
+}
+
+
+/// ## bmat_rref2_*n*(a,b)
+/// In place computes the *reduced row echelon form* of
+///
+///
+/// 
+/// Returns the *rank* of `m`
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// uint32_t bmat_rref2_8 (bmat_param_8 (a), bmat_param_8 (b))
+/// uint32_t bmat_rref2_16(bmat_param_16(a), bmat_param_16(b))
+/// uint32_t bmat_rref2_32(bmat_param_32(a), bmat_param_32(b))
+/// uint32_t bmat_rref2_64(bmat_param_64(a), bmat_param_64(b))
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// LOL! Massive temp hacks.
+
+uint32_t bmat_rref2_8(bmat_param_8(a), bmat_param_8(b))
+{
+  bmat_def_n(M,8);
+  bmat_adup_8(aa,a);
+  bmat_adup_8(ab,b);
+  
+  for (uint32_t i=0; i<8; i++)  {
+    M[i] = (uint64_t)(aa[i]) | (((uint64_t)(ab[i]))<<8);
+  }
+  uint32_t r = bmat_rref_n(M,8,16);
+  
+  for (uint32_t i=0; i<8; i++)  {
+    aa[i] = (uint8_t)(M[i]);
+    ab[i] = (uint8_t)(M[i] >> 8);
+  }
+
+  array_to_bmat_8(a,aa);
+  array_to_bmat_8(b,ab);
+
+  return r;
+}
+
+uint32_t bmat_rref2_16(bmat_param_16(a), bmat_param_16(b))
+{
+  bmat_def_n(M,16);
+  bmat_adup_16(aa,a);
+  bmat_adup_16(ab,b);
+  
+  for (uint32_t i=0; i<16; i++)  {
+    M[i] = (uint64_t)(aa[i]) | (((uint64_t)(ab[i]))<<16);
+  }
+
+  uint32_t r = bmat_rref_n(M,16,32);
+  
+  for (uint32_t i=0; i<16; i++)  {
+    aa[i] = (uint16_t)(M[i]);
+    ab[i] = (uint16_t)(M[i] >> 16);
+  }
+
+  array_to_bmat_16(a,aa);
+  array_to_bmat_16(b,ab);
+
+  return r;
+}
+
+uint32_t bmat_rref2_32(bmat_param_32(a), bmat_param_32(b))
+{
+  bmat_def_n(M,32);
+  bmat_adup_32(aa,a);
+  bmat_adup_32(ab,b);
+  
+  for (uint32_t i=0; i<32; i++)  {
+    M[i] = (uint64_t)(aa[i]) | (((uint64_t)(ab[i]))<<32);
+  }
+
+  uint32_t r = bmat_rref_n(M,32,64);
+  
+  for (uint32_t i=0; i<32; i++)  {
+    aa[i] = (uint32_t)(M[i]);
+    ab[i] = (uint32_t)(M[i] >> 32);
+  }
+
+  array_to_bmat_32(a,aa);
+  array_to_bmat_32(b,ab);
+
   return r;
 }
 
@@ -270,6 +358,8 @@ uint32_t bmat_rref_32(bmat_rparam_32(m))
 /// </details>
 
 // just forward to reference for the moment.
+// should flip to zero element counting of a REF or UT reduce
+// once (if) better SIMD versions are in place
 extern uint32_t bmat_rank_8_ref (bmat_param_8 (m));
 extern uint32_t bmat_rank_16_ref(bmat_param_16(m));
 extern uint32_t bmat_rank_32_ref(bmat_param_32(m));
@@ -407,9 +497,8 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
 uint32_t
 bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
 {
-  uint64_t M[8];
-  uint64_t K[8];
-
+  bmat_def_n(M,8);
+  bmat_def_n(K,8);
   bmat_widen_8(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,8);
@@ -422,9 +511,8 @@ bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
 uint32_t
 bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
 {
-  uint64_t M[16];
-  uint64_t K[16];
-
+  bmat_def_n(M,16);
+  bmat_def_n(K,16);
   bmat_widen_16(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,16);
@@ -437,9 +525,8 @@ bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
 uint32_t
 bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
 {
-  uint64_t M[32];
-  uint64_t K[32];
-
+  bmat_def_n(M,32);
+  bmat_def_n(K,32);
   bmat_widen_32(M,m);
 
   uint32_t r = bmat_kernel_w(M,K,32);
@@ -452,9 +539,8 @@ bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
 uint32_t
 bmat_kernel_64(bmat_rparam_64(m), bmat_array_64(k))
 {
-  uint64_t M[64];
-
-  for (uint32_t i=0; i<64; i++)  M[i] = m[i];
+  bmat_def_n(M,64);
+  bmat_dup_64(M,m);
 
   return bmat_kernel_w(M,k,64);
 }
@@ -500,8 +586,8 @@ uint32_t bmat_cokernel_64(bmat_rparam_64(m), bmat_array_64(v)) { bmat_def_64(t);
 uint32_t
 bmat_fixed_points_8(bmat_rparam_8(m), bmat_array_8(k))
 {
-  uint64_t M[8];
-  uint64_t K[8];
+  bmat_def_n(M,8);
+  bmat_def_n(K,8);
   uint64_t u = 1;
 
   bmat_adup_8(a,m);
@@ -518,8 +604,8 @@ bmat_fixed_points_8(bmat_rparam_8(m), bmat_array_8(k))
 uint32_t
 bmat_fixed_points_16(bmat_rparam_16(m), bmat_array_16(k))
 {
-  uint64_t M[16];
-  uint64_t K[16];
+  bmat_def_n(M,16);
+  bmat_def_n(K,16);
   uint64_t u = 1;
 
   bmat_adup_16(a,m);
@@ -536,8 +622,8 @@ bmat_fixed_points_16(bmat_rparam_16(m), bmat_array_16(k))
 uint32_t
 bmat_fixed_points_32(bmat_rparam_32(m), bmat_array_32(k))
 {
-  uint64_t M[32];
-  uint64_t K[32];
+  bmat_def_n(M,32);
+  bmat_def_n(K,32);
   uint64_t u = 1;
 
   bmat_adup_32(a,m);
@@ -554,10 +640,25 @@ bmat_fixed_points_32(bmat_rparam_32(m), bmat_array_32(k))
 uint32_t
 bmat_fixed_points_64(bmat_rparam_64(m), bmat_array_64(k))
 {
-  uint64_t M[64];
+  bmat_def_n(M,64);
   uint64_t u = 1;
 
   for (uint32_t i=0; i<64; i++, u<<=1)  M[i] = m[i]^u;
 
   return bmat_kernel_w(M,k,64);
 }
+
+
+// ## bmat_solve_k_*n*(m,k)
+//
+// Solves $ Mx=k $ for $x$. blah, blah, 0 if none, blah
+// nullspace for set of solutions.
+//
+// <details markdown="1"><summary>function list:</summary>
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+// uint8_t  bmat_solve_k_8 (bmat_param_8 (m), uint8_t  k)
+// uint16_t bmat_solve_k_16(bmat_param_16(m), uint16_t k)
+// uint32_t bmat_solve_k_32(bmat_param_32(m), uint32_t k)
+// uint64_t bmat_solve_k_64(bmat_param_64(m), uint64_t k)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+// </details>
