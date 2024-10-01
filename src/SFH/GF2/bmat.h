@@ -155,6 +155,11 @@ extern void bmat_set_unit_16(bmat_param_16(d));
 extern void bmat_set_unit_32(bmat_param_32(d));
 extern void bmat_set_unit_64(bmat_param_64(d));
 
+extern void bmat_set_ones_8 (bmat_param_8 (d));
+extern void bmat_set_ones_16(bmat_param_16(d));
+extern void bmat_set_ones_32(bmat_param_32(d));
+extern void bmat_set_ones_64(bmat_param_64(d));
+
 extern void bmat_set_exchange_8 (bmat_param_8 (m));
 extern void bmat_set_exchange_16(bmat_param_16(m));
 extern void bmat_set_exchange_32(bmat_param_32(m));
