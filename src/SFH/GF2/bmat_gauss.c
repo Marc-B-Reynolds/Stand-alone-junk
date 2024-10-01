@@ -22,7 +22,7 @@ void bmat_reduce_ut_8(bmat_param_8(M))
   uint64_t rmask = 0xff;
   uint64_t m     = M[0];
 
-  for(uint32_t i=0; i<7; i++) {
+  for(uint32_t i=0; i<8; i++) {
     // select: sets LSB of bytes of rows with column 'i' set
     // shift:  bit distance from row 'i' to the first row
     //         with column 'i' set (for row swap)
@@ -419,10 +419,16 @@ extern uint32_t bmat_rank_16_ref(bmat_param_16(m));
 extern uint32_t bmat_rank_32_ref(bmat_param_32(m));
 extern uint32_t bmat_rank_64_ref(bmat_param_64(m));
 
+//uint32_t bmat_rank_8(bmat_param_16(m)) { return bmat_rank_8_ref (m); }
 uint32_t bmat_rank_16(bmat_param_16(m)) { return bmat_rank_16_ref(m); }
 uint32_t bmat_rank_32(bmat_param_32(m)) { return bmat_rank_32_ref(m); }
 uint32_t bmat_rank_64(bmat_param_64(m)) { return bmat_rank_64_ref(m); }
 
+// search for a pivot:
+// 1) if found increment rank count
+// 2) eliminate all rows with that column set including
+//    pivot because we don't need the reduced matrix.
+//    no swap is needed. 
 uint32_t bmat_rank_8(bmat_param_8(M))
 {
   uint64_t cmask = 0x0101010101010101;
@@ -440,7 +446,10 @@ uint32_t bmat_rank_8(bmat_param_8(M))
 
     uint64_t row       = ((m>>shift) & rmask);
     uint64_t broadcast = select * row;
-    
+
+    // any row additions and shift the data
+    // by one so the next columns data is in
+    // the LSB of each byte.
     m = (m ^ broadcast) >> 1;
   }
   
@@ -572,8 +581,7 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
 }
 
 // temp hacks.
-uint32_t
-bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
+uint32_t bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
 {
   bmat_def_n(M,8);
   bmat_def_n(K,8);
@@ -586,8 +594,7 @@ bmat_kernel_8(bmat_rparam_8(m), bmat_array_8(k))
   return r;
 }
 
-uint32_t
-bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
+uint32_t bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
 {
   bmat_def_n(M,16);
   bmat_def_n(K,16);
@@ -600,8 +607,7 @@ bmat_kernel_16(bmat_rparam_16(m), bmat_array_16(k))
   return r;
 }
 
-uint32_t
-bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
+uint32_t bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
 {
   bmat_def_n(M,32);
   bmat_def_n(K,32);
@@ -614,8 +620,7 @@ bmat_kernel_32(bmat_rparam_32(m), bmat_array_32(k))
   return r;
 }
 
-uint32_t
-bmat_kernel_64(bmat_rparam_64(m), bmat_array_64(k))
+uint32_t bmat_kernel_64(bmat_rparam_64(m), bmat_array_64(k))
 {
   bmat_def_n(M,64);
   bmat_dup_64(M,m);
