@@ -42,6 +42,10 @@ uint64_t* m2;
 
 // f(m,m) calls
 #define FOR_2M_FUNCS(DO)     \
+    DO(bmat_kernel_8)        \
+    DO(bmat_kernel_16)       \
+    DO(bmat_kernel_32)       \
+    DO(bmat_kernel_64)       \
     DO(bmat_inverse_8)       \
     DO(bmat_inverse_16)      \
     DO(bmat_inverse_32)      \
@@ -104,7 +108,7 @@ uint64_t* m2;
 volatile uint32_t sink32 = 0;
 
 #define WRAP_1M(N)  BMAT_FLATTEN void w_##N(void) { N(m0); }
-#define WRAP_2M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,m1); }
+#define WRAP_2M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,(void*)m1); }
 #define WRAP_3M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,m1,m2); }
 
 #define WRAP_1MI(N) BMAT_FLATTEN void w_##N(void) { sink32 += N(m0); }
