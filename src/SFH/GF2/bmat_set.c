@@ -94,6 +94,25 @@ void bmat_set_unit_16(bmat_param_16(m)) { bmat_fill_ksl_n(m, bmat_main_diagonal_
 void bmat_set_unit_32(bmat_param_32(m)) { bmat_fill_ksl_n(m, bmat_main_diagonal_mask_32, 2, 16); }
 void bmat_set_unit_64(bmat_param_64(m)) { uint64_t n=1; for_range(i,0,64) { m[i] = n; n <<= 1; } }
 
+/// ## bmat_set_ones_*n*(m)
+///
+/// Sets $m$ to the [ones matrix]()
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_set_ones_8 (bmat_param_8 (m))
+/// void bmat_set_ones_16(bmat_param_16(m))
+/// void bmat_set_ones_32(bmat_param_32(m))
+/// void bmat_set_ones_64(bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// set to identity matrix
+void bmat_set_ones_8 (bmat_param_8 (m)) { memset(m,0xff, bmat_sizeof_8 ); }
+void bmat_set_ones_16(bmat_param_16(m)) { memset(m,0xff, bmat_sizeof_16); }
+void bmat_set_ones_32(bmat_param_32(m)) { memset(m,0xff, bmat_sizeof_32); }
+void bmat_set_ones_64(bmat_param_64(m)) { memset(m,0xff, bmat_sizeof_64); }
+
 ///----------
 ///
 /// ## bmat_set_exchange_*n*(m)
