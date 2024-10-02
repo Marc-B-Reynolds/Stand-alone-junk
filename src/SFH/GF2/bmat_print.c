@@ -6,7 +6,100 @@
 #include <stdio.h>
 #include "bmat_i.h"
 
-// all junk. make workers and direct
+// MY EYES! YOUR EYES! 
+// all junk. make workers and direct or better yet
+// put my mini report library in SFH and add matrix support
+
+void bmat_print_list_n(uint64_t row, uint32_t b)
+{
+  printf("{%c", (char)((row & 1)+'0'));
+  row >>= 1;
+
+  for(uint32_t i=1; i<b; i++) {
+    printf(",%c", (char)((row & 1)+'0'));
+    row >>=1;
+  }
+  printf("}");
+}
+
+void bmat_print_list_8(bmat_param_8(m))
+{
+  static const uint32_t D = 8;
+  
+  uint8_t a[8];
+
+  bmat_to_array_8(a,m);
+
+  printf("{");
+  bmat_print_list_n(a[0],D);
+  
+  for(uint32_t i=1; i<D; i++) {
+    printf(",");
+    bmat_print_list_n(a[i],D);
+  }
+
+  printf("}\n");
+}
+
+void bmat_print_list_16(bmat_param_16(m))
+{
+  static const uint32_t D = 16;
+  
+  uint16_t a[16];
+
+  bmat_to_array_16(a,m);
+
+  printf("{");
+  bmat_print_list_n(a[0],D);
+  
+  for(uint32_t i=1; i<D; i++) {
+    printf(",");
+    bmat_print_list_n(a[i],D);
+  }
+
+  printf("}\n");
+}
+
+void bmat_print_list_32(bmat_param_32(m))
+{
+  static const uint32_t D = 32;
+  
+  uint32_t a[32];
+
+  bmat_to_array_32(a,m);
+
+  printf("{");
+  bmat_print_list_n(a[0],D);
+  
+  for(uint32_t i=1; i<D; i++) {
+    printf(",");
+    bmat_print_list_n(a[i],D);
+  }
+
+  printf("}\n");
+}
+
+void bmat_print_list_64(bmat_param_64(m))
+{
+  static const uint32_t D = 64;
+  
+  uint64_t a[64];
+
+  bmat_to_array_64(a,m);
+
+  printf("{");
+  bmat_print_list_n(a[0],D);
+  
+  for(uint32_t i=1; i<D; i++) {
+    printf(",");
+    bmat_print_list_n(a[i],D);
+  }
+
+  printf("}\n");
+}
+
+//------------------------------------------------------------------------------
+
 
 void bmprt_row_start(char* prefix, uint32_t i) { printf("%s%2u │", prefix,i); }
 
@@ -85,7 +178,7 @@ void bmat_print_8(char* prefix, bmat_param_8(m))
   for(uint32_t i=0; i<8; i++) {
     bmprt_row_start(prefix,i);
     bmprt_row_8(m0[i]);
-    bmprt_row_8_end(prefix,1,"");
+    bmprt_row_8_end("",1,"");
   }
 }
 
@@ -104,7 +197,7 @@ void bmat_print2_8(char*   prefix,
     bmprt_row_start(prefix,i);
     bmprt_row_8(m0[i]);
     bmprt_row_8(m1[i]);
-    bmprt_row_8_end(prefix,2,"");
+    bmprt_row_8_end("",2,"");
   }
 }
 
