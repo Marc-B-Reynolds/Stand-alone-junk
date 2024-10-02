@@ -278,6 +278,12 @@ extern void bmat_print_16(char* prefix, bmat_param_16(m));
 extern void bmat_print_32(char* prefix, bmat_param_32(m));
 extern void bmat_print_64(char* prefix, bmat_param_64(m));
 
+extern void bmat_print_list_8 (bmat_param_8 (m));
+extern void bmat_print_list_16(bmat_param_16(m));
+extern void bmat_print_list_32(bmat_param_32(m));
+extern void bmat_print_list_64(bmat_param_64(m));
+
+
 extern uint32_t f2_ufunc_validate_32_i   (uint32_t (*)(uint32_t), uint32_t (*)(uint32_t));
 extern uint64_t f2_ufunc_validate_64_i   (uint64_t (*)(uint64_t), uint64_t (*)(uint64_t));
 extern uint32_t f2_ufunc_p_validate_32_i (uint32_t (*)(uint32_t), uint32_t (*)(uint32_t,uint32_t), uint32_t);
