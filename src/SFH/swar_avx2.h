@@ -447,6 +447,21 @@ pshufb_table_128x2(uint8_t B0,uint8_t B1,uint8_t B2,uint8_t B3,
   SFH_CAT(AVX2_PREFIX, setr_epi8)((int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF,(int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF)
 #endif
 
+// register with only bit 'n' set: 256 bit: (1 << n)
+// modification of: https://stackoverflow.com/questions/39475525/set-individual-bit-in-avx-register-m256i-need-random-access-operator/39595704#39595704
+static inline u256_t bit_n_256(uint32_t n)
+{
+//__m256i one   = broadcast_32x8(hint_no_const_fold_32(1));
+  __m256i one   = broadcast_32x8(1);
+  __m256i cnts  = _mm256_set_epi32(224,192,160,128,96,64,32,0);
+  __m256i bn    = broadcast_32x8(n);
+  __m256i shift = sub_32x8(bn, cnts);
+  __m256i r     = sllv_32x8(one, shift);
+  
+  return r;
+}
+
+
 // meh
 static inline u256_t byte_shuffle_128x2(u256_t x, u256_t table) { return SFH_CAT(AVX2_PREFIX, shuffle_epi8)(x,table); }
 
