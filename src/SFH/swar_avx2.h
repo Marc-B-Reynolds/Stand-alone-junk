@@ -65,7 +65,6 @@ typedef __m128i u128_t;
 #define loadu_256      SFH_CAT(AVX2_PREFIX, loadu_si256)
 #define storeu_256     SFH_CAT(AVX2_PREFIX, storeu_si256)
 
-#define setr_8x32      SFH_CAT(AVX2_PREFIX, setr_epi8)
 #define movemask_8x32  (uint32_t)SFH_CAT(AVX2_PREFIX, movemask_epi8)
 
 #define or_256         SFH_CAT(AVX2_PREFIX, or_si256)
@@ -141,6 +140,8 @@ typedef __m128i u128_t;
 #define slli_16x16     SFH_CAT(AVX2_PREFIX, slli_epi16)
 #define slli_32x8      SFH_CAT(AVX2_PREFIX, slli_epi32)
 #define slli_64x4      SFH_CAT(AVX2_PREFIX, slli_epi64)
+#define srai_16x16     SFH_CAT(AVX2_PREFIX, srai_epi16)
+#define srai_32x8      SFH_CAT(AVX2_PREFIX, srai_epi32)
 
 #define bslli_128x2    SFH_CAT(AVX2_PREFIX, bslli_epi128)
 #define bsrli_128x2    SFH_CAT(AVX2_PREFIX, bsrli_epi128)
@@ -152,16 +153,13 @@ typedef __m128i u128_t;
 #define sll_16x16      SFH_CAT(AVX2_PREFIX, sll_epi16)
 #define sll_32x8       SFH_CAT(AVX2_PREFIX, sll_epi32)
 #define sll_64x4       SFH_CAT(AVX2_PREFIX, sll_epi64)
+#define sra_16x16      SFH_CAT(AVX2_PREFIX, sra_epi16)
+#define sra_32x8       SFH_CAT(AVX2_PREFIX, sra_epi32)
 
 #define sllv_32x8      SFH_CAT(AVX2_PREFIX, sllv_epi32)
 #define sllv_64x4      SFH_CAT(AVX2_PREFIX, sllv_epi64)
 #define srlv_32x8      SFH_CAT(AVX2_PREFIX, srlv_epi32)
 #define srlv_64x4      SFH_CAT(AVX2_PREFIX, srlv_epi64)
-
-#define sra_16x16      SFH_CAT(AVX2_PREFIX, sra_epi16)
-#define sra_32x8       SFH_CAT(AVX2_PREFIX, sra_epi32)
-#define srai_16x16     SFH_CAT(AVX2_PREFIX, srai_epi16)
-#define srai_32x8      SFH_CAT(AVX2_PREFIX, srai_epi32)
 #define srav_32x8      SFH_CAT(AVX2_PREFIX, srav_epi32)
 
 #define cmpeq_8x32     SFH_CAT(AVX2_PREFIX, cmpeq_epi8)
@@ -179,6 +177,12 @@ typedef __m128i u128_t;
 #define blend_32x8     SFH_CAT(AVX2_PREFIX, blend_epi32)
 #define blend_pd_256   SFH_CAT(AVX2_PREFIX, blend_pd)
 // blend_64x4 hacky macro below
+
+#define blendv_8x32    SFH_CAT(AVX2_PREFIX, blendv_epi8)
+#define blendv_pd_256  SFH_CAT(AVX2_PREFIX, blendv_pd)
+#define blendv_ps_256  SFH_CAT(AVX2_PREFIX, blendv_ps)
+// blendv_32x8 hacky macro below
+// blendv_64x4 hacky macro below
 
 #define unpackhi_8x32  SFH_CAT(AVX2_PREFIX, unpackhi_epi8)
 #define unpacklo_8x32  SFH_CAT(AVX2_PREFIX, unpacklo_epi8)
@@ -204,6 +208,21 @@ typedef __m128i u128_t;
 #define alignr_128x2  SFH_CAT(AVX2_PREFIX, alignr_epi8)
 #define zero_256      SFH_CAT(AVX2_PREFIX, setzero_si256)
 #define pshufb_128x2  SFH_CAT(AVX2_PREFIX, shuffle_epi8)
+
+#define sub_ssat_8x32   SFH_CAT(AVX2_PREFIX, subs_epi8)
+#define sub_ssat_16x16  SFH_CAT(AVX2_PREFIX, subs_epi16)
+#define sub_usat_8x32   SFH_CAT(AVX2_PREFIX, subs_epu8)
+#define sub_usat_16x16  SFH_CAT(AVX2_PREFIX, subs_epu16)
+
+#define set_8x32      SFH_CAT(AVX2_PREFIX, set_epi8 )
+#define set_16x16     SFH_CAT(AVX2_PREFIX, set_epi16)
+#define set_32x8      SFH_CAT(AVX2_PREFIX, set_epi32)
+#define set_64x4      SFH_CAT(AVX2_PREFIX, set_epi64x)
+
+#define setr_8x32     SFH_CAT(AVX2_PREFIX, setr_epi8 )
+#define setr_16x16    SFH_CAT(AVX2_PREFIX, setr_epi16)
+#define setr_32x8     SFH_CAT(AVX2_PREFIX, setr_epi32)
+#define setr_64x4     SFH_CAT(AVX2_PREFIX, setr_epi64x)
 
 #define set1_8x32     SFH_CAT(AVX2_PREFIX, set1_epi8 )
 #define set1_16x16    SFH_CAT(AVX2_PREFIX, set1_epi16)
@@ -244,7 +263,9 @@ static inline u256_t dup_even_64x4(u256_t x)
   return from_f64_256(movedup_pd(to_f64_256(x)));
 }
 
-#define blend_64x4(A,B,S) from_f64_256(blend_pd(to_f64_256(A),to_f64_256(B),S))
+#define blend_64x4(A,B,S)  from_f64_256(blend_pd (to_f64_256(A),to_f64_256(B),S))
+#define blendv_64x4(A,B,S) from_f64_256(blendv_pd(to_f64_256(A),to_f64_256(B),S))
+#define blendv_32x8(A,B,S) from_f32_256(blendv_ps(to_f32_256(A),to_f32_256(B),S))
 
 // broadcast (scalar) 'k' to all elements
 static inline u256_t broadcast_8x32 (uint8_t  x) { return set1_8x32 ((int8_t) x); }
@@ -451,12 +472,12 @@ pshufb_table_128x2(uint8_t B0,uint8_t B1,uint8_t B2,uint8_t B3,
 // modification of: https://stackoverflow.com/questions/39475525/set-individual-bit-in-avx-register-m256i-need-random-access-operator/39595704#39595704
 static inline u256_t bit_n_256(uint32_t n)
 {
-//__m256i one   = broadcast_32x8(hint_no_const_fold_32(1));
-  __m256i one   = broadcast_32x8(1);
-  __m256i cnts  = _mm256_set_epi32(224,192,160,128,96,64,32,0);
-  __m256i bn    = broadcast_32x8(n);
-  __m256i shift = sub_32x8(bn, cnts);
-  __m256i r     = sllv_32x8(one, shift);
+//u256_t one   = broadcast_32x8(hint_no_const_fold_32(1));
+  u256_t one   = broadcast_32x8(1);
+  u256_t cnts  = _mm256_set_epi32(224,192,160,128,96,64,32,0);
+  u256_t bn    = broadcast_32x8(n);
+  u256_t shift = sub_32x8(bn, cnts);
+  u256_t r     = sllv_32x8(one, shift);
   
   return r;
 }
