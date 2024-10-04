@@ -47,9 +47,9 @@ ${ODIR}/%.d:%.c
 	@mkdir -p ${ODIR}
 	@$(CC) -MM -MQ${<:.c=} ${IDIRS} ${CFLAGS} $< >> $@
 
-# anything with a flint suffix requires flint
+# anything with a flint suffix requires flint & m4ri
 %_flint: %_flint.c Makefile
-	${CC} ${CFLAGS} $< -L.. ${LDLIBS} -lflint -o $@
+	${CC} ${CFLAGS} $< -L.. ${LDLIBS} -lflint -lm4ri -o $@
 
 # anything with a m4ri suffix requires m4ri
 %_m4ri_simde: %_m4ri.c Makefile
