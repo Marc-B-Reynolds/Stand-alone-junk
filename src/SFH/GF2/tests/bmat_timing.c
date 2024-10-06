@@ -102,16 +102,20 @@ uint64_t* m2;
     DO(bmat_rank_8)       \
     DO(bmat_rank_16)      \
     DO(bmat_rank_32)      \
-    DO(bmat_rank_64)
+    DO(bmat_rank_64)      \
+    DO(bmat_charpoly_8)   \
+    DO(bmat_charpoly_16)  \
+    DO(bmat_charpoly_32)  \
+    DO(bmat_charpoly_64)
 
 //--------------------------------------------------
-volatile uint32_t sink32 = 0;
+volatile uint64_t sink64 = 0;
 
 #define WRAP_1M(N)  BMAT_FLATTEN void w_##N(void) { N(m0); }
 #define WRAP_2M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,(void*)m1); }
 #define WRAP_3M(N)  BMAT_FLATTEN void w_##N(void) { N(m0,m1,m2); }
 
-#define WRAP_1MI(N) BMAT_FLATTEN void w_##N(void) { sink32 += N(m0); }
+#define WRAP_1MI(N) BMAT_FLATTEN void w_##N(void) { sink64 += (uint64_t)N(m0); }
 
 // expand wrappers
 //FOR_1M_FUNCS(WRAP_1M)
