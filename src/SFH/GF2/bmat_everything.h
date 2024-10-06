@@ -11,6 +11,7 @@
 #include "bmat_toeplitz.c"
 #include "bmat_block.c"
 #include "bmat_gauss.c"
+#include "bmat_charpoly.c"
 #include "bmat_mul.c"
 #include "bmat_transpose.c"
 #include "bmat_random.c"
