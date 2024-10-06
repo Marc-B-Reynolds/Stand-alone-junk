@@ -259,6 +259,16 @@ extern bool bmat_is_full_rank_16(bmat_param_16(m));
 extern bool bmat_is_full_rank_32(bmat_param_32(m));
 extern bool bmat_is_full_rank_64(bmat_param_64(m));
 
+extern void bmat_hessenberg_8(bmat_param_8(m));
+extern void bmat_hessenberg_16(bmat_param_16(m));
+extern void bmat_hessenberg_32(bmat_param_32(m));
+extern void bmat_hessenberg_64(bmat_param_64(m));
+
+extern uint64_t bmat_charpoly_8(bmat_param_8(m));
+extern uint64_t bmat_charpoly_16(bmat_param_16(m));
+extern uint64_t bmat_charpoly_32(bmat_param_32(m));
+extern uint64_t bmat_charpoly_64(bmat_param_64(m));
+
 extern void bmat_transpose_8 (bmat_rparam_8 (a), bmat_param_8 (b));
 extern void bmat_transpose_16(bmat_rparam_16(a), bmat_param_16(b));
 extern void bmat_transpose_32(bmat_rparam_32(a), bmat_param_32(b));
