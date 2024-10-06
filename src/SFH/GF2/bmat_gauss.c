@@ -516,7 +516,9 @@ bool bmat_is_full_rank_64(bmat_param_64(m)) { return bmat_rank_64(m) == 64; }
 /// </details>
 
 // kernel worker: handles up to 64-bit rows
-// TODO: compare against using full elimination instead.
+// TODO: compare against using full elimination instead once
+// I put SIMD versions in place. If pivot row style then
+// binary prefix sums? (consider how the ones matrix is modified)
 
 uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
 {
@@ -525,7 +527,7 @@ uint32_t bmat_kernel_w(uint64_t* restrict M, uint64_t* restrict V, uint64_t n)
   uint64_t bi   = 1;
   uint32_t nullity = 0;
 
-  // defect row index 
+  // pivot row index 
   uint8_t  mark[64];
 
   // walk the rows
