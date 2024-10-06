@@ -150,3 +150,34 @@ void bmat_set_exchange_32(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(i
 void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(int32_t i=63; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_64(m,a); }
 
 
+///----------
+///
+/// ## bmat_set_companion_*n*(m,n)
+///
+/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix)).
+///
+/// NO:
+/// $$
+///   \left[ {\begin{array}{cccc}
+///     0 & 0 & 0 & 1 \				\
+///    \vdots & \vdots & \ddots & \vdots\\
+///    0 & 1 & \cdots & 0\	 \
+///    1 & 0 & \cdots & 0 \\
+///  \end{array} } \right]
+/// $$
+/// 
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_set_companion_8 ((bmat_param_8 (m), uint64_t n)
+/// void bmat_set_companion_16((bmat_param_16(m), uint64_t n)
+/// void bmat_set_companion_32((bmat_param_32(m), uint64_t n)
+/// void bmat_set_companion_64((bmat_param_64(m), uint64_t n)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+#if 0
+void bmat_set_companion_8 (bmat_param_8 (m)) { bmat_set_rshift_8 (m,1); bmat_set_row_8 (m, 7,n); }
+void bmat_set_companion_16(bmat_param_16(m)) { bmat_set_rshift_16(m,1); bmat_set_row_16(m,15,n); }
+void bmat_set_companion_32(bmat_param_32(m)) { bmat_set_rshift_32(m,1); bmat_set_row_32(m,31,n); }
+void bmat_set_companion_64(bmat_param_64(m)) { bmat_set_rshift_64(m,1); bmat_set_row_64(m,63,n); }
+#endif
+
