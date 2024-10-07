@@ -6,19 +6,10 @@
 ///
 /// The headers for these functions are in `bmat_m4ri.h`.  If any
 /// of these routines are used then M4RI must be installed and
-/// the library linked.
+/// the library linked.n
+/// <br>
+/// Most of the functions are designed solely for testing.
 /// 
-/// Only the functions:
-/// * `bmat_to_m4ri_n`
-/// * `bmat_from_m4ri_n`
-/// 
-/// provide any functionality. Everything else is just wrappers
-/// that seem convenient to me. A fair amount of heavy weight
-/// functions for testing convenience.
-
-//Any function that contains `test`
-// is solely designed for testing purposes (it probably does
-// the *thing* in a super expensive way)
 
 
 // OPTIONAL BRIDGE TO M4RI. It's all hacked ATM
