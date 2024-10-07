@@ -18,5 +18,12 @@
 #include "bmat_func.c"
 
 #include "bmat_ref.c"
-#include "bmat_m4ri.c"
 #include "bmat_print.c"
+
+#if defined(BMAT_M4RI_ENABLE)
+#include "bmat_m4ri.c"
+#endif
+
+#if defined(BMAT_FLINT_ENABLE)
+#include "bmat_flint.c"
+#endif
