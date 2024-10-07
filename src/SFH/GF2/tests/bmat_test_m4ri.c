@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define  BMAT_M4RI_ENABLE
 #include "../bmat_everything.h"
 #include "bmat_test.h"
 
