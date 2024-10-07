@@ -16,10 +16,11 @@
 // 
 // "Computing Characteristic Polynomials of Matrices of
 // Structured Polynomials", Marshall Law, 2017
-// Algorithm 3, Stage 2
+// Algorithm 3
 // (https://www.cecm.sfu.ca/CAG/theses/marshall.pdf)
 
-
+// bmat_col_{swap,add}_w autovectorize pretty well. changing the mask
+// to be passed in adapt to smaller than 64-bit row workers
 
 // requires i>j
 static inline void
