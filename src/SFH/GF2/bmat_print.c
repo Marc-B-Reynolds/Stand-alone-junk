@@ -10,19 +10,24 @@
 // all junk. make workers and direct or better yet
 // put my mini report library in SFH and add matrix support
 
-void bmat_print_list_n(uint64_t row, uint32_t b)
+
+//*******************************************************************
+// output to PL & DSL dumps
+
+// worker versions: pass in start of row string, element separator and end row string
+void bmat_print_list_ni(uint64_t row, uint32_t b, char* rowS, char* elemS, char* rowE)
 {
-  printf("{%c", (char)((row & 1)+'0'));
+  printf("%s%c",rowS,(char)((row & 1)+'0'));
   row >>= 1;
 
   for(uint32_t i=1; i<b; i++) {
-    printf(",%c", (char)((row & 1)+'0'));
+    printf("%s%c", elemS, (char)((row & 1)+'0'));
     row >>=1;
   }
-  printf("}");
+  printf("%s", rowE);
 }
 
-void bmat_print_list_8(bmat_param_8(m))
+void bmat_print_list_8i(bmat_param_8(m), char* rowS, char* elemS, char* rowE)
 {
   static const uint32_t D = 8;
   
@@ -30,18 +35,18 @@ void bmat_print_list_8(bmat_param_8(m))
 
   bmat_to_array_8(a,m);
 
-  printf("{");
-  bmat_print_list_n(a[0],D);
+  printf("%s", rowS);
+  bmat_print_list_ni(a[0],D,rowS,elemS,rowE);
   
   for(uint32_t i=1; i<D; i++) {
-    printf(",");
-    bmat_print_list_n(a[i],D);
+    printf("%s", elemS);
+    bmat_print_list_ni(a[i],D,rowS,elemS,rowE);
   }
 
-  printf("}\n");
+  printf("%s\n",rowE);
 }
 
-void bmat_print_list_16(bmat_param_16(m))
+void bmat_print_list_16i(bmat_param_16(m), char* rowS, char* elemS, char* rowE)
 {
   static const uint32_t D = 16;
   
@@ -49,18 +54,18 @@ void bmat_print_list_16(bmat_param_16(m))
 
   bmat_to_array_16(a,m);
 
-  printf("{");
-  bmat_print_list_n(a[0],D);
+  printf("%s", rowS);
+  bmat_print_list_ni(a[0],D,rowS,elemS,rowE);
   
   for(uint32_t i=1; i<D; i++) {
-    printf(",");
-    bmat_print_list_n(a[i],D);
+    printf("%s", elemS);
+    bmat_print_list_ni(a[i],D,rowS,elemS,rowE);
   }
 
-  printf("}\n");
+  printf("%s\n",rowE);
 }
 
-void bmat_print_list_32(bmat_param_32(m))
+void bmat_print_list_32i(bmat_param_32(m), char* rowS, char* elemS, char* rowE)
 {
   static const uint32_t D = 32;
   
@@ -68,18 +73,18 @@ void bmat_print_list_32(bmat_param_32(m))
 
   bmat_to_array_32(a,m);
 
-  printf("{");
-  bmat_print_list_n(a[0],D);
+  printf("%s", rowS);
+  bmat_print_list_ni(a[0],D,rowS,elemS,rowE);
   
   for(uint32_t i=1; i<D; i++) {
-    printf(",");
-    bmat_print_list_n(a[i],D);
+    printf("%s", elemS);
+    bmat_print_list_ni(a[i],D,rowS,elemS,rowE);
   }
 
-  printf("}\n");
+  printf("%s\n",rowE);
 }
 
-void bmat_print_list_64(bmat_param_64(m))
+void bmat_print_list_64i(bmat_param_64(m), char* rowS, char* elemS, char* rowE)
 {
   static const uint32_t D = 64;
   
@@ -87,19 +92,32 @@ void bmat_print_list_64(bmat_param_64(m))
 
   bmat_to_array_64(a,m);
 
-  printf("{");
-  bmat_print_list_n(a[0],D);
+  printf("%s", rowS);
+  bmat_print_list_ni(a[0],D,rowS,elemS,rowE);
   
   for(uint32_t i=1; i<D; i++) {
-    printf(",");
-    bmat_print_list_n(a[i],D);
+    printf("%s", elemS);
+    bmat_print_list_ni(a[i],D,rowS,elemS,rowE);
   }
 
-  printf("}\n");
+  printf("%s\n",rowE);
 }
 
-//------------------------------------------------------------------------------
+void bmat_print_list_n(uint64_t row, uint32_t b) { bmat_print_list_ni(row,b,"{",",","}"); }
 
+// curely braces and commas
+void bmat_print_list_8 (bmat_param_8 (m)) { bmat_print_list_8i (m,"{",",","}"); }
+void bmat_print_list_16(bmat_param_16(m)) { bmat_print_list_16i(m,"{",",","}"); }
+void bmat_print_list_32(bmat_param_32(m)) { bmat_print_list_32i(m,"{",",","}"); }
+void bmat_print_list_64(bmat_param_64(m)) { bmat_print_list_64i(m,"{",",","}"); }
+
+// square brackets and commas
+void bmat_print_mlist_8 (bmat_param_8 (m)) { bmat_print_list_8i (m,"[",",","]"); }
+void bmat_print_mlist_16(bmat_param_16(m)) { bmat_print_list_16i(m,"[",",","]"); }
+void bmat_print_mlist_32(bmat_param_32(m)) { bmat_print_list_32i(m,"[",",","]"); }
+void bmat_print_mlist_64(bmat_param_64(m)) { bmat_print_list_64i(m,"[",",","]"); }
+
+//*******************************************************************
 
 void bmprt_row_start(char* prefix, uint32_t i) { printf("%s%2u │", prefix,i); }
 
