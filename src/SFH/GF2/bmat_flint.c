@@ -52,6 +52,23 @@ void flint_gf2p_free(nmod_poly_t* p)
   }
 }
 
+
+/// ----------
+/// ## flint_alloc_*n*(void)
+///
+/// allocates a FLINT structure for a $n \times n$ matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// nmod_mat_t* flint_alloc_8 (void)
+/// nmod_mat_t* flint_alloc_16(void)
+/// nmod_mat_t* flint_alloc_32(void)
+/// nmod_mat_t* flint_alloc_64(void)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// change these names
 nmod_mat_t* flint_gf2m_alloc_8 (void) { return flint_gf2m_alloc_n(8);  }
 nmod_mat_t* flint_gf2m_alloc_16(void) { return flint_gf2m_alloc_n(16); }
 nmod_mat_t* flint_gf2m_alloc_32(void) { return flint_gf2m_alloc_n(32); }
@@ -63,6 +80,20 @@ nmod_mat_t* flint_gf2m_alloc_64(void) { return flint_gf2m_alloc_n(64); }
 
 #include <m4ri/m4ri_config.h>
 #include <m4ri/m4ri.h>
+
+//******************************************************************************
+// move in/out of flint matrices. flint must be proper shape
+
+/// ----------
+/// ## m4ri_to_flint_*n*(d,m)
+///
+/// copies the matrix `m` into the FLINT structure `d`
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_to_flint_8 (nmod_mat_t d, bmat_param_8(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
 
 
 // M4RI convert. must be the same shape
@@ -92,6 +123,21 @@ void flint_to_m4ri(mzd_t* R, nmod_mat_t M)
 
 //******************************************************************************
 // move in/out of flint matrices. flint must be proper shape
+
+/// ----------
+/// ## bmat_to_flint_*n*(d,m)
+///
+/// copies the matrix `m` into the FLINT structure `d`
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_to_flint_8 (nmod_mat_t d, bmat_param_8(m))
+/// void bmat_to_flint_16(nmod_mat_t d, bmat_param_16(m))
+/// void bmat_to_flint_32(nmod_mat_t d, bmat_param_32(m))
+/// void bmat_to_flint_64(nmod_mat_t d, bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
 
 void bmat_to_flint_8(nmod_mat_t R, bmat_param_8(m))
 {
@@ -153,6 +199,21 @@ void bmat_to_flint_64(nmod_mat_t R, bmat_param_32(m))
     }
   }
 }
+
+
+/// ----------
+/// ## bmat_from_flint_*n*(d,m)
+///
+/// copies the matrix `m` into the FLINT structure `d`
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_from_flint_8 (bmat_param_8(m)), nmod_mat_t d)
+/// void bmat_from_flint_16(bmat_param_16(m), nmod_mat_t d)
+/// void bmat_from_flint_32(bmat_param_32(m), nmod_mat_t d)
+/// void bmat_from_flint_64(bmat_param_64(m), nmod_mat_t d)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
 
 void bmat_from_flint_8(bmat_param_8(m), nmod_mat_t M)
 {
@@ -230,6 +291,22 @@ void bmat_from_flint_64(bmat_param_8(m), nmod_mat_t M)
 //******************************************************************************
 // allocate/convert/return helpers
 
+/// ----------
+/// ## flint_make_*n*(m)
+///
+/// allocates a FLINT structure for a $n \times n$ matrix and
+/// sets it to `m`.
+///
+/// <details markdown="1"><summary>function list:</summary>
+///
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// nmod_mat_t* flint_make_8 (bmat_param_8 (m))
+/// nmod_mat_t* flint_make_16(bmat_param_16(m))
+/// nmod_mat_t* flint_make_32(bmat_param_32(m))
+/// nmod_mat_t* flint_make_64(bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
 nmod_mat_t* bmat_make_flint_8(bmat_param_8(m))
 {
   nmod_mat_t* M = flint_gf2m_alloc_8();
@@ -301,78 +378,23 @@ uint64_t flint_wrap_charpoly_64(bmat_param_64(m)) { return flint_wrap_charpoly_n
 
 
 
-
-
-
-
-
-/// ## m4ri_alloc_n(n)
+/// ----------
+/// ## flint_alloc_n(n)
 ///
-/// allocates a M4RI structure for a $n \times n$ matrix.
+/// allocates a FLINT structure for a $n \times n$ matrix.
 ///
 /// <details markdown="1"><summary>function list:</summary>
 ///
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// mzd_t* m4ri_alloc_n(uint32_t n)
+/// nmod_mat_t flint_alloc_n(uint32_t n)
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
 
-/// ## m4ri_alloc_*n*(void)
-///
-/// allocates a M4RI structure for a $n \times n$ matrix.
-///
-/// <details markdown="1"><summary>function list:</summary>
-///
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// mzd_t* m4ri_alloc_8 (void)
-/// mzd_t* m4ri_alloc_16(void)
-/// mzd_t* m4ri_alloc_32(void)
-/// mzd_t* m4ri_alloc_64(void)
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-/// </details>
 
 
-/// ## m4ri_make_*n*(m)
-///
-/// allocates a M4RI structure for a $n \times n$ matrix and
-/// sets it to `m`.
-///
-/// <details markdown="1"><summary>function list:</summary>
-///
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// mzd_t* m4ri_make_8 (bmat_param_8 (m))
-/// mzd_t* m4ri_make_16(bmat_param_8 (m))
-/// mzd_t* m4ri_make_32(bmat_param_8 (m))
-/// mzd_t* m4ri_make_64(bmat_param_8 (m))
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-/// </details>
 
 
-/// ## bmat_to_m4ri_*n*(d,m)
-///
-/// copies the matrix `m` into the M4RI structure `d`
-///
-/// <details markdown="1"><summary>function list:</summary>
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// void bmat_to_m4ri_8 (mzd_t* d, bmat_param_8(m))
-/// void bmat_to_m4ri_16(mzd_t* d, bmat_param_16(m))
-/// void bmat_to_m4ri_32(mzd_t* d, bmat_param_32(m))
-/// void bmat_to_m4ri_64(mzd_t* d, bmat_param_64(m))
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-/// </details>
 
 
-/// ## bmat_from_m4ri_*n*(d,m)
-///
-/// copies the matrix `m` into the M4RI structure `d`
-///
-/// <details markdown="1"><summary>function list:</summary>
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// void bmat_from_m4ri_8 (bmat_param_8(m)), mzd_t* d)
-/// void bmat_from_m4ri_16(bmat_param_16(m), mzd_t* d)
-/// void bmat_from_m4ri_32(bmat_param_32(m), mzd_t* d)
-/// void bmat_from_m4ri_64(bmat_param_64(m), mzd_t* d)
-/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-/// </details>
 
