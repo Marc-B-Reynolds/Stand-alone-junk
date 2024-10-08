@@ -20,7 +20,7 @@
 // (https://www.cecm.sfu.ca/CAG/theses/marshall.pdf)
 
 // bmat_col_{swap,add}_w autovectorize pretty well. changing the mask
-// to be passed in adapt to smaller than 64-bit row workers
+// to be passed in to adapt smaller than 64-bit row workers
 
 // requires i>j
 static inline void
@@ -72,10 +72,11 @@ static inline void bmat_hessenberg_w(uint64_t* r, uint32_t n)
     for (uint32_t i=j+1; i<n; i++) {
 
       if (r[i] & bj) {
-	// pivot found
+	// pivot found: swap the row & column
 	BIT_SWAP2_64(r[i],r[j]);
 	bmat_col_swap_w(r,i,j,n);
-	
+
+	// forward reduce
 	for (i=j+1; i<n; i++) {
 	  if (r[i] & bj) {
 	    r[i] ^= r[j];
