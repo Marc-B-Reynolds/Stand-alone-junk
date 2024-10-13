@@ -290,6 +290,67 @@ uint32_t test_all_unary_1param(prng_t* prng, uint32_t trials)
 }
 
 //******************************************************************************
+// validate two unary functions are the same: f0(m) = f1(m)
+//   where result is integer
+
+// the pair of functions to test
+typedef struct {
+  uint32_t (*f0)(uint64_t*);
+  uint32_t (*f1)(uint64_t*);
+} uqfunc_pair_t;
+
+// a full set of pairs for all sizes
+typedef struct {
+  char* name;
+  uqfunc_pair_t p[4];
+} uqfunc_set_t;
+
+// table of 1 parameter unary functions
+uqfunc_set_t uqfuncs[] = {
+  FUNC_SET(rank),
+};
+
+static inline uint32_t test_qunary(prng_t*        prng,
+				   test_fn_set_t* mset,
+				   uint32_t (*f0)(uint64_t*),
+				   uint32_t (*f1)(uint64_t*),
+				   uint32_t       n)
+{
+  bmat_def_64(m);
+  
+  mset->rsize();
+  
+  for(uint32_t i=0; i<n; i++) {
+    mset->random(m,prng);
+
+    uint32_t r0 = f0(m);
+    uint32_t r1 = f1(m);
+
+    if (r0 == r1) continue;
+
+    return test_fail();
+  }
+  return test_pass();
+}
+
+uint32_t test_all_qunary(prng_t* prng, uint32_t trials)
+{
+  uint32_t errors = 0;
+
+  for(uint32_t i=0; i<(sizeof(uqfuncs)/sizeof(uqfuncs[0])); i++) {
+    uqfunc_set_t* set = uqfuncs+i;
+    test_banner(set->name);
+
+    for(uint32_t t=0; t<4; t++) {
+      errors += test_qunary(prng, fn_set[t], set->p[t].f0, set->p[t].f1, trials);
+    }
+  }
+
+  return errors;
+}
+
+
+//******************************************************************************
 // validate two binary functions are the same: r = f0(a,b) = f1(a,b)
 //   call(r,a,b)
 
@@ -461,6 +522,7 @@ int main(void)
   errors += test_all_binary_3param(&prng, trials);
   errors += test_all_mvprod(&prng, trials);
   errors += test_all_gen(&prng, trials);
+  errors += test_all_qunary(&prng, trials);
   
   if (errors == 0)
     printf("all tests passed\n");
