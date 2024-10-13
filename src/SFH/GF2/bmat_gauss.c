@@ -465,14 +465,20 @@ uint32_t bmat_rank_16(bmat_param_16(M))
 
   uint32_t rank = 0;
 
-  for(uint32_t i=0; i<16; i++) {
-    a = cmpgt_16x16(and_256(m,c),z);
+  for(uint32_t i=0; i<15; i++) {
+    a = cmpgt_16x16(and_256(m,c),z);         // matching rows
     t = movemask_8x32(a);
-    b = broadcastv_16x16(m, ctz_64(t)>>1);
-    m = xor_256(m, and_256(a,b));
-    m = srli_16x16(m,1);
-    rank += (t != 0) ? 1 : 0;
+    b = broadcastv_16x16(m, ctz_64(t)>>1);   // first match to all
+    m = xor_256(m, and_256(a,b));            // add to all match
+    c = add_16x16(c,c);                      // update column bits
+    rank += (t != 0) ? 1 : 0;                // update rank
   }
+  
+  // skip elimation for last and handle that
+  // the comparison is signed.
+  a = cmpgt_16x16(z,and_256(m,c));
+  t = movemask_8x32(a);
+  rank += (t != 0) ? 1 : 0;
 
   return rank;
 }
