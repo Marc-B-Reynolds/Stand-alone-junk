@@ -275,6 +275,10 @@ static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x)
 
 // the reversal is unfortunate
 #define permutev_32x8   SFH_CAT(AVX2_PREFIX, permutevar8x32_epi32)
+#define permutev_pdx4   SFH_CAT(AVX2_PREFIX, permutevar_pd)
+
+// does NOT cross 128-bit lanes (unlike 32x8)
+#define permutev_64x4(X,I) from_f64_256(permutev_pdx4(to_f64_256(X),I))
 
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
 #define permute_128x2   SFH_CAT(AVX2_PREFIX, permute2x128_si256)
@@ -324,6 +328,40 @@ static inline u256_t hint_no_const_fold_256(u256_t v)
 #else
 static inline u256_t hint_no_const_fold_256(u256_t v) { return v; }
 #endif
+
+// broadcast element 'i' to all
+static inline u256_t broadcastv_32x8(u256_t x, uint32_t i)
+{
+  return permutev_32x8(x, broadcast_32x8(i));
+}
+
+// 8,16,64 shoehorn 32x8
+static inline u256_t broadcastv_8x32(u256_t x, uint32_t i)
+{
+  u256_t id = broadcast_32x8(i>>2);
+  u256_t r0 = permutev_32x8(x, id);
+  u256_t r  = pshufb_128x2(r0,broadcast_8x32(i&3));
+  return r;
+}
+
+static inline u256_t broadcastv_16x16(u256_t x, uint32_t i)
+{
+  u256_t i0 = broadcast_32x8(i>>1);
+  u256_t r0 = permutev_32x8(x, i0);
+
+  i = (i & 1) ? 0x0302 : 0x0100;
+
+  u256_t i1 = broadcast_16x16((uint16_t)i);
+  u256_t r  = pshufb_128x2(r0,i1);
+  return r;
+}
+
+static inline u256_t broadcastv_64x4(u256_t x, uint32_t i)
+{
+  u256_t id = add_32x8(broadcast_32x8(i<<1), broadcast_64x4(0x100000000));
+  u256_t r  = permutev_32x8(x, id);
+  return r;
+}
 
 
 // returns true if all elements are the same value
