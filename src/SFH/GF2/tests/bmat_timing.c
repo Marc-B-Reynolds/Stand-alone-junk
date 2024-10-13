@@ -12,6 +12,7 @@
 //#include <errno.h> // sigh
 #include <pthread.h>
 #include <sched.h>
+#include <math.h>
 
 #include "../bmat_everything.h"
 
