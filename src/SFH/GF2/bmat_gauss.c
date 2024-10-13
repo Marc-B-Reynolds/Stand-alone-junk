@@ -419,8 +419,6 @@ extern uint32_t bmat_rank_16_ref(bmat_param_16(m));
 extern uint32_t bmat_rank_32_ref(bmat_param_32(m));
 extern uint32_t bmat_rank_64_ref(bmat_param_64(m));
 
-//uint32_t bmat_rank_8(bmat_param_16(m)) { return bmat_rank_8_ref (m); }
-uint32_t bmat_rank_16(bmat_param_16(m)) { return bmat_rank_16_ref(m); }
 uint32_t bmat_rank_32(bmat_param_32(m)) { return bmat_rank_32_ref(m); }
 uint32_t bmat_rank_64(bmat_param_64(m)) { return bmat_rank_64_ref(m); }
 
@@ -455,6 +453,33 @@ uint32_t bmat_rank_8(bmat_param_8(M))
   
   return rank;
 }
+
+#if defined(SWAR_AVX2_H)
+uint32_t bmat_rank_16(bmat_param_16(M))
+{
+  u256_t   m = bmat_load_256(M);
+  u256_t   c = broadcast_16x16(1);
+  u256_t   z = zero_256();
+  u256_t   a,b;
+  uint64_t t;
+
+  uint32_t rank = 0;
+
+  for(uint32_t i=0; i<16; i++) {
+    a = cmpgt_16x16(and_256(m,c),z);
+    t = movemask_8x32(a);
+    b = broadcastv_16x16(m, ctz_64(t)>>1);
+    m = xor_256(m, and_256(a,b));
+    m = srli_16x16(m,1);
+    rank += (t != 0) ? 1 : 0;
+  }
+
+  return rank;
+}
+#else
+uint32_t bmat_rank_16(bmat_param_16(m)) { return bmat_rank_16_ref(m); }
+#endif
+
 
 
 /// ## bmat_nullity_*n*(m)
