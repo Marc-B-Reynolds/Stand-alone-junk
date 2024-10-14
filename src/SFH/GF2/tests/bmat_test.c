@@ -291,7 +291,7 @@ uint32_t test_all_unary_1param(prng_t* prng, uint32_t trials)
 
 //******************************************************************************
 // validate two unary functions are the same: f0(m) = f1(m)
-//   where result is integer
+//   where result is integer (and m may be modifed)
 
 // the pair of functions to test
 typedef struct {
@@ -316,17 +316,19 @@ static inline uint32_t test_qunary(prng_t*        prng,
 				   uint32_t (*f1)(uint64_t*),
 				   uint32_t       n)
 {
-  bmat_def_64(m);
+  bmat_def_64(m0);
+  bmat_def_64(m1);
   
   mset->rsize();
   
   for(uint32_t i=0; i<n; i++) {
-    mset->random(m,prng);
+    mset->random(m0,prng);
+    mset->dup(m1,m0);
 
-    uint32_t r0 = f0(m);
-    uint32_t r1 = f1(m);
+    uint32_t r0 = f0(m0);
+    uint32_t r1 = f1(m1);
 
-    if (r0 == r1) continue;
+    if (mset->equal(m0,m1) && (r0 == r1)) continue;
 
     return test_fail();
   }
