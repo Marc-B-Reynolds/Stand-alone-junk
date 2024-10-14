@@ -126,6 +126,11 @@ extern void bmat_sum_16(bmat_param_16(d), bmat_param_16(a));
 extern void bmat_sum_32(bmat_param_32(d), bmat_param_32(a));
 extern void bmat_sum_64(bmat_param_64(d), bmat_param_64(a));
 
+extern void bmat_add_unit_8 (bmat_param_8 (d), bmat_param_8 (a));
+extern void bmat_add_unit_16(bmat_param_16(d), bmat_param_16(a));
+extern void bmat_add_unit_32(bmat_param_32(d), bmat_param_32(a));
+extern void bmat_add_unit_64(bmat_param_64(d), bmat_param_64(a));
+
 extern uint32_t bmat_md_sum_8 (bmat_param_8 (m));
 extern uint32_t bmat_md_sum_16(bmat_param_16(m));
 extern uint32_t bmat_md_sum_32(bmat_param_32(m));
