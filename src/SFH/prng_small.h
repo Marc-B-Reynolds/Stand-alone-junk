@@ -13,12 +13,6 @@
 //   instead the XGB portion can be fast forwarded by 2^64
 
 
-#if defined(PRNG_SMALL_NO_MIX)
-
-static inline uint64_t prng_mix(uint64_t x) { return x; }
-
-#else
-
 // helper functions:
 #if !defined(_MSC_VER)
 // seems like "pretty much" everybody (stern eyes) can match this pattern
@@ -41,11 +35,15 @@ static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return __crc32cd
 static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return _mm_crc32_u64(k,x); }
 #endif
 
-// temp hack. decide one of the the 
-static inline uint64_t prng_mix(uint64_t x) { return x; }
+static inline uint64_t prng_mix_64(uint64_t x)
+{
+  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
+  x = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+  x = (x ^ (x >> 31));
+  return x;
+}
 
-#endif
-
+// slots of each state element
 enum { PRNG_LCG_0, PRNG_XGB_L, PRNG_XGB_H, PRNG_LENGTH };
 
 typedef struct { uint64_t state[3]; } prng_t;
@@ -58,7 +56,7 @@ static inline uint64_t prng_u64(prng_t* prng)
   uint64_t s0 = prng->state[PRNG_XGB_L];
   uint64_t s1 = prng->state[PRNG_XGB_H];
   uint64_t s2 = prng->state[PRNG_LCG_0];
-  uint64_t r  = prng_mix(s0 + s2);
+  uint64_t r  = prng_mix_64(s0 + s2);
   
   s1 ^= s0;
   prng->state[PRNG_LCG_0] = prng_mul_k * s2 + prng_add_k;
