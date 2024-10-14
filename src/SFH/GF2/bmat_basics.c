@@ -95,11 +95,47 @@ void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b)) { bmat_r
 void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b)) { bmat_row_add(d,a,b,16); }
 void bmat_add_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b)) { bmat_row_add(d,a,b,64); }
 
+
 // D += A 
 void bmat_sum_8 (bmat_param_8 (d), bmat_param_8 (a)) { bmat_row_sum(d,a, 1); }
 void bmat_sum_16(bmat_param_16(d), bmat_param_16(a)) { bmat_row_sum(d,a, 4); }
 void bmat_sum_32(bmat_param_32(d), bmat_param_32(a)) { bmat_row_sum(d,a,16); }
 void bmat_sum_64(bmat_param_64(d), bmat_param_64(a)) { bmat_row_sum(d,a,64); }
+
+// D = M+I
+void bmat_add_unit_8(bmat_param_8(d), bmat_param_8(m))
+{
+  d[0] = m[0] ^ UINT64_C(0x8040201008040201);
+}
+
+void bmat_add_unit_16(bmat_param_16(d), bmat_param_16(m))
+{
+  uint64_t u = UINT64_C(0x0008000400020001);
+  
+  d[0] = m[0] ^ u; u <<= 4;
+  d[1] = m[1] ^ u; u <<= 4;
+  d[2] = m[2] ^ u; u <<= 4;
+  d[3] = m[3] ^ u;
+}
+
+void bmat_add_unit_32(bmat_param_32(d), bmat_param_32(m))
+{
+  uint64_t u = UINT64_C(0x0000000200000001);
+
+  for(uint32_t i=0; i<16; i++) {
+    d[i] = m[i] ^ u; u <<= 2;
+  }
+}
+
+void bmat_add_unit_64(bmat_param_64(d), bmat_param_64(m))
+{
+  uint64_t u = 1;
+
+  for(uint32_t i=0; i<64; i++) {
+    d[i] = m[i] ^ u; u <<= 1;
+  }
+}
+
 
 // D = MJ
 void bmat_flip_h_8(bmat_param_8 (d), bmat_param_8(m)) { d[0] = bit_reverse_8x8 (m[0]); }
