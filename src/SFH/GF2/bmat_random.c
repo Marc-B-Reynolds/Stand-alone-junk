@@ -49,26 +49,110 @@ void bmat_random_64(bmat_param_64(m), prng_t* prng) { bmat_random_n(m,prng,64); 
 
 /// ----------
 ///
-/// ## bmat_random_stu_*n*(m,prng)
+/// ## bmat_random_sut_*n*(m,prng)
 ///
-/// Generates a [strictly upper triangular](https://en.wikipedia.org/wiki/Triangular_matrix) matrix.
+/// Generates a random [strictly upper triangular](https://en.wikipedia.org/wiki/Triangular_matrix#Special_forms) matrix.
 ///
 /// <details markdown="1"><summary>function list:</summary>
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
-/// void bmat_random_stu_64(bmat_param_64(m), prng_t* prng)
+/// void bmat_random_sut_8 (bmat_param_8 (m), prng_t* prng)
+/// void bmat_random_sut_16(bmat_param_16(m), prng_t* prng)
+/// void bmat_random_sut_32(bmat_param_32(m), prng_t* prng)
+/// void bmat_random_sut_64(bmat_param_64(m), prng_t* prng)
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 ///  </details>
 
-void bmat_random_stu_64(bmat_param_64(m),prng_t* prng)
+void bmat_random_sut_8(bmat_param_8(m), prng_t* prng)
+{
+  uint64_t mask = UINT64_C(0x0080c0e0f0f8fcfe);
+  uint64_t t    = prng_u64(prng);
+  m[0] = t & mask;
+}
+
+void bmat_random_sut_16(bmat_param_16(m), prng_t* prng)
+{
+  // can be done in 3 random draws but the extra work
+  // doesn't make it worthwhile.
+  m[0] = prng_u64(prng) & UINT64_C(0xfff0fff8fffcfffe);
+  m[1] = prng_u64(prng) & UINT64_C(0xff00ff80ffc0ffe0);
+  m[2] = prng_u64(prng) & UINT64_C(0xf000f800fc00fe00);
+  m[3] = prng_u64(prng) & UINT64_C(0x00008000c000e000);
+}
+
+void bmat_random_sut_32(bmat_param_32(m), prng_t* prng)
 {
   uint64_t t;
+  uint64_t mask = UINT64_C(0xfffffffcfffffffe);
 
-  for(uint32_t i=0; i<32; i++)  {
+  for(uint32_t i=0; i<8; i++)  {
     t       = prng_u64(prng);
-    m[i]    = (t >> (i+1) );
-    m[63-i] = (t << (63-i));
+    m[i]    = (t &  mask);
+    m[15-i] = (bit_reverse_64(t & ~mask) << 1) & mask;
+    mask    = (mask << 2) & UINT64_C(0xfffffffcfffffffc);
   }
 }
+
+void bmat_random_sut_64(bmat_param_64(m), prng_t* prng)
+{
+  uint64_t t;
+  uint64_t mask = UINT64_C(~0)^1;
+
+  for(uint32_t i=0; i<31; i++)  {
+    t       = prng_u64(prng);
+    m[i]    = t & mask;
+    m[62-i] = t << (63-i);
+    mask  <<= 1;
+  }
+  
+  m[31] = prng_u64(prng) & mask;
+  m[63] = 0;
+}
+
+
+
+/// ----------
+///
+/// ## bmat_random_uut_*n*(m,prng)
+///
+/// Generates a random [upper unitriangular](https://en.wikipedia.org/wiki/Triangular_matrix#Special_forms) matrix (the main diagonal is all 1s).
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_random_sut_8 (bmat_param_8 (m), prng_t* prng)
+/// void bmat_random_sut_16(bmat_param_16(m), prng_t* prng)
+/// void bmat_random_sut_32(bmat_param_32(m), prng_t* prng)
+/// void bmat_random_sut_64(bmat_param_64(m), prng_t* prng)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+///  </details>
+
+void bmat_random_uut_8(bmat_param_8(m),prng_t* prng)
+{
+  uint64_t foo = UINT64_C(0x8040201008040201);
+  bmat_random_sut_8(m,prng);
+  m[0] ^= foo;
+}
+
+void bmat_random_uut_16(bmat_param_16(m),prng_t* prng)
+{
+  bmat_random_sut_16(m,prng);
+  bmat_add_unit_16(m,m);
+}
+
+void bmat_random_uut_32(bmat_param_32(m),prng_t* prng)
+{
+  bmat_random_sut_32(m,prng);
+  bmat_add_unit_32(m,m);
+}
+
+void bmat_random_uut_64(bmat_param_64(m),prng_t* prng)
+{
+  bmat_random_sut_64(m,prng);
+  bmat_add_unit_64(m,m);
+}
+
+
+
+
 
 /// ----------
 ///
