@@ -139,6 +139,16 @@ extern uint32_t bmat_trace_8 (bmat_param_8 (m));
 extern uint32_t bmat_trace_16(bmat_param_16(m));
 extern uint32_t bmat_trace_32(bmat_param_32(m));
 
+extern uint64_t bmat_get_row_8 (bmat_param_8 (m), uint32_t n);
+extern uint64_t bmat_get_row_16(bmat_param_16(m), uint32_t n);
+extern uint64_t bmat_get_row_32(bmat_param_32(m), uint32_t n);
+extern uint64_t bmat_get_row_64(bmat_param_64(m), uint32_t n);
+
+extern void bmat_set_row_8 (bmat_param_8 (m), uint32_t r, uint64_t v);
+extern void bmat_set_row_16(bmat_param_16(m), uint32_t r, uint64_t v);
+extern void bmat_set_row_32(bmat_param_32(m), uint32_t r, uint64_t v);
+extern void bmat_set_row_64(bmat_param_64(m), uint32_t r, uint64_t v);
+
 extern void bmat_flip_h_8 (bmat_param_8 (d), bmat_param_8 (m));
 extern void bmat_flip_h_16(bmat_param_16(d), bmat_param_16(m));
 extern void bmat_flip_h_32(bmat_param_32(d), bmat_param_32(m));
