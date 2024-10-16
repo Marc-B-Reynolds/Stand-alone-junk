@@ -584,7 +584,7 @@ static inline u256_t bit_reverse_128x2(u256_t x) {  return byte_reverse_128x2(bi
 static inline u256_t bit_reverse_256  (u256_t x) {  return byte_reverse_256  (bit_reverse_8x32(x)); }
 
 
-// computes the population count of each data width
+// computes the population count of each element
 
 #if 1
 static inline u256_t pop_8x32(u256_t x)
