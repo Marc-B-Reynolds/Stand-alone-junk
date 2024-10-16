@@ -66,13 +66,48 @@ void bmat_row_swap_16(bmat_param_16(m), uint32_t r0, uint32_t r1) { bmat_row_swa
 void bmat_row_swap_32(bmat_param_32(m), uint32_t r0, uint32_t r1) { bmat_row_swap_32_i(m, r0&0x1f, r1&0x1f); }
 void bmat_row_swap_64(bmat_param_64(m), uint32_t r0, uint32_t r1) { bmat_row_swap_64_i(m, r0&0x3f, r1&0x3f); }
 
-// not intended for usage. even for reference versions. dev aide.
-uint8_t  bmat_get_row_8 (bmat_param_8 (m), uint32_t n) { return (uint8_t) (m[0]             >> ( 8*(n&7))); }
-uint16_t bmat_get_row_16(bmat_param_16(m), uint32_t n) { return (uint16_t)(m[(n & 0x0f)>>2] >> (16*(n&3))); }
-uint32_t bmat_get_row_32(bmat_param_32(m), uint32_t n) { return (uint32_t)(m[(n & 0x1f)>>1] >> (32*(n&1))); }
-uint64_t bmat_get_row_64(bmat_param_64(m), uint32_t n) { return            m[(n & 0x3f)   ]; }
+uint64_t bmat_get_row_8 (bmat_param_8 (m), uint32_t n) { return (m[0]             >> ( 8*(n&7))) & 0xff; }
+uint64_t bmat_get_row_16(bmat_param_16(m), uint32_t n) { return (m[(n & 0x0f)>>2] >> (16*(n&3))) & 0xffff; }
+uint64_t bmat_get_row_32(bmat_param_32(m), uint32_t n) { return (m[(n & 0x1f)>>1] >> (32*(n&1))) & 0xffffffff; }
+uint64_t bmat_get_row_64(bmat_param_64(m), uint32_t n) { return  m[(n & 0x3f)   ]; }
 
-// not intended for usage. even for reference versions. dev aide.
+
+void bmat_set_row_8(bmat_param_8(m), uint32_t r, uint64_t v)
+{
+  uint64_t mask = UINT64_C(0xff);
+
+  v      = (v & mask) << (r*8);
+  mask <<= (r*8);
+  
+  m[0] = (m[0] & ~mask) ^ v;
+}
+
+void bmat_set_row_16(bmat_param_16(m), uint32_t r, uint64_t v)
+{
+  uint64_t mask = UINT64_C(0xffff);
+
+  v      = (v & mask) << (16*(r&3));
+  mask <<= (16*(r&3));
+
+  m[r>>2] = (m[r>>2] & ~mask) ^ v;
+}
+
+void bmat_set_row_32(bmat_param_32(m), uint32_t r, uint64_t v)
+{
+  uint64_t mask = UINT64_C(0xffffffff);
+
+  v      = (v & mask) << (32*(r&1));
+  mask <<= (32*(r&1));
+  
+  m[r>>1] = (m[r>>1] & ~mask) ^ v;
+}
+
+void bmat_set_row_64(bmat_param_64(m), uint32_t r, uint64_t v)
+{
+  r &= 0x3f;
+  m[r] = v;
+}
+
 uint64_t bmat_get_8 (bmat_param_8 (m), uint32_t r, uint32_t c) { return (bmat_get_row_8 (m,r) >> (c & 0x07)) & 1; }
 uint64_t bmat_get_16(bmat_param_16(m), uint32_t r, uint32_t c) { return (bmat_get_row_16(m,r) >> (c & 0x0f)) & 1; }
 uint64_t bmat_get_32(bmat_param_32(m), uint32_t r, uint32_t c) { return (bmat_get_row_32(m,r) >> (c & 0x1f)) & 1; }
