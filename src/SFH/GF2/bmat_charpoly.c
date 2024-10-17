@@ -99,7 +99,7 @@ void bmat_hessenberg_64(bmat_param_64(m))
   bmat_hessenberg_w(m,64);
 }
 
-// versions that wrapper generic
+// versions that wrapper the generic worker 
 
 void bmat_hessenberg_8(bmat_param_8(m))
 {
