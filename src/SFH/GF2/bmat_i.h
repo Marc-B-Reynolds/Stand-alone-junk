@@ -41,6 +41,11 @@ typedef union {
 #endif  
 } u256_data_t;
 
+// sigh
+#define BMAT_MAIN_DIAGONAL_MASK_8  UINT64_C(0X8040201008040201)
+#define BMAT_MAIN_DIAGONAL_MASK_16 UINT64_C(0X0008000400020001)
+#define BMAT_MAIN_DIAGONAL_MASK_32 UINT64_C(0x0000000200000001)
+
 extern const uint64_t bmat_main_diagonal_mask_8;
 extern const uint64_t bmat_main_diagonal_mask_16;
 extern const uint64_t bmat_main_diagonal_mask_32;
