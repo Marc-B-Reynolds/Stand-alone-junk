@@ -35,12 +35,12 @@ void bmat_and_n(bmat_rparam_n(d), uint64_t * a, uint64_t * b, uint32_t n)
   for(uint32_t i=0; i<n; i++) d[i] = a[i]&b[i];
 }
 
-void bmat_row_sum(bmat_rparam_n(d), uint64_t* a, uint32_t n)
+void bmat_sum_n(bmat_rparam_n(d), uint64_t* a, uint32_t n)
 {
   for(uint32_t i=0; i<n; i++) d[i] ^= a[i];
 }
 
-void bmat_row_add(bmat_rparam_n(d), uint64_t* a, uint64_t* b, uint32_t n)
+void bmat_add_n(bmat_rparam_n(d), uint64_t* a, uint64_t* b, uint32_t n)
 {
   for(uint32_t i=0; i<n; i++) d[i] = a[i]^b[i];
 }
@@ -113,39 +113,38 @@ uint64_t bmat_get_16(bmat_param_16(m), uint32_t r, uint32_t c) { return (bmat_ge
 uint64_t bmat_get_32(bmat_param_32(m), uint32_t r, uint32_t c) { return (bmat_get_row_32(m,r) >> (c & 0x1f)) & 1; }
 uint64_t bmat_get_64(bmat_param_64(m), uint32_t r, uint32_t c) { return (bmat_get_row_64(m,r) >> (c & 0x3f)) & 1; }
 
-bool bmat_equal_8 (bmat_param_8 (a), bmat_param_8 (b)) { return a[0] == b[0];         }
-bool bmat_equal_16(bmat_param_16(a), bmat_param_16(b)) { return bmat_equal_n(a,b, 4); }
-bool bmat_equal_32(bmat_param_32(a), bmat_param_32(b)) { return bmat_equal_n(a,b,16); }
-bool bmat_equal_64(bmat_param_64(a), bmat_param_64(b)) { return bmat_equal_n(a,b,64); }
+bool bmat_equal_8 (bmat_rparam_8 (a), bmat_param_8 (b)) { return a[0] == b[0];         }
+bool bmat_equal_16(bmat_rparam_16(a), bmat_param_16(b)) { return bmat_equal_n(a,b, 4); }
+bool bmat_equal_32(bmat_rparam_32(a), bmat_param_32(b)) { return bmat_equal_n(a,b,16); }
+bool bmat_equal_64(bmat_rparam_64(a), bmat_param_64(b)) { return bmat_equal_n(a,b,64); }
 
 bool bmat_is_zero_8 (bmat_param_8(m))  { return m[0] == 0; }
 bool bmat_is_zero_16(bmat_param_16(m)) { return bmat_is_zero_n(m, 4); }
 bool bmat_is_zero_32(bmat_param_32(m)) { return bmat_is_zero_n(m,16); }
 bool bmat_is_zero_64(bmat_param_64(m)) { return bmat_is_zero_n(m,64); }
 
-
-// D = A+B (restrict on output is required to be autovector nice)
-void bmat_add_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b)) { bmat_row_add(d,a,b, 1); }
-void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b)) { bmat_row_add(d,a,b, 4); }
-void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b)) { bmat_row_add(d,a,b,16); }
-void bmat_add_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b)) { bmat_row_add(d,a,b,64); }
-
+// D = A+B  (restrict on impl & not in forward decl on purpose)
+void bmat_add_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b)) { bmat_add_n(d,a,b, 1); }
+void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b)) { bmat_add_n(d,a,b, 4); }
+void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b)) { bmat_add_n(d,a,b,16); }
+void bmat_add_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b)) { bmat_add_n(d,a,b,64); }
 
 // D += A 
-void bmat_sum_8 (bmat_param_8 (d), bmat_param_8 (a)) { bmat_row_sum(d,a, 1); }
-void bmat_sum_16(bmat_param_16(d), bmat_param_16(a)) { bmat_row_sum(d,a, 4); }
-void bmat_sum_32(bmat_param_32(d), bmat_param_32(a)) { bmat_row_sum(d,a,16); }
-void bmat_sum_64(bmat_param_64(d), bmat_param_64(a)) { bmat_row_sum(d,a,64); }
+void bmat_sum_8 (bmat_rparam_8 (d), bmat_param_8 (a)) { bmat_sum_n(d,a, 1); }
+void bmat_sum_16(bmat_rparam_16(d), bmat_param_16(a)) { bmat_sum_n(d,a, 4); }
+void bmat_sum_32(bmat_rparam_32(d), bmat_param_32(a)) { bmat_sum_n(d,a,16); }
+void bmat_sum_64(bmat_rparam_64(d), bmat_param_64(a)) { bmat_sum_n(d,a,64); }
 
-// D = M+I
-void bmat_add_unit_8(bmat_param_8(d), bmat_param_8(m))
+
+// D = M+I  (restrict on impl & not in forward decl on purpose)
+void bmat_add_unit_8(bmat_rparam_8(d), bmat_param_8(m))
 {
-  d[0] = m[0] ^ UINT64_C(0x8040201008040201);
+  d[0] = m[0] ^ bmat_main_diagonal_mask_8;
 }
 
-void bmat_add_unit_16(bmat_param_16(d), bmat_param_16(m))
+void bmat_add_unit_16(bmat_rparam_16(d), bmat_param_16(m))
 {
-  uint64_t u = UINT64_C(0x0008000400020001);
+  uint64_t u = bmat_main_diagonal_mask_16;
   
   d[0] = m[0] ^ u; u <<= 4;
   d[1] = m[1] ^ u; u <<= 4;
@@ -153,16 +152,16 @@ void bmat_add_unit_16(bmat_param_16(d), bmat_param_16(m))
   d[3] = m[3] ^ u;
 }
 
-void bmat_add_unit_32(bmat_param_32(d), bmat_param_32(m))
+void bmat_add_unit_32(bmat_rparam_32(d), bmat_param_32(m))
 {
-  uint64_t u = UINT64_C(0x0000000200000001);
+  uint64_t u = bmat_main_diagonal_mask_32;
 
   for(uint32_t i=0; i<16; i++) {
     d[i] = m[i] ^ u; u <<= 2;
   }
 }
 
-void bmat_add_unit_64(bmat_param_64(d), bmat_param_64(m))
+void bmat_add_unit_64(bmat_rparam_64(d), bmat_param_64(m))
 {
   uint64_t u = 1;
 
