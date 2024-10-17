@@ -154,8 +154,7 @@ void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(i
 ///
 /// ## bmat_set_companion_*n*(m,n)
 ///
-/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix)).
-///
+/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix))
 /// NO:
 /// $$
 ///   \left[ {\begin{array}{cccc}
@@ -166,6 +165,8 @@ void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(i
 ///  \end{array} } \right]
 /// $$
 /// 
+/// * blah 
+/// 
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
 /// void bmat_set_companion_8 ((bmat_param_8 (m), uint64_t n)
 /// void bmat_set_companion_16((bmat_param_16(m), uint64_t n)
@@ -175,9 +176,43 @@ void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(i
 /// </details>
 
 #if 0
-void bmat_set_companion_8 (bmat_param_8 (m)) { bmat_set_rshift_8 (m,1); bmat_set_row_8 (m, 7,n); }
-void bmat_set_companion_16(bmat_param_16(m)) { bmat_set_rshift_16(m,1); bmat_set_row_16(m,15,n); }
-void bmat_set_companion_32(bmat_param_32(m)) { bmat_set_rshift_32(m,1); bmat_set_row_32(m,31,n); }
-void bmat_set_companion_64(bmat_param_64(m)) { bmat_set_rshift_64(m,1); bmat_set_row_64(m,63,n); }
+// todo: add_col
+void bmat_set_companion_8 (bmat_param_8 (m), uint64_t n) { bmat_set_lshift_8 (m,1); bmat_set_col_8 (m, 7,n); }
+void bmat_set_companion_16(bmat_param_16(m), uint64_t n) { bmat_set_lshift_16(m,1); bmat_set_col_16(m,15,n); }
+void bmat_set_companion_32(bmat_param_32(m), uint64_t n) { bmat_set_lshift_32(m,1); bmat_set_col_32(m,31,n); }
+void bmat_set_companion_64(bmat_param_64(m), uint64_t n) { bmat_set_lshift_64(m,1); bmat_set_col_64(m,63,n); }
+#endif
+
+
+///----------
+///
+/// ## bmat_set_linear_rs_*n*(m,n)
+///
+/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix))
+/// NO:
+/// * blah 
+/// $$
+///   \left[ {\begin{array}{cccc}
+///     0 & 0 & 0 & 1 \				\
+///    \vdots & \vdots & \ddots & \vdots\\
+///    0 & 1 & \cdots & 0\	 \
+///    1 & 0 & \cdots & 0 \\
+///  \end{array} } \right]
+/// $$
+/// 
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_set_linear_rs_8 ((bmat_param_8 (m), uint64_t n)
+/// void bmat_set_linear_rs_16((bmat_param_16(m), uint64_t n)
+/// void bmat_set_linear_rs_32((bmat_param_32(m), uint64_t n)
+/// void bmat_set_linear_rs_64((bmat_param_64(m), uint64_t n)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+#if 0
+// todo: add_row
+void bmat_set_linear_rs_8 (bmat_param_8 (m), uint64_t n) { bmat_set_rshift_8 (m,1); bmat_set_row_8 (m, 7,n); }
+void bmat_set_linear_rs_16(bmat_param_16(m), uint64_t n) { bmat_set_rshift_16(m,1); bmat_set_row_16(m,15,n); }
+void bmat_set_linear_rs_32(bmat_param_32(m), uint64_t n) { bmat_set_rshift_32(m,1); bmat_set_row_32(m,31,n); }
+void bmat_set_linear_rs_64(bmat_param_64(m), uint64_t n) { bmat_set_rshift_64(m,1); bmat_set_row_64(m,63,n); }
 #endif
 
