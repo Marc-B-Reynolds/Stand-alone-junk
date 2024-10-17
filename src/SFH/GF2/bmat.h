@@ -10,6 +10,13 @@
 #include "prng_small.h" // temp hack
 #endif
 
+// NOTES:
+// * a number of functions purposefully drop 'restrict' that is used
+//   at the implementation from the forward declarations. This is because
+//   identical inputs are fine for the routine but the compiler needs
+//   to know that there's no partial overlaps. An example is matrix
+//   addition.
+
 // hide your eyes
 
 // number of 64-bit words
@@ -49,12 +56,12 @@
 #define BMAT_ALIGN  __declspec(align(32))
 #define BMAT_FLATTEN
 
-#define bmat_rparam_n(X)  uint64_t* X
+#define bmat_rparam_n(X)  uint64_t* __restrict X
 
-#define bmat_rparam_8(X)  uint64_t* X
-#define bmat_rparam_16(X) uint64_t* X
-#define bmat_rparam_32(X) uint64_t* X
-#define bmat_rparam_64(X) uint64_t* X
+#define bmat_rparam_8(X)  uint64_t* __restrict X
+#define bmat_rparam_16(X) uint64_t* __restrict X
+#define bmat_rparam_32(X) uint64_t* __restrict X
+#define bmat_rparam_64(X) uint64_t* __restrict X
 
 #define bmat_param_8(X)  uint64_t* X
 #define bmat_param_16(X) uint64_t* X
@@ -116,15 +123,10 @@ extern bool bmat_is_zero_16(bmat_param_16(m));
 extern bool bmat_is_zero_32(bmat_param_32(m));
 extern bool bmat_is_zero_64(bmat_param_64(m));
 
-extern void bmat_add_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b));
-extern void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b));
-extern void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b));
-extern void bmat_add_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b));
-
-extern void bmat_sum_8 (bmat_param_8 (d), bmat_param_8 (a));
-extern void bmat_sum_16(bmat_param_16(d), bmat_param_16(a));
-extern void bmat_sum_32(bmat_param_32(d), bmat_param_32(a));
-extern void bmat_sum_64(bmat_param_64(d), bmat_param_64(a));
+extern void bmat_add_8 (bmat_param_8 (d), bmat_param_8 (a), bmat_param_8 (b));
+extern void bmat_add_16(bmat_param_16(d), bmat_param_16(a), bmat_param_16(b));
+extern void bmat_add_32(bmat_param_32(d), bmat_param_32(a), bmat_param_32(b));
+extern void bmat_add_64(bmat_param_64(d), bmat_param_64(a), bmat_param_64(b));
 
 extern void bmat_add_unit_8 (bmat_param_8 (d), bmat_param_8 (a));
 extern void bmat_add_unit_16(bmat_param_16(d), bmat_param_16(a));
