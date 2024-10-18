@@ -47,3 +47,13 @@ extern uint8_t  bmat_mulv_8_ref (bmat_param_8 (m), uint8_t);
 extern uint16_t bmat_mulv_16_ref(bmat_param_16(m), uint16_t);
 extern uint32_t bmat_mulv_32_ref(bmat_param_32(m), uint32_t);
 extern uint64_t bmat_mulv_64_ref(bmat_param_64(m), uint64_t);
+
+extern void bmat_row_lshift_8_ref (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_lshift_16_ref(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_lshift_32_ref(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_lshift_64_ref(bmat_param_64(d), bmat_param_64(m), uint32_t s);
+
+extern void bmat_row_rshift_8_ref (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_rshift_16_ref(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_rshift_32_ref(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_rshift_64_ref(bmat_param_64(d), bmat_param_64(m), uint32_t s);
