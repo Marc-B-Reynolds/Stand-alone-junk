@@ -123,6 +123,11 @@ extern bool bmat_is_zero_16(bmat_param_16(m));
 extern bool bmat_is_zero_32(bmat_param_32(m));
 extern bool bmat_is_zero_64(bmat_param_64(m));
 
+extern void bmat_sum_8 (bmat_rparam_8 (d), bmat_param_8 (a));
+extern void bmat_sum_16(bmat_rparam_16(d), bmat_param_16(a));
+extern void bmat_sum_32(bmat_rparam_32(d), bmat_param_32(a));
+extern void bmat_sum_64(bmat_rparam_64(d), bmat_param_64(a));
+
 extern void bmat_add_8 (bmat_param_8 (d), bmat_param_8 (a), bmat_param_8 (b));
 extern void bmat_add_16(bmat_param_16(d), bmat_param_16(a), bmat_param_16(b));
 extern void bmat_add_32(bmat_param_32(d), bmat_param_32(a), bmat_param_32(b));
@@ -183,6 +188,16 @@ extern void bmat_set_exchange_32(bmat_param_32(m));
 extern void bmat_set_exchange_64(bmat_param_64(m));
 
 // bmat_toeplitz.c
+extern void bmat_set_ut_toeplitz_8 (bmat_param_8 (m), uint64_t k);
+extern void bmat_set_ut_toeplitz_16(bmat_param_16(m), uint64_t k);
+extern void bmat_set_ut_toeplitz_32(bmat_param_32(m), uint64_t k);
+extern void bmat_set_ut_toeplitz_64(bmat_param_64(m), uint64_t k);
+
+extern void bmat_set_lt_toeplitz_8 (bmat_param_8 (m), uint64_t k);
+extern void bmat_set_lt_toeplitz_16(bmat_param_16(m), uint64_t k);
+extern void bmat_set_lt_toeplitz_32(bmat_param_32(m), uint64_t k);
+extern void bmat_set_lt_toeplitz_64(bmat_param_64(m), uint64_t k);
+
 extern void bmat_set_toeplitz_8 (bmat_param_8 (m), uint8_t  r, uint8_t  c);
 extern void bmat_set_toeplitz_16(bmat_param_16(m), uint16_t r, uint16_t c);
 extern void bmat_set_toeplitz_32(bmat_param_32(m), uint32_t r, uint32_t c);
