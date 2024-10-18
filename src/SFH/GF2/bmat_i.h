@@ -46,6 +46,10 @@ typedef union {
 #define BMAT_MAIN_DIAGONAL_MASK_16 UINT64_C(0X0008000400020001)
 #define BMAT_MAIN_DIAGONAL_MASK_32 UINT64_C(0x0000000200000001)
 
+#define BMAT_COLUMN_MASK_8  UINT64_C(0X0101010101010101)
+#define BMAT_COLUMN_MASK_16 UINT64_C(0X0001000100010001)
+#define BMAT_COLUMN_MASK_32 UINT64_C(0x0000000100000001)
+
 extern const uint64_t bmat_main_diagonal_mask_8;
 extern const uint64_t bmat_main_diagonal_mask_16;
 extern const uint64_t bmat_main_diagonal_mask_32;
@@ -83,6 +87,28 @@ extern const u256_data_t bmat_md_256_64;
 
 
 #define BMAT_REP_SHIFT_4(X,S) {X,X<<S,X<<(2*S),X<<(3*S)}
+
+
+extern void bmat_add_lsk_8 (bmat_param_8 (d), bmat_param_8 (m), uint64_t k);
+extern void bmat_add_lsk_16(bmat_param_16(d), bmat_param_16(m), uint64_t k);
+extern void bmat_add_lsk_32(bmat_param_32(d), bmat_param_32(m), uint64_t k);
+extern void bmat_add_lsk_64(bmat_param_64(d), bmat_param_64(m), uint64_t k);
+
+extern void bmat_add_rsk_8 (bmat_param_8 (d), bmat_param_8 (m), uint64_t k);
+extern void bmat_add_rsk_16(bmat_param_16(d), bmat_param_16(m), uint64_t k);
+extern void bmat_add_rsk_32(bmat_param_32(d), bmat_param_32(m), uint64_t k);
+extern void bmat_add_rsk_64(bmat_param_64(d), bmat_param_64(m), uint64_t k);
+
+extern void bmat_set_lsk_8 (bmat_param_8 (m), uint64_t k);
+extern void bmat_set_lsk_16(bmat_param_16(m), uint64_t k);
+extern void bmat_set_lsk_32(bmat_param_32(m), uint64_t k);
+extern void bmat_set_lsk_64(bmat_param_64(m), uint64_t k);
+
+extern void bmat_set_rsk_8 (bmat_param_8 (m), uint64_t k);
+extern void bmat_set_rsk_16(bmat_param_16(m), uint64_t k);
+extern void bmat_set_rsk_32(bmat_param_32(m), uint64_t k);
+extern void bmat_set_rsk_64(bmat_param_64(m), uint64_t k);
+
 
 static inline void bmat_widen_8(uint64_t* M, bmat_param_8(m))
 {
