@@ -687,7 +687,7 @@ uint32_t bmat_cokernel_64(bmat_rparam_64(m), bmat_array_64(v)) { bmat_def_64(t);
 ///
 /// $$ Ax=x $$ 
 /// 
-/// $$ Ax+x=0 \\  
+/// $$ Ax+x=0 \newline
 ///    \left(A+I\right)x = 0$$ 
 ///
 /// <details markdown="1"><summary>function list:</summary>
