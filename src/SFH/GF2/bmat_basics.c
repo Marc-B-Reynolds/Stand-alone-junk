@@ -113,21 +113,75 @@ uint64_t bmat_get_16(bmat_param_16(m), uint32_t r, uint32_t c) { return (bmat_ge
 uint64_t bmat_get_32(bmat_param_32(m), uint32_t r, uint32_t c) { return (bmat_get_row_32(m,r) >> (c & 0x1f)) & 1; }
 uint64_t bmat_get_64(bmat_param_64(m), uint32_t r, uint32_t c) { return (bmat_get_row_64(m,r) >> (c & 0x3f)) & 1; }
 
+/// ## bmat_equal_*n*(a,b)
+///
+/// Returns `true` if the inputs are the same matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_equal_8 (bmat_param_8 (a), bmat_param_8 (b))
+/// void bmat_equal_16(bmat_param_16(a), bmat_param_16(b))
+/// void bmat_equal_32(bmat_param_32(a), bmat_param_32(b))
+/// void bmat_equal_64(bmat_param_64(a), bmat_param_64(b))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
 bool bmat_equal_8 (bmat_rparam_8 (a), bmat_param_8 (b)) { return a[0] == b[0];         }
 bool bmat_equal_16(bmat_rparam_16(a), bmat_param_16(b)) { return bmat_equal_n(a,b, 4); }
 bool bmat_equal_32(bmat_rparam_32(a), bmat_param_32(b)) { return bmat_equal_n(a,b,16); }
 bool bmat_equal_64(bmat_rparam_64(a), bmat_param_64(b)) { return bmat_equal_n(a,b,64); }
+
+
+/// ## bmat_is_zero_*n*(m)
+///
+/// Returns `true` if the input the zero matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_is_zero_8 (bmat_param_8 (m))
+/// void bmat_is_zero_16(bmat_param_16(m))
+/// void bmat_is_zero_32(bmat_param_32(m))
+/// void bmat_is_zero_64(bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
 
 bool bmat_is_zero_8 (bmat_param_8(m))  { return m[0] == 0; }
 bool bmat_is_zero_16(bmat_param_16(m)) { return bmat_is_zero_n(m, 4); }
 bool bmat_is_zero_32(bmat_param_32(m)) { return bmat_is_zero_n(m,16); }
 bool bmat_is_zero_64(bmat_param_64(m)) { return bmat_is_zero_n(m,64); }
 
+/// ## bmat_add_*n*(d,a,b)
+///
+/// $$ D = A+B $$
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_add_8 (bmat_param_8 (d), bmat_param_8 (a), bmat_param_8 (b))
+/// void bmat_add_16(bmat_param_16(d), bmat_param_16(a), bmat_param_16(b))
+/// void bmat_add_32(bmat_param_32(d), bmat_param_32(a), bmat_param_32(b))
+/// void bmat_add_64(bmat_param_64(d), bmat_param_64(a), bmat_param_64(b))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
 // D = A+B  (restrict on impl & not in forward decl on purpose)
 void bmat_add_8 (bmat_rparam_8 (d), bmat_param_8 (a), bmat_param_8 (b)) { bmat_add_n(d,a,b, 1); }
 void bmat_add_16(bmat_rparam_16(d), bmat_param_16(a), bmat_param_16(b)) { bmat_add_n(d,a,b, 4); }
 void bmat_add_32(bmat_rparam_32(d), bmat_param_32(a), bmat_param_32(b)) { bmat_add_n(d,a,b,16); }
 void bmat_add_64(bmat_rparam_64(d), bmat_param_64(a), bmat_param_64(b)) { bmat_add_n(d,a,b,64); }
+
+
+/// ## bmat_sum_*n*(m,n)
+///
+/// $$ D = D+A $$
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_sum_8 (bmat_param_8 (d), bmat_param_8 (a))
+/// void bmat_sum_16(bmat_param_16(d), bmat_param_16(a))
+/// void bmat_sum_32(bmat_param_32(d), bmat_param_32(a))
+/// void bmat_sum_64(bmat_param_64(d), bmat_param_64(a))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
 
 // D += A 
 void bmat_sum_8 (bmat_rparam_8 (d), bmat_param_8 (a)) { bmat_sum_n(d,a, 1); }
@@ -136,15 +190,29 @@ void bmat_sum_32(bmat_rparam_32(d), bmat_param_32(a)) { bmat_sum_n(d,a,16); }
 void bmat_sum_64(bmat_rparam_64(d), bmat_param_64(a)) { bmat_sum_n(d,a,64); }
 
 
-// D = M+I  (restrict on impl & not in forward decl on purpose)
+/// ## bmat_add_unit_*n*(m,n)
+///
+/// $$ D = M+I $$
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_add_unit_8 (bmat_param_8 (d), bmat_param_8 (m))
+/// void bmat_add_uint_16(bmat_param_16(d), bmat_param_16(m))
+/// void bmat_add_unit_32(bmat_param_32(d), bmat_param_32(m))
+/// void bmat_add_unit_64(bmat_param_64(d), bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// NOTE: forward decl should NOT have restrict (see impl notes)
+
 void bmat_add_unit_8(bmat_rparam_8(d), bmat_param_8(m))
 {
-  d[0] = m[0] ^ bmat_main_diagonal_mask_8;
+  d[0] = m[0] ^ BMAT_MAIN_DIAGONAL_MASK_8;
 }
 
 void bmat_add_unit_16(bmat_rparam_16(d), bmat_param_16(m))
 {
-  uint64_t u = bmat_main_diagonal_mask_16;
+  uint64_t u = BMAT_MAIN_DIAGONAL_MASK_16;
   
   d[0] = m[0] ^ u; u <<= 4;
   d[1] = m[1] ^ u; u <<= 4;
@@ -154,7 +222,7 @@ void bmat_add_unit_16(bmat_rparam_16(d), bmat_param_16(m))
 
 void bmat_add_unit_32(bmat_rparam_32(d), bmat_param_32(m))
 {
-  uint64_t u = bmat_main_diagonal_mask_32;
+  uint64_t u = BMAT_MAIN_DIAGONAL_MASK_16;
 
   for(uint32_t i=0; i<16; i++) {
     d[i] = m[i] ^ u; u <<= 2;
@@ -169,6 +237,60 @@ void bmat_add_unit_64(bmat_rparam_64(d), bmat_param_64(m))
     d[i] = m[i] ^ u; u <<= 1;
   }
 }
+
+/// ## bmat_row_lshift_*n*(m,n)
+///
+/// In-place left shifts each row by `n`:
+///
+/// $$ M' = ML^n
+///
+/// where $L$ is the left shift matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_row_lshift_8 (bmat_param_8 (m),n)
+/// void bmat_row_lshift_16(bmat_param_16(m),n)
+/// void bmat_row_lshift_32(bmat_param_32(m),n)
+/// void bmat_row_lshift_64(bmat_param_64(m),n)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
+
+/// ## bmat_flip_h_*n*(m,n)
+///
+/// Reverses each row:
+///
+/// $$ D = MJ $$
+///
+/// where $J$ is the exchange matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_flip_h_8 (bmat_param_8 (d), bmat_param_8 (m))
+/// void bmat_flip_h_16(bmat_param_16(d), bmat_param_16(m))
+/// void bmat_flip_h_32(bmat_param_32(d), bmat_param_32(m))
+/// void bmat_flip_h_64(bmat_param_64(d), bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+
+/// ## bmat_flip_v_*n*(m,n)
+///
+/// Reverses each column:
+///
+/// $$ D = JM $$
+///
+/// where $J$ is the exchange matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_flip_v_8 (bmat_param_8 (d), bmat_param_8 (m))
+/// void bmat_flip_v_16(bmat_param_16(d), bmat_param_16(m))
+/// void bmat_flip_v_32(bmat_param_32(d), bmat_param_32(m))
+/// void bmat_flip_v_64(bmat_param_64(d), bmat_param_64(m))
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
 
 
 // D = MJ
@@ -339,4 +461,106 @@ uint16_t bvec_hsum_16x4(uint64_t x) { x ^= (x>>32); x ^= (x>>16);              r
 uint32_t bvec_hsum_32x2(uint64_t x) { x ^= (x>>32);                            return (uint32_t)x; }
 
 
+//*************************************************************************************************
+// WARNING: below here implementation need to occur after the callsites where they are used. This
+// is because the forward declarations don't have the 'restrict' type qualifier specified. This is
+// to hint to the compiler that the output being one of the inputs is legal (and thus no warning)
+// but there's no partial overlaps between the output and input(s).  So once some d[i] has been
+// written there is no future input (say m[i]) read that requires it's incoming value. 
+// Obviously doesn't matter for any external callsites.
 
+// useless defines just to "look the same" as other sizes
+void bmat_add_lsk_8(bmat_rparam_8(d), bmat_param_8(m), uint64_t k) { d[0] = m[0] ^ k; }
+void bmat_add_rsk_8(bmat_rparam_8(d), bmat_param_8(m), uint64_t k) { d[0] = m[0] ^ k; }
+
+void bmat_add_lsk_16(bmat_rparam_16(d), bmat_param_16(m), uint64_t k)
+{ 
+  d[0] = m[0] ^ k; k <<= 4;
+  d[1] = m[1] ^ k; k <<= 4;
+  d[2] = m[2] ^ k; k <<= 4;
+  d[3] = m[3] ^ k;
+}
+
+void bmat_add_lsk_32(bmat_rparam_32(d), bmat_param_32(m), uint64_t k)
+{
+  for(uint32_t i=0; i<16; i++) {
+    d[i] = m[i] ^ k; k <<= 2;
+  }
+}
+
+void bmat_add_lsk_64(bmat_rparam_64(d), bmat_param_64(m), uint64_t k)
+{
+  for(uint32_t i=0; i<64; i++) {
+    d[i] = m[i] ^ k; k <<= 1;
+  }
+}
+
+void bmat_add_rsk_16(bmat_rparam_16(d), bmat_param_16(m), uint64_t k)
+{ 
+  d[0] = m[0] ^ k; k >>= 4;
+  d[1] = m[1] ^ k; k >>= 4;
+  d[2] = m[2] ^ k; k >>= 4;
+  d[3] = m[3] ^ k;
+}
+
+void bmat_add_rsk_32(bmat_rparam_32(d), bmat_param_32(m), uint64_t k)
+{
+  for(uint32_t i=0; i<16; i++) {
+    d[i] = m[i] ^ k; k >>= 2;
+  }
+}
+
+void bmat_add_rsk_64(bmat_rparam_64(d), bmat_param_64(m), uint64_t k)
+{
+  for(uint32_t i=0; i<64; i++) {
+    d[i] = m[i] ^ k; k >>= 1;
+  }
+}
+
+// here just because they are similar to the add versions
+void bmat_set_lsk_8(bmat_param_8(m), uint64_t k) { m[0] = k; }
+void bmat_set_rsk_8(bmat_param_8(m), uint64_t k) { m[0] = k; }
+
+void bmat_set_lsk_16(bmat_param_16(m), uint64_t k)
+{ 
+  m[0] = k; k <<= 4;
+  m[1] = k; k <<= 4;
+  m[2] = k; k <<= 4;
+  m[3] = k;
+}
+
+void bmat_set_lsk_32(bmat_param_32(m), uint64_t k)
+{
+  for(uint32_t i=0; i<16; i++) {
+    m[i] = k; k <<= 2;
+  }
+}
+
+void bmat_set_lsk_64(bmat_param_64(m), uint64_t k)
+{
+  for(uint32_t i=0; i<64; i++) {
+    m[i] = k; k <<= 1;
+  }
+}
+
+void bmat_set_rsk_16(bmat_param_16(m), uint64_t k)
+{ 
+  m[0] = k; k >>= 4;
+  m[1] = k; k >>= 4;
+  m[2] = k; k >>= 4;
+  m[3] = k;
+}
+
+void bmat_set_rsk_32(bmat_param_32(m), uint64_t k)
+{
+  for(uint32_t i=0; i<16; i++) {
+    m[i] = k; k >>= 2;
+  }
+}
+
+void bmat_set_rsk_64(bmat_param_64(m), uint64_t k)
+{
+  for(uint32_t i=0; i<64; i++) {
+    m[i] = k; k >>= 1;
+  }
+}
