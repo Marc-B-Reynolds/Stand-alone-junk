@@ -438,4 +438,21 @@ uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v)
 
 //***************************************************************************
 
+// meh..needs work
+// performs d[i] = OP working with element sized rows
+#define BMAT_TRIVIAL_REF(W,OP)               \
+  uint##W##_t a[W];                          \  
+  bmat_to_array_##W(a,m);                    \
+  for_range(i,0,W) a[i] = (uint##W##_t)(OP); \
+  array_to_bmat_##W(d,a);
+
+void bmat_row_lshift_8_ref (bmat_param_8 (d), bmat_param_8 (m), uint32_t s) { BMAT_TRIVIAL_REF(8,  a[i]<<s) }
+void bmat_row_lshift_16_ref(bmat_param_16(d), bmat_param_16(m), uint32_t s) { BMAT_TRIVIAL_REF(16, a[i]<<s) }
+void bmat_row_lshift_32_ref(bmat_param_32(d), bmat_param_32(m), uint32_t s) { BMAT_TRIVIAL_REF(32, a[i]<<s) }
+void bmat_row_lshift_64_ref(bmat_param_64(d), bmat_param_64(m), uint32_t s) { BMAT_TRIVIAL_REF(64, a[i]<<s) }
+
+void bmat_row_rshift_8_ref (bmat_param_8 (d), bmat_param_8 (m), uint32_t s) { BMAT_TRIVIAL_REF(8,  a[i]>>s) }
+void bmat_row_rshift_16_ref(bmat_param_16(d), bmat_param_16(m), uint32_t s) { BMAT_TRIVIAL_REF(16, a[i]>>s) }
+void bmat_row_rshift_32_ref(bmat_param_32(d), bmat_param_32(m), uint32_t s) { BMAT_TRIVIAL_REF(32, a[i]>>s) }
+void bmat_row_rshift_64_ref(bmat_param_64(d), bmat_param_64(m), uint32_t s) { BMAT_TRIVIAL_REF(64, a[i]>>s) }
 
