@@ -419,6 +419,80 @@ uint32_t test_all_binary_3param(prng_t* prng, uint32_t trials)
 }
 
 //******************************************************************************
+
+// the pair of functions to test
+typedef struct {
+  void (*f0)(uint64_t*, uint64_t*, uint32_t);
+  void (*f1)(uint64_t*, uint64_t*, uint32_t);
+} shift_func_pair_t;
+
+// a full set of pairs for all sizes
+typedef struct {
+  char* name;
+  shift_func_pair_t p[4];
+} shift_func_set_t;
+
+shift_func_set_t shift_funcs[] = {
+  FUNC_SET(row_rshift),
+  FUNC_SET(row_lshift),
+  FUNC_SET(row_ushift),
+  FUNC_SET(row_dshift),
+};
+
+
+uint32_t test_shifts(prng_t* prng,
+		     test_fn_set_t* mset,
+		     void (*f0)(uint64_t*, uint64_t*, uint32_t),
+		     void (*f1)(uint64_t*, uint64_t*, uint32_t),
+		     uint32_t n)
+{
+  bmat_def_64(m0);
+  bmat_def_64(r0);
+  bmat_def_64(r1);
+  
+  mset->rsize();
+
+  // do all ones matrix (covers all sizes)
+  // for the first pass.
+  bmat_set_ones_64(m0);
+
+  uint32_t w = mset->n;
+  
+  for(uint32_t i=0; i<n; i++) {
+
+    for(uint32_t s=0; s<w; s++) {
+      f0(r0,m0,s);
+      f1(r1,m0,s);
+
+      if (mset->equal(r0,r1)) continue;
+
+      return test_fail();
+    }
+
+    // for the result use uniform random
+    mset->random(m0,prng);
+  }
+  return test_pass();
+}
+
+uint32_t test_all_shifts(prng_t* prng, uint32_t trials)
+{
+  uint32_t errors = 0;
+
+  for(uint32_t i=0; i<(sizeof(shift_funcs)/sizeof(shift_funcs[0])); i++) {
+    shift_func_set_t* set = shift_funcs+i;
+    test_banner(set->name);
+
+    for(uint32_t t=0; t<4; t++) {
+      errors += test_shifts(prng, fn_set[t], set->p[t].f0, set->p[t].f1, trials);
+    }
+  }
+
+  return errors;
+}
+
+
+//******************************************************************************
 // matrix/vector products
 
 // the pair of functions to test
@@ -522,6 +596,7 @@ int main(void)
   errors += test_all_unary_2param(&prng, trials);
   errors += test_all_unary_1param(&prng, trials);
   errors += test_all_binary_3param(&prng, trials);
+  errors += test_all_shifts(&prng, trials);
   errors += test_all_mvprod(&prng, trials);
   errors += test_all_gen(&prng, trials);
   errors += test_all_qunary(&prng, trials);
