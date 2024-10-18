@@ -89,10 +89,10 @@ bool bmat_is_unit_64(bmat_param_64(m)) { uint64_t a[64]; bmat_to_array_64(a,m); 
 /// </details>
 
 // set to identity matrix
-void bmat_set_unit_8 (bmat_param_8 (m)) { m[0] = bmat_main_diagonal_mask_8; }
-void bmat_set_unit_16(bmat_param_16(m)) { bmat_fill_ksl_n(m, bmat_main_diagonal_mask_16, 4, 4);  }
-void bmat_set_unit_32(bmat_param_32(m)) { bmat_fill_ksl_n(m, bmat_main_diagonal_mask_32, 2, 16); }
-void bmat_set_unit_64(bmat_param_64(m)) { uint64_t n=1; for_range(i,0,64) { m[i] = n; n <<= 1; } }
+void bmat_set_unit_8 (bmat_param_8 (m)) { bmat_set_lsk_8 (m, BMAT_MAIN_DIAGONAL_MASK_8);  }
+void bmat_set_unit_16(bmat_param_16(m)) { bmat_set_lsk_16(m, BMAT_MAIN_DIAGONAL_MASK_16); }
+void bmat_set_unit_32(bmat_param_32(m)) { bmat_set_lsk_32(m, BMAT_MAIN_DIAGONAL_MASK_32); }
+void bmat_set_unit_64(bmat_param_64(m)) { bmat_set_lsk_64(m, 1); }
 
 /// ## bmat_set_ones_*n*(m)
 ///
@@ -143,7 +143,7 @@ void bmat_set_ones_64(bmat_param_64(m)) { memset(m,0xff, bmat_sizeof_64); }
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
-// set to exchange matrix (a.k.a: J, bitreverse) TEMP HACK
+// set to exchange matrix (a.k.a: J, bitreverse). compile to const-load/store
 void bmat_set_exchange_8 (bmat_param_8 (m)) {uint8_t  a[ 8]; uint8_t  n=1; for(int32_t i= 7; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_8 (m,a); }
 void bmat_set_exchange_16(bmat_param_16(m)) {uint16_t a[16]; uint16_t n=1; for(int32_t i=15; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_16(m,a); }
 void bmat_set_exchange_32(bmat_param_32(m)) {uint32_t a[32]; uint32_t n=1; for(int32_t i=31; i>=0; i--) { a[i] = n; n <<= 1; } array_to_bmat_32(m,a); }
@@ -156,14 +156,6 @@ void bmat_set_exchange_64(bmat_param_64(m)) {uint64_t a[64]; uint64_t n=1; for(i
 ///
 /// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix))
 /// NO:
-/// $$
-///   \left[ {\begin{array}{cccc}
-///     0 & 0 & 0 & 1 \				\
-///    \vdots & \vdots & \ddots & \vdots\\
-///    0 & 1 & \cdots & 0\	 \
-///    1 & 0 & \cdots & 0 \\
-///  \end{array} } \right]
-/// $$
 /// 
 /// * blah 
 /// 
@@ -188,15 +180,15 @@ void bmat_set_companion_64(bmat_param_64(m), uint64_t n) { bmat_set_lshift_64(m,
 ///
 /// ## bmat_set_linear_rs_*n*(m,n)
 ///
-/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix))
+/// Initializes matrix $M$ to the [Frobenius companion matrix](https://en.wikipedia.org/wiki/Exchange_matrix)) 
 /// NO:
 /// * blah 
 /// $$
 ///   \left[ {\begin{array}{cccc}
-///     0 & 0 & 0 & 1 \				\
-///    \vdots & \vdots & \ddots & \vdots\\
-///    0 & 1 & \cdots & 0\	 \
-///    1 & 0 & \cdots & 0 \\
+///     0 & 0 & 0 & 1  \newline
+///    \vdots & \vdots & \ddots & \vdots \newline
+///    0 & 1 & \cdots & 0 \newline
+///    1 & 0 & \cdots & 0 \newline
 ///  \end{array} } \right]
 /// $$
 /// 
