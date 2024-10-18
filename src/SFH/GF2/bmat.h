@@ -156,6 +156,26 @@ extern void bmat_set_row_16(bmat_param_16(m), uint32_t r, uint64_t v);
 extern void bmat_set_row_32(bmat_param_32(m), uint32_t r, uint64_t v);
 extern void bmat_set_row_64(bmat_param_64(m), uint32_t r, uint64_t v);
 
+extern void bmat_row_lshift_8 (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_lshift_16(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_lshift_32(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_lshift_64(bmat_param_64(d), bmat_param_64(m), uint32_t s);
+
+extern void bmat_row_rshift_8 (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_rshift_16(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_rshift_32(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_rshift_64(bmat_param_64(d), bmat_param_64(m), uint32_t s);
+
+extern void bmat_row_ushift_8 (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_ushift_16(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_ushift_32(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_ushift_64(bmat_param_64(d), bmat_param_64(m), uint32_t s);
+
+extern void bmat_row_dshift_8 (bmat_param_8 (d), bmat_param_8 (m), uint32_t s);
+extern void bmat_row_dshift_16(bmat_param_16(d), bmat_param_16(m), uint32_t s);
+extern void bmat_row_dshift_32(bmat_param_32(d), bmat_param_32(m), uint32_t s);
+extern void bmat_row_dshift_64(bmat_param_64(d), bmat_param_64(m), uint32_t s);
+
 extern void bmat_flip_h_8 (bmat_param_8 (d), bmat_param_8 (m));
 extern void bmat_flip_h_16(bmat_param_16(d), bmat_param_16(m));
 extern void bmat_flip_h_32(bmat_param_32(d), bmat_param_32(m));
