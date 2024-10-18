@@ -255,6 +255,278 @@ void bmat_add_unit_64(bmat_rparam_64(d), bmat_param_64(m))
 /// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 /// </details>
 
+/// ## bmat_row_lshift_*n*(d,m,s)
+///
+/// Left shifts each row by `s`:
+///
+/// $$ D = ML^s $$
+///
+/// where $L$ is the left shift matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_row_lshift_8 (bmat_param_8 (m), bmat_param_8 (m), s)
+/// void bmat_row_lshift_16(bmat_param_16(m), bmat_param_16(m), s)
+/// void bmat_row_lshift_32(bmat_param_32(m), bmat_param_32(m), s)
+/// void bmat_row_lshift_64(bmat_param_64(m), bmat_param_64(m), s)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+// mask to clear 'n' right columns (64-bit package)
+// input mask is: 
+inline uint64_t bmat_rcolumn_mask(uint64_t mask, uint32_t n)
+{
+  return ~((mask << n) - mask);
+}
+
+// mask to clear 'n' left columns (64-bit package)
+// input mask is:
+inline uint64_t bmat_lcolumn_mask(uint64_t mask, uint32_t n)
+{
+  return (mask >> n) + ~mask;
+}
+
+void bmat_row_lshift_8(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  s &= 7;
+  uint64_t mask = bmat_rcolumn_mask(BMAT_COLUMN_MASK_8,s);
+  d[0] = (m[0] << s) & mask;
+}
+
+void bmat_row_lshift_16(bmat_rparam_16(d), bmat_param_16(m), uint32_t s)
+{
+  s &= 0xf;
+
+  uint64_t mask = bmat_rcolumn_mask(BMAT_COLUMN_MASK_16,s);
+
+  d[0] = (m[0] << s) & mask;
+  d[1] = (m[1] << s) & mask;
+  d[2] = (m[2] << s) & mask;
+  d[3] = (m[3] << s) & mask;
+}
+
+void bmat_row_lshift_32(bmat_rparam_32(d), bmat_param_32(m), uint32_t s)
+{
+  s &= 0x1f;
+
+  uint64_t mask = bmat_rcolumn_mask(BMAT_COLUMN_MASK_32,s);
+
+  for(uint32_t i=0; i<16; i++) {
+    d[i] = (m[i] << s) & mask;
+  }
+}
+
+void bmat_row_lshift_64(bmat_rparam_64(d), bmat_param_64(m), uint32_t s)
+{
+  s &= 0x3f;
+
+  for(uint32_t i=0; i<64; i++)
+    d[i] = (m[i] << s);
+}
+
+
+/// ## bmat_row_rshift_*n*(d,m,s)
+///
+/// Right shifts each row by `s`:
+///
+/// $$ D = MR^s $$
+///
+/// where $R$ is the right shift matrix. Input `s` is mod width.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_row_rshift_8 (bmat_param_8 (m), bmat_param_8 (m), s)
+/// void bmat_row_rshift_16(bmat_param_16(m), bmat_param_16(m), s)
+/// void bmat_row_rshift_32(bmat_param_32(m), bmat_param_32(m), s)
+/// void bmat_row_rshift_64(bmat_param_64(m), bmat_param_64(m), s)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+void bmat_row_rshift_8(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  s &= 7;
+  uint64_t mask = bmat_lcolumn_mask(BMAT_COLUMN_MASK_8^1,s);
+  d[0] = (m[0] >> s) & mask;
+}
+
+void bmat_row_rshift_16(bmat_rparam_16(d), bmat_param_16(m), uint32_t s)
+{
+  s &= 0xf;
+
+  uint64_t mask = bmat_lcolumn_mask(BMAT_COLUMN_MASK_16^1,s);
+
+  d[0] = (m[0] >> s) & mask;
+  d[1] = (m[1] >> s) & mask;
+  d[2] = (m[2] >> s) & mask;
+  d[3] = (m[3] >> s) & mask;
+}
+
+void bmat_row_rshift_32(bmat_rparam_32(d), bmat_param_32(m), uint32_t s)
+{
+  s &= 0x1f;
+
+  uint64_t mask = bmat_lcolumn_mask(BMAT_COLUMN_MASK_32^1,s);
+
+  for(uint32_t i=0; i<16; i++) {
+    d[i] = (m[i] >> s) & mask;
+  }
+}
+
+void bmat_row_rshift_64(bmat_rparam_64(d), bmat_param_64(m), uint32_t s)
+{
+  s &= 0x3f;
+
+  for(uint32_t i=0; i<64; i++)
+    d[i] = (m[i] >> s);
+}
+
+
+/// ## bmat_row_ushift_*n*(d,m,s)
+///
+/// Shifts each row up `s`:
+///
+/// $$ D = L^s~M $$
+///
+/// where $L$ is the left shift matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_row_dshift_8 (bmat_param_8 (m), bmat_param_8 (m), s)
+/// void bmat_row_dshift_16(bmat_param_16(m), bmat_param_16(m), s)
+/// void bmat_row_dshift_32(bmat_param_32(m), bmat_param_32(m), s)
+/// void bmat_row_dshift_64(bmat_param_64(m), bmat_param_64(m), s)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+void bmat_row_ushift_8_ref(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  s &= 0x7;
+  
+  bmat_adup_8(a,m);
+
+  for(uint32_t i=0;   i<8-s; i++) a[i] = a[s+i];
+  for(uint32_t i=8-s; i<8;   i++) a[i] = 0;
+
+  array_to_bmat_8(d,a);
+}
+
+void bmat_row_ushift_16_ref(bmat_rparam_16(d), bmat_param_16(m), uint32_t s)
+{
+  s &= 0xf;
+  
+  bmat_adup_16(a,m);
+
+  for(uint32_t i=0;    i<16-s; i++) a[i] = a[s+i];
+  for(uint32_t i=16-s; i<16;   i++) a[i] = 0;
+
+  array_to_bmat_16(d,a);
+}
+
+void bmat_row_ushift_32_ref(bmat_rparam_32(d), bmat_param_32(m), uint32_t s)
+{
+  s &= 0x1f;
+  
+  bmat_adup_32(a,m);
+
+  for(uint32_t i=0;    i<32-s; i++) a[i] = a[s+i];
+  for(uint32_t i=32-s; i<32;   i++) a[i] = 0;
+
+  array_to_bmat_32(d,a);
+}
+
+void bmat_row_ushift_64_ref(bmat_rparam_64(d), bmat_param_64(m), uint32_t s)
+{
+  for(uint32_t i=0;    i<64-s; i++) d[i] = m[s+i];
+  for(uint32_t i=64-s; i<64;   i++) d[i] = 0;
+}
+
+void bmat_row_ushift_8(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  d[0] = m[0] >> (8*(s&7));
+}
+
+void bmat_row_ushift_16(bmat_rparam_16(d), bmat_param_16(m), uint32_t s) { bmat_row_ushift_16_ref(d,m,s); }
+void bmat_row_ushift_32(bmat_rparam_32(d), bmat_param_32(m), uint32_t s) { bmat_row_ushift_32_ref(d,m,s); }
+void bmat_row_ushift_64(bmat_rparam_64(d), bmat_param_64(m), uint32_t s) { bmat_row_ushift_64_ref(d,m,s); }
+
+
+/// ## bmat_row_dshift_*n*(d,m,s)
+///
+/// Shifts each row down `s`:
+///
+/// $$ D = R^s~M $$
+///
+/// where $R$ is the right shift matrix.
+///
+/// <details markdown="1"><summary>function list:</summary>
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+/// void bmat_row_dshift_8 (bmat_param_8 (m), bmat_param_8 (m), s)
+/// void bmat_row_dshift_16(bmat_param_16(m), bmat_param_16(m), s)
+/// void bmat_row_dshift_32(bmat_param_32(m), bmat_param_32(m), s)
+/// void bmat_row_dshift_64(bmat_param_64(m), bmat_param_64(m), s)
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+/// </details>
+
+void bmat_row_dshift_8_ref(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  s &= 0x7;
+  
+  bmat_adup_8(a,m);
+  uint8_t D[8];
+
+  for(uint32_t i=0; i<s; i++) D[i] = 0;
+  for(uint32_t i=s; i<8; i++) D[i] = a[i-s];
+
+  array_to_bmat_8(d,D);
+}
+
+void bmat_row_dshift_16_ref(bmat_rparam_16(d), bmat_param_16(m), uint32_t s)
+{
+  s &= 0xf;
+  
+  bmat_adup_16(a,m);
+  uint16_t D[16];
+
+  for(uint32_t i=0; i<s;  i++) D[i] = 0;
+  for(uint32_t i=s; i<16; i++) D[i] = a[i-s];
+
+  array_to_bmat_16(d,D);
+}
+
+void bmat_row_dshift_32_ref(bmat_rparam_32(d), bmat_param_32(m), uint32_t s)
+{
+  s &= 0x1f;
+  
+  bmat_adup_32(a,m);
+  uint32_t D[32];
+
+  for(uint32_t i=0; i<s;  i++) D[i] = 0;
+  for(uint32_t i=s; i<32; i++) D[i] = a[i-s];
+
+  array_to_bmat_32(d,D);
+}
+
+void bmat_row_dshift_64_ref(bmat_rparam_64(d), bmat_param_64(m), uint32_t s)
+{
+  s &= 0x3f;
+  
+  uint64_t D[64];
+
+  for(uint32_t i=0; i<s;  i++) D[i] = 0;
+  for(uint32_t i=s; i<64; i++) D[i] = m[i-s];
+
+  array_to_bmat_64(d,D);
+}
+
+
+void bmat_row_dshift_8(bmat_rparam_8(d), bmat_param_8(m), uint32_t s)
+{
+  d[0] = m[0] << (8*(s&7));
+}
+
+void bmat_row_dshift_16(bmat_rparam_16(d), bmat_param_16(m), uint32_t s) { bmat_row_dshift_16_ref(d,m,s); }
+void bmat_row_dshift_32(bmat_rparam_32(d), bmat_param_32(m), uint32_t s) { bmat_row_dshift_32_ref(d,m,s); }
+void bmat_row_dshift_64(bmat_rparam_64(d), bmat_param_64(m), uint32_t s) { bmat_row_dshift_64_ref(d,m,s); }
 
 
 /// ## bmat_flip_h_*n*(m,n)
