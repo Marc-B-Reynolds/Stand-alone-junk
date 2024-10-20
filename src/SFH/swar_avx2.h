@@ -111,6 +111,7 @@ typedef __m128i u128_t;
 #define umax_8x32      SFH_CAT(AVX2_PREFIX, max_epu8)
 #define umax_16x16     SFH_CAT(AVX2_PREFIX, max_epu16)
 #define umax_32x8      SFH_CAT(AVX2_PREFIX, max_epu32)
+// umin/umax_64x4 composites below
 
 // min/max of signed elements (add prefix s)
 #define smin_8x32      SFH_CAT(AVX2_PREFIX, min_epi8)
@@ -264,9 +265,41 @@ static inline u256_t dup_even_64x4(u256_t x)
 }
 
 
-#define blend_64x4(A,B,S)  from_f64_256(blend_pd (to_f64_256(A),to_f64_256(B),S))
-#define blendv_64x4(A,B,S) from_f64_256(blendv_pd(to_f64_256(A),to_f64_256(B),S))
-#define blendv_32x8(A,B,S) from_f32_256(blendv_ps(to_f32_256(A),to_f32_256(B),S))
+#define blend_64x4(A,B,S)  from_f64_256(blend_pd_256 (to_f64_256(A),to_f64_256(B),S))
+#define blendv_64x4(A,B,S) from_f64_256(blendv_pd_256(to_f64_256(A),to_f64_256(B),S))
+#define blendv_32x8(A,B,S) from_f32_256(blendv_ps_256(to_f32_256(A),to_f32_256(B),S))
+
+#if 1
+// umin/umax are using sign bit -> 64-bit blend
+static inline u256_t umin_64x4(u256_t a, u256_t b)
+{
+  return blendv_64x4(a,b,sub_64x4(b,a));
+}
+
+static inline u256_t umax_64x4(u256_t a, u256_t b)
+{
+  return blendv_64x4(b,a,sub_64x4(b,a));
+}
+
+static inline u256_t smin_64x4(u256_t a, u256_t b)
+{
+  return blendv_8x32(b,a, cmpgt_64x4(b,a));
+}
+
+static inline u256_t smax_64x4(u256_t a, u256_t b)
+{
+  return blendv_8x32(b,a, cmpgt_64x4(a,b));
+}
+
+#else
+// AVX512VL
+#define umin_64x4     SFH_CAT(AVX2_PREFIX, min_epu64)
+#define umax_64x4     SFH_CAT(AVX2_PREFIX, max_epu64)
+#define smin_64x4     SFH_CAT(AVX2_PREFIX, min_epi64)
+#define smax_64x4     SFH_CAT(AVX2_PREFIX, max_epi64)
+#endif
+
+
 
 // broadcast (scalar) 'k' to all elements
 static inline u256_t broadcast_8x32 (uint8_t  x) { return set1_8x32 ((int8_t) x); }
