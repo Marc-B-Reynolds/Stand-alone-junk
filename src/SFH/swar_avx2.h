@@ -266,8 +266,8 @@ static inline u256_t dup_even_64x4(u256_t x)
 
 
 #define blend_64x4(A,B,S)  from_f64_256(blend_pd_256 (to_f64_256(A),to_f64_256(B),S))
-#define blendv_64x4(A,B,S) from_f64_256(blendv_pd_256(to_f64_256(A),to_f64_256(B),S))
-#define blendv_32x8(A,B,S) from_f32_256(blendv_ps_256(to_f32_256(A),to_f32_256(B),S))
+#define blendv_64x4(A,B,S) from_f64_256(blendv_pd_256(to_f64_256(A),to_f64_256(B),to_f64_256(S)))
+#define blendv_32x8(A,B,S) from_f32_256(blendv_ps_256(to_f32_256(A),to_f32_256(B),to_f64_256(S)))
 
 #if 1
 // umin/umax are using sign bit -> 64-bit blend
