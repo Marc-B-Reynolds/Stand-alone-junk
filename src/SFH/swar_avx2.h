@@ -506,6 +506,10 @@ pshufb_table_128x2(uint8_t B0,uint8_t B1,uint8_t B2,uint8_t B3,
   SFH_CAT(AVX2_PREFIX, setr_epi8)((int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF,(int8_t)B0,(int8_t)B1,(int8_t)B2,(int8_t)B3,(int8_t)B4,(int8_t)B5,(int8_t)B6,(int8_t)B7,(int8_t)B8,(int8_t)B9,(int8_t)BA,(int8_t)BB,(int8_t)BC,(int8_t)BD,(int8_t)BE,(int8_t)BF)
 #endif
 
+#define pshufb_rtable_128x2(B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF) pshufb_table_128x2(BF,BE,BD,BC,BB,BA,B9,B8,B7,B6,B5,B4,B3,B2,B1,B0)
+
+
+
 // register with only bit 'n' set: 256 bit: (1 << n)
 // modification of: https://stackoverflow.com/questions/39475525/set-individual-bit-in-avx-register-m256i-need-random-access-operator/39595704#39595704
 static inline u256_t bit_n_256(uint32_t n)
@@ -523,6 +527,7 @@ static inline u256_t bit_n_256(uint32_t n)
 
 // meh
 static inline u256_t byte_shuffle_128x2(u256_t x, u256_t table) { return SFH_CAT(AVX2_PREFIX, shuffle_epi8)(x,table); }
+static inline u256_t pshufb_256(u256_t x, u256_t table) { return byte_shuffle_128x2(x,table); }
 
 typedef struct { u256_t lo,hi; } m256_pair_t;
 
