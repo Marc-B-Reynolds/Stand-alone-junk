@@ -419,6 +419,7 @@ uint32_t test_all_binary_3param(prng_t* prng, uint32_t trials)
 }
 
 //******************************************************************************
+// tests  D = F(M,s) where 's' is an integer on [0,n) for an nxn matrix
 
 // the pair of functions to test
 typedef struct {
@@ -452,14 +453,15 @@ uint32_t test_shifts(prng_t* prng,
   
   mset->rsize();
 
-  // do all ones matrix (covers all sizes)
-  // for the first pass.
+  // do all ones matrix for the first pass.
+  // 64x64 covers all smaller sizes
   bmat_set_ones_64(m0);
 
   uint32_t w = mset->n;
   
   for(uint32_t i=0; i<n; i++) {
 
+    // walk all 's' for size 'w'
     for(uint32_t s=0; s<w; s++) {
       f0(r0,m0,s);
       f1(r1,m0,s);
@@ -469,7 +471,7 @@ uint32_t test_shifts(prng_t* prng,
       return test_fail();
     }
 
-    // for the result use uniform random
+    // for the remaining use uniform random
     mset->random(m0,prng);
   }
   return test_pass();
