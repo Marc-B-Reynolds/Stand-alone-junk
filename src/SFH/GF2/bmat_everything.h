@@ -5,6 +5,15 @@
 // SRLY: for no-build system (no configuration communication), multi-config + easy LTO.
 // sure it's evil but (shrug) not a library.
 
+// Done on purpose in some places..including everything will
+// make it pop-up.
+#if defined(__GNUC__)
+#if defined(__clang__)
+#else
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+#endif
+
 #include "bmat_i.h"
 #include "bmat_basics.c"
 #include "bmat_set.c"
