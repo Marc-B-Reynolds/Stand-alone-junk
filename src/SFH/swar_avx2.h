@@ -51,7 +51,7 @@ typedef __m128i u128_t;
 #define SFH_CAT_X(a, ...) a ## __VA_ARGS__
 #endif
 
-// temp hack
+// temp hack: and need a better name
 #ifndef SSE_MM_SHUFFLE
 #define SSE_MM_SHUFFLE(A,B,C,D) (((A)<<6)|((B)<<4)|((C) << 2)|(D))
 #endif
@@ -263,6 +263,7 @@ static inline u256_t dup_even_64x4(u256_t x)
   return from_f64_256(movedup_pd(to_f64_256(x)));
 }
 
+
 #define blend_64x4(A,B,S)  from_f64_256(blend_pd (to_f64_256(A),to_f64_256(B),S))
 #define blendv_64x4(A,B,S) from_f64_256(blendv_pd(to_f64_256(A),to_f64_256(B),S))
 #define blendv_32x8(A,B,S) from_f32_256(blendv_ps(to_f32_256(A),to_f32_256(B),S))
@@ -280,6 +281,8 @@ static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x)
 // does NOT cross 128-bit lanes (unlike 32x8)
 #define permutev_64x4(X,I) from_f64_256(permutev_pdx4(to_f64_256(X),I))
 
+#define permute_ps      SFH_CAT(AVX2_PREFIX, permute_ps)
+#define permute_32x8(A,I) from_f32_256(permute_ps(to_f32_256(A),I))
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
 #define permute_128x2   SFH_CAT(AVX2_PREFIX, permute2x128_si256)
 
