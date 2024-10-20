@@ -121,10 +121,10 @@ void bmat_set_ones_64(bmat_param_64(m)) { memset(m,0xff, bmat_sizeof_64); }
 ///
 /// $$
 ///   \left[ {\begin{array}{cccc}
-///     0 & 0 & 0 & 1 \				\
-///    \vdots & \vdots & \ddots & \vdots\\
-///    0 & 1 & \cdots & 0\	 \
-///    1 & 0 & \cdots & 0 \\
+///     0 & 0 & 0 & 1 \newline
+///    \vdots & \vdots & \ddots & \vdots \newline
+///    0 & 1 & \cdots & 0                \newline
+///    1 & 0 & \cdots & 0                \newline
 ///  \end{array} } \right]
 /// $$
 /// 
