@@ -127,9 +127,9 @@ void bmat_random_sut_64(bmat_param_64(m), prng_t* prng)
 
 void bmat_random_uut_8(bmat_param_8(m),prng_t* prng)
 {
-  uint64_t foo = UINT64_C(0x8040201008040201);
+  uint64_t unit = UINT64_C(0x8040201008040201);
   bmat_random_sut_8(m,prng);
-  m[0] ^= foo;
+  m[0] ^= unit;
 }
 
 void bmat_random_uut_16(bmat_param_16(m),prng_t* prng)
@@ -149,8 +149,6 @@ void bmat_random_uut_64(bmat_param_64(m),prng_t* prng)
   bmat_random_sut_64(m,prng);
   bmat_add_unit_64(m,m);
 }
-
-
 
 
 
