@@ -265,40 +265,9 @@ static inline u256_t dup_even_64x4(u256_t x)
 }
 
 
-#define blend_64x4(A,B,S)  from_f64_256(blend_pd_256 (to_f64_256(A),to_f64_256(B),S))
+#define blend_64x4(A,B,I)  from_f64_256(blend_pd_256 (to_f64_256(A),to_f64_256(B),I))
 #define blendv_64x4(A,B,S) from_f64_256(blendv_pd_256(to_f64_256(A),to_f64_256(B),to_f64_256(S)))
 #define blendv_32x8(A,B,S) from_f32_256(blendv_ps_256(to_f32_256(A),to_f32_256(B),to_f64_256(S)))
-
-#if 1
-// umin/umax are using sign bit -> 64-bit blend
-static inline u256_t umin_64x4(u256_t a, u256_t b)
-{
-  return blendv_64x4(a,b,sub_64x4(b,a));
-}
-
-static inline u256_t umax_64x4(u256_t a, u256_t b)
-{
-  return blendv_64x4(b,a,sub_64x4(b,a));
-}
-
-static inline u256_t smin_64x4(u256_t a, u256_t b)
-{
-  return blendv_8x32(b,a, cmpgt_64x4(b,a));
-}
-
-static inline u256_t smax_64x4(u256_t a, u256_t b)
-{
-  return blendv_8x32(b,a, cmpgt_64x4(a,b));
-}
-
-#else
-// AVX512VL
-#define umin_64x4     SFH_CAT(AVX2_PREFIX, min_epu64)
-#define umax_64x4     SFH_CAT(AVX2_PREFIX, max_epu64)
-#define smin_64x4     SFH_CAT(AVX2_PREFIX, min_epi64)
-#define smax_64x4     SFH_CAT(AVX2_PREFIX, max_epi64)
-#endif
-
 
 
 // broadcast (scalar) 'k' to all elements
@@ -306,6 +275,7 @@ static inline u256_t broadcast_8x32 (uint8_t  x) { return set1_8x32 ((int8_t) x)
 static inline u256_t broadcast_16x16(uint16_t x) { return set1_16x16((int16_t)x); }
 static inline u256_t broadcast_32x8 (uint32_t x) { return set1_32x8 ((int32_t)x); }
 static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x); }
+
 
 // the reversal is unfortunate
 #define permutev_32x8   SFH_CAT(AVX2_PREFIX, permutevar8x32_epi32)
@@ -398,6 +368,39 @@ static inline u256_t broadcastv_64x4(u256_t x, uint32_t i)
   u256_t r  = permutev_32x8(x, id);
   return r;
 }
+
+#if 1
+static inline u256_t umin_64x4(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_64x4(0x8000000000000000);
+
+  return blendv_64x4(a,b,cmpgt_64x4(xor_256(a,s), xor_256(b,s)));
+}
+
+static inline u256_t umax_64x4(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_64x4(0x8000000000000000);
+
+  return blendv_64x4(b,a,cmpgt_64x4(xor_256(a,s), xor_256(b,s)));
+}
+
+static inline u256_t smin_64x4(u256_t a, u256_t b)
+{
+  return blendv_8x32(b,a, cmpgt_64x4(b,a));
+}
+
+static inline u256_t smax_64x4(u256_t a, u256_t b)
+{
+  return blendv_8x32(b,a, cmpgt_64x4(a,b));
+}
+
+#else
+// AVX512VL
+#define umin_64x4     SFH_CAT(AVX2_PREFIX, min_epu64)
+#define umax_64x4     SFH_CAT(AVX2_PREFIX, max_epu64)
+#define smin_64x4     SFH_CAT(AVX2_PREFIX, min_epi64)
+#define smax_64x4     SFH_CAT(AVX2_PREFIX, max_epi64)
+#endif
 
 
 // returns true if all elements are the same value
