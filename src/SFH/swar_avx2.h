@@ -314,6 +314,36 @@ static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 // return (scalar) true/false if all elements of a & b are equal
 static inline bool cmp_equal_256(u256_t a, u256_t b) { return movemask_8x32(cmpeq_8x32(a,b)) == 0xFFFFFFFF; }
 
+#if 1
+// range-remap to get unsigned compares
+static inline u256_t ucmpgt_8x32(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_8x32(0x80);
+  return cmpgt_8x32(xor_256(a,s), xor_256(b,s));
+}
+
+static inline u256_t ucmpgt_16x16(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_16x16(0x8000);
+  return cmpgt_16x16(xor_256(a,s), xor_256(b,s));
+}
+
+static inline u256_t ucmpgt_32x8(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_32x8(0x80000000);
+  return cmpgt_32x8(xor_256(a,s), xor_256(b,s));
+}
+
+static inline u256_t ucmpgt_64x4(u256_t a, u256_t b)
+{
+  u256_t s = broadcast_64x4(0x8000000000000000);
+  return cmpgt_64x4(xor_256(a,s), xor_256(b,s));
+}
+#else
+// yeah..avx512
+#endif
+
+
 // attempted to hint to the complier not to promote a computation
 // with 'v' into a constant load. use with care and only at point
 // of the computation with 'v' to not potentially break constant
@@ -372,16 +402,12 @@ static inline u256_t broadcastv_64x4(u256_t x, uint32_t i)
 #if 1
 static inline u256_t umin_64x4(u256_t a, u256_t b)
 {
-  u256_t s = broadcast_64x4(0x8000000000000000);
-
-  return blendv_64x4(a,b,cmpgt_64x4(xor_256(a,s), xor_256(b,s)));
+  return blendv_64x4(a,b,ucmpgt_64x4(a,b));
 }
 
 static inline u256_t umax_64x4(u256_t a, u256_t b)
 {
-  u256_t s = broadcast_64x4(0x8000000000000000);
-
-  return blendv_64x4(b,a,cmpgt_64x4(xor_256(a,s), xor_256(b,s)));
+  return blendv_64x4(b,a,ucmpgt_64x4(a,b));
 }
 
 static inline u256_t smin_64x4(u256_t a, u256_t b)
