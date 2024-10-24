@@ -25,6 +25,7 @@
 // 
 // Those that don't follow this pattern are grouped together in the next
 // section.
+//
 
 // base expansion: adds any needed prefix for the intrinsic
 #if !defined(AVX_PREFIX)
@@ -52,9 +53,8 @@ typedef __m128i u128_t;
 #endif
 
 // temp hack: and need a better name
-#ifndef SSE_MM_SHUFFLE
-#define SSE_MM_SHUFFLE(A,B,C,D) (((A)<<6)|((B)<<4)|((C) << 2)|(D))
-#endif
+// 4 2-bit selectors
+#define AVX_SHUFFLE_4(A,B,C,D) (((A)<<6)|((B)<<4)|((C) << 2)|(D))
 
 // punting to expression-statements in this case for the more involved
 #if defined(AVX2_MACRO_KOP)
@@ -86,6 +86,17 @@ typedef __m128i u128_t;
 #define sub_16x16      SFH_CAT(AVX2_PREFIX, sub_epi16)
 #define sub_32x8       SFH_CAT(AVX2_PREFIX, sub_epi32)
 #define sub_64x4       SFH_CAT(AVX2_PREFIX, sub_epi64)
+
+// signed/unsigned staturated add/sub
+#define add_ss_8x32    SFH_CAT(AVX2_PREFIX, adds_epi8)
+#define add_ss_16x16   SFH_CAT(AVX2_PREFIX, adds_epi16)
+#define add_us_8x32    SFH_CAT(AVX2_PREFIX, adds_epu8)
+#define add_us_16x16   SFH_CAT(AVX2_PREFIX, adds_epu16)
+
+#define sub_ss_8x32    SFH_CAT(AVX2_PREFIX, subs_epi8)
+#define sub_ss_16x16   SFH_CAT(AVX2_PREFIX, subs_epi16)
+#define sub_us_8x32    SFH_CAT(AVX2_PREFIX, subs_epu8)
+#define sub_us_16x16   SFH_CAT(AVX2_PREFIX, subs_epu16)
 
 #define mullo_16x16    SFH_CAT(AVX2_PREFIX, mullo_epi16)
 #define mullo_32x8     SFH_CAT(AVX2_PREFIX, mullo_epi32)
@@ -247,6 +258,38 @@ typedef __m128i u128_t;
 #define from_f32_256  SFH_CAT(AVX2_PREFIX, castps_si256)
 #define from_f64_256  SFH_CAT(AVX2_PREFIX, castpd_si256)
 
+//--- via 128-bit
+// put scalar 32 bit integer into low element and zero rest
+static inline u128_t set_lo_32x4(uint32_t x)
+{
+  return SFH_CAT(AVX_PREFIX, cvtsi32_si128)((int32_t)x);
+}
+
+// put scalar 64 bit integer into low element and zero rest
+static inline u128_t set_lo_64x2(uint64_t x)
+{
+  return SFH_CAT(AVX_PREFIX, cvtsi64_si128)((int64_t)x);
+}
+
+// sign/unsigned extend 'n' bit element (128-bit source)
+// to 'm' bit elements (256-bit). when there's more input
+// elements than out the it's the low out number converted
+// {s,u}ext_nx?_mx?{..}
+#define uext_8x16_16x16 SFH_CAT(AVX2_PREFIX, cvtepu8_epi16)
+#define uext_8x16_32x8  SFH_CAT(AVX2_PREFIX, cvtepu8_epi32)
+#define uext_8x16_64x4  SFH_CAT(AVX2_PREFIX, cvtepu8_epi64)
+#define sext_8x16_16x16 SFH_CAT(AVX2_PREFIX, cvtepi8_epi16)
+#define sext_8x16_32x8  SFH_CAT(AVX2_PREFIX, cvtepi8_epi32)
+#define sext_8x16_64x4  SFH_CAT(AVX2_PREFIX, cvtepi8_epi64)
+
+#define uext_16x8_32x8  SFH_CAT(AVX2_PREFIX, cvtepu16_epi32)
+#define uext_16x8_64x4  SFH_CAT(AVX2_PREFIX, cvtepu16_epi64)
+#define sext_16x8_32x8  SFH_CAT(AVX2_PREFIX, cvtepi16_epi32)
+#define sext_16x8_64x4  SFH_CAT(AVX2_PREFIX, cvtepi16_epi64)
+
+#define uext_32x4_64x4  SFH_CAT(AVX2_PREFIX, cvtepu32_epi64)
+#define sext_32x4_64x4  SFH_CAT(AVX2_PREFIX, cvtepi32_epi64)
+
 // duplicate even/odd elements
 // {e[0],e[0],e[2],e[2]...}
 static inline u256_t dup_even_32x8(u256_t x)
@@ -289,10 +332,11 @@ static inline u256_t broadcast_64x4 (uint64_t x) { return set1_64x4 ((int64_t)x)
 #define permute_64x4    SFH_CAT(AVX2_PREFIX, permute4x64_epi64)
 #define permute_128x2   SFH_CAT(AVX2_PREFIX, permute2x128_si256)
 
-#define cast_128_256    SFH_CAT(AVX2_PREFIX, castsi256_si128)
+#define cast_128_256    SFH_CAT(AVX2_PREFIX, castsi128_si256)
+#define cast_256_128    SFH_CAT(AVX2_PREFIX, castsi256_si128)
 
 static inline uint32_t movd_256(u256_t a) { return (uint32_t)SFH_CAT(AVX2_PREFIX, cvtsi256_si32)(a); }
-static inline uint64_t movq_256(u256_t a) { return (uint64_t)SFH_CAT(AVX_PREFIX,  cvtsi128_si64)(cast_128_256(a)); }
+static inline uint64_t movq_256(u256_t a) { return (uint64_t)SFH_CAT(AVX_PREFIX,  cvtsi128_si64)(cast_256_128(a)); }
 
 #define broadcast_lo_8x32_128  SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )
 #define broadcast_lo_16x16_128 SFH_CAT(AVX2_PREFIX, broadcastw_epi16)
@@ -300,12 +344,10 @@ static inline uint64_t movq_256(u256_t a) { return (uint64_t)SFH_CAT(AVX_PREFIX,
 #define broadcast_lo_64x4_128  SFH_CAT(AVX2_PREFIX, broadcastq_epi64)
 
 // low element of 'x' broadcast to all (the 'cast' isn't a real operation)
-static inline u256_t broadcast_lo_8x32 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )(cast_128_256(x)); }
-static inline u256_t broadcast_lo_16x16(u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastw_epi16)(cast_128_256(x)); }
-static inline u256_t broadcast_lo_32x8 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastd_epi32)(cast_128_256(x)); }
-static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastq_epi64)(cast_128_256(x)); }
-
-// should have the converts
+static inline u256_t broadcast_lo_8x32 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastb_epi8 )(cast_256_128(x)); }
+static inline u256_t broadcast_lo_16x16(u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastw_epi16)(cast_256_128(x)); }
+static inline u256_t broadcast_lo_32x8 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastd_epi32)(cast_256_128(x)); }
+static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastq_epi64)(cast_256_128(x)); }
 
 
 //------------------------------------------------------------------------------
@@ -364,6 +406,16 @@ static inline u256_t hint_no_const_fold_256(u256_t v)
 #else
 static inline u256_t hint_no_const_fold_256(u256_t v) { return v; }
 #endif
+
+// some 128-bit permutation helpers
+//   clear upper/lower 128 bits
+//   right shift by 128 bits. aka top to bottom and zero top
+//   left  shift by 128 bits. aka bottom to top and zero bottom
+static inline u256_t clear_lo_128_256(u256_t x) { return permute_128x2(x,x,0x18); }
+static inline u256_t clear_hi_128_256(u256_t x) { return permute_128x2(x,x,0x80); }
+static inline u256_t shr_128_256(u256_t x)      { return permute_128x2(x,x,0x83); }
+static inline u256_t shl_128_256(u256_t x)      { return permute_128x2(x,x,0x08); }
+
 
 // broadcast element 'i' to all
 static inline u256_t broadcastv_32x8(u256_t x, uint32_t i)
@@ -437,22 +489,22 @@ static inline bool   is_rep_64x6 (u256_t x) { return cmp_equal_256(x, broadcast_
 
 
 // all bits set : should lower to vpcmpeqd ymmR,ymmN,ymmN (ymmN is any)
-static inline u256_t bit_allset_256(void) { u256_t t = zero_256(); return cmpeq_8x32(t,t); }
+static inline u256_t ones_256(void) { u256_t t = zero_256(); return cmpeq_8x32(t,t); }
 
 // ~x
-static inline u256_t bit_not_256(u256_t x) { return xor_256(x,bit_allset_256()); }
+static inline u256_t not_256(u256_t x) { return xor_256(x,ones_256()); }
 
 // each element -1
-static inline u256_t dec_8x32 (u256_t x) { return add_8x32 (x,bit_allset_256()); }
-static inline u256_t dec_16x16(u256_t x) { return add_16x16(x,bit_allset_256()); }
-static inline u256_t dec_32x8 (u256_t x) { return add_32x8 (x,bit_allset_256()); }
-static inline u256_t dec_64x4 (u256_t x) { return add_64x4 (x,bit_allset_256()); }
+static inline u256_t dec_8x32 (u256_t x) { return add_8x32 (x,ones_256()); }
+static inline u256_t dec_16x16(u256_t x) { return add_16x16(x,ones_256()); }
+static inline u256_t dec_32x8 (u256_t x) { return add_32x8 (x,ones_256()); }
+static inline u256_t dec_64x4 (u256_t x) { return add_64x4 (x,ones_256()); }
 
 // each element +1
-static inline u256_t inc_8x32 (u256_t x) { return sub_8x32 (x,bit_allset_256()); }
-static inline u256_t inc_16x16(u256_t x) { return sub_16x16(x,bit_allset_256()); }
-static inline u256_t inc_32x8 (u256_t x) { return sub_32x8 (x,bit_allset_256()); }
-static inline u256_t inc_64x4 (u256_t x) { return sub_64x4 (x,bit_allset_256()); }
+static inline u256_t inc_8x32 (u256_t x) { return sub_8x32 (x,ones_256()); }
+static inline u256_t inc_16x16(u256_t x) { return sub_16x16(x,ones_256()); }
+static inline u256_t inc_32x8 (u256_t x) { return sub_32x8 (x,ones_256()); }
+static inline u256_t inc_64x4 (u256_t x) { return sub_64x4 (x,ones_256()); }
 
 // negate each element
 static inline u256_t negate_8x32 (u256_t x) { return sub_8x32 (zero_256(), x); }
@@ -466,7 +518,8 @@ static inline u256_t negate_64x4 (u256_t x) { return sub_64x4 (zero_256(), x); }
 static inline u256_t byte_sum_64x4(u256_t x) { return sad_8x32(x, zero_256()); }
 
 // alignr : amount compile time
-#define byte_barrel_shift_128x2(X,I) alignr_128x2(X,X,I)
+#define byte_barrel_shift_128x2 alignr_128x2
+#define byte_rotate_128x2(X,A)  alignr_128x2(X,X,A)
 
 
 static inline u256_t shr_1_8x32(u256_t x)
@@ -540,10 +593,10 @@ static inline u256_t bit_lowest_set_32x8 (u256_t x) { return and_256(x,negate_32
 static inline u256_t bit_lowest_set_64x4 (u256_t x) { return and_256(x,negate_64x4 (x)); }
 
 // isolate lowest clear bit per element (bit set in location. all others clear)
-static inline u256_t bit_lowest_clear_8x32 (u256_t x) { return and_256(inc_8x32 (x),bit_not_256(x)); }
-static inline u256_t bit_lowest_clear_16x16(u256_t x) { return and_256(inc_16x16(x),bit_not_256(x)); }
-static inline u256_t bit_lowest_clear_32x8 (u256_t x) { return and_256(inc_32x8 (x),bit_not_256(x)); }
-static inline u256_t bit_lowest_clear_64x4 (u256_t x) { return and_256(inc_64x4 (x),bit_not_256(x)); }
+static inline u256_t bit_lowest_clear_8x32 (u256_t x) { return and_256(inc_8x32 (x),not_256(x)); }
+static inline u256_t bit_lowest_clear_16x16(u256_t x) { return and_256(inc_16x16(x),not_256(x)); }
+static inline u256_t bit_lowest_clear_32x8 (u256_t x) { return and_256(inc_32x8 (x),not_256(x)); }
+static inline u256_t bit_lowest_clear_64x4 (u256_t x) { return and_256(inc_64x4 (x),not_256(x)); }
 
 // isolate lowest bit that differs from the LSB per element (bit set in location. all others clear)
 static inline u256_t bit_lowest_changed_8x32 (u256_t x) { return and_256(inc_8x32 (x),negate_8x32 (x)); }
@@ -553,6 +606,17 @@ static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x
 
 
 //-------------------------------------------------------------------------------------------------------------
+
+
+#define set_table_8x4(A,B,C,D) (int8_t)(A),(int8_t)(B),(int8_t)(C),(int8_t)(D)
+#define set_table_8x8(A,B,C,D,E,F,G,H) set_table_8x4(A,B,C,D),set_table_8x4(E,F,G,H)
+
+#define set_table_8x32(L0,L1,L2,L3,L4,L5,L6,L7,L8,L9,LA,LB,LC,LD,LE,LF,H0,H1,H2,H3,H4,H5,H6,H7,H8,H9,HA,HB,HC,HD,HE,HF)         \
+  setr_8x32(set_table_8x8(L0,L1,L2,L3,L4,L5,L6,L7), \
+            set_table_8x8(L8,L9,LA,LB,LC,LD,LE,LF), \
+            set_table_8x8(H0,H1,H2,H3,H4,H5,H6,H7), \
+            set_table_8x8(H8,H9,HA,HB,HC,HD,HE,HF)) \
+
 
 #if !defined(AVX2_MACRO_KOP)
 // table entries are duplicated per 128 bit lane
@@ -581,7 +645,7 @@ static inline u256_t bit_n_256(uint32_t n)
 {
 //u256_t one   = broadcast_32x8(hint_no_const_fold_32(1));
   u256_t one   = broadcast_32x8(1);
-  u256_t cnts  = _mm256_set_epi32(224,192,160,128,96,64,32,0);
+  u256_t cnts  = set_32x8(224,192,160,128,96,64,32,0);
   u256_t bn    = broadcast_32x8(n);
   u256_t shift = sub_32x8(bn, cnts);
   u256_t r     = sllv_32x8(one, shift);
@@ -613,7 +677,7 @@ static inline m256_pair_t pshufb_lookup_256(u256_t x, u256_t lo, u256_t hi)
 
 
 // swap upper/lower 128 bit lanes
-static inline u256_t swap_128x2(u256_t x) { return permute_64x4(x, SSE_MM_SHUFFLE(1,0,3,2)); }
+static inline u256_t swap_128x2(u256_t x) { return permute_64x4(x, AVX_SHUFFLE_4(1,0,3,2)); }
 
 // reverse the bytes in each element
 static inline u256_t byte_reverse_16x16(u256_t x) { return pshufb_128x2(x, pshufb_table_128x2(1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14)); }
@@ -627,13 +691,13 @@ static inline u256_t byte_reverse_256(u256_t x)
 }
 
 // reverse n-bit elements (across the 128-bit lanes)
-static inline u256_t u32_swap_256(u256_t x) { return swap_128x2(shuffle_32x8(x, SSE_MM_SHUFFLE(0,1,2,3))); }
-static inline u256_t u64_swap_256(u256_t x) { return permute_64x4(x, SSE_MM_SHUFFLE(0,1,2,3)); }
+static inline u256_t u32_swap_256(u256_t x) { return swap_128x2(shuffle_32x8(x, AVX_SHUFFLE_4(0,1,2,3))); }
+static inline u256_t u64_swap_256(u256_t x) { return permute_64x4(x, AVX_SHUFFLE_4(0,1,2,3)); }
 
 static inline u256_t u16_swap_256(u256_t x)
 {
-  x = shuffle_lo_16x16(x, SSE_MM_SHUFFLE(0,1,2,3));
-  x = shuffle_hi_16x16(x, SSE_MM_SHUFFLE(0,1,2,3));
+  x = shuffle_lo_16x16(x, AVX_SHUFFLE_4(0,1,2,3));
+  x = shuffle_hi_16x16(x, AVX_SHUFFLE_4(0,1,2,3));
   return u64_swap_256(x);
 }
 
@@ -927,7 +991,7 @@ static inline u256_t byte_unzip_128x2(u256_t x)
 static inline u256_t byte_unzip_256(u256_t x)
 {
   x = byte_unzip_128x2(x);
-  x = permute_64x4(x, SSE_MM_SHUFFLE(3,1,2,0));
+  x = permute_64x4(x, AVX_SHUFFLE_4(3,1,2,0));
   return x;
 }
 
@@ -948,7 +1012,7 @@ static inline u256_t u16_zip_128x2(u256_t x)
 
 static inline u256_t u64_unzip_256(u256_t x)
 {
-  return permute_64x4(x, SSE_MM_SHUFFLE(3,1,2,0));
+  return permute_64x4(x, AVX_SHUFFLE_4(3,1,2,0));
 }
 
 // macro version
@@ -997,5 +1061,130 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 })
 
 #endif
+
+
+
+// number of selected is: pop_32(movemask_8x32(m)) >> 2
+// let compiler remove
+static inline u256_t gather_32x8(u256_t x, u256_t mask)
+{
+  const uint64_t id = 0x0706050403020100;   // element indices
+  const uint64_t n  = 0x0f0f0f0f0f0f0f0f;   // scatter nibble selector
+
+  uint32_t mm = movemask_8x32(mask);
+  
+  // m: mask is elements all set or clear. movemask gives nibble/elem,
+  //    scatter to bytes, (input to r) fills in byte.
+  // r: gather from 'id' to get selected indices
+  // p: expand 'r' to 32-bit elements
+  uint64_t m = bit_scatter_64(mm, n);
+  uint64_t r = bit_gather_64(id, m^(m<<4));
+  u256_t   p = uext_8x16_32x8(set_lo_64x2(r));
+
+  // move the selected but doesn't clear out (any) upper portion
+  return permutev_32x8(x,p);
+}
+
+// the same as 32x8 except count is obviously different:
+// pop_32(movemask_8x32(m)) >> 3
+static inline u256_t gather_64x4(u256_t x, u256_t mask)
+{
+  return gather_32x8(x,mask);
+}
+
+#if !defined (SWAR_AVX2_IMPLEMENTATION)
+
+extern u256_t sort_64x4(u256_t x);
+extern u256_t sort_32x8(u256_t x);
+
+#else
+
+// sort the 4 64-bit unsigned integers
+u256_t sort_64x4(u256_t x)
+{
+  // bitonic sorting network of 4 elements.
+  // (well it's an odd-even mergesort)
+  // attempted not using software min/max but was
+  // turning out slightly worse.
+  // uiCA spitballs at 30.67 cycles. needing to
+  // software umin/umax adds 2 xors per pair.
+  //
+  // alternate stage 1:
+  //  t = permute_64x4(x, AVX_SHUFFLE_4(2,3,0,1));
+  //  c = dup_even_64x4(ucmpgt_64x4(x,t));
+  //  x = blendv_64x4(x,t,c);
+  // stages 2 & 3 didn't think of a cheap scheme
+  // to modify the selector 'c' like the dup_even
+
+  u256_t t,min,max;
+
+  // sort (0,1) & (2,3) : ascending
+  t   = permute_64x4(x, AVX_SHUFFLE_4(2,3,0,1));
+  min = umin_64x4(x,t);
+  max = umax_64x4(x,t);
+  x   = blend_32x8(min, max, 0xcc);
+
+  // sort (0,2) and (1,3) : ascending
+  t   = permute_64x4(x, AVX_SHUFFLE_4(1,0,3,2));
+  min = umin_64x4(x,t);
+  max = umax_64x4(x,t);
+  x   = blend_32x8(min, max, 0xf0);
+
+  // sort (1,2)
+  t   = permute_64x4(x, AVX_SHUFFLE_4(3,1,2,0));
+  min = umin_64x4(x, t);
+  max = umax_64x4(x, t);
+  x   = blend_32x8(min, max, 0x30);
+
+  return x;
+}
+
+// sort the 8 32-bit unsigned integers
+u256_t sort_32x8(u256_t x)
+{
+  // bitonic mergesort
+  // uiCA splitballs at 20.18 cycles
+  u256_t t,lo,hi;
+
+  // stage 1 (1 step)
+  t  = permute_32x8(x, AVX_SHUFFLE_4(2,3,0,1));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xaa); // 0b10101010
+
+  // stage 2 (2 steps)
+  t  = permute_32x8(x, AVX_SHUFFLE_4(0,1,2,3));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xcc); // 0b11001100
+
+  t  = permute_32x8(x, AVX_SHUFFLE_4(2,3,0,1));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xaa); // 0b10101010
+
+  // stage 3 (3 steps)
+  u256_t s = swap_128x2(x);
+  
+  t  = permute_32x8(s, AVX_SHUFFLE_4(0,1,2,3));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xf0);
+
+  t  = permute_32x8(x, AVX_SHUFFLE_4(1,0,3,2));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xcc);
+
+  t  = permute_32x8(x, AVX_SHUFFLE_4(2,3,0,1));
+  lo = umin_32x8(x,t);
+  hi = umax_32x8(x,t);
+  x  = blend_32x8(lo, hi, 0xaa);
+  
+  return x;
+}
+
+#endif
+
 
 #endif
