@@ -441,7 +441,7 @@ uint64_t bmat_mulv_64_ref(bmat_param_64(M), uint64_t v)
 // meh..needs work
 // performs d[i] = OP working with element sized rows
 #define BMAT_TRIVIAL_REF(W,OP)               \
-  uint##W##_t a[W];                          \  
+  uint##W##_t a[W];                          \
   bmat_to_array_##W(a,m);                    \
   for_range(i,0,W) a[i] = (uint##W##_t)(OP); \
   array_to_bmat_##W(d,a);
