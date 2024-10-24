@@ -143,7 +143,7 @@ void bmat_mul_16(bmat_rparam_16(C), bmat_param_16(A), bmat_param_16(B))
   bmat_to_array_16(b,B);
 
   // flip bits of A so we can compare against eq to zero for broadcast
-  a = xor_256(a,bit_allset_256());
+  a = xor_256(a,ones_256());
 
   // work backwards so we can use add instead of shift (take pressure
   // off of port 5)
@@ -221,7 +221,7 @@ void bmat_mul_32_(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
   for(uint32_t j=0; j<4; j++) {
     // complement 'a' so we're checking for zeroes
     // instead of ones. 
-    a[j] = xor_256(a[j], bit_allset_256());
+    a[j] = xor_256(a[j], ones_256());
     c[j] = and_256(r, cmpeq_32x8(and_256(a[j],cm),z));
     a[j] = add_32x8(a[j],a[j]);
   }
@@ -276,7 +276,7 @@ void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
   for(uint32_t j=0; j<4; j++) {
     // complement 'a' so we're checking for zeroes
     // instead of ones.
-    a[j] = xor_256(a[j], bit_allset_256());
+    a[j] = xor_256(a[j], ones_256());
     c[j] = and_256(r, cmpeq_32x8(and_256(a[j],cm),z));
     a[j] = add_32x8(a[j],a[j]);
   }
@@ -313,19 +313,19 @@ void bmat_mul_32(bmat_rparam_32(C), bmat_param_32(A), bmat_param_32(B))
 
   // complement 'a' so we're checking for zeroes
   // instead of ones.
-  a0 = xor_256(a0, bit_allset_256());
+  a0 = xor_256(a0, ones_256());
   c0 = and_256(r, cmpeq_32x8(and_256(a0,cm),z));
   a0 = add_32x8(a0,a0);
 
-  a1 = xor_256(a1, bit_allset_256());
+  a1 = xor_256(a1, ones_256());
   c1 = and_256(r, cmpeq_32x8(and_256(a1,cm),z));
   a1 = add_32x8(a1,a1);
 
-  a2 = xor_256(a2, bit_allset_256());
+  a2 = xor_256(a2, ones_256());
   c2 = and_256(r, cmpeq_32x8(and_256(a2,cm),z));
   a2 = add_32x8(a2,a2);
 
-  a3 = xor_256(a3, bit_allset_256());
+  a3 = xor_256(a3, ones_256());
   c3 = and_256(r, cmpeq_32x8(and_256(a3,cm),z));
   a3 = add_32x8(a3,a3);
   
@@ -381,7 +381,7 @@ void bmat_mul_64_avx2(bmat_rparam_64(C), bmat_param_64(A), bmat_param_64(B))
   r = broadcast_64x4(b[63]);
   
   for(uint32_t j=0; j<16; j++) {
-    a[j] = xor_256(a[j], bit_allset_256());
+    a[j] = xor_256(a[j], ones_256());
     c[j] = and_256(r, cmpeq_64x4(and_256(a[j],cm),z));
     a[j] = add_64x4(a[j],a[j]);
   }
@@ -480,7 +480,7 @@ uint16_t bmat_vmul_16(uint16_t v, bmat_param_16(M))
   
   m = bmat_load_256(M);
   s = and_256(bmat_md_256_16.p, broadcast_16x16(v));
-  s = xor_256(cmpeq_16x16(s, zero_256()), bit_allset_256());
+  s = xor_256(cmpeq_16x16(s, zero_256()), ones_256());
   r = and_256(m,s);
 
   return bmat_hsum_16x16(r);
@@ -665,8 +665,8 @@ uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
 
   m[0] = packus_32x8(and_256(m[0],mask), and_256(m[1],mask));
   m[1] = packus_32x8(and_256(m[2],mask), and_256(m[3],mask));
-  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));  // *
-  m[1] = permute_64x4(m[1], SSE_MM_SHUFFLE(3,1,2,0));  // *
+  m[0] = permute_64x4(m[0], AVX_SHUFFLE_4(3,1,2,0));  // *
+  m[1] = permute_64x4(m[1], AVX_SHUFFLE_4(3,1,2,0));  // *
   
   m[0] = xor_256(m[0], srli_16x16(m[0],8));
   m[1] = xor_256(m[1], srli_16x16(m[1],8));
@@ -674,7 +674,7 @@ uint32_t bmat_mulv_32(bmat_param_32(M), uint32_t V)
 
   m[0] = packus_16x16(and_256(m[0],mask), and_256(m[1],mask));
   m[0] = bit_parity_mask_8x32(m[0]);
-  m[0] = permute_64x4(m[0], SSE_MM_SHUFFLE(3,1,2,0));  // *
+  m[0] = permute_64x4(m[0], AVX_SHUFFLE_4(3,1,2,0));  // *
   
   return movemask_8x32(m[0]);
 }
@@ -707,18 +707,18 @@ uint64_t bmat_mulv_64(bmat_param_64(M), uint64_t V)
 
     // start of not-great
     m[i>>1] = packus_16x16(m[i],m[i+1]);
-    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+    m[i>>1] = permute_64x4(m[i>>1], AVX_SHUFFLE_4(3,1,2,0));
   }
 
   // continued: not-great
   for(uint32_t i=0; i<8; i+=2) {
     m[i>>1] = packus_16x16(m[i],m[i+1]);
-    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+    m[i>>1] = permute_64x4(m[i>>1], AVX_SHUFFLE_4(3,1,2,0));
   }
 
   for(uint32_t i=0; i<4; i+=2) {
     m[i>>1] = packus_16x16(m[i],m[i+1]);
-    m[i>>1] = permute_64x4(m[i>>1], SSE_MM_SHUFFLE(3,1,2,0));
+    m[i>>1] = permute_64x4(m[i>>1], AVX_SHUFFLE_4(3,1,2,0));
   }
   
   uint32_t t0 = movemask_8x32(negate_8x32(and_256(m[ 0],c)));
