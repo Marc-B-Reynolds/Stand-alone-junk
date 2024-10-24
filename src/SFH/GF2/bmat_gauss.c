@@ -708,11 +708,14 @@ bmat_fixed_points_8(bmat_rparam_8(m), bmat_array_8(k))
   uint64_t u = 1;
 
   bmat_adup_8(a,m);
-  
+
+  // widen and add the unit (M+I) at the same time
   for (uint32_t i=0; i<8; i++, u<<=1)  M[i] = a[i]^u;
 
+  // compute the kernel using the general code
   uint32_t r = bmat_kernel_w(M,K,8);
 
+  // narrow the result back 8-bit
   for (uint32_t i=0; i<r; i++)  k[i] = (uint8_t)K[i];
 
   return r;
