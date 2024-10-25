@@ -642,7 +642,7 @@ pshufb_table_128x2(uint8_t B0,uint8_t B1,uint8_t B2,uint8_t B3,
 
 
 // register with only bit 'n' set: 256 bit: (1 << n)
-// modification of: https://stackoverflow.com/questions/39475525/set-individual-bit-in-avx-register-m256i-need-random-access-operator/39595704#39595704
+// modification of: https://stackoverflow.com/a/39595704/3635927
 static inline u256_t bit_n_256(uint32_t n)
 {
 //u256_t one   = broadcast_32x8(hint_no_const_fold_32(1));
@@ -651,6 +651,29 @@ static inline u256_t bit_n_256(uint32_t n)
   u256_t bn    = broadcast_32x8(n);
   u256_t shift = sub_32x8(bn, cnts);
   u256_t r     = sllv_32x8(one, shift);
+  
+  return r;
+}
+
+// mod of: Peter Cordes (https://stackoverflow.com/a/24242696/3635927)
+static inline u256_t movemask_inverse_256(uint32_t x)
+{
+  // mapping of bit in 32-bit mask to corresponding byte
+  // 4 byte 0, 4 byte 1, etc
+  u256_t p = setr_64x4(0x0000000000000000,
+		       0x0101010101010101,
+		       0x0202020202020202,
+		       0x0303030303030303);
+
+  // bit position in mapped byte
+  u256_t a  = broadcast_64x4(0x8040201008040201);
+  
+  u256_t r;
+
+  r = broadcast_32x8(x);          // dup input 4x
+  r = pshufb_128x2(r,p);          // rearrange bytes
+  r = andnot_256(r,a);            // isolate bit
+  r = cmpeq_8x32(r, zero_256());  // back to mask 
   
   return r;
 }
