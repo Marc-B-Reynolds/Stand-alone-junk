@@ -360,7 +360,8 @@ void bprint(uint64_t v, uint32_t b)
 
 //----------------------------------------------------------------------
 
-static char* print_vsep = "│";
+static char* print_vsep  = "│";
+static char* print_vsep2 = "┆";
 
 #define wrap_reg_8(A,R)  uint8_t  A[32]; memcpy(A,&R,32);
 #define wrap_reg_16(A,R) uint16_t A[16]; memcpy(A,&R,32);
@@ -369,7 +370,8 @@ static char* print_vsep = "│";
 #define back_2_reg(R,A)  memcpy(&R,A,32);
 
 void dump_hex_8     (uint8_t  v)  { printf("%02x",v); }
-void dump_hex_sep_8 (uint8_t  v)  { printf("%s%02x",print_vsep,v); }
+void dump_hex_sep_8 (uint8_t  v)  { printf("%s%02x",print_vsep, v); }
+void dump_hex_sep2_8(uint8_t  v)  { printf("%s%02x",print_vsep2,v); }
 void dump_hex_16    (uint16_t v)  { printf("%04x",v); }
 void dump_hex_sep_16(uint16_t v)  { printf("%s%04x",print_vsep,v); }
 void dump_hex_32    (uint32_t v)  { printf("%08x",v); }
@@ -385,11 +387,23 @@ void avx2_print_64x4 (__m256i x) { wrap_reg_64(s,x); dump_hex_64(s[0]); for_rang
 
 // register order: low element last
 // change tick marks except at 128 bit lane boundary
-void avx2_reg_print_8x32 (__m256i x) { wrap_reg_8 (s,x); dump_hex_8 (s[31]); for_range(i,1,32) dump_hex_sep_8 (s[31-i]); }
+//void avx2_reg_print_8x32 (__m256i x) { wrap_reg_8 (s,x); dump_hex_8 (s[31]); for_range(i,1,32) dump_hex_sep_8 (s[31-i]); }
 void avx2_reg_print_16x16(__m256i x) { wrap_reg_16(s,x); dump_hex_16(s[15]); for_range(i,1,16) dump_hex_sep_16(s[15-i]); }
 void avx2_reg_print_32x8 (__m256i x) { wrap_reg_32(s,x); dump_hex_32(s[ 7]); for_range(i,1, 8) dump_hex_sep_32(s[ 7-i]); }
 void avx2_reg_print_64x4 (__m256i x) { wrap_reg_64(s,x); dump_hex_64(s[ 3]); for_range(i,1, 4) dump_hex_sep_64(s[ 3-i]); }
 
+// nah. should have an end sep and call twice. this is all a fungus growth mess
+void avx2_reg_print_8x32 (__m256i x) {
+  wrap_reg_8 (s,x);
+  dump_hex_8 (s[31]);
+  for_range(i,1,16)
+    dump_hex_sep_8 (s[31-i]);
+  
+  dump_hex_sep2_8(s[31-16]);
+
+  for_range(i,17,32)
+    dump_hex_sep_8 (s[31-i]);
+}
 
 void avx2_print_diff_8x32 (__m256i x, __m256i y)
 {
