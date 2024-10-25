@@ -672,8 +672,8 @@ static inline u256_t movemask_inverse_256(uint32_t x)
 
   r = broadcast_32x8(x);          // dup input 4x
   r = pshufb_128x2(r,p);          // rearrange bytes
-  r = andnot_256(r,a);            // isolate bit
-  r = cmpeq_8x32(r, zero_256());  // back to mask 
+  r = and_256(r,a);               // isolate the bit/byte
+  r = cmpeq_8x32(r,a);            // back to mask
   
   return r;
 }
