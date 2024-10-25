@@ -230,11 +230,13 @@ typedef __m128i u128_t;
 #define set_16x16     SFH_CAT(AVX2_PREFIX, set_epi16)
 #define set_32x8      SFH_CAT(AVX2_PREFIX, set_epi32)
 #define set_64x4      SFH_CAT(AVX2_PREFIX, set_epi64x)
+#define set_128x2     SFH_CAT(AVX2_PREFIX, set_m128i)
 
 #define setr_8x32     SFH_CAT(AVX2_PREFIX, setr_epi8 )
 #define setr_16x16    SFH_CAT(AVX2_PREFIX, setr_epi16)
 #define setr_32x8     SFH_CAT(AVX2_PREFIX, setr_epi32)
 #define setr_64x4     SFH_CAT(AVX2_PREFIX, setr_epi64x)
+#define setr_128x2    SFH_CAT(AVX2_PREFIX, setr_m128i)
 
 #define set1_8x32     SFH_CAT(AVX2_PREFIX, set1_epi8 )
 #define set1_16x16    SFH_CAT(AVX2_PREFIX, set1_epi16)
