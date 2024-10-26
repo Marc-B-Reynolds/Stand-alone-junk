@@ -659,7 +659,7 @@ static inline u256_t bit_n_256(uint32_t n)
 static inline u256_t movemask_inverse_256(uint32_t x)
 {
   // mapping of bit in 32-bit mask to corresponding byte
-  // 4 byte 0, 4 byte 1, etc
+  // 8 byte 0, 8 byte 1, etc
   u256_t p = setr_64x4(0x0000000000000000,
 		       0x0101010101010101,
 		       0x0202020202020202,
