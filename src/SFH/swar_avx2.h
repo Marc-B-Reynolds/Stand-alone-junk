@@ -655,7 +655,8 @@ static inline u256_t bit_n_256(uint32_t n)
   return r;
 }
 
-// mod of: Peter Cordes (https://stackoverflow.com/a/24242696/3635927)
+// minor mod of: Peter Cordes (https://stackoverflow.com/a/24242696/3635927)
+// uiCA predicts 5.0 cycles/iteration throughput (skylake)
 static inline u256_t movemask_inverse_256(uint32_t x)
 {
   // mapping of bit in 32-bit mask to corresponding byte
@@ -672,8 +673,8 @@ static inline u256_t movemask_inverse_256(uint32_t x)
 
   r = broadcast_32x8(x);          // dup input 4x
   r = pshufb_128x2(r,p);          // rearrange bytes
-  r = and_256(r,a);               // isolate the bit/byte
-  r = cmpeq_8x32(r,a);            // back to mask
+  r = and_256(r,a);               // isoloate bit of this element
+  r = cmpeq_8x32(r,a);            // fill element
   
   return r;
 }
@@ -1090,7 +1091,7 @@ static inline u256_t bit_permute_step_simple_64x4(u256_t x, u256_t m, const int 
 
 
 // number of selected is: pop_32(movemask_8x32(m)) >> 2
-// let compiler remove
+// uiCA predicts 18.0 cycles/iteration throughput (skylake)
 static inline u256_t gather_32x8(u256_t x, u256_t mask)
 {
   const uint64_t id = 0x0706050403020100;   // element indices
