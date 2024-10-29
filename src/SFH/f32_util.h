@@ -57,8 +57,8 @@
 #endif
 
 
-// just say no
-#if (defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
+// just say no.
+#if (defined(__FAST_MATH__)  || (defined(__FINITE_MATH_ONLY__) && (__FINITE_MATH_ONLY__)) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
 #warning "relaxed floating point operations breaks everything"
 #define FP32_LOL_NO
 #endif
@@ -85,8 +85,8 @@ static const float f32_ulp1         = 0x1.0p-23f;
 static const float f32_min_normal   = 0x1.0p-126f;
 static const float f32_max_normal   = 0x1.fffffep+127f;
 static const float f32_min_denormal = 0x1.0p-149f;
-static const float f32_nan          = 0.f/0.f;
-static const float f32_inf          = 1.f/0.f;
+static const float f32_nan          = (0.f/0.f);
+static const float f32_inf          = (1.f/0.f);
 
 static const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 static const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
