@@ -16,6 +16,7 @@ sinh
 acosh
 asinh
 exp
+expm1
 log2
 log2p1
 log
