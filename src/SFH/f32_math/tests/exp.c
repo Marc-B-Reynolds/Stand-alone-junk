@@ -1,6 +1,6 @@
 // Public Domain under http://unlicense.org, see link for details.
 //
-// nothing here yet
+// nothing here yet.
 //
 // *****EXCEPT:************************
 // 1) reference (cr_expf) version:
@@ -152,6 +152,8 @@ void scan_limits(void)
   uint32_t ix = 0;
   float    r;
 
+  printf("f(inf) = %a %08x\n", cr_func(f32_inf), f32_to_bits(f32_inf));
+  
   // look for largest normal result
   ix = f32_to_bits(0x1.0p6f);
 
@@ -185,6 +187,13 @@ void scan_limits(void)
   ix--;
 
   printf("f(x) = 0 for x <= %a (%08x)\n", f32_from_bits(ix),ix);
+
+  ix = normal_hi+1;
+
+  printf("f(x) = %a for x = %a (%08x)\n",
+	 cr_func(f32_from_bits(ix)),
+	 f32_from_bits(ix),
+	 ix);
 }
 
 // EVERYTHING BELOW HERE NEEDS CHANGING! Need to put on
@@ -196,8 +205,22 @@ void test_spot(void)
 
 void test_all(void)
 {
-  uint32_t x0 = 0;
-  uint32_t x1 = 0x332332e8;
+  uint32_t x0 = 0xc2cff1b4;
+  uint32_t x1 = 0xff800000;  // -infinity
+
+  // validate all exp(x) = 0
+  test_const_range(x0,x1,0);
+
+  // validate all exp(x) = infinity
+  x0 = 0x42b17219;
+  x1 = 0x7f800000; // +infinity
+  test_const_range(x0,x1,f32_inf);
+
+  // add everything else. temp hack version
+  // doint all together.
+  x0 = 0x42b17218;
+  x1 = 0xc2aeac50;
+  test_force(x0,x1);
 }
 
 void test_sanity(void)
@@ -208,8 +231,7 @@ void test_sanity(void)
 
 int main(int argc, char** argv)
 {
-  scan_limits();
-  return 0;
+  //scan_limits(); return 0;
   
   return test_run(argc, argv);
 }
