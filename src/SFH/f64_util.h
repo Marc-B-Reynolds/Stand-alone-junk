@@ -239,7 +239,7 @@ static inline double f64_sgn(double x) { return copysign(1.0,x); }
 
 // (1-t)a + tb
 // should be two fma ops
-static inline double f64_lerp(double t, double a, double b)
+static inline double f64_lerp(double a, double b, double t)
 {
   return fma(t,b,-fma(t,a,-a));
 }
