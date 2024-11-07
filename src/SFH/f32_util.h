@@ -293,7 +293,7 @@ static inline float f32_sgn(float x) { return copysignf(1.f,x); }
 
 // (1-t)a + tb
 // should be two fma ops
-static inline float f32_lerp(float t, float a, float b)
+static inline float f32_lerp(float a, float b, float t)
 {
   return fmaf(t,b,-fmaf(t,a,-a));
 }
