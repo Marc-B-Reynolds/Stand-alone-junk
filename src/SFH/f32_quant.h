@@ -4,7 +4,7 @@
 #ifndef F32_QUANT_H
 #define F32_QUANT_H
 
-// uniform scalar quantization helpers
+// scalar uniform quantization helpers
 
 //**** helper functions:
 
@@ -12,6 +12,7 @@ typedef struct { float h,l; } suq_scale_t;
 
 // local version of generating a pair of constants
 // to compute 1/n for correctly rounded decodes.
+// SEE: https://marc-b-reynolds.github.io/math/2019/03/12/FpDiv.html
 static inline suq_scale_t suq_scale(uint32_t n)
 {
   const float y  = (float)n;
@@ -113,7 +114,9 @@ static inline float suq_decode_w(uint32_t u, uint32_t n)
 // for when n isn't a power of two. a bit useless ATM
 // since there's no special case encode for this
 static inline float suq_decode_w_cr(uint32_t u, uint32_t n)
-{ 
+{
+  // I'm assuming this will be optimized away into
+  // precomputed constants.
   const suq_scale_t s = suq_scale(n);
 
   float f = (float)u;
