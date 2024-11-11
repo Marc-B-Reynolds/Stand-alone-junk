@@ -125,5 +125,17 @@ static inline float suq_decode_w_cr(uint32_t u, uint32_t n)
   return r;
 }
 
+// SEE: https://fgiesen.wordpress.com/2024/11/06/exact-unorm8-to-float/
+static inline float unorm8_decode_cr(uint32_t u)
+{
+  static const float k = 1.f/(255.f*3.f);
+
+  float f = (float)(3*u);
+  float r = k*f;
+
+  return r;
+}
+
+
 #endif
 
