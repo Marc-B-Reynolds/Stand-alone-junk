@@ -42,7 +42,7 @@
 #if defined(__clang__) && (__clang_major__ >= 12)
 #define FP32_REASSOCIATE_ON()  F32_PRAGMA("clang fp reassociate(on)")
 #define FP32_REASSOCIATE_OFF() F32_PRAGMA("clang fp reassociate(off)")
-#define FP32_ASSOC_BARRIER(X)  (X)
+#define FP32_ASSOC_BARRIER(X)  __arithmetic_fence(X)
 #define FP32_STRICT_FUNC()     
 #elif defined(__GNUC__) &&  (__GNUC__ >= 12)
 #define FP32_REASSOCIATE_ON()
@@ -75,6 +75,11 @@ typedef union {
   struct {float x,y; };
   float f[2];
 } f32_pair_t;
+
+static inline f32_pair_t f32_pair(float h, float l)
+{
+  return (f32_pair_t){.h=h,.l=l};
+}
 
 
 typedef struct { float f; uint32_t u; } f32_u32_tuple_t;
@@ -301,30 +306,29 @@ static inline float f32_lerp(float a, float b, float t)
 
 // exact product: ab (provided no over/underflow)
 // h = RN(ab), l=RN(ab-RN(ab) -> ab = (h+l)
-static inline void f32_2mul(f32_pair_t* r, float a, float b)
+static inline f32_pair_t f32_2mul(float a, float b)
 {
   float t = a*b;
   float e = fmaf(a,b,-t);
-  r->h = t;
-  r->l = e;
+  return f32_pair(t,e);
 }
 
 // return RN(x*p) where p is unevaluated pair
-static inline float f32_up_mul(const f32_pair_t* const p, float x) 
+static inline float f32_up_mul(f32_pair_t const p, float x) 
 {
-  return fmaf(x, p->h, x*p->l);
+  return fmaf(x, p.h, x*p.l);
 }
 
 // compute a*b+c
-static inline float f32_up_madd(const f32_pair_t* const a, float b, float c)
+static inline float f32_up_madd(const f32_pair_t const a, float b, float c)
 {
-  return fmaf(a->h, b, fmaf(a->l, b, c));
+  return fmaf(a.h, b, fmaf(a.l, b, c));
 }
 
 // pi*x (extended precision)
 static inline float f32_mul_pi(float x)
 {
-  return f32_up_mul(&f32_mul_k_pi,x);
+  return f32_up_mul(f32_mul_k_pi,x);
 }
 
 // x + pi  (FMA variant)
@@ -552,7 +556,7 @@ static inline bool f32_gt_or_unordered(float a, float b)
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me
-static inline void f32_2sum(f32_pair_t* p, float a, float b)
+static inline f32_pair_t f32_2sum(float a, float b)
 {
   FP32_REASSOCIATE_OFF();
   float x  = (a+b);
@@ -561,8 +565,7 @@ static inline void f32_2sum(f32_pair_t* p, float a, float b)
   float eb = (b-bp);
   float ea = (a-ap);
   float y  = (ea+eb);
-  p->h = x;
-  p->l = y;
+  return f32_pair(x,y);
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
@@ -570,14 +573,13 @@ static inline void f32_2sum(f32_pair_t* p, float a, float b)
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
 // * fastmath breaks me
-static inline void f32_fast2sum(f32_pair_t* p, float a, float b)
+static inline f32_pair_t f32_fast2sum(float a, float b)
 {
   FP32_REASSOCIATE_OFF();
   float x  = (a+b);
   float bp = (x-a);
   float y  = (b-bp);
-  p->h = x;
-  p->l = y;
+  return f32_pair(x,y);
 }
 
 #endif
