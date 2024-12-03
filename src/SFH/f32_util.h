@@ -154,6 +154,7 @@ static inline float f32_xor(float a, float b)
 
 
 // if 'v' is float and 's' is all clear (except sign bit)
+// return copysign(1.f,s)*v
 static inline float f32_mulsign(float v, uint32_t s)
 {
   return f32_from_bits(f32_to_bits(v)^s);
