@@ -572,12 +572,12 @@ static inline uint64_t bit_isolate_nth_set_64(uint64_t x, uint32_t n)
 // return bit position of the n^th set in 'x'. 64 if none.
 static inline uint32_t bit_pos_nth_set_32(uint32_t x, uint32_t n)
 {
-  return ctz_64(bit_isolate_nth_64(x,n));
+  return ctz_32(bit_isolate_nth_set_32(x,n));
 }
 
 static inline uint32_t bit_pos_nth_set_64(uint64_t x, uint32_t n)
 {
-  return ctz_64(bit_isolate_nth_64(x,n));
+  return ctz_64(bit_isolate_nth_set_64(x,n));
 }
 
 
