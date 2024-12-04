@@ -71,6 +71,11 @@ typedef union {
   double d[2];
 } f64_pair_t;
 
+static inline f64_pair(double x, double y)
+{
+  return (f64_pair_t){.x=x,.y=y}
+}
+
 // extended precision constants section
 // SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)
 
@@ -246,32 +251,31 @@ static inline double f64_lerp(double a, double b, double t)
 
 
 // return RN(x*p) where p is unevaluated pair
-static inline double f64_up_mul(const f64_pair_t* const p, double x) 
+static inline double f64_up_mul(const f64_pair_t p, double x) 
 {
-  return fma(x, p->h, x*p->l);
+  return fma(x, p.h, x*p.l);
 }
 
 // compute a*b+c
-static inline double f64_up_madd(const f64_pair_t* const a, double b, double c)
+static inline double f64_up_madd(const f64_pair_t a, double b, double c)
 {
-  return fma(a->h, b, fma(a->l, b, c));
+  return fma(a.h, b, fma(a.l, b, c));
 }
 
 static inline double f64_mul_pi(double x)
 {
-  return f64_up_mul(&f64_mul_k_pi,x);
+  return f64_up_mul(f64_mul_k_pi,x);
 }
 				
 
 // (a*b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow. 
-static inline void f64_2mul(f64_pair_t* p, double a, double b)
+static inline f64_pair_t f64_2mul(double a, double b)
 {
   double x = a*b;
   double y = fma(a,b,-x);
-  p->h = x;
-  p->l = y;
+  return f64_pair(x,y);
 }
 
 // checks if LSB is clear.
@@ -482,6 +486,7 @@ static inline bool f64_gt_or_unordered(double a, double b)
   return !(a <= b);
 }
 
+// move to f64_pair.h
 // (a+b) exactly represented by unevaluated pair (h+l)
 // * |l| <= ulp(h)/2
 // * provided a+b does not overflow
