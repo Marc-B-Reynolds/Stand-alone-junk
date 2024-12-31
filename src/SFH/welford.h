@@ -24,7 +24,7 @@ static inline void seq_stats_add(seq_stats_t* d, float v)
   double dm = x-m;
   
   d->m = m + dm/d->n;
-  d->s = s + dm*(x-d->m);  // why I'm I not doing FMA here?
+  d->s = fma(dm, x-d->m, s);
 }
 
 static inline double seq_stats_mean(seq_stats_t* d)     { return d->m; }
