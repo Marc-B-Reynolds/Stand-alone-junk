@@ -485,6 +485,67 @@ static inline uint32_t bit_run_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
 static inline uint32_t bit_run_count_32(uint32_t x) { return pop_32(x & (x^(x>>1))); }
 static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x>>1))); }
 
+// a set bit indicates that x has a bit run of 'n' or more from that
+// position from hi to lo.  equivalent to applying 'bit_run_clear_lo'
+// 'n' times.
+// SEE: Hacker's Delight, "Find First String of 1-Bits of a Given Length"
+static inline uint64_t bit_run_mark_hi_ge_n_64(uint64_t x, uint32_t n)
+{
+  uint32_t s;
+
+  // steps are trivial for compiler to drop for known constant 'n'
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s);
+
+  return x;
+}
+
+static inline uint32_t bit_run_mark_hi_ge_n_32(uint32_t x, uint32_t n)
+{
+  uint32_t s;
+
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s); n = n - s;
+  s = n >> 1; x = x & (x << s);
+
+  return x;
+}
+
+// same as above but for lo to hi bits (bit_run_clear_hi 'n' times)
+static inline uint64_t bit_run_mark_lo_ge_n_64(uint64_t x, uint32_t n)
+{
+  uint32_t s;
+
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s);
+
+  return x;
+}
+
+static inline uint32_t bit_run_mark_lo_ge_n_32(uint32_t x, uint32_t n)
+{
+  uint32_t s;
+
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s); n = n - s;
+  s = n >> 1; x = x & (x >> s);
+
+  return x;
+}
+
+
 // isolate the lowest bit run
 static inline uint32_t bit_run_lo_32(uint32_t x)
 {
@@ -497,6 +558,21 @@ static inline uint64_t bit_run_lo_64(uint64_t x)
   uint64_t t = x + (x & (-x));
   return x & (~t);
 }
+
+#if (BITOPS_HAS_SCATTER_GATHER)
+
+// removes all trailing zeroes and reduces length of all zero gaps between runs to one
+static inline uint64_t bit_run_compress_64(uint64_t x)
+{
+  return bit_gather_64(x,x|(x<<1));
+}
+
+static inline uint32_t bit_run_compress_32(uint32_t x)
+{
+  return bit_gather_32(x,x|(x<<1));
+}
+
+#endif
 
 // mask of low bits that are the same in x & y
 static inline uint64_t bit_match_lo_32(uint32_t x, uint32_t y)
