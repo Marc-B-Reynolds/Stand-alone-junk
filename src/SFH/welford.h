@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2018-2024
+// Marc B. Reynolds, 2018-2025
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef WELFORD_H

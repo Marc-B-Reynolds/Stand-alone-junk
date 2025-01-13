@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2024
+// Marc B. Reynolds, 2016-2025
 // Public Domain under http://unlicense.org, see link for details.
 //
 // This is utter junk example code for some posts.

@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2015-2024
+// Marc B. Reynolds, 2015-2025
 
 // evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low (c_n,... c_0)
 

@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2024
+// Marc B. Reynolds, 2016-2025
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
@@ -562,6 +562,7 @@ static inline uint64_t bit_run_lo_64(uint64_t x)
 #if (BITOPS_HAS_SCATTER_GATHER)
 
 // removes all trailing zeroes and reduces length of all zero gaps between runs to one
+// the opposite direction shift produces shorten all runs of zeros to one.
 static inline uint64_t bit_run_compress_64(uint64_t x)
 {
   return bit_gather_64(x,x|(x<<1));

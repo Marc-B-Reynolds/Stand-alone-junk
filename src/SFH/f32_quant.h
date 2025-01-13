@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2022-2024
+// Marc B. Reynolds, 2022-2025
 
 #ifndef F32_QUANT_H
 #define F32_QUANT_H

@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2021-2024
+// Marc B. Reynolds, 2021-2025
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
