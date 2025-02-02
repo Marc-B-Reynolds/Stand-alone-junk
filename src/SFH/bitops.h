@@ -6,9 +6,14 @@
 
 //  name_(u|s)?(d+)
 
+// NOTES:
+// 1) functions that require special op(s) may not have portable
+//    fallbacks for fail-fast at compile time instead of
+//    running grossly expensive routines.
+
 // Note: some of the strangeness about includes is:
 // 1) allowing SIMDe to be used instead of native
-// 2) allowing 
+// 2) allowing
 
 #if     defined(__ARM_ARCH)
 #include <arm_acle.h>
