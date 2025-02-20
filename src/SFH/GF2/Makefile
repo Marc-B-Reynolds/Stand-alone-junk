@@ -7,7 +7,7 @@ ifeq ($(origin CC),default)
 endif
 
 LDLIBS = -lm -lm4ri
-CFLAGS = -g -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
+CFLAGS = -g3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
 DFLAGS = -DBMAT_DEBUG
 
 #SRC    := ${wildcard *.c}

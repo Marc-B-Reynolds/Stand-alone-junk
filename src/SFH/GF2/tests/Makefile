@@ -8,7 +8,7 @@ ifeq ($(origin CC),default)
 endif
 
 IDIRS  = -I../.. -I..
-CFLAGS = -g -O3 -flto ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
+CFLAGS = -g3 -O3 -flto ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
 LDLIBS = 
 ODIR    := obj
 
