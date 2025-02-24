@@ -789,3 +789,23 @@ static inline uint64_t pop_prev_64(uint64_t x)
   return b^d;
 }
 
+// inverses of right and left xorshifts. trivally expand for constant n
+static inline uint32_t rxorshift_inv_32(uint32_t x, uint32_t n)
+{
+  while(n < 32) { x ^= x >> n; n += n; } return x;
+}
+
+static inline uint64_t rxorshift_inv_64(uint64_t x, uint32_t n)
+{
+  while(n < 64) { x ^= x >> n; n += n; } return x;
+}
+
+static inline uint32_t lxorshift_inv_32(uint32_t x, uint32_t n)
+{
+  while(n < 32) { x ^= x << n; n += n; } return x;
+}
+
+static inline uint64_t lxorshift_inv_64(uint64_t x, uint32_t n)
+{
+  while(n < 64) { x ^= x << n; n += n; } return x;
+}
