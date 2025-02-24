@@ -143,7 +143,7 @@ static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 static inline uint32_t mod_inverse_u32(uint32_t a)
 {
   uint32_t x = (3*a)^2; 
-  uint32_t y  = 1 - a*x;
+  uint32_t y = 1 - a*x;
   x = x*(1+y); y *= y;
   x = x*(1+y); y *= y;
   x = x*(1+y);
@@ -153,7 +153,7 @@ static inline uint32_t mod_inverse_u32(uint32_t a)
 static inline uint64_t mod_inverse_u64(uint64_t a)
 {
   uint64_t x = (3*a)^2; 
-  uint64_t y  = 1 - a*x;
+  uint64_t y = 1 - a*x;
   x = x*(1+y); y *= y;
   x = x*(1+y); y *= y;
   x = x*(1+y); y *= y;
