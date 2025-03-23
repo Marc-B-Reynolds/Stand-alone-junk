@@ -11,7 +11,7 @@ CFLAGS = -g3 -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-fun
 DFLAGS = -DBMAT_DEBUG
 
 #SRC    := ${wildcard *.c}
-SRC     := bmat_basics.c bmat_block.c bmat_set.c bmat_mul.c bmat_print.c bmat_gauss.c bmat_transpose.c bmat_random.c bmat_ref.c bmat_toeplitz.c bmat_func.c bmat_charpoly.c bmat_m4ri.c bmat_flint.c
+SRC     := bmat_basics.c bmat_block.c bmat_set.c bmat_mul.c bmat_print.c bmat_gauss.c bmat_transpose.c bmat_random.c bmat_ref.c bmat_toeplitz.c bmat_func.c bmat_charpoly.c bmat_m4ri.c bmat_flint.c bmat_pow.c
 HEADERS := ${wildcard *.h}
 
 IDIRS   := -I..
