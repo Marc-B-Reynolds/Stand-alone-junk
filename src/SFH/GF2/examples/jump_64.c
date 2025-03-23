@@ -28,8 +28,7 @@ static inline uint64_t A(uint64_t s)
 //             (which is a carryless x^2)
 //
 // These are all very "inefficient" in terms of implementation
-// but it to moves from uncomputable to fast in the human waiting
-// time scale. So fine for AOT but needs TLC otherwise.
+// but the techinques are fine.
 
 typedef __uint128_t u128_t;
 typedef struct {uint64_t lo,hi;} split_t;
@@ -95,6 +94,16 @@ static inline u128_t f2_jump_next_64(u128_t x, u128_t n)
   return x;
 }
 
+void f2_base_build_64(uint64_t table[static 64])
+{
+  uint64_t r = 1;
+
+  for(uint32_t i=0; i<64; i++) {
+    table[i] = r;
+    r = A(r);
+  }
+}
+
 // compute: 2^2^n mod p for n on [0,63]
 //   p has implied high bit (bit 64 is set)
 void f2_jump_build_64(uint64_t table[static 64], uint64_t p)
@@ -132,7 +141,7 @@ uint64_t f2_jump_i_64(uint64_t g, uint64_t s)
 {
   uint64_t n = 0;
 
-  // evaluate the polynomial 'g(A)' using Horner's method
+  // evaluate the polynomial 'g(A)x' using Horner's method
   do {
     if (g & 1) n ^= s;
     g = g >> 1;
@@ -146,8 +155,6 @@ uint64_t f2_jump_by_64(uint64_t table[static 64], uint32_t n, uint64_t s)
 {
   uint64_t g = 0;
 
-  
-  
   return f2_jump_i_64(g,s);
 }
 
@@ -207,6 +214,7 @@ void do_the_stuff(bmat_param_64(m))
 
   // build the jump table
   uint64_t jump[64];
+  uint64_t u_i[64] = {0};
 
   printf("\n");
   f2_jump_build_64(jump, p);
@@ -214,6 +222,26 @@ void do_the_stuff(bmat_param_64(m))
   table_dump_64("jump_table", jump);
   printf("\n");
 
+  // build the u_i table
+  printf("\n");
+  f2_base_build_64(u_i);
+  printf("// A^i * (1,0,...0)^T\n");
+  table_dump_64("jump_ui", u_i);
+  printf("\n");
+
+  for(uint32_t j=1; j<10; j++) {
+    printf("{");
+    uint64_t b = UINT64_C(1) << j;
+    uint32_t cnt = 0;
+    for(uint32_t i=0; i<64; i++) {
+      uint32_t t = (u_i[i] & b) != 0;
+      cnt += t;
+      printf("%u,", t);
+    }
+    printf("\b}; // %2u : %u\n", j,cnt);
+  }
+
+  
   // foo
 #if 0  
   for(uint32_t i=0; i<64; i++) {
