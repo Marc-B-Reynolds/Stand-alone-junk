@@ -89,11 +89,15 @@
 #define bmat_def_32(NAME,...)   bmat_def_n(NAME,16,__VA_ARGS__)
 #define bmat_def_64(NAME,...)   bmat_def_n(NAME,64,__VA_ARGS__)
 
-
 static inline void bmat_dup_8 (bmat_param_8(a),  bmat_param_8(m))  { memcpy(a, m,   8); }
 static inline void bmat_dup_16(bmat_param_16(a), bmat_param_16(m)) { memcpy(a, m,  32); }
 static inline void bmat_dup_32(bmat_param_32(a), bmat_param_32(m)) { memcpy(a, m, 128); }
 static inline void bmat_dup_64(bmat_param_64(a), bmat_param_64(m)) { memcpy(a, m, 512); }
+
+#define bmat_defdup_8(M,A)     bmat_def_n(M, 1); bmat_dup_8(M,A);
+#define bmat_defdup_16(M,A)    bmat_def_n(M, 4); bmat_dup_16(M,A);
+#define bmat_defdup_32(M,A)    bmat_def_n(M,16); bmat_dup_32(M,A);
+#define bmat_defdup_64(M,A)    bmat_def_n(M,64); bmat_dup_64(M,A);
 
 // bmat_to_array_n/array_to_bmat_n :
 // * for type-punning between array types (for strict aliasing)
@@ -269,6 +273,16 @@ extern void bmat_bracket_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b
 extern void bmat_bracket_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b));
 extern void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b));
 
+// bmat_pow.h
+extern void bmat_pow2_8 (bmat_rparam_8 (m));
+extern void bmat_pow2_16(bmat_rparam_16(m));
+extern void bmat_pow2_32(bmat_rparam_32(m));
+extern void bmat_pow2_64(bmat_rparam_64(m));
+
+extern void bmat_pow_8 (bmat_rparam_8 (m), bmat_param_8 (a), uint64_t n);
+extern void bmat_pow_16(bmat_rparam_16(m), bmat_param_16(a), uint64_t n);
+extern void bmat_pow_32(bmat_rparam_32(m), bmat_param_32(a), uint64_t n);
+extern void bmat_pow_64(bmat_rparam_64(m), bmat_param_64(a), uint64_t n);
 
 // bmat_gauss.c
 extern uint32_t bmat_echelon_8 (bmat_param_8 (m));
