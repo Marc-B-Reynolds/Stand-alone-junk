@@ -18,6 +18,7 @@
 //         do other work here { wanting to hide the latency of 'v' }
 //     do something with 'v' here
 //
+// TODO: change to Alexander Monakov's chained suggestion
 #if defined(__GNUC__)
 #define hint_result_barrier(X) __asm__ __volatile__("" : "+r"(X) : "r"(X));
 //                             __asm__ __volatile__("" : "+r"(X) : );
