@@ -856,6 +856,7 @@ uint32_t m4ri_eval_32(mzd_t* M, uint32_t x)
   return result;
 }
 
+
 // in-place compute m^n (validate)
 // ouch! expensive as is. (doesn't matter ATM)
 mzd_t* m4ri_pow(mzd_t* m, uint64_t n)
