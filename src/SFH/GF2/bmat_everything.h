@@ -22,6 +22,7 @@
 #include "bmat_gauss.c"
 #include "bmat_charpoly.c"
 #include "bmat_mul.c"
+#include "bmat_pow.c"
 #include "bmat_transpose.c"
 #include "bmat_random.c"
 #include "bmat_func.c"
