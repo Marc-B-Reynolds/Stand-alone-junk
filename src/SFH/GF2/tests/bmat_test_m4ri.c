@@ -564,6 +564,7 @@ uint32_t test_mv_mul(prng_t* prng, uint32_t n)
 #endif
 
 //******************************************************************************
+// explict echelon test
 
 uint32_t test_rref(prng_t* prng, uint32_t trials)
 {
@@ -642,6 +643,142 @@ uint32_t test_rref(prng_t* prng, uint32_t trials)
       if (bmat_equal_64(m0,m1)) continue;
       test_fail();
       errors++;
+      goto test_done;
+    }
+  }
+  test_pass();
+
+ test_done:
+  return errors;
+}
+
+
+//******************************************************************************
+// explict matrix power test
+
+void m4ri_wrap_pow_8(bmat_param_8(m), uint64_t n)
+{
+  mzd_t*   mm = m4ri_make_8(m);
+  m4ri_pow(mm,n);
+  bmat_from_m4ri_8(m,mm);
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_pow_16(bmat_param_16(m), uint64_t n)
+{
+  mzd_t*   mm = m4ri_make_16(m);
+  m4ri_pow(mm,n);
+  bmat_from_m4ri_16(m,mm);
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_pow_32(bmat_param_32(m), uint64_t n)
+{
+  mzd_t*   mm = m4ri_make_32(m);
+  m4ri_pow(mm,n);
+  bmat_from_m4ri_32(m,mm);
+  m4ri_free(mm);
+}
+
+void m4ri_wrap_pow_64(bmat_param_64(m), uint64_t n)
+{
+  mzd_t*   mm = m4ri_make_64(m);
+  m4ri_pow(mm,n);
+  bmat_from_m4ri_64(m,mm);
+  m4ri_free(mm);
+}
+
+
+uint32_t test_pow(prng_t* prng, uint32_t trials)
+{
+  uint32_t errors = 0;
+  
+  bmat_def_64(m);
+  bmat_def_64(m0);
+  bmat_def_64(m1);
+
+  test_banner("bmat_pow_n");
+
+  {
+    test_header_8();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      uint64_t v = prng_u64(prng) & 0xff;
+      
+      bmat_random_8(m, prng);
+      bmat_dup_8(m0,m);
+
+      m4ri_wrap_pow_8(m0,v);
+      bmat_pow_8(m1,m,v);
+      
+      if (bmat_equal_8(m0,m1)) continue;
+      test_fail();
+      errors++;
+      goto test_16;
+    }
+  }
+  test_pass();
+
+ test_16: {
+    test_header_16();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      uint64_t v = prng_u64(prng) & 0xffff;
+      
+      bmat_random_16(m, prng);
+      bmat_dup_16(m0,m);
+
+      m4ri_wrap_pow_16(m0,v);
+      bmat_pow_16(m1,m,v);
+
+      if (bmat_equal_16(m0,m1)) continue;
+
+      test_fail();
+      errors++;
+
+      goto test_32;
+    }
+  }
+  test_pass();
+
+  
+ test_32: {
+    test_header_32();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      uint64_t v = prng_u64(prng) & 0xffff;
+      
+      bmat_random_32(m, prng);
+      bmat_dup_32(m0,m);
+      
+      m4ri_wrap_pow_32(m0,v);
+      bmat_pow_32(m1,m,v);
+      
+      if (bmat_equal_32(m0,m1)) continue;
+      test_fail();
+      errors++;
+
+      goto test_64;
+    }
+  }
+  test_pass();
+
+ test_64: {
+    test_header_64();
+    
+    for(uint32_t i=0; i<trials; i++) {
+      uint64_t v = prng_u64(prng) & 0xffff;
+      
+      bmat_random_64(m, prng);
+      bmat_dup_64(m0,m);
+      
+      m4ri_wrap_pow_64(m0,v);
+      bmat_pow_64(m1,m,v);
+
+      if (bmat_equal_64(m0,m1)) continue;
+      test_fail();
+      errors++;
+
       goto test_done;
     }
   }
@@ -791,6 +928,7 @@ int main(void)
     errors = roundtrip(&prng);
 
     if (errors == 0) {
+      errors += test_pow(&prng, trials);
       errors += test_inverse(&prng, trials);
       errors += test_set_unit(&prng, trials);
       errors += test_transpose(&prng, trials);
