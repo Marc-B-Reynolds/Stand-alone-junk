@@ -96,6 +96,7 @@ static const float f32_inf          = (1.f/0.f);
 static const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 static const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
 static const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
+static const uint32_t f32_one_bits_k = UINT32_C(0x3f800000);
 
 
 

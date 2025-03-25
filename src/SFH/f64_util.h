@@ -61,6 +61,10 @@ static const double f64_inf          = 1.0/0.0;
 
 static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
+static const uint64_t f64_exp_bits_k = UINT64_C(0x7FF0000000000000);
+static const uint64_t f64_mag_bits_k = UINT64_C(0x000fffffffffffff);
+static const uint64_t f64_one_bits_k = UINT64_C(0x3ff0000000000000);
+
 
 // NOTES:
 // u = round-off unit (2^-) = ulp(1)/2
