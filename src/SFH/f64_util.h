@@ -71,9 +71,9 @@ typedef union {
   double d[2];
 } f64_pair_t;
 
-static inline f64_pair(double x, double y)
+static inline f64_pair_t f64_pair(double x, double y)
 {
-  return (f64_pair_t){.x=x,.y=y}
+  return (f64_pair_t){.x=x,.y=y};
 }
 
 // extended precision constants section

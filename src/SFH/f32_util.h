@@ -321,7 +321,7 @@ static inline float f32_up_mul(f32_pair_t const p, float x)
 }
 
 // compute a*b+c
-static inline float f32_up_madd(const f32_pair_t const a, float b, float c)
+static inline float f32_up_madd(f32_pair_t const a, float b, float c)
 {
   return fmaf(a.h, b, fmaf(a.l, b, c));
 }
