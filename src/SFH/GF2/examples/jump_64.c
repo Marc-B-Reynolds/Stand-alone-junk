@@ -141,7 +141,7 @@ uint64_t f2_jump_i_64(uint64_t g, uint64_t s)
 {
   uint64_t n = 0;
 
-  // evaluate the polynomial 'g(A)x' using Horner's method
+  // evaluate the polynomial 'g(A)x'
   do {
     if (g & 1) n ^= s;
     g = g >> 1;
