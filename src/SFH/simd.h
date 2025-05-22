@@ -289,7 +289,8 @@ typedef uint64_t u64x8_t  __attribute__ ((vector_size(64)));
 // you've ever seen.
 
 // self note: doesn't these require adding may_alias
-// to the types? thinky-thinky
+// to the types? thinky-thinky. could make inline
+// functions to call.
 
 #define simd_fp_to_ui(X) ({         \
   typeof(X) _x = X;                 \
@@ -444,52 +445,6 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 #endif
 
 //*******************************************************
-// min/max
-//
-// the comparision is written this way for floating point which
-// will cause the first parameter to be returned if the inputs
-// are unordered (one or both are NaN). Doesn't matter for integers.
-//
-// this differs from the libm functions in C which will return
-// the ordered value if only one is NaN.
-
-// scalar macros
-#define simd_min_s(A,B) ({ simd_param_2(A,B); !(_a > _b) ? _a : _b; })
-#define simd_max_s(A,B) ({ simd_param_2(A,B); !(_a < _b) ? _a : _b; })
-
-// vector macros (B element is awkward because it's directly expanded.
-// could make a binary function expander...but meh ATM)
-
-// integer & floating point (with above listed behavior)
-#define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i));
-#define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i));
-
-// floating-point C library behavior
-// self note: GCC expansions of this explode w/o weaking FP behavior
-// (think about this at some point)
-#define simd_fmin(a,b) simd_fp_std_binary(fmin,a,b)
-#define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
-
-#if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
-#endif
-
-//*******************************************************
-//
-
-// yields the first parameter that's a vector type (if there is one)
-#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_simd_type(A),A,B)
-#define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
-
-
-// simd_param_{n} helper:
-// • `name` is the variable name of the captured 
-// • `orig` is the macro parameter
-// uses helper `simd_splat_i` which logically passes
-// through a vector type and broadcasts a scalar
-#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
-
 
 // mixed vector/scalar macro paramenter helper:
 // all parameters must be a vector type (T) or
@@ -538,6 +493,55 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #endif
 
 
+//*******************************************************
+// min/max
+//
+// the comparision is written this way for floating point which
+// will cause the first parameter to be returned if the inputs
+// are unordered (one or both are NaN). Doesn't matter for integers.
+//
+// this differs from the libm functions in C which will return
+// the ordered value if only one is NaN.
+
+// scalar macros
+#define simd_min_s(A,B) ({ simd_param_2(A,B); !(_a > _b) ? _a : _b; })
+#define simd_max_s(A,B) ({ simd_param_2(A,B); !(_a < _b) ? _a : _b; })
+
+// vector macros (B element is awkward because it's directly expanded.
+// could make a binary function expander...but meh ATM)
+
+// integer & floating point (with above listed behavior)
+#define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i));
+#define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i));
+
+// floating-point C library behavior
+// self note: GCC expansions of this explode w/o weaking FP behavior
+// (think about this at some point)
+#define simd_fmin(a,b) simd_fp_std_binary(fmin,a,b)
+#define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
+
+#if defined(SIMD_SPECIALIZE)
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
+#endif
+
+//*******************************************************
+//
+
+// yields the first parameter that's a vector type (if there is one)
+#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_simd_type(A),A,B)
+#define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
+
+
+// simd_param_{n} helper:
+// • `name` is the variable name of the captured 
+// • `orig` is the macro parameter
+// uses helper `simd_splat_i` which logically passes
+// through a vector type and broadcasts a scalar
+#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
+
+
+
 // scalar FMA (generic binary32/binary64)
 #define simd_fma_s(A,B,C)            \
   _Generic((A),                      \
@@ -558,6 +562,20 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
   A;                                      \
 })
 
+// R_i = RN(A_i•B_i - C_i)
+// simd_fms_i macro can't take a negated
+// input so specialize it
+#define simd_fms_i(A,B,C) ({              \
+  for(size_t i=0; i<simd_dim(A); i++) {   \
+    simd_elem(A,i) = simd_fma_s(          \
+    simd_elem(A,i),                       \
+    simd_elem(B,i),                       \
+    -simd_elem(C,i));                     \
+  }                                       \
+  A;                                      \
+})
+
+
 // SIMD FMA : R_i = RN(A_i•B_i + C_i)
 #define simd_fma(A,B,C) ({     \
   simd_param_3(A,B,C);         \
@@ -569,8 +587,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 // • end-points are exact (2 FMA formulation)
 #define simd_lerp(A,B,T) ({                \
   simd_param_3(A,B,T);                     \
-  typeof(_type) _r = simd_fms_v(_a,_c,_a); \
-  typeof(_type) _f = simd_fma_v(_b,_c,_r); \
+  typeof(_type) _r = simd_fms_i(_a,_c,_a); \
+  typeof(_type) _f = simd_fma_i(_b,_c,_r); \
   _f;                                      \
 })
 
