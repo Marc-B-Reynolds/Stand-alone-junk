@@ -29,7 +29,18 @@
 //   it will nag the user and set them via pragmas)
 //
 // Usage: include this header (+options):
-// • define `SIMD_SPECIALIZE` 
+// • define `SIMD_SPECIALIZE`
+//
+// Behavior diffrences:
+// • GCC is more strict than clang about types (make notes)
+// • For comparison results:
+//   vector_size: any same sized type allowed
+//   ext_vector_type: signed integer was same number elements
+//   so: i32x8_t fcmp(T a, T b) { return a>=b; } is valid for
+//       T={f32x8_t,i32x8_t,u32x8_t}
+// SEE:
+//   https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
+//   https://clang.llvm.org/docs/LanguageExtensions.html#vectors-and-extended-vectors
 //
 // Credits:
 // • David Mazières: SIMD_MAP
@@ -82,6 +93,12 @@
 // number of elements in X (including scalars)
 #define simd_dim(X)    (sizeof(X)/sizeof(simd_elem(X,0)))
 
+// number of elements in X (must be vector)
+#if defined(__clang__)
+#define simd_dim_v(X) __builtin_vectorelements(X)
+#else
+#define simd_dim_v(X)  (sizeof(X)/sizeof(X[0]))
+#endif
 
 // returns a vector of same type as input 'X' where
 // each component is: r_i = f(x_i, ...)
@@ -149,10 +166,10 @@
 #define SIMD_SUM(A,...) (A)__VA_OPT__(SIMD_MAP(+,__VA_ARGS__))
 
 
-// if `ext_vector_type` is available use that instead of `vector_size`
+// if `ext_vector_type` is available use that instead (1) of `vector_size`
 // not used internal but allows users to access the added functionality
-// such as shader "dot" notation.
-#if __has_attribute(ext_vector_type)
+// such as shader "dot" notation. (1: unless disabling)
+#if __has_attribute(ext_vector_type) && !defined(SIMD_NO_EXT_VECTOR)
 
 // 64-bit packages
 typedef float    f32x2_t  __attribute__ ((ext_vector_type(2)));
@@ -355,7 +372,7 @@ typedef uint64_t u64x8_t  __attribute__ ((vector_size(64)));
 #define simd_is_const(a)  __builtin_constant_p(a)
 
 // `true` if a is a `vector_size` or `ext_vector_type`
-#define simd_is_simd_type(a)  (__builtin_classify_type(a) == 19)
+#define simd_is_vec_type(a)  (__builtin_classify_type(a) == 19)
 
 #define simd_is_type(a,T) __builtin_types_compatible_p(typeof(a), T)
 #define simd_is_i32(a)    simd_is_type(a, int32_t)
@@ -369,20 +386,21 @@ typedef uint64_t u64x8_t  __attribute__ ((vector_size(64)));
 #define simd_is_scalar_int(a) (simd_is_i32(a) || simd_is_i64(a) || simd_is_u32(a) || simd_is_u64(a))
 
 #define simd_is_same_type(a,b) __builtin_types_compatible_p(typeof(a), typeof(b))
+#define simd_is_same_type3(a,b,c) (simd_is_same_type(a,b) & simd_is_same_type(a,c))
 
 // attempt to make macro barf errors a bit easier to read
-#define simd_assert_const(a)       static_assert(simd_is_const(a), "must be constant")
-#define simd_assert_same_type(a,b) static_assert(simd_is_same_type(a,b), "must be same type")
-
+#define simd_assert_const(a)          static_assert(simd_is_const(a), "must be constant")
+#define simd_assert_same_type(a,b)    static_assert(simd_is_same_type(a,b), "must be same type")
+#define simd_assert_same_type3(a,b,c) static_assert(simd_is_same_type3(a,b,c),"must be same type")
 
 // all listed must be scalar types (floating-point or integer)
 #define simd_assert_scalar_fp(A,...)  static_assert(simd_is_scalar_fp(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_fp,__VA_ARGS__)), "must be same scalar float type")
 #define simd_assert_scalar_int(A,...) static_assert(simd_is_scalar_int(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_int,__VA_ARGS__)), "must be same scalar integer type")
-#define simd_assert_vec(A,...)        static_assert(simd_is_simd_type(A) __VA_OPT__(SIMD_MAP(&& simd_is_simd_type,__VA_ARGS__)), "must be vector type")
+#define simd_assert_vec(A,...)        static_assert(simd_is_vec_type(A) __VA_OPT__(SIMD_MAP(&& simd_is_vec_type,__VA_ARGS__)), "must be vector type")
 
 
 // if variable 'X' is a vector type yield 'V' and otherwise 'S'
-#define simd_select_vs(X,V,S) __builtin_choose_expr(simd_is_simd_type(X), V, S)
+#define simd_select_vs(X,V,S) __builtin_choose_expr(simd_is_vec_type(X), V, S)
 
 // return the base type of 'A'
 #define simd_base_type(A) simd_select_vs(A,A[0],A)
@@ -448,7 +466,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // mixed vector/scalar macro paramenter helpers
 
 // yields the first parameter that's a vector type (if there is one)
-#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_simd_type(A),A,B)
+#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_vec_type(A),A,B)
 #define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
 
 
@@ -529,7 +547,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 
 // floating-point C library behavior
 // self note: GCC expansions of this explode w/o weaking FP behavior
-// (think about this at some point)
+// (think about this at some point -ffinite-math-only does the trick
+// but then single NaN behavior is...whatever dude?)
 #define simd_fmin(a,b) simd_fp_std_binary(fmin,a,b)
 #define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
 
@@ -583,6 +602,28 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 })
 
 
+// all parameters must be vectors version
+#if defined(__clang__)
+#define simd_fma_v(a,b,c) ({           \
+  simd_assert_same_type3(a,b,c);       \
+  simd_assert_vec(a);                  \
+  typeof(a) _a=a,_b=b,_c=c;            \
+  __builtin_elementwise_fma(_a,_b,_c); \
+})
+#else
+#define simd_fma_v(a,b,c) ({     \
+  simd_assert_same_type3(a,b,c); \
+  simd_assert_vec(a);            \
+  typeof(a) _a=a,_b=b,_c=c;      \
+  for(size_t i=0; i<simd_dim_v(_a); i++) {  \
+    _a[i] = simd_fma_s(_a[i],_b[i],_c[i]);  \
+  }                             \
+  _a;                           \
+})
+#endif
+
+
+
 // SIMD LERP: R_i = A_i(1-T_i) + B_i•T_i
 // • end-points are exact (2 FMA formulation)
 #define simd_lerp(A,B,T) ({                \
@@ -591,6 +632,29 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
   typeof(_type) _f = simd_fma_i(_b,_c,_r); \
   _f;                                      \
 })
+
+// all vector input version
+#if defined(__clang__)
+#define simd_lerp_v(a,b,t) ({                \
+  simd_assert_same_type3(a,b,t);             \
+  simd_assert_vec(a);                        \
+  typeof(a) _a=a,_b=b,_t=t;                  \
+  _a = __builtin_elementwise_fma(_a,_t,-_a); \
+  _a = __builtin_elementwise_fma(_b,_t, _a); \
+  _a;                                        \
+})
+#else
+#define simd_lerp_v(a,b,t) ({    \
+  simd_assert_same_type3(a,b,t); \
+  simd_assert_vec(a);            \
+  typeof(a) _a=a,_b=b,_t=t;      \
+  for(size_t i=0; i<simd_dim_v(_a); i++) {  \
+    _a[i] = simd_fma_s(_a[i],_t[i],-_a[i]); \
+    _a[i] = simd_fma_s(_b[i],_t[i], _a[i]); \
+  }                             \
+  _a;                           \
+})
+#endif
 
 
 #if !defined(__clang__)
