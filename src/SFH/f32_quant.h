@@ -4,7 +4,7 @@
 #ifndef F32_QUANT_H
 #define F32_QUANT_H
 
-// scalar uniform quantization helpers
+// scalar uniform quantization (suq) helpers
 
 //**** helper functions:
 
@@ -24,16 +24,44 @@ static inline suq_scale_t suq_scale(uint32_t n)
 
 //**** scalar uniform encoding funcs
 
+static inline int32_t suq_scale_i32(float x, float s)
+{
+  return (int32_t)(s*x);
+}
+
+static inline int32_t suq_scale_round_i32(float x, float s)
+{
+  return (int32_t)fmaf(s,x,0.5f);
+}
+
+
+static inline uint32_t suq_scale_u32(float x, float s)
+{
+  return (uint32_t)((int32_t)(s*x));
+}
+
+static inline uint32_t suq_scale_translate_u32(float x, float s, float t)
+{
+  return (uint32_t)((int32_t)fmaf(x,s,t));
+}
+
+
+static inline uint32_t suq_scale_round_u32(float x, float s)
+{
+  return (uint32_t)((int32_t)fmaf(x,s,0.5f));
+}
+
+
 // floor quantization
 static inline uint32_t suq_encode_f(float x , uint32_t n)
 {
-  return (uint32_t)(x * (float)n);
+  return suq_scale_u32(x, (float)n);
 }
 
 // rounded quantization
 static inline uint32_t suq_encode_r(float x , uint32_t n)
 {
-  return (uint32_t)fmaf(x,(float)(n-1), 0.5f);
+  return suq_scale_round_u32(x, (float)(n-1));
 }
 
 
@@ -101,7 +129,7 @@ static inline float    suq_decode_rl(uint32_t u, uint32_t n) { return suq_decode
 static inline uint32_t suq_encode_w(float x , uint32_t n)
 {
   // not doing anything clever here since n is assumed POT
-  return ((uint32_t)fmaf(x,(float)(n), 0.5f)) % n;
+  return suq_scale_translate_u32(x,(float)(n), 0.5f) % n;
 }
 
 // wrapped dequantization (assume n is power-of-two)
@@ -125,6 +153,11 @@ static inline float suq_decode_w_cr(uint32_t u, uint32_t n)
   return r;
 }
 
+static inline uint32_t unorm8_encode(float x)
+{
+  return suq_scale_round_u32(x,255.f);  
+}
+
 // SEE: https://fgiesen.wordpress.com/2024/11/06/exact-unorm8-to-float/
 static inline float unorm8_decode_cr(uint32_t u)
 {
@@ -136,6 +169,20 @@ static inline float unorm8_decode_cr(uint32_t u)
   return r;
 }
 
+static inline uint32_t snorm8_encode(float x)
+{
+  return suq_scale_u32(x, (255.f/2.f) + 128.0f);  
+}
+
+static inline float snorm8_decode_cr(uint32_t u)
+{
+  static const float k = 2.f/(255.f*3.f);
+
+  float f = (float)(3*u);
+  float r = fmaf(k,f,-1.f);
+
+  return r;
+}
 
 #endif
 
