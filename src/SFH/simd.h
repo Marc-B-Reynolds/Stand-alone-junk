@@ -445,8 +445,21 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 #endif
 
 //*******************************************************
+// mixed vector/scalar macro paramenter helpers
 
-// mixed vector/scalar macro paramenter helper:
+// yields the first parameter that's a vector type (if there is one)
+#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_simd_type(A),A,B)
+#define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
+
+
+// simd_param_{n} helper:
+// • `name` is the variable name of the captured 
+// • `orig` is the macro parameter
+// uses helper `simd_splat_i` which logically passes
+// through a vector type and broadcasts a scalar
+#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
+
+
 // all parameters must be a vector type (T) or
 // a scalar of the element type of T. All scalars
 // are broadcast to type T (if there are any)
@@ -527,19 +540,6 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 
 //*******************************************************
 //
-
-// yields the first parameter that's a vector type (if there is one)
-#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_simd_type(A),A,B)
-#define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
-
-
-// simd_param_{n} helper:
-// • `name` is the variable name of the captured 
-// • `orig` is the macro parameter
-// uses helper `simd_splat_i` which logically passes
-// through a vector type and broadcasts a scalar
-#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
-
 
 
 // scalar FMA (generic binary32/binary64)
