@@ -8,6 +8,45 @@
 /// ==============================================================
 /// whatever
 
+// fast forward 'n' steps:  while(n--) s = A(s)
+// precompute 'g' from 'n' and method takes bit
+// width number of steps (on average, fixed per n)
+
+// TODO: need to implement the carryless product
+// version of a*b mod P for known P.
+
+// return A^n s where 'n' is implicit from 'g'
+//   g = 2^(2^n) mod p where p is characteristic polynomial of A
+uint64_t f2_jump_64(uint64_t g, uint64_t (*A)(uint64_t), uint64_t s)
+{
+  uint64_t n = 0;
+
+  // evaluate the polynomial 'g(A)x'
+  do {
+    if (g & 1) n ^= s;
+    g = g >> 1;
+    s = A(s);
+  } while(g);
+
+  return n;
+}
+
+
+uint32_t f2_jump_32(uint32_t g, uint32_t (*A)(uint32_t), uint32_t s)
+{
+  uint32_t n = 0;
+
+  // evaluate the polynomial 'g(A)x'
+  do {
+    if (g & 1) n ^= s;
+    g = g >> 1;
+    s = A(s);
+  } while(g);
+
+  return n;
+}
+
+
 
 /// ## bmat_from_ufunc_*n*(m,f)
 ///
