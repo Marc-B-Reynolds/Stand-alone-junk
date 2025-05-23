@@ -256,6 +256,12 @@
     static inline CAT(o,base,_t) CAT(simd_bitcast_,i,o,_,base)(CAT(i,base,_t) x) { return type_pun(x,CAT(o,base,_t)); }  \
     static inline CAT(i,base,_t) CAT(simd_bitcast_,o,i,_,base)(CAT(o,base,_t) x) { return type_pun(x,CAT(i,base,_t)); } 
 
+#define SIMD_MAKE_TCONV(base)                                                      \
+    static inline CAT(f,base,_t) CAT(simd_convert_if,_,base)(CAT(i,base,_t) x) {   \
+         return __builtin_convertvector(x,CAT(f,base,_t)); }                       \
+    static inline CAT(i,base,_t) CAT(simd_convert_fi,_,base)(CAT(f,base,_t) x) {   \
+         return __builtin_convertvector(x,CAT(i,base,_t)); } 
+
 
 // make integer typedefs, uint <-> sint type-pun
 // • 
@@ -268,15 +274,17 @@
 
 // 32-bit elements types: expand int macro and add float typedefs
 // and type-pun back and forth signed integers
-#define SIMD_BUILD_TYPE_32(B,N) SIMD_BUILD_TYPE_INT(B,N) \
-                                SIMD_MAKE_TYPE_F(B,N)    \
-                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i)
+#define SIMD_BUILD_TYPE_32(B,N) SIMD_BUILD_TYPE_INT(B,N)       \
+                                SIMD_MAKE_TYPE_F(B,N)          \
+                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i) \
+                                SIMD_MAKE_TCONV(CAT(B,x,N))
 
 // 64-bit elements types: expand int macro and add double typedefs
 // and type-pun back and forth signed integers
 #define SIMD_BUILD_TYPE_64(B,N) SIMD_BUILD_TYPE_INT(B,N) \
                                 SIMD_MAKE_TYPE_D(B,N)    \
-                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i)
+                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i) \
+                                SIMD_MAKE_TCONV(CAT(B,x,N))
 
 SIMD_SMAP(SIMD_BUILD_TYPE_INT, SIMD_S8_X);
 SIMD_SMAP(SIMD_BUILD_TYPE_INT, SIMD_S16_X);
@@ -352,7 +360,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_bitcast_ui_x
 #endif
 
-// floating point to signed integer
+// type pun: floating point to signed integer
 #define simd_bitcast_fi(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
@@ -365,7 +373,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
     default: (void*)0)(_x);         \
   })
 
-// signed integer to floating point 
+// type pun: signed integer to floating point 
 #define simd_bitcast_if(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
@@ -416,6 +424,51 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 #define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
 #define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
+
+
+//*******************************************************
+// floating/integer conversion
+
+#if 0
+#define simd_convert_fi_x           \
+    f32x16_t:simd_convert_fi_32x16, \
+    f64x8_t: simd_convert_fi_64x8,
+
+#define simd_convert_if_x           \
+    i32x16_t:simd_convert_if_32x16, \
+    i64x8_t: simd_convert_if_64x8,
+#else
+#define simd_convert_fi_x
+#define simd_convert_if_x
+#endif
+
+
+
+// floating point to signed integer conversion
+#define simd_convert_fi(X) ({       \
+  typeof(X) _x = X;                 \
+  _Generic((_x),                    \
+    f32x2_t: simd_convert_fi_32x2,  \
+    f32x4_t: simd_convert_fi_32x4,  \
+    f32x8_t: simd_convert_fi_32x8,  \
+    f64x2_t: simd_convert_fi_64x2,  \
+    f64x4_t: simd_convert_fi_64x4,  \
+             simd_convert_fi_x      \
+    default: (void*)0)(_x);         \
+  })
+
+// signed integer to floating point conversion
+#define simd_convert_if(X) ({       \
+  typeof(X) _x = X;                 \
+  _Generic((_x),                    \
+    i32x2_t: simd_convert_if_32x2,  \
+    i32x4_t: simd_convert_if_32x4,  \
+    i32x8_t: simd_convert_if_32x8,  \
+    i64x2_t: simd_convert_if_64x2,  \
+    i64x4_t: simd_convert_if_64x4,  \
+             simd_convert_if_x      \
+    default: (void*)0)(_x);         \
+  })
 
 
 //*******************************************************
