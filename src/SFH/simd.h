@@ -334,10 +334,14 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
     i64x8_t: simd_bitcast_if_64x8,
 
 #define simd_bitcast_iu_x           \
+    i8x64_t :simd_bitcast_iu_8x64,  \
+    i16x32_t:simd_bitcast_iu_16x32, \
     i32x16_t:simd_bitcast_iu_32x16, \
     i64x8_t: simd_bitcast_iu_64x8,
 
 #define simd_bitcast_ui_x           \
+    u8x64_t: simd_bitcast_ui_8x64,  \
+    u16x32_t:simd_bitcast_ui_16x32, \
     u32x16_t:simd_bitcast_ui_32x16, \
     u64x8_t: simd_bitcast_ui_64x8,
 
@@ -377,6 +381,12 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_bitcast_ui(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
+    u8x8_t:  simd_bitcast_ui_8x8,   \
+    u8x16_t: simd_bitcast_ui_8x16,  \
+    u8x32_t: simd_bitcast_ui_8x32,  \
+    u16x4_t: simd_bitcast_ui_16x4,  \
+    u16x8_t: simd_bitcast_ui_16x8,  \
+    u16x16_t:simd_bitcast_ui_16x16, \
     u32x2_t: simd_bitcast_ui_32x2,  \
     u32x4_t: simd_bitcast_ui_32x4,  \
     u32x8_t: simd_bitcast_ui_32x8,  \
@@ -389,6 +399,12 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_bitcast_iu(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
+    i8x8_t:  simd_bitcast_iu_8x8,   \
+    i8x16_t: simd_bitcast_iu_8x16,  \
+    i8x32_t: simd_bitcast_iu_8x32,  \
+    i16x4_t: simd_bitcast_iu_16x4,  \
+    i16x8_t: simd_bitcast_iu_16x8,  \
+    i16x16_t:simd_bitcast_iu_16x16, \
     i32x2_t: simd_bitcast_iu_32x2,  \
     i32x4_t: simd_bitcast_iu_32x4,  \
     i32x8_t: simd_bitcast_iu_32x8,  \
