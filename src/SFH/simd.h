@@ -4,6 +4,9 @@
 
 #pragma once
 
+// IMPORTANT: currently only "works" with GCC 14.1+ and clang 17.0.1+
+// need to think about that...hummm...
+
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
 // Single header file "library" of generic SIMD & SIMD/scalar
@@ -37,7 +40,7 @@
 //   vector_size: any same sized type allowed
 //   ext_vector_type: signed integer was same number elements
 //   so: i32x8_t fcmp(T a, T b) { return a>=b; } is valid for
-//       T={f32x8_t,i32x8_t,u32x8_t}
+//       T={f32x8_t,i32x8_t,u32x8_t} for both extensions
 // SEE:
 //   https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
 //   https://clang.llvm.org/docs/LanguageExtensions.html#vectors-and-extended-vectors
@@ -45,6 +48,7 @@
 // Credits:
 // • David Mazières: SIMD_MAP
 
+// marker define
 #define SIMD_H
 
 #if defined(__GNUC__)
@@ -127,6 +131,7 @@
 #define simd_fp_std_binary(NAME,X,Y) simd_fp_component_map(NAME ## f, NAME, X,Y[i])
 
 
+//*******************************************************
 // David Mazières' modernized X macro (SIMD_MAP)
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 #define SIMD_PARENS ()
@@ -162,109 +167,125 @@
 
 #define SIMD_MAP_PEAL_AGAIN() SIMD_MAP_PEAL_HELPER
 
+
+//*******************************************************
+// A non-rescan expansion (argcount based) limited to [1,6]
+// varargs. Lighter weight preprocessing time than SIMD_MAP
+
+#define SIMD_SMAP_APPLY(F, X) F X
+#define SIMD_SMAP1(F,A)           SIMD_SMAP_APPLY(F,A)
+#define SIMD_SMAP2(F,A,B)         SIMD_SMAP_APPLY(F,A) SIMD_SMAP_APPLY(F,B)
+#define SIMD_SMAP3(F,A,B,C)       SIMD_SMAP_APPLY(F,A) SIMD_SMAP_APPLY(F,B) SIMD_SMAP_APPLY(F,C)
+#define SIMD_SMAP4(F,A,B,C,D)     SIMD_SMAP_APPLY(F,A) SIMD_SMAP_APPLY(F,B) SIMD_SMAP_APPLY(F,C) SIMD_SMAP_APPLY(F,D)
+#define SIMD_SMAP5(F,A,B,C,D,E)   SIMD_SMAP_APPLY(F,A) SIMD_SMAP_APPLY(F,B) SIMD_SMAP_APPLY(F,C) SIMD_SMAP_APPLY(F,D) SIMD_SMAP_APPLY(F,E)
+#define SIMD_SMAP6(F,A,B,C,D,E,G) SIMD_SMAP_APPLY(F,A) SIMD_SMAP_APPLY(F,B) SIMD_SMAP_APPLY(F,C) SIMD_SMAP_APPLY(F,D) SIMD_SMAP_APPLY(F,E) SIMD_SMAP_APPLY(F,G)
+#define SIMD_SMAP_(_1,_2,_3,_4,_5,_6,NAME,...) NAME
+
+#define SIMD_SMAP(F,...) SIMD_SMAP_(__VA_ARGS__,SIMD_SMAP6,SIMD_SMAP5,SIMD_SMAP4,SIMD_SMAP3,SIMD_SMAP2,SIMD_SMAP1)(F, __VA_ARGS__)
+
+
+//*******************************************************
+// argument count based concat (limited to 8 for one, nest for more)
+
+#define CAT0()
+#define CAT1(A) A
+#define CAT2(A,B) A##B
+#define CAT3(A,B,C) A##B##C
+#define CAT4(A,B,C,D) A##B##C##D
+#define CAT5(A,B,C,D,E) A##B##C##D##E
+#define CAT6(A,B,C,D,E,F) A##B##C##D##E##F
+#define CAT7(A,B,C,D,E,F,G) A##B##C##D##E##F##G
+#define CAT8(A,B,C,D,E,F,G,H) A##B##C##D##E##F##G##H
+#define CAT_(_0,_1,_2,_3,_4,_5,_6,_7,M,...) M
+#define CAT(...) CAT_(__VA_ARGS__,CAT8,CAT7,CAT6,CAT5,CAT4,CAT3,CAT2,CAT1,CAT0)(__VA_ARGS__)
+
+
+//*******************************************************
+
 // expands to: (A)+(B)+...+(N)
 #define SIMD_SUM(A,...) (A)__VA_OPT__(SIMD_MAP(+,__VA_ARGS__))
 
 
+//*******************************************************
+// Make the type defs and base support
+//
 // if `ext_vector_type` is available use that instead (1) of `vector_size`
 // not used internal but allows users to access the added functionality
 // such as shader "dot" notation. (1: unless disabling)
-#if __has_attribute(ext_vector_type) && !defined(SIMD_NO_EXT_VECTOR)
+//
+// Full fills out logical register sizes of {64,128,256,512} bits.
+// 64 is handy for 2D vectors binary32 (as an example) and just
+// make the 512 even if not expanding any explict functions for
+// that type.
 
-// 64-bit packages
-typedef float    f32x2_t  __attribute__ ((ext_vector_type(2)));
-typedef int8_t   i8x8_t   __attribute__ ((ext_vector_type(8)));
-typedef int16_t  i16x4_t  __attribute__ ((ext_vector_type(4)));
-typedef int32_t  i32x2_t  __attribute__ ((ext_vector_type(2)));
-typedef uint8_t  u8x8_t   __attribute__ ((ext_vector_type(8)));
-typedef uint16_t u16x4_t  __attribute__ ((ext_vector_type(4)));
-typedef uint32_t u32x2_t  __attribute__ ((ext_vector_type(2)));
-
-// 128-bit packages
-typedef float    f32x4_t  __attribute__ ((ext_vector_type(4)));
-typedef double   f64x2_t  __attribute__ ((ext_vector_type(2)));
-typedef int8_t   i8x16_t  __attribute__ ((ext_vector_type(16)));
-typedef int16_t  i16x8_t  __attribute__ ((ext_vector_type(8)));
-typedef int32_t  i32x4_t  __attribute__ ((ext_vector_type(4)));
-typedef int64_t  i64x2_t  __attribute__ ((ext_vector_type(2)));
-typedef uint8_t  u8x16_t  __attribute__ ((ext_vector_type(16)));
-typedef uint16_t u16x8_t  __attribute__ ((ext_vector_type(8)));
-typedef uint32_t u32x4_t  __attribute__ ((ext_vector_type(4)));
-typedef uint64_t u64x2_t  __attribute__ ((ext_vector_type(2)));
-
-// 256-bit packages
-typedef float    f32x8_t  __attribute__ ((ext_vector_type(8)));
-typedef double   f64x4_t  __attribute__ ((ext_vector_type(4)));
-typedef int8_t   i8x32_t  __attribute__ ((ext_vector_type(32)));
-typedef int16_t  i16x16_t __attribute__ ((ext_vector_type(16)));
-typedef int32_t  i32x8_t  __attribute__ ((ext_vector_type(8)));
-typedef int64_t  i64x4_t  __attribute__ ((ext_vector_type(4)));
-typedef uint8_t  u8x32_t  __attribute__ ((ext_vector_type(32)));
-typedef uint16_t u16x16_t __attribute__ ((ext_vector_type(16)));
-typedef uint32_t u32x8_t  __attribute__ ((ext_vector_type(8)));
-typedef uint64_t u64x4_t  __attribute__ ((ext_vector_type(4)));
-
-// 512-bit packages (makes the defines even if 'disabled'.)
-typedef float    f32x16_t __attribute__ ((ext_vector_type(16)));
-typedef double   f64x8_t  __attribute__ ((ext_vector_type(8)));
-typedef int8_t   i8x64_t  __attribute__ ((ext_vector_type(64)));
-typedef int16_t  i16x32_t __attribute__ ((ext_vector_type(32)));
-typedef int32_t  i32x16_t __attribute__ ((ext_vector_type(16)));
-typedef int64_t  i64x8_t  __attribute__ ((ext_vector_type(8)));
-typedef uint8_t  u8x64_t  __attribute__ ((ext_vector_type(64)));
-typedef uint16_t u16x32_t __attribute__ ((ext_vector_type(32)));
-typedef uint32_t u32x16_t __attribute__ ((ext_vector_type(16)));
-typedef uint64_t u64x8_t  __attribute__ ((ext_vector_type(8)));
-
+// define (bit-width,num-elemnts) for register sizes of (64,128,256)
+#if 0
+//                 | 64  |  128  |  256  | 512  |
+#define SIMD_S8_X  ( 8,8),( 8,16),( 8,32),( 8,64)
+#define SIMD_S16_X (16,4),(16, 8),(16,16),(16,32)
+#define SIMD_S32_X (32,2),(32, 4),(32, 8),(32,16)
+#define SIMD_S64_X         (64,2),(64, 4),(64, 8)
 #else
-
-// 64-bit packages
-typedef float    f32x2_t  __attribute__ ((vector_size(8)));
-typedef int8_t   i8x8_t   __attribute__ ((vector_size(8)));
-typedef int16_t  i16x4_t  __attribute__ ((vector_size(8)));
-typedef int32_t  i32x2_t  __attribute__ ((vector_size(8)));
-typedef uint8_t  u8x8_t   __attribute__ ((vector_size(8)));
-typedef uint16_t u16x4_t  __attribute__ ((vector_size(8)));
-typedef uint32_t u32x2_t  __attribute__ ((vector_size(8)));
-
-// 128-bit packages
-typedef float    f32x4_t  __attribute__ ((vector_size(16)));
-typedef double   f64x2_t  __attribute__ ((vector_size(16)));
-typedef int8_t   i8x16_t  __attribute__ ((vector_size(16)));
-typedef int16_t  i16x8_t  __attribute__ ((vector_size(16)));
-typedef int32_t  i32x4_t  __attribute__ ((vector_size(16)));
-typedef int64_t  i64x2_t  __attribute__ ((vector_size(16)));
-typedef uint8_t  u8x16_t  __attribute__ ((vector_size(16)));
-typedef uint16_t u16x8_t  __attribute__ ((vector_size(16)));
-typedef uint32_t u32x4_t  __attribute__ ((vector_size(16)));
-typedef uint64_t u64x2_t  __attribute__ ((vector_size(16)));
-
-// 256-bit packages
-typedef float    f32x8_t  __attribute__ ((vector_size(32)));
-typedef double   f64x4_t  __attribute__ ((vector_size(32)));
-typedef int8_t   i8x32_t  __attribute__ ((vector_size(32)));
-typedef int16_t  i16x16_t __attribute__ ((vector_size(32)));
-typedef int32_t  i32x8_t  __attribute__ ((vector_size(32)));
-typedef int64_t  i64x4_t  __attribute__ ((vector_size(32)));
-typedef uint8_t  u8x32_t  __attribute__ ((vector_size(32)));
-typedef uint16_t u16x16_t __attribute__ ((vector_size(32)));
-typedef uint32_t u32x8_t  __attribute__ ((vector_size(32)));
-typedef uint64_t u64x4_t  __attribute__ ((vector_size(32)));
-
-// 512-bit packages (make the defines even if 'disabled')
-typedef float    f32x16_t __attribute__ ((vector_size(64)));
-typedef double   f64x8_t  __attribute__ ((vector_size(64)));
-typedef int8_t   i8x64_t  __attribute__ ((vector_size(64)));
-typedef int16_t  i16x32_t __attribute__ ((vector_size(64)));
-typedef int32_t  i32x16_t __attribute__ ((vector_size(64)));
-typedef int64_t  i64x8_t  __attribute__ ((vector_size(64)));
-typedef uint8_t  u8x64_t  __attribute__ ((vector_size(64)));
-typedef uint16_t u16x32_t __attribute__ ((vector_size(64)));
-typedef uint32_t u32x16_t __attribute__ ((vector_size(64)));
-typedef uint64_t u64x8_t  __attribute__ ((vector_size(64)));
-
+#define SIMD_S8_X  ( 8,8),( 8,16),( 8,32)
+#define SIMD_S16_X (16,4),(16, 8),(16,16)
+#define SIMD_S32_X (32,2),(32, 4),(32, 8)
+#define SIMD_S64_X        (64, 2),(64, 4)
 #endif
 
+// choose vector attribute type
+#if __has_attribute(ext_vector_type) && !defined(SIMD_NO_EXT_VECTOR)
+#define SIMD_MAKE_TYPE_EX(B,N) __attribute__((ext_vector_type(N)))
+#else
+#define SIMD_MAKE_TYPE_EX(B,N) __attribute__((vector_size(B*N/8)))
+#endif
+
+
+// create typedef for: signed int, unsigned int, binary32, binary64 respectively
+#define SIMD_MAKE_TYPE_I(B,N) typedef int##B##_t  CAT(i,B,x,N,_t) SIMD_MAKE_TYPE_EX(B,N);
+#define SIMD_MAKE_TYPE_U(B,N) typedef uint##B##_t CAT(u,B,x,N,_t) SIMD_MAKE_TYPE_EX(B,N);
+#define SIMD_MAKE_TYPE_F(B,N) typedef float       CAT(f,B,x,N,_t) SIMD_MAKE_TYPE_EX(B,N);
+#define SIMD_MAKE_TYPE_D(B,N) typedef double      CAT(f,B,x,N,_t) SIMD_MAKE_TYPE_EX(B,N);
+
+
+// make a pair of type-puns. example (32x4,i,u) expands to:
+//   static inline u32x4_t simd_bitcast_iu_32x4(i32x4_t x) { return type_pun(x,u32x4_t); }
+//   static inline i32x4_t simd_bitcast_ui_32x4(u32x4_t x) { return type_pun(x,i32x4_t); }
+// and likewise for float-point & signed integer. (choosen instead of unsigned because of
+// default float compare behavior)
+#define SIMD_MAKE_TPUN(base,i,o) \
+    static inline CAT(o,base,_t) CAT(simd_bitcast_,i,o,_,base)(CAT(i,base,_t) x) { return type_pun(x,CAT(o,base,_t)); }  \
+    static inline CAT(i,base,_t) CAT(simd_bitcast_,o,i,_,base)(CAT(o,base,_t) x) { return type_pun(x,CAT(i,base,_t)); } 
+
+
+// make integer typedefs, uint <-> sint type-pun
+// • 
+// • 
+#define SIMD_BUILD_TYPE_INT(B,N) SIMD_MAKE_TYPE_I(B,N) \
+                                 SIMD_MAKE_TYPE_U(B,N) \
+                                 SIMD_MAKE_TPUN(CAT(B,x,N),i,u)
+
+// for the moment the following two are identical
+
+// 32-bit elements types: expand int macro and add float typedefs
+// and type-pun back and forth signed integers
+#define SIMD_BUILD_TYPE_32(B,N) SIMD_BUILD_TYPE_INT(B,N) \
+                                SIMD_MAKE_TYPE_F(B,N)    \
+                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i)
+
+// 64-bit elements types: expand int macro and add double typedefs
+// and type-pun back and forth signed integers
+#define SIMD_BUILD_TYPE_64(B,N) SIMD_BUILD_TYPE_INT(B,N) \
+                                SIMD_MAKE_TYPE_D(B,N)    \
+                                SIMD_MAKE_TPUN(CAT(B,x,N),f,i)
+
+SIMD_SMAP(SIMD_BUILD_TYPE_INT, SIMD_S8_X);
+SIMD_SMAP(SIMD_BUILD_TYPE_INT, SIMD_S16_X);
+SIMD_SMAP(SIMD_BUILD_TYPE_32,  SIMD_S32_X);
+SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
+
+
+
+//---------------------------rework this 
 // defs for SIMD_MAP et al.
 #if defined(SIMD_ENABLE_512)
 #define SIMD_U8_X   u8x8,u8x16,u8x32,u8x64
@@ -298,72 +319,88 @@ typedef uint64_t u64x8_t  __attribute__ ((vector_size(64)));
 
 
 //*******************************************************
-// identical register width type-puns. It'd be nice
-// to have a cleaner (unknown width) versions...
-// but anyway this has to jump through hoops since
-// all the expressions must be syntactically legal
-// for all inputs. Hopefully it's not the "worst" NOP
-// you've ever seen.
+// manually expanded "generic" type puns.
+// using a macro to expand it (which would happen
+// each time it's used) seems really sucky.
 
-// self note: doesn't these require adding may_alias
-// to the types? thinky-thinky. could make inline
-// functions to call.
+// entries for 512-bit packages
+#if 0
+#define simd_bitcast_fi_x           \
+    f32x16_t:simd_bitcast_fi_32x16, \
+    f64x8_t: simd_bitcast_fi_64x8,
 
-#define simd_fp_to_ui(X) ({         \
+#define simd_bitcast_if_x           \
+    i32x16_t:simd_bitcast_if_32x16, \
+    i64x8_t: simd_bitcast_if_64x8,
+
+#define simd_bitcast_iu_x           \
+    i32x16_t:simd_bitcast_iu_32x16, \
+    i64x8_t: simd_bitcast_iu_64x8,
+
+#define simd_bitcast_ui_x           \
+    u32x16_t:simd_bitcast_ui_32x16, \
+    u64x8_t: simd_bitcast_ui_64x8,
+
+#else
+#define simd_bitcast_fi_x
+#define simd_bitcast_if_x
+#define simd_bitcast_iu_x
+#define simd_bitcast_ui_x
+#endif
+
+// floating point to signed integer
+#define simd_bitcast_fi(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
-    f32x2_t: ((u32x2_t*) (&_x))[0], \
-    f32x4_t: ((u32x4_t*) (&_x))[0], \
-    f32x8_t: ((u32x8_t*) (&_x))[0], \
-    f32x16_t:((u32x16_t*)(&_x))[0], \
-    f64x2_t: ((u64x2_t*) (&_x))[0], \
-    f64x4_t: ((u64x4_t*) (&_x))[0], \
-    f64x8_t: ((u64x8_t*) (&_x))[0], \
-    default: (void*)0);             \
+    f32x2_t: simd_bitcast_fi_32x2,  \
+    f32x4_t: simd_bitcast_fi_32x4,  \
+    f32x8_t: simd_bitcast_fi_32x8,  \
+    f64x2_t: simd_bitcast_fi_64x2,  \
+    f64x4_t: simd_bitcast_fi_64x4,  \
+             simd_bitcast_fi_x      \
+    default: (void*)0)(_x);         \
   })
 
-#define simd_ui_to_fp(X) ({         \
+// signed integer to floating point 
+#define simd_bitcast_if(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
-    u32x2_t: ((f32x2_t*) (&_x))[0], \
-    u32x4_t: ((f32x4_t*) (&_x))[0], \
-    u32x8_t: ((f32x8_t*) (&_x))[0], \
-    u32x16_t:((f32x16_t*)(&_x))[0], \
-    u64x2_t: ((f64x2_t*) (&_x))[0], \
-    u64x4_t: ((f64x4_t*) (&_x))[0], \
-    u64x8_t: ((f64x8_t*) (&_x))[0], \
-    default: (void*)0);             \
+    i32x2_t: simd_bitcast_if_32x2,  \
+    i32x4_t: simd_bitcast_if_32x4,  \
+    i32x8_t: simd_bitcast_if_32x8,  \
+    i64x2_t: simd_bitcast_if_64x2,  \
+    i64x4_t: simd_bitcast_if_64x4,  \
+             simd_bitcast_if_x      \
+    default: (void*)0)(_x);         \
   })
 
-#define simd_si_to_ui(X) ({         \
+#define simd_bitcast_ui(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
-    u32x2_t: ((i32x2_t*) (&_x))[0], \
-    u32x4_t: ((i32x4_t*) (&_x))[0], \
-    u32x8_t: ((i32x8_t*) (&_x))[0], \
-    u32x16_t:((i32x16_t*)(&_x))[0], \
-    u64x2_t: ((i64x2_t*) (&_x))[0], \
-    u64x4_t: ((i64x4_t*) (&_x))[0], \
-    u64x8_t: ((i64x8_t*) (&_x))[0], \
-    default: (void*)0);             \
+    u32x2_t: simd_bitcast_ui_32x2,  \
+    u32x4_t: simd_bitcast_ui_32x4,  \
+    u32x8_t: simd_bitcast_ui_32x8,  \
+    u64x2_t: simd_bitcast_ui_64x2,  \
+    u64x4_t: simd_bitcast_ui_64x4,  \
+             simd_bitcast_ui_x      \
+    default: (void*)0)(_x);         \
   })
 
-#define simd_ui_to_si(X) ({         \
+#define simd_bitcast_iu(X) ({       \
   typeof(X) _x = X;                 \
   _Generic((_x),                    \
-    i32x2_t: ((u32x2_t*) (&_x))[0], \
-    i32x4_t: ((u32x4_t*) (&_x))[0], \
-    i32x8_t: ((u32x8_t*) (&_x))[0], \
-    i32x16_t:((u32x16_t*)(&_x))[0], \
-    i64x2_t: ((u64x2_t*) (&_x))[0], \
-    i64x4_t: ((u64x4_t*) (&_x))[0], \
-    i64x8_t: ((u64x8_t*) (&_x))[0], \
-    default: (void*)0);             \
+    i32x2_t: simd_bitcast_iu_32x2,  \
+    i32x4_t: simd_bitcast_iu_32x4,  \
+    i32x8_t: simd_bitcast_iu_32x8,  \
+    i64x2_t: simd_bitcast_iu_64x2,  \
+             simd_bitcast_iu_x      \
+    default: (void*)0)(_x);         \
   })
 
 
-#define simd_fxor(A,B) simd_ui_to_fp(simd_fp_to_ui(A) ^ simd_fp_to_ui(B))
-#define simd_fand(A,B) simd_ui_to_fp(simd_fp_to_ui(A) & simd_fp_to_ui(B))
+#define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
+#define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
+
 
 //*******************************************************
 
