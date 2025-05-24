@@ -6,6 +6,8 @@
 
 // IMPORTANT: currently only "works" with GCC 14.1+ and clang 17.0.1+
 // need to think about that...hummm...
+// if I can't move to older compiler support then limit features?
+// humm...
 
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
@@ -49,7 +51,7 @@
 // • David Mazières: SIMD_MAP
 
 // marker define
-#define SIMD_H
+#define SFH_SIMD_H
 
 #if defined(__GNUC__)
 
@@ -63,18 +65,27 @@
 
 // passive agressive compiler options checking/setting
 
-// clang doesn't do the macro
+// clang doesn't do the macro. 
 #if !defined(__NO_MATH_ERRNO__)
+// errno is just a pre IEEE 745 feature that should never be used
+// and compilers should have disabled by default 20+ years ago.
 #warning "setting `-fno-math-errno` for you.  You're welcome."
 #pragma GCC optimize ("no-math-errno")
 #endif
 
 // disabled by default in clang and it doesn't do the macro
 #if !defined(__NO_TRAPPING_MATH__)
+// do you have some signal handler for floating point? Didn't think so.
 #warning "setting `-no-trapping-math` for you. (stern eyes)"
 #pragma GCC optimize ("no-trapping-math")
 #endif
 
+#endif
+
+// determine if it internally use to (more) C23 features
+// currently only `auto`
+#if (__STDC_VERSION__ >= 202311L) && !defined(SIMD_NO_C23)
+#define SIMD_USE_C23
 #endif
 
 
@@ -422,9 +433,6 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
   })
 
 
-#define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
-#define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
-
 
 //*******************************************************
 // floating/integer conversion
@@ -470,9 +478,29 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
     default: (void*)0)(_x);         \
   })
 
+//*******************************************************
+// macro for FP/int type-pun and convert types
+
+#if defined(SIMD_USE_C23)
+// I'm assuming auto is lighter weight to compile than
+// the macro expansion of without.
+#define simd_bitcast_fi_typeof(X) auto
+#define simd_bitcast_if_typeof(X) auto
+#define simd_convert_fi_typeof(X) auto
+#define simd_convert_if_typeof(X) auto
+#else
+#define simd_bitcast_fi_typeof(X) typeof(simd_bitcast_fi(X))
+#define simd_bitcast_if_typeof(X) typeof(simd_bitcast_if(X))
+#define simd_convert_fi_typeof(X) typeof(simd_convert_fi(X))
+#define simd_convert_if_typeof(X) typeof(simd_convert_if(X))
+#endif
+
+
+// not quite. these are the inner expansion.
+#define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
+#define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
 
 //*******************************************************
-
 
 // workers for macro expansions
 #define simd_is_const(a)  __builtin_constant_p(a)
@@ -498,6 +526,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_assert_const(a)          static_assert(simd_is_const(a), "must be constant")
 #define simd_assert_same_type(a,b)    static_assert(simd_is_same_type(a,b), "must be same type")
 #define simd_assert_same_type3(a,b,c) static_assert(simd_is_same_type3(a,b,c),"must be same type")
+#define simd_assert_same_size(a,b)    static_assert(sizeof(a)==sizeof(b), "must be same size types")
 
 // all listed must be scalar types (floating-point or integer)
 #define simd_assert_scalar_fp(A,...)  static_assert(simd_is_scalar_fp(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_fp,__VA_ARGS__)), "must be same scalar float type")
@@ -666,7 +695,6 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 //*******************************************************
 //
 
-
 // scalar FMA (generic binary32/binary64)
 #define simd_fma_s(A,B,C)            \
   _Generic((A),                      \
@@ -761,6 +789,38 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
   _a;                           \
 })
 #endif
+
+//*******************************************************
+// blend support:  (a & s) | (a & (~s))
+// can only be lowered into an actual blend if the
+// compiler can see `s` is a selection mask
+
+#if defined(SIMD_USE_C23)
+#define simd_blend_i(A,B,S) ({    \
+  auto _a = simd_bitcast_fi(A);   \
+  auto _b = simd_bitcast_fi(B);   \
+  auto _s = S;                    \
+  auto _r = (_a&_s)|(_b & (~_s)); \
+  simd_bitcast_if(_r);            \
+})
+#else
+#define simd_blend_i(A,B,S) ({          \
+  simd_bitcast_fi_typeof(A) _a          \
+    = simd_bitcast_fi(A);               \
+  typeof(_a) _b = simd_bitcast_fi(B);   \
+  typeof(_a) _s = S;                    \
+  typeof(_a) _r = (_a&_s)|(_b & (~_s)); \
+  simd_bitcast_if(_r);                  \
+})
+#endif
+
+// should be checking for FP vector types
+#define simd_blend_v(A,B,S) ({    \
+  simd_assert_same_type(A,B);     \
+  simd_assert_vec(A,B);           \
+  simd_blend_i(A,B,S);            \
+})
+
 
 
 #if !defined(__clang__)
