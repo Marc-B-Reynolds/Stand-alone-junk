@@ -264,13 +264,13 @@
 // and likewise for float-point & signed integer. (choosen instead of unsigned because of
 // default float compare behavior)
 #define SIMD_MAKE_TPUN(base,i,o) \
-    static inline CAT(o,base,_t) CAT(simd_bitcast_,i,o,_,base)(CAT(i,base,_t) x) { return type_pun(x,CAT(o,base,_t)); }  \
-    static inline CAT(i,base,_t) CAT(simd_bitcast_,o,i,_,base)(CAT(o,base,_t) x) { return type_pun(x,CAT(i,base,_t)); } 
+    static inline CAT(o,base,_t) CAT(bitcast_,i,o,_,base)(CAT(i,base,_t) x) { return type_pun(x,CAT(o,base,_t)); }  \
+    static inline CAT(i,base,_t) CAT(bitcast_,o,i,_,base)(CAT(o,base,_t) x) { return type_pun(x,CAT(i,base,_t)); } 
 
 #define SIMD_MAKE_TCONV(base)                                                      \
-    static inline CAT(f,base,_t) CAT(simd_convert_if,_,base)(CAT(i,base,_t) x) {   \
+    static inline CAT(f,base,_t) CAT(convert_if,_,base)(CAT(i,base,_t) x) {   \
          return __builtin_convertvector(x,CAT(f,base,_t)); }                       \
-    static inline CAT(i,base,_t) CAT(simd_convert_fi,_,base)(CAT(f,base,_t) x) {   \
+    static inline CAT(i,base,_t) CAT(convert_fi,_,base)(CAT(f,base,_t) x) {   \
          return __builtin_convertvector(x,CAT(i,base,_t)); } 
 
 
@@ -344,25 +344,25 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 // entries for 512-bit packages
 #if 0
-#define simd_bitcast_fi_x           \
-    f32x16_t:simd_bitcast_fi_32x16, \
-    f64x8_t: simd_bitcast_fi_64x8,
+#define simd_bitcast_fi_x      \
+    f32x16_t:bitcast_fi_32x16, \
+    f64x8_t: bitcast_fi_64x8,
 
-#define simd_bitcast_if_x           \
-    i32x16_t:simd_bitcast_if_32x16, \
-    i64x8_t: simd_bitcast_if_64x8,
+#define simd_bitcast_if_x      \
+    i32x16_t:bitcast_if_32x16, \
+    i64x8_t: bitcast_if_64x8,
 
-#define simd_bitcast_iu_x           \
-    i8x64_t :simd_bitcast_iu_8x64,  \
-    i16x32_t:simd_bitcast_iu_16x32, \
-    i32x16_t:simd_bitcast_iu_32x16, \
-    i64x8_t: simd_bitcast_iu_64x8,
+#define simd_bitcast_iu_x      \
+    i8x64_t :bitcast_iu_8x64,  \
+    i16x32_t:bitcast_iu_16x32, \
+    i32x16_t:bitcast_iu_32x16, \
+    i64x8_t: bitcast_iu_64x8,
 
-#define simd_bitcast_ui_x           \
-    u8x64_t: simd_bitcast_ui_8x64,  \
-    u16x32_t:simd_bitcast_ui_16x32, \
-    u32x16_t:simd_bitcast_ui_32x16, \
-    u64x8_t: simd_bitcast_ui_64x8,
+#define simd_bitcast_ui_x      \
+    u8x64_t: bitcast_ui_8x64,  \
+    u16x32_t:bitcast_ui_16x32, \
+    u32x16_t:bitcast_ui_32x16, \
+    u64x8_t: bitcast_ui_64x8,
 
 #else
 #define simd_bitcast_fi_x
@@ -372,64 +372,64 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #endif
 
 // type pun: floating point to signed integer
-#define simd_bitcast_fi(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    f32x2_t: simd_bitcast_fi_32x2,  \
-    f32x4_t: simd_bitcast_fi_32x4,  \
-    f32x8_t: simd_bitcast_fi_32x8,  \
-    f64x2_t: simd_bitcast_fi_64x2,  \
-    f64x4_t: simd_bitcast_fi_64x4,  \
-             simd_bitcast_fi_x      \
-    default: (void*)0)(_x);         \
+#define simd_bitcast_fi(X) ({ \
+  typeof(X) _x = X;           \
+  _Generic((_x),              \
+    f32x2_t: bitcast_fi_32x2, \
+    f32x4_t: bitcast_fi_32x4, \
+    f32x8_t: bitcast_fi_32x8, \
+    f64x2_t: bitcast_fi_64x2, \
+    f64x4_t: bitcast_fi_64x4, \
+        simd_bitcast_fi_x     \
+    default: (void*)0)(_x);   \
   })
 
 // type pun: signed integer to floating point 
-#define simd_bitcast_if(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    i32x2_t: simd_bitcast_if_32x2,  \
-    i32x4_t: simd_bitcast_if_32x4,  \
-    i32x8_t: simd_bitcast_if_32x8,  \
-    i64x2_t: simd_bitcast_if_64x2,  \
-    i64x4_t: simd_bitcast_if_64x4,  \
-             simd_bitcast_if_x      \
-    default: (void*)0)(_x);         \
+#define simd_bitcast_if(X) ({ \
+  typeof(X) _x = X;           \
+  _Generic((_x),              \
+    i32x2_t: bitcast_if_32x2, \
+    i32x4_t: bitcast_if_32x4, \
+    i32x8_t: bitcast_if_32x8, \
+    i64x2_t: bitcast_if_64x2, \
+    i64x4_t: bitcast_if_64x4, \
+        simd_bitcast_if_x     \
+    default: (void*)0)(_x);   \
   })
 
-#define simd_bitcast_ui(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    u8x8_t:  simd_bitcast_ui_8x8,   \
-    u8x16_t: simd_bitcast_ui_8x16,  \
-    u8x32_t: simd_bitcast_ui_8x32,  \
-    u16x4_t: simd_bitcast_ui_16x4,  \
-    u16x8_t: simd_bitcast_ui_16x8,  \
-    u16x16_t:simd_bitcast_ui_16x16, \
-    u32x2_t: simd_bitcast_ui_32x2,  \
-    u32x4_t: simd_bitcast_ui_32x4,  \
-    u32x8_t: simd_bitcast_ui_32x8,  \
-    u64x2_t: simd_bitcast_ui_64x2,  \
-    u64x4_t: simd_bitcast_ui_64x4,  \
-             simd_bitcast_ui_x      \
-    default: (void*)0)(_x);         \
+#define simd_bitcast_ui(X) ({  \
+  typeof(X) _x = X;            \
+  _Generic((_x),               \
+    u8x8_t:  bitcast_ui_8x8,   \
+    u8x16_t: bitcast_ui_8x16,  \
+    u8x32_t: bitcast_ui_8x32,  \
+    u16x4_t: bitcast_ui_16x4,  \
+    u16x8_t: bitcast_ui_16x8,  \
+    u16x16_t:bitcast_ui_16x16, \
+    u32x2_t: bitcast_ui_32x2,  \
+    u32x4_t: bitcast_ui_32x4,  \
+    u32x8_t: bitcast_ui_32x8,  \
+    u64x2_t: bitcast_ui_64x2,  \
+    u64x4_t: bitcast_ui_64x4,  \
+        simd_bitcast_ui_x      \
+    default: (void*)0)(_x);    \
   })
 
-#define simd_bitcast_iu(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    i8x8_t:  simd_bitcast_iu_8x8,   \
-    i8x16_t: simd_bitcast_iu_8x16,  \
-    i8x32_t: simd_bitcast_iu_8x32,  \
-    i16x4_t: simd_bitcast_iu_16x4,  \
-    i16x8_t: simd_bitcast_iu_16x8,  \
-    i16x16_t:simd_bitcast_iu_16x16, \
-    i32x2_t: simd_bitcast_iu_32x2,  \
-    i32x4_t: simd_bitcast_iu_32x4,  \
-    i32x8_t: simd_bitcast_iu_32x8,  \
-    i64x2_t: simd_bitcast_iu_64x2,  \
-             simd_bitcast_iu_x      \
-    default: (void*)0)(_x);         \
+#define simd_bitcast_iu(X) ({  \
+  typeof(X) _x = X;            \
+  _Generic((_x),               \
+    i8x8_t:  bitcast_iu_8x8,   \
+    i8x16_t: bitcast_iu_8x16,  \
+    i8x32_t: bitcast_iu_8x32,  \
+    i16x4_t: bitcast_iu_16x4,  \
+    i16x8_t: bitcast_iu_16x8,  \
+    i16x16_t:bitcast_iu_16x16, \
+    i32x2_t: bitcast_iu_32x2,  \
+    i32x4_t: bitcast_iu_32x4,  \
+    i32x8_t: bitcast_iu_32x8,  \
+    i64x2_t: bitcast_iu_64x2,  \
+        simd_bitcast_iu_x      \
+    default: (void*)0)(_x);    \
   })
 
 
@@ -438,13 +438,13 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 // floating/integer conversion
 
 #if 0
-#define simd_convert_fi_x           \
-    f32x16_t:simd_convert_fi_32x16, \
-    f64x8_t: simd_convert_fi_64x8,
+#define simd_convert_fi_x      \
+    f32x16_t:convert_fi_32x16, \
+    f64x8_t: convert_fi_64x8,
 
-#define simd_convert_if_x           \
-    i32x16_t:simd_convert_if_32x16, \
-    i64x8_t: simd_convert_if_64x8,
+#define simd_convert_if_x      \
+    i32x16_t:convert_if_32x16, \
+    i64x8_t: convert_if_64x8,
 #else
 #define simd_convert_fi_x
 #define simd_convert_if_x
@@ -453,54 +453,55 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 // floating point to signed integer conversion
-#define simd_convert_fi(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    f32x2_t: simd_convert_fi_32x2,  \
-    f32x4_t: simd_convert_fi_32x4,  \
-    f32x8_t: simd_convert_fi_32x8,  \
-    f64x2_t: simd_convert_fi_64x2,  \
-    f64x4_t: simd_convert_fi_64x4,  \
-             simd_convert_fi_x      \
-    default: (void*)0)(_x);         \
+#define simd_convert_fi(X) ({  \
+  typeof(X) _x = X;            \
+  _Generic((_x),               \
+    f32x2_t: convert_fi_32x2,  \
+    f32x4_t: convert_fi_32x4,  \
+    f32x8_t: convert_fi_32x8,  \
+    f64x2_t: convert_fi_64x2,  \
+    f64x4_t: convert_fi_64x4,  \
+        simd_convert_fi_x      \
+    default: (void*)0)(_x);    \
   })
 
 // signed integer to floating point conversion
-#define simd_convert_if(X) ({       \
-  typeof(X) _x = X;                 \
-  _Generic((_x),                    \
-    i32x2_t: simd_convert_if_32x2,  \
-    i32x4_t: simd_convert_if_32x4,  \
-    i32x8_t: simd_convert_if_32x8,  \
-    i64x2_t: simd_convert_if_64x2,  \
-    i64x4_t: simd_convert_if_64x4,  \
-             simd_convert_if_x      \
-    default: (void*)0)(_x);         \
+#define simd_convert_if(X) ({  \
+  typeof(X) _x = X;            \
+  _Generic((_x),               \
+    i32x2_t: convert_if_32x2,  \
+    i32x4_t: convert_if_32x4,  \
+    i32x8_t: convert_if_32x8,  \
+    i64x2_t: convert_if_64x2,  \
+    i64x4_t: convert_if_64x4,  \
+        simd_convert_if_x      \
+    default: (void*)0)(_x);    \
   })
 
 //*******************************************************
-// macro for FP/int type-pun and convert types
+// macros to get the converted type
 
 // for external use. this allows comma list of variables
 // with and without initializers. 
-#define simd_bitcast_fi_typeof(X) typeof(simd_bitcast_fi(X))
-#define simd_bitcast_if_typeof(X) typeof(simd_bitcast_if(X))
-#define simd_convert_fi_typeof(X) typeof(simd_convert_fi(X))
-#define simd_convert_if_typeof(X) typeof(simd_convert_if(X))
+#define simd_fi_typeof(X) typeof(simd_bitcast_fi(X))
+#define simd_if_typeof(X) typeof(simd_bitcast_if(X))
+#define simd_ui_typeof(X) typeof(simd_bitcast_ui(X))
+#define simd_iu_typeof(X) typeof(simd_bitcast_iu(X))
 
 
 #if defined(SIMD_USE_C23)
 // I'm assuming auto is lighter weight to compile than
-// the macro expansion of without.
-#define simd_bitcast_fi_typeof_i(X) auto
-#define simd_bitcast_if_typeof_i(X) auto
-#define simd_convert_fi_typeof_i(X) auto
-#define simd_convert_if_typeof_i(X) auto
+// the macro expansion of without. Using this has the
+// restriction of auto (noted above)
+#define simd_fi_typeof_i(X) auto
+#define simd_if_typeof_i(X) auto
+#define simd_ui_typeof_i(X) auto
+#define simd_iu_typeof_i(X) auto
 #else
-#define simd_bitcast_fi_typeof_i(X) simd_bitcast_fi_typeof(X)
-#define simd_bitcast_if_typeof_i(X) simd_bitcast_if_typeof(X)
-#define simd_convert_fi_typeof_i(X) simd_convert_fi_typeof(X)
-#define simd_convert_if_typeof_i(X) simd_convert_if_typeof(X)
+#define simd_fi_typeof_i(X) simd_fi_typeof(X)
+#define simd_if_typeof_i(X) simd_if_typeof(X)
+#define simd_ui_typeof_i(X) simd_ui_typeof(X)
+#define simd_iu_typeof_i(X) simd_iu_typeof(X)
 #endif
 
 
@@ -814,7 +815,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 })
 #else
 #define simd_blend_i(A,B,S) ({          \
-  simd_bitcast_fi_typeof_i(A) _a        \
+  simd_fi_typeof_i(A) _a        \
     = simd_bitcast_fi(A);               \
   typeof(_a) _b = simd_bitcast_fi(B);   \
   typeof(_a) _s = S;                    \
