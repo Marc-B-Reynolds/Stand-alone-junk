@@ -481,18 +481,26 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 //*******************************************************
 // macro for FP/int type-pun and convert types
 
-#if defined(SIMD_USE_C23)
-// I'm assuming auto is lighter weight to compile than
-// the macro expansion of without.
-#define simd_bitcast_fi_typeof(X) auto
-#define simd_bitcast_if_typeof(X) auto
-#define simd_convert_fi_typeof(X) auto
-#define simd_convert_if_typeof(X) auto
-#else
+// for external use. this allows comma list of variables
+// with and without initializers. 
 #define simd_bitcast_fi_typeof(X) typeof(simd_bitcast_fi(X))
 #define simd_bitcast_if_typeof(X) typeof(simd_bitcast_if(X))
 #define simd_convert_fi_typeof(X) typeof(simd_convert_fi(X))
 #define simd_convert_if_typeof(X) typeof(simd_convert_if(X))
+
+
+#if defined(SIMD_USE_C23)
+// I'm assuming auto is lighter weight to compile than
+// the macro expansion of without.
+#define simd_bitcast_fi_typeof_i(X) auto
+#define simd_bitcast_if_typeof_i(X) auto
+#define simd_convert_fi_typeof_i(X) auto
+#define simd_convert_if_typeof_i(X) auto
+#else
+#define simd_bitcast_fi_typeof_i(X) simd_bitcast_fi_typeof(X)
+#define simd_bitcast_if_typeof_i(X) simd_bitcast_if_typeof(X)
+#define simd_convert_fi_typeof_i(X) simd_convert_fi_typeof(X)
+#define simd_convert_if_typeof_i(X) simd_convert_if_typeof(X)
 #endif
 
 
@@ -564,15 +572,16 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 // generic to specialized expansion macros (expand function or prototype)
 // the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
 
+// clean these up..this is silly
 #if   defined(SIMD_INLINE_SPECIALIZE)
-#define SIMD_MAKE_UFUN(name,T) static inline T ##_t name ## _ ## T(T ##_t a) { return simd_ ## name(a); }
-#define SIMD_MAKE_BFUN(name,T) static inline T ##_t name ## _ ## T(T ##_t a, T ##_t b) { return simd_ ## name(a,b); }
+#define SIMD_MAKE_UFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
+#define SIMD_MAKE_BFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
 #elif defined(SIMD_IMPLEMENTATION)
-#define SIMD_MAKE_UFUN(name,T) T ##_t name ## _ ## T(T ##_t a) { return simd_ ## name(a); }
-#define SIMD_MAKE_BFUN(name,T) T ##_t name ## _ ## T(T ##_t a, T ##_t b) { return simd_ ## name(a,b); }
+#define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
+#define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
 #else
-#define SIMD_MAKE_UFUN(name,T) extern T ##_t name ## _ ## T(T ##_t a);
-#define SIMD_MAKE_BFUN(name,T) extern T ##_t name ## _ ## T(T ##_t a, T ##_t b);
+#define SIMD_MAKE_UFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a);
+#define SIMD_MAKE_BFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b);
 #endif
 
 //*******************************************************
@@ -805,7 +814,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 })
 #else
 #define simd_blend_i(A,B,S) ({          \
-  simd_bitcast_fi_typeof(A) _a          \
+  simd_bitcast_fi_typeof_i(A) _a        \
     = simd_bitcast_fi(A);               \
   typeof(_a) _b = simd_bitcast_fi(B);   \
   typeof(_a) _s = S;                    \
