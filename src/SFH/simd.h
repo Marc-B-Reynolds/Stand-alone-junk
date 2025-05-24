@@ -75,10 +75,21 @@
 
 #if defined(__clang__)
 
-#else
-// GCC specific step-up stuff
+// expression statements are how everything "works"
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
+#pragma GCC diagnostic push
 
+// temp disable some that can occur during expansion
+#pragma GCC diagnostic ignored "-Wextra-semi"
+#pragma GCC diagnostic ignored "-Wlanguage-extension-token"
+#pragma GCC diagnostic ignored "-Wvariadic-macro-arguments-omitted"
+
+#else
+
+// GCC specific step-up stuff
 #pragma GCC push_options
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 
 // passive agressive compiler options checking/setting
 
@@ -99,17 +110,6 @@
 #endif
 
 #endif
-
-// Now that we've nagged the user about compiler options: let's
-// disable some warnings. 
-// Most of the generic macro expansions use expression-statements
-
-// I'm not reseting the expression-statement warning. This is a
-// temp hack.
-#pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra-semi"
-
 
 #if !defined(__has_builtin)
 #define __has_builtin(X) 0
@@ -726,7 +726,6 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // min/max
 //
 
-#if (defined(__clang__) && (__clang_major__ >= 18)) || (__GNUC__ >= 14)
 // the comparision is written this way for floating point which
 // will cause the first parameter to be returned if the inputs
 // are unordered (one or both are NaN). Doesn't matter for integers.
@@ -752,8 +751,9 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #endif
-#endif
 
+#if 0
+// disable for now.
 // floating-point C library behavior
 // self note: GCC expansions of this explode w/o weaking FP behavior
 // (think about this at some point -ffinite-math-only does the trick
@@ -764,6 +764,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #if defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
+#endif
 #endif
 
 //*******************************************************
@@ -896,7 +897,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 
 
-
+// clean-up compiler option mods
 #pragma GCC diagnostic pop
 
 #if !defined(__clang__)
