@@ -4,10 +4,13 @@
 
 #pragma once
 
-// IMPORTANT: currently only "works" with GCC 14.1+ and clang 17.0.1+
-// need to think about that...hummm...
-// if I can't move to older compiler support then limit features?
-// humm...
+// clang problems:
+//   generic fma expansion broken in version < 18
+// minimum versions: GCC version 9.1, clang 12.0 for basics
+// (a couple of functions are disabled for GCC < 14 & clang < 18
+//  need to revisit. see min & max)
+//
+
 
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
@@ -32,9 +35,19 @@
 // • target has hardware FMA
 // • user has disabled: math-errno and trapping-math (if GCC
 //   it will nag the user and set them via pragmas)
+// • WARNING: weaking floating point (other various fast-math
+//   optimization will break some contracts). I'll try to
+//   remember to note them in the code.
 //
 // Usage: include this header (+options):
-// • define `SIMD_SPECIALIZE`
+// • define `SIMD_` 
+// • define `SIMD_SPECIALIZE` to expand functions for types.
+//   by default this expands non-inline functions which will
+//   be compiled in the file that defines `SIMD_IMPLEMENTATION`
+//   If additionally `SIMD_INLINE_SPECIALIZE` is defined
+//   these function will instead by expanded into static inline.
+//   A number of inline functions are always defined since they
+//   back the generic macros.
 //
 // Behavior diffrences:
 // • GCC is more strict than clang about types (make notes)
@@ -60,7 +73,11 @@
 #include <math.h>
 #include <assert.h>
 
-#if !defined(__clang__)
+#if defined(__clang__)
+
+#else
+// GCC specific step-up stuff
+
 #pragma GCC push_options
 
 // passive agressive compiler options checking/setting
@@ -74,12 +91,28 @@
 #endif
 
 // disabled by default in clang and it doesn't do the macro
-#if !defined(__NO_TRAPPING_MATH__)
+// 
+#if !defined(__NO_TRAPPING_MATH__) && (__GNUC__ >= 12)
 // do you have some signal handler for floating point? Didn't think so.
 #warning "setting `-no-trapping-math` for you. (stern eyes)"
 #pragma GCC optimize ("no-trapping-math")
 #endif
 
+#endif
+
+// Now that we've nagged the user about compiler options: let's
+// disable some warnings. 
+// Most of the generic macro expansions use expression-statements
+
+// I'm not reseting the expression-statement warning. This is a
+// temp hack.
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wextra-semi"
+
+
+#if !defined(__has_builtin)
+#define __has_builtin(X) 0
 #endif
 
 // determine if it internally use to (more) C23 features
@@ -88,6 +121,9 @@
 #define SIMD_USE_C23
 #endif
 
+#if defined(__AVX512F__)
+#define SIMD_ENABLE_512
+#endif
 
 // UB free type punning
 #ifndef type_pun
@@ -109,7 +145,7 @@
 #define simd_dim(X)    (sizeof(X)/sizeof(simd_elem(X,0)))
 
 // number of elements in X (must be vector)
-#if defined(__clang__)
+#if (__has_builtin(__builtin_vectorelements))
 #define simd_dim_v(X) __builtin_vectorelements(X)
 #else
 #define simd_dim_v(X)  (sizeof(X)/sizeof(X[0]))
@@ -147,7 +183,8 @@
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 #define SIMD_PARENS ()
 
-// increased the number of rescans from 256 to 1024
+// increased the number of rescans from 256 to 1024 (actually I should do
+// the opposite. revisit)
 #define SIMD_EXPAND(arg)  SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(arg))))
 #define SIMD_EXPAND1(arg) SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(arg))))
 #define SIMD_EXPAND2(arg) SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(arg))))
@@ -230,7 +267,7 @@
 // that type.
 
 // define (bit-width,num-elemnts) for register sizes of (64,128,256)
-#if 0
+#if defined(SIMD_ENABLE_512)
 //                 | 64  |  128  |  256  | 512  |
 #define SIMD_S8_X  ( 8,8),( 8,16),( 8,32),( 8,64)
 #define SIMD_S16_X (16,4),(16, 8),(16,16),(16,32)
@@ -259,17 +296,21 @@
 
 
 // make a pair of type-puns. example (32x4,i,u) expands to:
-//   static inline u32x4_t simd_bitcast_iu_32x4(i32x4_t x) { return type_pun(x,u32x4_t); }
-//   static inline i32x4_t simd_bitcast_ui_32x4(u32x4_t x) { return type_pun(x,i32x4_t); }
+//   static inline u32x4_t bitcast_iu_32x4(i32x4_t x) { return type_pun(x,u32x4_t); }
+//   static inline i32x4_t bitcast_ui_32x4(u32x4_t x) { return type_pun(x,i32x4_t); }
 // and likewise for float-point & signed integer. (choosen instead of unsigned because of
 // default float compare behavior)
 #define SIMD_MAKE_TPUN(base,i,o) \
     static inline CAT(o,base,_t) CAT(bitcast_,i,o,_,base)(CAT(i,base,_t) x) { return type_pun(x,CAT(o,base,_t)); }  \
     static inline CAT(i,base,_t) CAT(bitcast_,o,i,_,base)(CAT(o,base,_t) x) { return type_pun(x,CAT(i,base,_t)); } 
 
-#define SIMD_MAKE_TCONV(base)                                                      \
+// make a pair of float/int conversions. Example:
+//   static inline i32x4_t convert_fi_32x4(f32x4_t x) { ... }
+//   static inline f32x4_t convert_if_32x4(i32x4_t x) { ... }
+// only with signed integer because it's the best supported in hardware.
+#define SIMD_MAKE_TCONV(base)                                                 \
     static inline CAT(f,base,_t) CAT(convert_if,_,base)(CAT(i,base,_t) x) {   \
-         return __builtin_convertvector(x,CAT(f,base,_t)); }                       \
+         return __builtin_convertvector(x,CAT(f,base,_t)); }                  \
     static inline CAT(i,base,_t) CAT(convert_fi,_,base)(CAT(f,base,_t) x) {   \
          return __builtin_convertvector(x,CAT(i,base,_t)); } 
 
@@ -304,7 +345,8 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 
-//---------------------------rework this 
+//---------------------------
+// rework all of this (should be expanded)
 // defs for SIMD_MAP et al.
 #if defined(SIMD_ENABLE_512)
 #define SIMD_U8_X   u8x8,u8x16,u8x32,u8x64
@@ -333,8 +375,8 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 // floating point collection
 #define SIMD_FP_X  SIMD_F32_X,SIMD_F64_X
-#define SIMD_UI_X  SIMD_U32_X,SIMD_U64_X,
-#define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X,
+#define SIMD_UI_X  SIMD_U32_X,SIMD_U64_X
+#define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X
 
 
 //*******************************************************
@@ -343,7 +385,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 // each time it's used) seems really sucky.
 
 // entries for 512-bit packages
-#if 0
+#if defined(SIMD_ENABLE_512)
 #define simd_bitcast_fi_x      \
     f32x16_t:bitcast_fi_32x16, \
     f64x8_t: bitcast_fi_64x8,
@@ -515,7 +557,8 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_is_const(a)  __builtin_constant_p(a)
 
 // `true` if a is a `vector_size` or `ext_vector_type`
-#define simd_is_vec_type(a)  (__builtin_classify_type(a) == 19)
+// (temp hack: gcc < 14 and clang < 18 return -1)
+#define simd_is_vec_type(a)  ((__builtin_classify_type(a) == 19)||(__builtin_classify_type(a) == -1))
 
 #define simd_is_type(a,T) __builtin_types_compatible_p(typeof(a), T)
 #define simd_is_i32(a)    simd_is_type(a, int32_t)
@@ -536,6 +579,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_assert_same_type(a,b)    static_assert(simd_is_same_type(a,b), "must be same type")
 #define simd_assert_same_type3(a,b,c) static_assert(simd_is_same_type3(a,b,c),"must be same type")
 #define simd_assert_same_size(a,b)    static_assert(sizeof(a)==sizeof(b), "must be same size types")
+
 
 // all listed must be scalar types (floating-point or integer)
 #define simd_assert_scalar_fp(A,...)  static_assert(simd_is_scalar_fp(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_fp,__VA_ARGS__)), "must be same scalar float type")
@@ -588,11 +632,19 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 //*******************************************************
 // generic SIMD libm functionality
 
-
+// don't expect GCC to add and checking individually is a PITA
+#if defined(__clang__) && (__clang_major__ >= 14)
+#define simd_floor(x) __builtin_elementwise_floor(x)
+#define simd_ceil(x)  __builtin_elementwise_ceil(x)
+#define simd_fabs(x)  __builtin_elementwise_abs(x)
+#define simd_trunc(x) __builtin_elementwise_trunc(x)
+#else
 #define simd_floor(x) simd_fp_std_unary(floor,x)
 #define simd_ceil(x)  simd_fp_std_unary(ceil,x)
 #define simd_fabs(x)  simd_fp_std_unary(fabs,x)
 #define simd_trunc(x) simd_fp_std_unary(trunc,x)
+#endif
+
 #define simd_round(x) simd_fp_std_unary(round,x)
 #define simd_sqrt(x)  simd_fp_std_unary(sqrt,x)
 
@@ -642,27 +694,28 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // TODO:
 // • add type checking asserts. 
 
+// NOTE: using = {0} instead of {} for older compilers
 #if 0
 #define simd_param_2(A,B)     \
-  typeof(A+B) _type = {};     \
+  typeof(A+B) _type = {0};    \
   simd_capture_i(_a,A);       \
   simd_capture_i(_b,B);
 
 #define simd_param_3(A,B,C)    \
-  typeof(A+B+C) _type = {};    \
+  typeof(A+B+C) _type = {0};   \
   simd_capture_i(_a,A);        \
   simd_capture_i(_b,B);        \
   simd_capture_i(_c,C);
 #else
 #define simd_param_2(A,B)      \
   typeof(simd_first_vt2(A,B))  \
-    _type = {};                \
+    _type = {0};               \
   simd_capture_i(_a,A);        \
   simd_capture_i(_b,B);
 
 #define simd_param_3(A,B,C)    \
   typeof(simd_first_vt3(A,B,C))\
-    _type = {};                \
+    _type = {0};               \
   simd_capture_i(_a,A);        \
   simd_capture_i(_b,B);        \
   simd_capture_i(_c,C);
@@ -672,6 +725,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 //*******************************************************
 // min/max
 //
+
+#if (defined(__clang__) && (__clang_major__ >= 18)) || (__GNUC__ >= 14)
 // the comparision is written this way for floating point which
 // will cause the first parameter to be returned if the inputs
 // are unordered (one or both are NaN). Doesn't matter for integers.
@@ -679,9 +734,10 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // this differs from the libm functions in C which will return
 // the ordered value if only one is NaN.
 
-// scalar macros
-#define simd_min_s(A,B) ({ simd_param_2(A,B); !(_a > _b) ? _a : _b; })
-#define simd_max_s(A,B) ({ simd_param_2(A,B); !(_a < _b) ? _a : _b; })
+// scalar macros (compare written for NaN)
+// WARNING: enabling finite math breaks any promise of NaN behavior)
+#define simd_min_s(A,B) ({ simd_param_2(A,B); (_b > _a) ? _a : _b; })
+#define simd_max_s(A,B) ({ simd_param_2(A,B); (_b < _a) ? _a : _b; })
 
 // vector macros (B element is awkward because it's directly expanded.
 // could make a binary function expander...but meh ATM)
@@ -689,6 +745,14 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // integer & floating point (with above listed behavior)
 #define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i));
 #define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i));
+
+#if defined(SIMD_SPECIALIZE)
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
+#endif
+#endif
 
 // floating-point C library behavior
 // self note: GCC expansions of this explode w/o weaking FP behavior
@@ -698,8 +762,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 #define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
 
 #if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
+SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 
 //*******************************************************
@@ -747,7 +811,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 
 
 // all parameters must be vectors version
-#if defined(__clang__)
+#if (__has_builtin(__builtin_elementwise_fma))
 #define simd_fma_v(a,b,c) ({           \
   simd_assert_same_type3(a,b,c);       \
   simd_assert_vec(a);                  \
@@ -778,7 +842,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 })
 
 // all vector input version
-#if defined(__clang__)
+#if (__has_builtin(__builtin_elementwise_fma))
 #define simd_lerp_v(a,b,t) ({                \
   simd_assert_same_type3(a,b,t);             \
   simd_assert_vec(a);                        \
@@ -832,6 +896,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 })
 
 
+
+#pragma GCC diagnostic pop
 
 #if !defined(__clang__)
 #pragma GCC reset_options
