@@ -4,14 +4,6 @@
 
 #pragma once
 
-// clang problems:
-//   generic fma expansion broken in version < 18
-// minimum versions: GCC version 9.1, clang 12.0 for basics
-// (a couple of functions are disabled for GCC < 14 & clang < 18
-//  need to revisit. see min & max)
-//
-
-
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
 // Single header file "library" of generic SIMD & SIMD/scalar
@@ -40,22 +32,28 @@
 //   remember to note them in the code.
 //
 // Usage: include this header (+options):
-// • define `SIMD_` 
+// • define `SIMD_USE_VECTOR_SIZE` to force using vector_size
+//   for types.
 // • define `SIMD_SPECIALIZE` to expand functions for types.
 //   by default this expands non-inline functions which will
 //   be compiled in the file that defines `SIMD_IMPLEMENTATION`
 //   If additionally `SIMD_INLINE_SPECIALIZE` is defined
 //   these function will instead by expanded into static inline.
 //   A number of inline functions are always defined since they
-//   back the generic macros.
+//   back the generic macros. (note: the default means you want
+//   to LTO).
 //
 // Behavior diffrences:
+// • Older versions of clang and GCC (prior to 18/14 respectively)
+//   don't classify vector types as `vector_type_class` and
+//   return `no_type_class` instead. Although I try to work
+//   around this there might be some hic-ups related to this.
 // • GCC is more strict than clang about types (make notes)
-// • For comparison results:
+// • For vector comparison results:
 //   vector_size: any same sized type allowed
-//   ext_vector_type: signed integer was same number elements
+//   ext_vector_type: signed integer with same number elements
 //   so: i32x8_t fcmp(T a, T b) { return a>=b; } is valid for
-//       T={f32x8_t,i32x8_t,u32x8_t} for both extensions
+//       T={f32x8_t,i32x8_t,u32x8_t} for both extensions.
 // SEE:
 //   https://gcc.gnu.org/onlinedocs/gcc/Vector-Extensions.html
 //   https://clang.llvm.org/docs/LanguageExtensions.html#vectors-and-extended-vectors
@@ -75,6 +73,7 @@
 
 #if defined(__clang__)
 
+// TODO: version limit these.
 // expression statements are how everything "works"
 #pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
 #pragma GCC diagnostic push
@@ -115,8 +114,8 @@
 #define __has_builtin(X) 0
 #endif
 
-// determine if it internally use to (more) C23 features
-// currently only `auto`
+// determine if internally to use to C23 features
+// that require -std=c23 (currently only `auto`)
 #if (__STDC_VERSION__ >= 202311L) && !defined(SIMD_NO_C23)
 #define SIMD_USE_C23
 #endif
@@ -267,6 +266,7 @@
 // that type.
 
 // define (bit-width,num-elemnts) for register sizes of (64,128,256)
+// (and optionally 512)
 #if defined(SIMD_ENABLE_512)
 //                 | 64  |  128  |  256  | 512  |
 #define SIMD_S8_X  ( 8,8),( 8,16),( 8,32),( 8,64)
@@ -281,7 +281,7 @@
 #endif
 
 // choose vector attribute type
-#if __has_attribute(ext_vector_type) && !defined(SIMD_NO_EXT_VECTOR)
+#if __has_attribute(ext_vector_type) && !defined(SIMD_USE_VECTOR_SIZE)
 #define SIMD_MAKE_TYPE_EX(B,N) __attribute__((ext_vector_type(N)))
 #else
 #define SIMD_MAKE_TYPE_EX(B,N) __attribute__((vector_size(B*N/8)))
@@ -308,7 +308,10 @@
 //   static inline i32x4_t convert_fi_32x4(f32x4_t x) { ... }
 //   static inline f32x4_t convert_if_32x4(i32x4_t x) { ... }
 // only with signed integer because it's the best supported in hardware.
-#define SIMD_MAKE_TCONV(base)                                                 \
+
+#define simd_convert(v,t) __builtin_convertvector(v,t)
+
+#define SIMD_MAKE_TCONV(base)                                           \
     static inline CAT(f,base,_t) CAT(convert_if,_,base)(CAT(i,base,_t) x) {   \
          return __builtin_convertvector(x,CAT(f,base,_t)); }                  \
     static inline CAT(i,base,_t) CAT(convert_fi,_,base)(CAT(f,base,_t) x) {   \
@@ -378,6 +381,9 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define SIMD_UI_X  SIMD_U32_X,SIMD_U64_X
 #define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X
 
+
+// validate we're using the correct value for vector types 
+static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "classify_type: wrong value");
 
 //*******************************************************
 // manually expanded "generic" type puns.
@@ -556,9 +562,45 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 // workers for macro expansions
 #define simd_is_const(a)  __builtin_constant_p(a)
 
+// have the defines even if not present in header. it's not
+// nice they didn't end it with something.
+enum simd_type_class
+{
+  no_type_class = -1,
+  void_type_class,
+  integer_type_class,
+  char_type_class,
+  enumeral_type_class,
+  boolean_type_class,
+  pointer_type_class,
+  reference_type_class,
+  offset_type_class,
+  real_type_class,
+  complex_type_class,
+  function_type_class,
+  method_type_class,
+  record_type_class,
+  union_type_class,
+  array_type_class,
+  string_type_class,
+  lang_type_class,
+  opaque_type_class,
+  bitint_type_class,
+  vector_type_class
+};
+
+// determine the value the compiler will return for vectors. (vector_type_class not exisiting yet)
+#if (defined(__clang__) && __clang_major__ >= 18) || (defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 14)
+#define SIMD_VEC_CLASS_TYPE vector_type_class
+#else
+#define SIMD_VEC_CLASS_TYPE no_type_class
+#endif
+
 // `true` if a is a `vector_size` or `ext_vector_type`
-// (temp hack: gcc < 14 and clang < 18 return -1)
-#define simd_is_vec_type(a)  ((__builtin_classify_type(a) == 19)||(__builtin_classify_type(a) == -1))
+#define simd_is_vec_type(a)  (__builtin_classify_type(a) == SIMD_VEC_CLASS_TYPE)
+
+#define simd_is_same_type(a,b) __builtin_types_compatible_p(typeof(a), typeof(b))
+#define simd_is_same_type3(a,b,c) (simd_is_same_type(a,b) & simd_is_same_type(a,c))
 
 #define simd_is_type(a,T) __builtin_types_compatible_p(typeof(a), T)
 #define simd_is_i32(a)    simd_is_type(a, int32_t)
@@ -568,11 +610,15 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_is_f32(a)    simd_is_type(a, float)
 #define simd_is_f64(a)    simd_is_type(a, double)
 
-#define simd_is_scalar_fp(a)  (simd_is_f32(a) || simd_is_f64(a))
-#define simd_is_scalar_int(a) (simd_is_i32(a) || simd_is_i64(a) || simd_is_u32(a) || simd_is_u64(a))
+// both arrays and pointers classify as `pointer_type_class` so jump through
+// some hoops to be able to differentiate.
+#define simd_is_ptr_or_array(a)  (__builtin_classify_type(a) == pointer_type_class)
+#define simd_is_ptr_(a)          (&*__builtin_choose_expr(simd_is_ptr_or_array(a), a,0))
+#define simd_is_ptr(a)           simd_is_same_type(a,simd_is_ptr_(a))
+#define simd_is_array(a)         (simd_is_ptr_or_array(a) && !simd_is_ptr(a))
 
-#define simd_is_same_type(a,b) __builtin_types_compatible_p(typeof(a), typeof(b))
-#define simd_is_same_type3(a,b,c) (simd_is_same_type(a,b) & simd_is_same_type(a,c))
+#define simd_is_scalar_fp(a)     (__builtin_classify_type(a) == real_type_class)
+#define simd_is_scalar_int(a)    (__builtin_classify_type(a) == integer_type_class)
 
 // attempt to make macro barf errors a bit easier to read
 #define simd_assert_const(a)          static_assert(simd_is_const(a), "must be constant")
@@ -580,8 +626,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_assert_same_type3(a,b,c) static_assert(simd_is_same_type3(a,b,c),"must be same type")
 #define simd_assert_same_size(a,b)    static_assert(sizeof(a)==sizeof(b), "must be same size types")
 
-
-// all listed must be scalar types (floating-point or integer)
+// all listed must be the specified type
 #define simd_assert_scalar_fp(A,...)  static_assert(simd_is_scalar_fp(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_fp,__VA_ARGS__)), "must be same scalar float type")
 #define simd_assert_scalar_int(A,...) static_assert(simd_is_scalar_int(A) __VA_OPT__(SIMD_MAP(&& simd_is_scalar_int,__VA_ARGS__)), "must be same scalar integer type")
 #define simd_assert_vec(A,...)        static_assert(simd_is_vec_type(A) __VA_OPT__(SIMD_MAP(&& simd_is_vec_type,__VA_ARGS__)), "must be vector type")
@@ -614,6 +659,12 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 //*******************************************************
+
+f64x2_t promote_f32x2_t(f32x2_t v) { return (f64x2_t){v[0],v[1]}; } 
+
+
+
+//*******************************************************
 // generic to specialized expansion macros (expand function or prototype)
 // the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
 
@@ -621,12 +672,15 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #if   defined(SIMD_INLINE_SPECIALIZE)
 #define SIMD_MAKE_UFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
 #define SIMD_MAKE_BFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
+#define SIMD_MAKE_3FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
 #elif defined(SIMD_IMPLEMENTATION)
-#define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
-#define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
+#define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a)                          { return CAT(simd_,name)(a);     }
+#define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b)             { return CAT(simd_,name)(a,b);   }
+#define SIMD_MAKE_3FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
 #else
 #define SIMD_MAKE_UFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a);
 #define SIMD_MAKE_BFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b);
+#define SIMD_MAKE_3FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c);
 #endif
 
 //*******************************************************
@@ -638,6 +692,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_ceil(x)  __builtin_elementwise_ceil(x)
 #define simd_fabs(x)  __builtin_elementwise_abs(x)
 #define simd_trunc(x) __builtin_elementwise_trunc(x)
+#define simd_abs(x)   __builtin_elementwise_abs(x)
 #else
 #define simd_floor(x) simd_fp_std_unary(floor,x)
 #define simd_ceil(x)  simd_fp_std_unary(ceil,x)
@@ -688,7 +743,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // • `simd_capture_i` uses typeof(_type) is used to pass through vector
 //   and parameters, broadcast any scalars, and 
 //   capture macro input (prevent side-effects)
-// • {_a,_b,...} are the original values with any
+// • {_a,_b,...} are the original values with anyxb
 //   scalars broadcast to T. (fixed naming scheme)
 //
 // TODO:
@@ -742,8 +797,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // could make a binary function expander...but meh ATM)
 
 // integer & floating point (with above listed behavior)
-#define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i));
-#define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i));
+#define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i))
+#define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i))
 
 #if defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
@@ -751,6 +806,17 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #endif
+
+#define simd_clamp(x,lo,hi) simd_min(simd_max(x,lo),hi)
+
+#if 0//defined(SIMD_SPECIALIZE)
+SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_UI_X)
+SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_SI_X)
+SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_FP_X);
+SIMD_MAP_PEAL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
+#endif
+
+
 
 #if 0
 // disable for now.
@@ -831,8 +897,6 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 #endif
 
-
-
 // SIMD LERP: R_i = A_i(1-T_i) + B_i•T_i
 // • end-points are exact (2 FMA formulation)
 #define simd_lerp(A,B,T) ({                \
@@ -866,6 +930,20 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 
 //*******************************************************
+
+// compute: sa•A + sb•B  scalar (sa,sb), vector (A,B)
+// todo : add typechecking
+#define smind_wsum(a,b,sa,sb) ({      \
+  typeof(a) _a  = a;                  \                
+  typeof(a) _b  = b;                  \
+  typeof(a) _sa = sa-(typeof(a)){0};  \
+  typeof(a) _sb = sb-(typeof(a)){0};  \
+  _a = simd_fma_v(_sa,_a,_sb*_b);     \
+  _a;                                 \
+})
+
+
+//*******************************************************
 // blend support:  (a & s) | (a & (~s))
 // can only be lowered into an actual blend if the
 // compiler can see `s` is a selection mask
@@ -880,7 +958,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 #else
 #define simd_blend_i(A,B,S) ({          \
-  simd_fi_typeof_i(A) _a        \
+  simd_fi_typeof_i(A) _a                \
     = simd_bitcast_fi(A);               \
   typeof(_a) _b = simd_bitcast_fi(B);   \
   typeof(_a) _s = S;                    \
@@ -895,6 +973,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   simd_assert_vec(A,B);           \
   simd_blend_i(A,B,S);            \
 })
+
+
 
 
 // clean-up compiler option mods
