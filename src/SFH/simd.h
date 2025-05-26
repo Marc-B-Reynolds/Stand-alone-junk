@@ -61,6 +61,14 @@
 // Credits:
 // • David Mazières: SIMD_MAP
 
+// TODO: (there's tons of stuff. just starting some self notes) 
+// • most type checking is missing
+// • use small map expansion macro more (compile time improvement) esp for
+//   for logical callsite macros.
+// • generic macros could be simplifed when `SIMD_SPECIALIZE` is set (compile time improvment)
+//   
+
+
 // marker define
 #define SFH_SIMD_H
 
@@ -70,6 +78,13 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+
+// do what I can to inspect compiler options. 
+// need to rethink about the others (WIP)
+
+#if defined(__FINITE_MATH_ONLY__) && (__FINITE_MATH_ONLY__)
+#define SIMD_FINITE_MATH_ENABLED
+#endif
 
 #if defined(__clang__)
 
@@ -96,15 +111,19 @@
 #if !defined(__NO_MATH_ERRNO__)
 // errno is just a pre IEEE 745 feature that should never be used
 // and compilers should have disabled by default 20+ years ago.
+#if !defined(SIMD_NO_NAG)
 #warning "setting `-fno-math-errno` for you.  You're welcome."
+#endif
 #pragma GCC optimize ("no-math-errno")
 #endif
 
 // disabled by default in clang and it doesn't do the macro
 // 
 #if !defined(__NO_TRAPPING_MATH__) && (__GNUC__ >= 12)
+#if !defined(SIMD_NO_NAG)
 // do you have some signal handler for floating point? Didn't think so.
 #warning "setting `-no-trapping-math` for you. (stern eyes)"
+#endif
 #pragma GCC optimize ("no-trapping-math")
 #endif
 
@@ -120,7 +139,8 @@
 #define SIMD_USE_C23
 #endif
 
-#if defined(__AVX512F__)
+// determine if to define 512 bit package functionality
+#if defined(__AVX512F__) && !defined(SIMD_NO_512)
 #define SIMD_ENABLE_512
 #endif
 
@@ -182,14 +202,11 @@
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 #define SIMD_PARENS ()
 
-// increased the number of rescans from 256 to 1024 (actually I should do
-// the opposite. revisit)
-#define SIMD_EXPAND(arg)  SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(arg))))
-#define SIMD_EXPAND1(arg) SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(arg))))
-#define SIMD_EXPAND2(arg) SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(arg))))
-#define SIMD_EXPAND3(arg) SIMD_EXPAND4(SIMD_EXPAND4(SIMD_EXPAND4(SIMD_EXPAND4(arg))))
-#define SIMD_EXPAND4(arg) SIMD_EXPAND5(SIMD_EXPAND5(SIMD_EXPAND5(SIMD_EXPAND5(arg))))
-#define SIMD_EXPAND5(arg) arg
+#define SIMD_EXPAND(...)  SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(__VA_ARGS__))))
+#define SIMD_EXPAND4(...) SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(__VA_ARGS__))))
+#define SIMD_EXPAND3(...) SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(__VA_ARGS__))))
+#define SIMD_EXPAND2(...) SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(__VA_ARGS__))))
+#define SIMD_EXPAND1(...) __VA_ARGS__
 
 // map `macro` across all listed varargs (...)
 // SIMD_MAP(F,0,1,2,...,N) -> F(0) F(1) F(2) .. F(N)
@@ -205,8 +222,8 @@
 
 // map `macro` across all listed varargs (...)
 // SIMD_MAP_PEAL(F,P,0,1,2,...,N) -> F(P,0) F(P,1) F(P,2) .. F(P,N)
-#define SIMD_MAP_PEAL(macro, P0, ...)                                   \
-  __VA_OPT__(SIMD_EXPAND(SIMD_MAP_PEAL_HELPER(macro,P0,__VA_ARGS__)))
+#define SIMD_MAP_PEAL(macro, ...)                                       \
+  __VA_OPT__(SIMD_EXPAND(SIMD_MAP_PEAL_HELPER(macro,__VA_ARGS__)))
 
 #define SIMD_MAP_PEAL_HELPER(macro,P0,P1, ...)                          \
   macro(P0,P1)                                                          \
@@ -334,8 +351,8 @@
                                 SIMD_MAKE_TPUN(CAT(B,x,N),f,i) \
                                 SIMD_MAKE_TCONV(CAT(B,x,N))
 
-// 64-bit elements types: expand int macro and add double typedefs
-// and type-pun back and forth signed integers
+// 64-bit elements types: expand int macro and add double typedefs,
+// type-puns,  back and forth signed integers
 #define SIMD_BUILD_TYPE_64(B,N) SIMD_BUILD_TYPE_INT(B,N) \
                                 SIMD_MAKE_TYPE_D(B,N)    \
                                 SIMD_MAKE_TPUN(CAT(B,x,N),f,i) \
@@ -381,9 +398,6 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define SIMD_UI_X  SIMD_U32_X,SIMD_U64_X
 #define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X
 
-
-// validate we're using the correct value for vector types 
-static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "classify_type: wrong value");
 
 //*******************************************************
 // manually expanded "generic" type puns.
@@ -485,7 +499,7 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 //*******************************************************
 // floating/integer conversion
 
-#if 0
+#if defined(SIMD_ENABLE_512)
 #define simd_convert_fi_x      \
     f32x16_t:convert_fi_32x16, \
     f64x8_t: convert_fi_64x8,
@@ -563,7 +577,7 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 #define simd_is_const(a)  __builtin_constant_p(a)
 
 // have the defines even if not present in header. it's not
-// nice they didn't end it with something.
+// nice they didn't make a MAX_TYPE_CLASS kindof define.
 enum simd_type_class
 {
   no_type_class = -1,
@@ -595,6 +609,10 @@ enum simd_type_class
 #else
 #define SIMD_VEC_CLASS_TYPE no_type_class
 #endif
+
+// validate we're using the correct value for vector types 
+static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "classify_type: wrong value");
+
 
 // `true` if a is a `vector_size` or `ext_vector_type`
 #define simd_is_vec_type(a)  (__builtin_classify_type(a) == SIMD_VEC_CLASS_TYPE)
@@ -659,9 +677,162 @@ enum simd_type_class
 
 
 //*******************************************************
+// type widen/narrow
 
-f64x2_t promote_f32x2_t(f32x2_t v) { return (f64x2_t){v[0],v[1]}; } 
+// clean these with (with other similar)
+#define simd_def_promote(x,ti,to) \
+  static inline CAT(to,_t) CAT(promote_,ti)(CAT(ti,_t) v)  \
+  { return __builtin_convertvector(v,CAT(to,_t)); }
 
+#define simd_def_demote(x,ti,to) \
+  static inline CAT(to,_t) CAT(demote_,ti)(CAT(ti,_t) v)  \
+  { return __builtin_convertvector(v,CAT(to,_t)); }
+
+#define simd_def_widen_narrow(x,ti,to) \
+  simd_def_promote(x,ti,to) \
+  simd_def_demote(x,to,ti) 
+
+//  8/16 pairs
+simd_def_widen_narrow(x, u8x8,  u16x8);
+simd_def_widen_narrow(x, i8x8,  i16x8);
+simd_def_widen_narrow(x, u8x16, u16x16);
+simd_def_widen_narrow(x, i8x16, i16x16);
+
+// 16/32 pairs
+simd_def_widen_narrow(x, u16x4, u32x4);
+simd_def_widen_narrow(x, i16x4, i32x4);
+simd_def_widen_narrow(x, u16x8, u32x8);
+simd_def_widen_narrow(x, i16x8, i32x8);
+
+// 32/64 pairs
+simd_def_widen_narrow(x, f32x2, f64x2);
+simd_def_widen_narrow(x, u32x2, u64x2);
+simd_def_widen_narrow(x, i32x2, i64x2);
+simd_def_widen_narrow(x, f32x4, f64x4);
+simd_def_widen_narrow(x, u32x4, u64x4);
+simd_def_widen_narrow(x, i32x4, i64x4);
+
+// expand to 512 packages if enabled
+#if defined(SIMD_ENABLE_512)
+simd_def_widen_narrow(x, u8x32, u16x32);
+simd_def_widen_narrow(x, i8x32, i16x32);
+
+simd_def_widen_narrow(x, u16x16, u32x16);
+simd_def_widen_narrow(x, i16x16, i32x16);
+
+simd_def_widen_narrow(x, f32x8, f64x8);
+simd_def_widen_narrow(x, u32x8, u64x8);
+simd_def_widen_narrow(x, i32x8, i64x8);
+
+// extra generic entries
+#define simd_promote_f_x f32x8_t: promote_f32x8,
+
+#define simd_promote_u_x u8x32_t:  promote_u8x32, \
+                         u16x16_t: promote_u8x32, \
+                         u32x8_t:  promote_u32x8,
+
+#define simd_promote_i_x i8x32_t:  promote_i8x32, \
+                         i16x16_t: promote_i8x32, \
+                         i32x8_t:  promote_i32x8,
+
+#define simd_demote_f_x  f64x8_t:  demote_f64x8,
+
+#define simd_demote_u_x  u16x32_t: demote_u16x32, \
+                         u32x16_t: demote_u32x16, \
+                         u64x8_t:  demote_u64x8,
+
+#define simd_demote_i_x  i16x32_t: demote_i16x32, \
+                         i32x16_t: demote_i32x16, \
+                         i64x8_t:  demote_i64x8,
+#else
+#define simd_promote_f_x
+#define simd_promote_u_x
+#define simd_promote_i_x
+#define simd_demote_f_x
+#define simd_demote_u_x
+#define simd_demote_i_x
+#endif
+
+// scalar support
+static inline uint16_t promote_u8(uint8_t  x)  { return (uint16_t)x; }
+static inline uint32_t promote_u16(uint16_t x) { return (uint32_t)x; }
+static inline uint64_t promote_u32(uint32_t x) { return (uint64_t)x; }
+
+static inline uint8_t  demote_u16 (uint16_t x) { return (uint8_t )x; }
+static inline uint16_t demote_u32 (uint32_t x) { return (uint16_t)x; }
+static inline uint32_t demote_u64 (uint64_t x) { return (uint32_t)x; }
+
+static inline int16_t  promote_i8 (int8_t  x) { return (int16_t)x; }
+static inline int32_t  promote_i16(int16_t x) { return (int32_t)x; }
+static inline int64_t  promote_i32(int32_t x) { return (int64_t)x; }
+
+static inline int8_t   demote_i16 (int16_t x) { return (int8_t )x; }
+static inline int16_t  demote_i32 (int32_t x) { return (int16_t)x; }
+static inline int32_t  demote_i64 (int64_t x) { return (int32_t)x; }
+
+static inline double   promote_f32(float  x)  { return (double)x; }
+static inline float    demote_f64 (double x)  { return (float) x; }
+  
+// generic type widen/narrow
+// • only same base types (floating point ,signed int, unsigned int).
+//   Don't see any value to unknown base type.
+// • support scalars (expect small usage so extra expansion is meh)
+// number of combos is small enough (and mostly fixed)
+// so no strong reason to macro expand these.
+  
+// binary32 → binary64
+#define simd_promote_f(X) ({  \
+  typeof(X) _x = X;           \
+  _Generic(_x,                \
+    float:   promote_f32,     \
+    f32x2_t: promote_f32x2,   \
+    f32x4_t: promote_f32x4,   \
+        simd_promote_f_x      \
+    default: (void*)0)(_x);   \
+  })
+
+// binary64 → binary32
+#define simd_demote_f(X) ({   \
+  typeof(X) _x = X;           \
+  _Generic(_x,                \
+    double:  demote_f64,      \
+    f64x2_t: demote_f64x2,    \
+    f64x4_t: demote_f64x4,    \
+        simd_demote_f_x       \
+    default: (void*)0)(_x);   \
+  })
+
+// unsigned integers    
+#define simd_promote_u(X) ({  \
+  typeof(X) _x = X;           \
+  _Generic(_x,                \
+    uint8_t:  promote_u8,     \
+    uint16_t: promote_u16,    \
+    uint32_t: promote_u32,    \
+    u8x8_t:   promote_u8x8,   \
+    u8x16_t:  promote_u8x16,  \
+    u16x4_t:  promote_u16x4,  \
+    u16x8_t:  promote_u16x8,  \
+    u32x2_t:  promote_u32x2,  \
+         simd_promote_u_x     \
+    default: (void*)0)(_x);   \
+  })
+
+// signed integers    
+#define simd_promote_i(X) ({  \
+  typeof(X) _x = X;           \
+  _Generic(_x,                \
+    int8_t:  promote_i8,      \
+    int16_t: promote_i16,     \
+    int32_t: promote_i32,     \
+    i8x8_t:  promote_i8x8,    \
+    i8x16_t: promote_i8x16,   \
+    i16x4_t: promote_i16x4,   \
+    i16x8_t: promote_i16x8,   \
+    i32x2_t: promote_i32x2,   \
+        simd_promote_i_x      \
+    default: (void*)0)(_x);   \
+  })
 
 
 //*******************************************************
@@ -689,15 +860,15 @@ f64x2_t promote_f32x2_t(f32x2_t v) { return (f64x2_t){v[0],v[1]}; }
 // don't expect GCC to add and checking individually is a PITA
 #if defined(__clang__) && (__clang_major__ >= 14)
 #define simd_floor(x) __builtin_elementwise_floor(x)
-#define simd_ceil(x)  __builtin_elementwise_ceil(x)
-#define simd_fabs(x)  __builtin_elementwise_abs(x)
 #define simd_trunc(x) __builtin_elementwise_trunc(x)
+#define simd_ceil(x)  __builtin_elementwise_ceil(x)
+//#define simd_fabs(x)  __builtin_elementwise_abs(x)
 #define simd_abs(x)   __builtin_elementwise_abs(x)
 #else
 #define simd_floor(x) simd_fp_std_unary(floor,x)
-#define simd_ceil(x)  simd_fp_std_unary(ceil,x)
-#define simd_fabs(x)  simd_fp_std_unary(fabs,x)
 #define simd_trunc(x) simd_fp_std_unary(trunc,x)
+#define simd_ceil(x)  simd_fp_std_unary(ceil,x)
+//#define simd_fabs(x)  simd_fp_std_unary(fabs,x)
 #endif
 
 #define simd_round(x) simd_fp_std_unary(round,x)
@@ -708,18 +879,36 @@ f64x2_t promote_f32x2_t(f32x2_t v) { return (f64x2_t){v[0],v[1]}; }
 // expand specialized: (example: floor_f32x4)
 SIMD_MAP_PEAL(SIMD_MAKE_UFUN, floor, SIMD_FP_X) 
 SIMD_MAP_PEAL(SIMD_MAKE_UFUN, ceil,  SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, fabs,  SIMD_FP_X) 
 SIMD_MAP_PEAL(SIMD_MAKE_UFUN, trunc, SIMD_FP_X) 
 SIMD_MAP_PEAL(SIMD_MAKE_UFUN, round, SIMD_FP_X) 
 SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
+//SIMD_MAP_PEAL(SIMD_MAKE_UFUN, fabs,  SIMD_FP_X) 
 #endif
+
+// GCC only. break into integer and fp, explict and mask for fp
+#if !defined(simd_abs)
+
+// abs stub for GCC floating point
+// ({ simd_make_sgnmask_fv(x); simd_bitcast_if(simd_bitcast_fi(x) & _sgnmask); })
+
+
+#define simd_abs_s(A) ({ typeof(A) _a = A; (_a > 0) ? _a : 0-_a; })
+#define simd_abs(A)   simd_component_map(simd_abs_s,A)
+#endif
+
+#if defined(SIMD_SPECIALIZE)
+SIMD_MAP_PEAL(SIMD_MAKE_UFUN, abs,  SIMD_FP_X) 
+SIMD_MAP_PEAL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X) 
+#endif
+
 
 //*******************************************************
 // mixed vector/scalar macro paramenter helpers
 
 // yields the first parameter that's a vector type (if there is one)
-#define simd_first_vt2(A,B)   __builtin_choose_expr(simd_is_vec_type(A),A,B)
-#define simd_first_vt3(A,B,C) simd_first_vt2(simd_first_vt2(A,B),C)
+#define simd_first_vt2(A,B)     __builtin_choose_expr(simd_is_vec_type(A),A,B)
+#define simd_first_vt3(A,B,C)   simd_first_vt2(simd_first_vt2(A,B),C)
+#define simd_first_vt4(A,B,C,D) simd_first_vt3(A,B,simd_first_vt2(C,D))
 
 
 // simd_param_{n} helper:
@@ -727,6 +916,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // • `orig` is the macro parameter
 // uses helper `simd_splat_i` which logically passes
 // through a vector type and broadcasts a scalar
+// and `_type` is defined instead the expression statement
 #define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
 
 
@@ -735,33 +925,18 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 // are broadcast to type T (if there are any)
 //
 // • determine the vector type T (two methods):
-//   • `typeof` of the expression of the sum of parameters
-//   • `simd_first_vt{n}`: walks the parameters and yields
-//      the first vector type (or final if none)
-//   (first is nicer to look at, but wavering
-//    about which is a "better" tool)
-// • `simd_capture_i` uses typeof(_type) is used to pass through vector
-//   and parameters, broadcast any scalars, and 
+//   `simd_first_vt{n}`: walks the parameters and yields
+//   the first vector type (or final if none)
+// • `simd_capture_i` uses typeof(_type) to pass through
+//   vector parameters, broadcast any scalars, and 
 //   capture macro input (prevent side-effects)
-// • {_a,_b,...} are the original values with anyxb
+// • {_a,_b,...} are the original values with any
 //   scalars broadcast to T. (fixed naming scheme)
 //
 // TODO:
 // • add type checking asserts. 
 
 // NOTE: using = {0} instead of {} for older compilers
-#if 0
-#define simd_param_2(A,B)     \
-  typeof(A+B) _type = {0};    \
-  simd_capture_i(_a,A);       \
-  simd_capture_i(_b,B);
-
-#define simd_param_3(A,B,C)    \
-  typeof(A+B+C) _type = {0};   \
-  simd_capture_i(_a,A);        \
-  simd_capture_i(_b,B);        \
-  simd_capture_i(_c,C);
-#else
 #define simd_param_2(A,B)      \
   typeof(simd_first_vt2(A,B))  \
     _type = {0};               \
@@ -774,7 +949,24 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
   simd_capture_i(_a,A);        \
   simd_capture_i(_b,B);        \
   simd_capture_i(_c,C);
-#endif
+
+#define simd_param_4(A,B,C,D)     \
+  typeof(simd_first_vt3(A,B,C,D)) \
+    _type = {0};                  \
+  simd_capture_i(_a,A);           \
+  simd_capture_i(_b,B);           \
+  simd_capture_i(_c,C);           \
+  simd_capture_i(_d,D);           \
+
+
+// internal helper: given floating-point vector X return same size integer with all bits set
+// (could be done smarter)
+#define simd_make_ones_fv(X)    simd_fi_typeof(x) _ones = (~(typeof(_ones)){0})
+
+// internal helper: given floating-point vector X return same size integer sign bit set
+// (could be done smarter)
+#define simd_make_sgnmask_fv(X) simd_fi_typeof(x) _sgnmask = ((~(typeof(_ones)){0}) << (8*sizeof(x[0])-1))
+
 
 
 //*******************************************************
@@ -807,15 +999,12 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #endif
 
-#define simd_clamp(x,lo,hi) simd_min(simd_max(x,lo),hi)
-
 #if 0//defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_UI_X)
 SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_SI_X)
 SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
 #endif
-
 
 
 #if 0
@@ -832,6 +1021,13 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
 SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 #endif
+
+// temp hack as-is
+// todo: either 'x' is a vector or all are same scalar type
+#define simd_clamp(x,lo,hi) simd_min(simd_max(x,lo),hi)
+
+
+
 
 //*******************************************************
 //
@@ -932,9 +1128,9 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 //*******************************************************
 
 // compute: sa•A + sb•B  scalar (sa,sb), vector (A,B)
-// todo : add typechecking
+// todo : add typechecking & use capture macro
 #define smind_wsum(a,b,sa,sb) ({      \
-  typeof(a) _a  = a;                  \                
+  typeof(a) _a  = a;                  \
   typeof(a) _b  = b;                  \
   typeof(a) _sa = sa-(typeof(a)){0};  \
   typeof(a) _sb = sb-(typeof(a)){0};  \
