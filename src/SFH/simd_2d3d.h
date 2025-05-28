@@ -126,6 +126,11 @@ static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1]
 #define vec3_fwd(name,x,...) ({_Generic(x, vec3f_t:vec3f_##name, default:vec3d_##name)(x __VA_OPT__(,__VA_ARGS__));})
 #define quat_fwd(name,x,...) ({_Generic(x, quatf_t:quatf_##name, default:quatd_##name)(x __VA_OPT__(,__VA_ARGS__));})
 
+
+// broadcast a scalar to all elements
+// • IMPORTANT: vec3_broadcast sends 'v' to the first 3 elements and 4th is
+//   set to zero. In many cases setting all four elements to 'v' is equally
+//   correct and more efficient.
 static inline vec2f_t vec2f_broadcast(float  v) { return vec2f(v,v); }
 static inline vec2d_t vec2d_broadcast(double v) { return vec2d(v,v); }
 static inline vec3f_t vec3f_broadcast(float  v) { return vec3f(v,v,v); }
@@ -280,10 +285,12 @@ static inline vec3d_t vec3d_vlerp(vec3d_t a, vec3d_t b, vec3d_t t) { return ssim
 static inline quatf_t quatf_vlerp(vec3f_t a, vec3f_t b, vec3f_t t) { return ssimd_lerp_i(quatf,a,b,t); }
 static inline quatd_t quatd_vlerp(quatd_t a, quatd_t b, quatd_t t) { return ssimd_lerp_i(quatd,a,b,t); }
 
+//
+// • using `vec3` are using `quat_broadcast` on purpose (SEE: vec3_broadcast)
 static inline vec2f_t vec2f_lerp(vec2f_t a, vec2f_t b, float   t) { return vec2f_vlerp(a,b,vec2f_broadcast(t)); }
 static inline vec2d_t vec2d_lerp(vec2d_t a, vec2d_t b, double  t) { return vec2d_vlerp(a,b,vec2d_broadcast(t)); }
-static inline vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float   t) { return vec3f_vlerp(a,b,vec3f_broadcast(t)); }
-static inline vec3d_t vec3d_lerp(vec3d_t a, vec3d_t b, double  t) { return vec3d_vlerp(a,b,vec3d_broadcast(t)); }
+static inline vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float   t) { return vec3f_vlerp(a,b,quatf_broadcast(t)); } // (1)
+static inline vec3d_t vec3d_lerp(vec3d_t a, vec3d_t b, double  t) { return vec3d_vlerp(a,b,quatd_broadcast(t)); } // (1)
 static inline quatf_t quatf_lerp(vec3f_t a, quatf_t b, float   t) { return quatf_vlerp(a,b,quatf_broadcast(t)); }
 static inline quatd_t quatd_lerp(quatd_t a, quatd_t b, double  t) { return quatd_vlerp(a,b,quatd_broadcast(t)); }
 
@@ -305,12 +312,13 @@ static inline quatd_t quatd_lerp(quatd_t a, quatd_t b, double  t) { return quatd
 
 #define ssimd_vwsum_i(type,A,B,SA,SB) type##_fma(A,SA,B*SB)
 
+// vec3 redirecting to quat is on purpose
 static inline vec2f_t vec2f_vwsum(vec2f_t a, vec2f_t b, vec2f_t sa, vec2f_t sb) { return ssimd_vwsum_i(vec2f,a,b,sa,sb); }
 static inline vec2d_t vec2d_vwsum(vec2d_t a, vec2d_t b, vec2d_t sa, vec2d_t sb) { return ssimd_vwsum_i(vec2d,a,b,sa,sb); }
-static inline vec3f_t vec3f_vwsum(vec3f_t a, vec3f_t b, vec3f_t sa, vec3f_t sb) { return ssimd_vwsum_i(vec3f,a,b,sa,sb); }
-static inline vec3d_t vec3d_vwsum(vec3d_t a, vec3d_t b, vec3d_t sa, vec3d_t sb) { return ssimd_vwsum_i(vec3d,a,b,sa,sb); }
 static inline quatf_t quatf_vwsum(vec3f_t a, vec3f_t b, vec3f_t sa, vec3f_t sb) { return ssimd_vwsum_i(quatf,a,b,sa,sb); }
 static inline quatd_t quatd_vwsum(quatd_t a, quatd_t b, quatd_t sa, quatd_t sb) { return ssimd_vwsum_i(quatd,a,b,sa,sb); }
+static inline vec3f_t vec3f_vwsum(vec3f_t a, vec3f_t b, vec3f_t sa, vec3f_t sb) { return quatf_vwsum(a,b,sa,sb); }
+static inline vec3d_t vec3d_vwsum(vec3d_t a, vec3d_t b, vec3d_t sa, vec3d_t sb) { return quatd_vwsum(a,b,sa,sb); }
 
 #define vec2_blend(a,b,s) vec2_fwd(blend, a,b,s)
 #define vec3_blend(a,b,s) vec3_fwd(blend, a,b,s)
@@ -321,10 +329,10 @@ static inline quatd_t quatd_vwsum(quatd_t a, quatd_t b, quatd_t sa, quatd_t sb) 
 
 static inline vec2f_t vec2f_wsum(vec2f_t a, vec2f_t b, float   sa, float   sb)  { return ssimd_wsum_x(vec2f,a,b,sa,sb); }
 static inline vec2d_t vec2d_wsum(vec2d_t a, vec2d_t b, double  sa, double  sb)  { return ssimd_wsum_x(vec2d,a,b,sa,sb); }
-static inline vec3f_t vec3f_wsum(vec3f_t a, vec3f_t b, float   sa, float   sb)  { return ssimd_wsum_x(vec3f,a,b,sa,sb); }
-static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  { return ssimd_wsum_x(vec3d,a,b,sa,sb); }
 static inline quatf_t quatf_wsum(vec3f_t a, vec3f_t b, float   sa, float   sb)  { return ssimd_wsum_x(quatf,a,b,sa,sb); }
 static inline quatd_t quatd_wsum(quatd_t a, quatd_t b, double  sa, double  sb)  { return ssimd_wsum_x(quatd,a,b,sa,sb); }
+static inline vec3f_t vec3f_wsum(vec3f_t a, vec3f_t b, float   sa, float   sb)  { return quatf_wsum(a,b,sa,sb); }
+static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  { return quatd_wsum(a,b,sa,sb); }
 
 #define vec2_wsum(a,b,sa,sb) vec2_fwd(wsum, a,b,sa,sb)
 #define vec3_wsum(a,b,sa,sb) vec3_fwd(wsum, a,b,sa,sb)
@@ -543,7 +551,8 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 
 #define vec3_cross(a,b) vec3_fwd(cross,a,b)
 
-
+// ensure the fourth component is zero
+#define vec3_canonical(v) ({ typeof(v) r = v; r[3] = 0; r; })
 
 
 //**********************************************************
