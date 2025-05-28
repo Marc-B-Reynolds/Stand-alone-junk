@@ -51,19 +51,6 @@ typedef int64_t i64x2_t SSIMD_TYPE_ATTR(64,2);
 typedef int32_t i32x4_t SSIMD_TYPE_ATTR(32,4);
 typedef int64_t i64x4_t SSIMD_TYPE_ATTR(64,4);
 
-// argcount CAT (temp hack: should be nuked)
-#define CAT0()
-#define CAT1(A) A
-#define CAT2(A,B) A##B
-#define CAT3(A,B,C) A##B##C
-#define CAT4(A,B,C,D) A##B##C##D
-#define CAT5(A,B,C,D,E) A##B##C##D##E
-#define CAT6(A,B,C,D,E,F) A##B##C##D##E##F
-#define CAT7(A,B,C,D,E,F,G) A##B##C##D##E##F##G
-#define CAT8(A,B,C,D,E,F,G,H) A##B##C##D##E##F##G##H
-#define CAT_(_0,_1,_2,_3,_4,_5,_6,_7,M,...) M
-#define CAT(...) CAT_(__VA_ARGS__,CAT8,CAT7,CAT6,CAT5,CAT4,CAT3,CAT2,CAT1,CAT0)(__VA_ARGS__)
-
 #ifndef type_pun
 #define type_pun(X,TYPE) ({			    \
  static_assert(sizeof(X) == sizeof(TYPE),"size mismatch"); \
@@ -147,49 +134,6 @@ static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 #define vec3_shuffle(V,A,B,C)   __builtin_shufflevector(V,V,A,B,C,3)
 #define quat_shuffle(Q,A,B,C,D) __builtin_shufflevector(Q,Q,A,B,C,D)
 
-// expansions for vector binary32/binary64 unary/binary functions
-// (for defining macro that maps to explict version)
-// probably nuke the CAT macros
-// KILL these
-#define ssimd_def_ufunc(type,W,name,A) ({    \
-  typeof(A) _a = A;                          \
-    _Generic(_a,                             \
-      CAT(f32x,W,_t): CAT(type,f_,name),     \
-      CAT(f64x,W,_t): CAT(type,d_,name))     \
-      (_a);                                  \
-})
-
-#define ssimd_def_bfunc(type,W,name,A,B) ({ \
-  typeof(A) _a = A;                         \
-  typeof(B) _b = B;                         \
-    _Generic(_a,                            \
-      CAT(f32x,W,_t): CAT(type,f_,name),    \
-      CAT(f64x,W,_t): CAT(type,d_,name))    \
-      (_a,_b);                              \
-})
-
-#define ssimd_def_3func(type,W,name,A,B) ({ \
-  typeof(A) _a = A;                         \
-  typeof(B) _b = B;                         \
-  typeof(B) _c = C;                         \
-    _Generic(_a,                            \
-      CAT(f32x,W,_t): CAT(type,f_,name),    \
-      CAT(f64x,W,_t): CAT(type,d_,name))    \
-      (_a,_b);                              \
-})
-
-// kill these
-#define vec2_def_ufunc(name,A) ssimd_def_ufunc(vec2,2,name,A)
-#define vec3_def_ufunc(name,A) ssimd_def_ufunc(vec3,4,name,A)
-#define quat_def_ufunc(name,A) ssimd_def_ufunc(quat,4,name,A)
-
-#define vec2_def_bfunc(name,A,B) ssimd_def_bfunc(vec2,2,name,A,B)
-#define vec3_def_bfunc(name,A,B) ssimd_def_bfunc(vec3,4,name,A,B)
-#define quat_def_bfunc(name,A,B) ssimd_def_bfunc(quat,4,name,A,B)
-
-#define vec2_def_3func(name,A,B,C) ssimd_def_3func(vec2,2,name,A,B)
-#define vec3_def_3func(name,A,B,C) ssimd_def_3func(vec3,4,name,A,B,C)
-#define quat_def_3func(name,A,B,C) ssimd_def_3func(quat,4,name,A,B,C)
 
 // promote/demote (widen/narrow) between binary32/binary64 elements
 static inline vec2d_t vec2f_promote(vec2f_t v) { return __builtin_convertvector(v,vec2d_t); }
@@ -411,8 +355,8 @@ static inline vec2f_t vec2f_normalize(vec2f_t a) { return sqrtf(1.f/(vec2f_biase
 static inline vec2d_t vec2d_normalize(vec2d_t a) { return sqrt (1.0/(vec2d_biased_norm(a))) * a; }
 static inline vec3f_t vec3f_normalize(vec3f_t a) { return sqrtf(1.f/(vec3f_biased_norm(a))) * a; }
 static inline vec3d_t vec3d_normalize(vec3d_t a) { return sqrt (1.0/(vec3d_biased_norm(a))) * a; }
-static inline quatf_t quatf_normalize(quatf_t a) { return sqrtf(1.f/(vec3f_biased_norm(a))) * a; }
-static inline quatd_t quatd_normalize(quatd_t a) { return sqrt (1.0/(vec3d_biased_norm(a))) * a; }
+static inline quatf_t quatf_normalize(quatf_t a) { return sqrtf(1.f/(quatf_biased_norm(a))) * a; }
+static inline quatd_t quatd_normalize(quatd_t a) { return sqrt (1.0/(quatd_biased_norm(a))) * a; }
 
 #define vec2_normalize(a) vec2_fwd(normalize,a)
 #define vec3_normalize(a) vec3_fwd(normalize,a)
@@ -558,6 +502,13 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 //**********************************************************
 //
 
+// norm of the bivector part
+#define quat_bdot(a,b) \
+  ({_Generic(x, quatf_t:vec3f_dot, default: vec3d_dot)(a,b);})  
+
+// norm of the bivector part
+#define quat_bnorm(q) quat_bdot(q,q)
+
 // complex conjugate: (s,V) → (s,-V)
 #define quat_conj(q) ({ typeof(q) r = q; r = -r; r[3] = -r[3]; r; })
 
@@ -607,7 +558,29 @@ static inline quatd_t quatd_usqrt(quatd_t q)
   return quatd_sb_rs(q,s,d*s);
 }
 
-#define quat_usqrt(a) quat_fwd(usqrt,a)
+#define quat_usqrt(q) quat_fwd(usqrt,q)
+
+// q^2 for |q|=1
+static inline quatf_t quatf_upow2(quatf_t q)
+{
+  // validate I didn't screw this up
+  float w = q[3];
+  float s = 2.f*w;
+  
+  return quatf_sb_rs(q,s,fmaf(w,s,-1.f));
+}
+
+static inline quatd_t quatd_upow2(quatd_t q)
+{
+  double w = q[3];
+  double s = 2.0*w;
+
+  return quatd_sb_rs(q,s,fma(w,s,-1.0));
+}
+
+#define quat_upow2(q) quat_fwd(upow2,q)
+
+
 
 
 //**********************************************************
