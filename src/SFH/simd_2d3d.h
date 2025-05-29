@@ -105,6 +105,9 @@ static inline vec3d_t vec3d(double x, double y, double z)           { return (ve
 static inline quatf_t quatf(float  x, float  y, float  z, float  w) { return (quatf_t){x,y,z,w}; }
 static inline quatd_t quatd(double x, double y, double z, double w) { return (quatd_t){x,y,z,w}; }
 
+//#define vec2(x,y)   ({_Generic(x, float:vec2f, default:vec2d)(x,y)
+//#define vec3(x,y,z) ({_Generic(x, float:vec3f, default:vec3d)(x,y,z)
+
 // set from bivector + scalar: Q = (b,s)
 static inline quatf_t quatf_bs(vec3f_t b, float  s) { return (quatf_t){b[0],b[1],b[2],s}; }
 static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1],b[2],s}; }
@@ -118,6 +121,7 @@ static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1]
 #define quatd_set(x,...)                                                \
 ({_Generic(x, quatd_t:quatd_bs, default: quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
+#define quat(x,...) ({_Generic(x, quatf_t:quatf_##name, default:quatd_##name)(x __VA_OPT__(,__VA_ARGS__));})
 
 // expand generic expression which forward to a function and first parameter is a scalar
 // (no need to perform any parameter capturing)
@@ -158,6 +162,9 @@ static inline vec3d_t vec3f_promote(vec3f_t v) { return __builtin_convertvector(
 static inline vec3f_t vec3d_demote (vec3d_t v) { return __builtin_convertvector(v,vec3f_t); }
 static inline quatd_t quatf_promote(quatf_t q) { return __builtin_convertvector(q,quatd_t); }
 static inline quatf_t quatd_demote (quatd_t q) { return __builtin_convertvector(q,quatf_t); }
+
+#define ssimd_sqrt(a)    (_Generic((a),float:sqrtf,default: sqrt)(x))
+#define ssimd_fma(a,b,c) (_Generic((a),float:fmaf, default: fma)(a,b,c))
 
 // element-wise FMAs (unlike 'simd.h' it's up the the user to perform any broadcasts)
 static inline vec2f_t vec2f_fma(vec2f_t a, vec2f_t b, vec2f_t c) { return vec2f(fmaf(a[0],b[0],c[0]), fmaf(a[1],b[1],c[1])); }
@@ -395,37 +402,38 @@ static inline vec3d_t vec3d_mul_sgn(vec3d_t v, double s) { return quatd_mul_sgn(
 // dot(a,b) = a•b
 
 // GCC is struggling with both versions of some of these (oh bother) w various options. look closer later
-#if defined(SIMD_DOT_NO_FMA)
-static inline float  vec2f_dot(vec2f_t a, vec2f_t b) { return a[0]*b[0]+a[1]*b[1]; }
-static inline double vec2d_dot(vec2d_t a, vec2d_t b) { return a[0]*b[0]+a[1]*b[1]; }
-static inline float  vec3f_dot(vec3f_t a, vec3f_t b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-static inline double vec3d_dot(vec3d_t a, vec3d_t b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-static inline float  quatf_dot(quatf_t a, quatf_t b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]; }
-static inline double quatd_dot(quatd_t a, quatd_t b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]; }
-#else
-static inline float  vec2f_dot(vec2f_t a, vec2f_t b) { return fmaf(a[0],b[0],a[1]*b[1]); }
-static inline double vec2d_dot(vec2d_t a, vec2d_t b) { return fma (a[0],b[0],a[1]*b[1]); }
-static inline float  vec3f_dot(vec3f_t a, vec3f_t b) { return fmaf(a[0],b[0],fmaf(a[1],b[1],a[2]*b[2])); }
-static inline double vec3d_dot(vec3d_t a, vec3d_t b) { return fma (a[0],b[0],fma (a[1],b[1],a[2]*b[2])); }
-static inline float  quatf_dot(quatf_t a, quatf_t b) { return fmaf(a[0],b[0],a[1]*b[1])+fmaf(a[2],b[2],a[3]*b[3]); }
-static inline double quatd_dot(quatd_t a, quatd_t b) { return fma (a[0],b[0],a[1]*b[1])+fma (a[2],b[2],a[3]*b[3]); }
-#endif
+
+static inline float  vec2f_dot(vec2f_t a, vec2f_t b) { a *= b; return a[0]+a[1]; }
+static inline double vec2d_dot(vec2d_t a, vec2d_t b) { a *= b; return a[0]+a[1]; }
+static inline float  vec3f_dot(vec3f_t a, vec3f_t b) { a *= b; return a[0]+a[1]+a[2]; }
+static inline double vec3d_dot(vec3d_t a, vec3d_t b) { a *= b; return a[0]+a[1]+a[2]; }
+static inline float  quatf_dot(quatf_t a, quatf_t b) { a *= b; return (a[0]+a[1])+(a[2]+a[3]); }
+static inline double quatd_dot(quatd_t a, quatd_t b) { a *= b; return (a[0]+a[1])+(a[2]+a[3]); }
+
+static inline float  vec2f_dot_fma(vec2f_t a, vec2f_t b) { return fmaf(a[0],b[0],a[1]*b[1]); }
+static inline double vec2d_dot_fma(vec2d_t a, vec2d_t b) { return fma (a[0],b[0],a[1]*b[1]); }
+static inline float  vec3f_dot_fma(vec3f_t a, vec3f_t b) { return fmaf(a[0],b[0],fmaf(a[1],b[1],a[2]*b[2])); }
+static inline double vec3d_dot_fma(vec3d_t a, vec3d_t b) { return fma (a[0],b[0],fma (a[1],b[1],a[2]*b[2])); }
+static inline float  quatf_dot_fma(quatf_t a, quatf_t b) { return fmaf(a[0],b[0],a[1]*b[1])+fmaf(a[2],b[2],a[3]*b[3]); }
+static inline double quatd_dot_fma(quatd_t a, quatd_t b) { return fma (a[0],b[0],a[1]*b[1])+fma (a[2],b[2],a[3]*b[3]); }
 
 #define vec2_dot(a,b) vec2_fwd(dot,a,b)
 #define vec3_dot(a,b) vec3_fwd(dot,a,b)
 #define quat_dot(a,b) quat_fwd(dot,a,b)
 
-// norm(a) = a•a
-static inline float  vec2f_norm(vec2f_t a) { return vec2f_dot(a,a); }
-static inline double vec2d_norm(vec2d_t a) { return vec2d_dot(a,a); }
-static inline float  vec3f_norm(vec3f_t a) { return vec3f_dot(a,a); }
-static inline double vec3d_norm(vec3d_t a) { return vec3d_dot(a,a); }
-static inline float  quatf_norm(quatf_t a) { return quatf_dot(a,a); }
-static inline double quatd_norm(quatd_t a) { return quatd_dot(a,a); }
+#define vec2_dot_fma(a,b) vec2_fwd(dot_fma,a,b)
+#define vec3_dot_fma(a,b) vec3_fwd(dot_fma,a,b)
+#define quat_dot_fma(a,b) quat_fwd(dot_fma,a,b)
 
+// norm(a) = a•a
 #define vec2_norm(a) vec2_dot(a,a)
 #define vec3_norm(a) vec3_dot(a,a)
 #define quat_norm(a) quat_dot(a,a)
+#define vec2_norm_fma(a) vec2_dot_fma(a,a)
+#define vec3_norm_fma(a) vec3_dot_fma(a,a)
+#define quat_norm_fam(a) quat_dot_fma(a,a)
+
+
 
 // biased_norm(a) = a•a + min_normal
 //  the bias can't contribute to the result if 1/2 ulp(a•a) > min_normal
@@ -527,14 +535,14 @@ static inline vec2d_t vec2d_cmul(vec2d_t a, vec2d_t b)
   return vec2d(vec2d_dot(a,b), vec2d_cross(a,b));
 }
 
-#define vec2_cmul(a,b) vec2_fwd(cross,a,b)
+#define vec2_cmul(a,b) vec2_fwd(cmul,a,b)
 
 
 // complex sqrt(a) where |a|=1
 static inline vec2f_t vec2f_usqrt(vec2f_t a)
 {
   float x  = a[0], y = a[1];
-  float m  = x+1.f; m = sqrtf(m+m);
+  float m  = x+1.f; m = ssimd_sqrt(m+m);
   float rx = 0.5f * m;
   float ry = y/(m + ssimd_f32_min_normal);
 
@@ -544,7 +552,7 @@ static inline vec2f_t vec2f_usqrt(vec2f_t a)
 static inline vec2d_t vec2d_usqrt(vec2f_t a)
 {
   double x  = a[0], y = a[1];
-  double m  = x+1.0; m = sqrt(m+m);
+  double m  = x+1.0; m = ssimd_sqrt(m+m);
   double rx = 0.5 * m;
   double ry = y/(m + ssimd_f64_min_normal);
 
@@ -573,20 +581,24 @@ static inline vec2d_t vec2d_sq(vec2d_t a)
 
 static inline vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)
 {
-  float x = a[1]*b[2] - a[2]*b[1];
-  float y = a[2]*b[0] - a[0]*b[2];
-  float z = a[0]*b[1] - a[1]*b[0];
-
-  return vec3f(x,y,z);
+  vec3f_t a1 = vec3_shuffle(a, 2,0,1);     // (az,ax,ay)
+  vec3f_t b1 = vec3_shuffle(b, 1,2,0);     // (by,bz,bx)
+  vec3f_t r0 = a1*b1;                      // (az by,ax bz,ay bx)
+  vec3f_t a0 = vec3_shuffle(a, 1,2,0);     // (ay,az,ax)
+  vec3f_t b0 = vec3_shuffle(b, 2,0,1);     // (bz,bx,by)
+  
+  return vec3_fma(a0,b0,-r0);
 }
 
 static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 {
-  double x = a[1]*b[2] - a[2]*b[1];
-  double y = a[2]*b[0] - a[0]*b[2];
-  double z = a[0]*b[1] - a[1]*b[0];
-
-  return vec3d(x,y,z);
+  vec3d_t a1 = vec3_shuffle(a, 2,0,1);
+  vec3d_t b1 = vec3_shuffle(b, 1,2,0);
+  vec3d_t r0 = a1*b1;
+  vec3d_t a0 = vec3_shuffle(a, 1,2,0);
+  vec3d_t b0 = vec3_shuffle(b, 2,0,1);
+  
+  return vec3_fma(a0,b0,-r0);
 }
 
 #define vec3_cross(a,b) vec3_fwd(cross,a,b)
@@ -663,15 +675,14 @@ static inline quatf_t quatf_upow2(quatf_t q)
   float w = q[3];
   float s = 2.f*w;
   
-  return quatf_sb_rs(q,s,fmaf(w,s,-1.f));
+  return quatf_sb_rs(q,s,ssimd_fma(w,s,-1.f));
 }
 
 static inline quatd_t quatd_upow2(quatd_t q)
 {
   double w = q[3];
   double s = 2.0*w;
-
-  return quatd_sb_rs(q,s,fma(w,s,-1.0));
+  return quatd_sb_rs(q,s,ssimd_fma(w,s,-1.0));
 }
 
 #define quat_upow2(q) quat_fwd(upow2,q)
@@ -723,7 +734,6 @@ static inline quatd_t quatd_bisect(quatd_t a, quatd_t b)
 // are compatiable.
 static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
 {
-  // these are close ATM but need to think about a cross that sucks less.
 #if 1
   // SEE: fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
   vec3f_t t = vec3_cross(q+q,v);
@@ -746,7 +756,7 @@ static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
 static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 {
   // revisit as per above
-  vec3f_t t = vec3_cross(q+q,v);
+  vec3d_t t = vec3_cross(q+q,v);
   v += q[3]*t + vec3_cross(q,t);
   return v;
 }
