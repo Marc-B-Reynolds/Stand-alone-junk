@@ -4,6 +4,8 @@
 
 #pragma once
 
+#define SFH_SIMD_H  // marker define
+
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
 // Single header file "library" of generic SIMD & SIMD/scalar
@@ -41,7 +43,8 @@
 //   these function will instead by expanded into static inline.
 //   A number of inline functions are always defined since they
 //   back the generic macros. (note: the default means you want
-//   to LTO).
+//   to LTO). ALSO: some small functions we be defined static
+//   inline even if not requested.
 //
 // Behavior diffrences:
 // • Older versions of clang and GCC (prior to 18/14 respectively)
@@ -62,10 +65,16 @@
 // • David Mazières: SIMD_MAP
 
 // TODO: (there's tons of stuff. just starting some self notes) 
-// • most type checking is missing
+// • #define performs no expansions so any exposed functionality defines
+//   should be as lightweigh WRT expansion required as possible.
+//   a far amount of effory could be made here.
+// • most type checking is missing (and as per previous should possible
+//   to disable)
 // • use small map expansion macro more (compile time improvement) esp for
-//   for logical callsite macros.
-// • generic macros could be simplifed when `SIMD_SPECIALIZE` is set (compile time improvment)
+//   for logical callsite macros. (repeatin first point)
+// • generic macros could be simplifed when `SIMD_SPECIALIZE` is set.
+//   tricky though (total macros that need to be "call-site" expanded.
+//   humm...thinky, thinky)
 //   
 
 
