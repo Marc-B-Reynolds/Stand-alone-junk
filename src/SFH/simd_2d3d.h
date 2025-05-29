@@ -59,6 +59,7 @@ typedef int64_t i64x4_t SSIMD_TYPE_ATTR(64,4);
   memcpy(&__d, &__x, sizeof(TYPE));                 \
   __d;                                              \
 })
+
 #endif
 #endif
 
@@ -76,6 +77,21 @@ typedef quatd_t vec3d_t;
 //   explicit type implementations. This helps reduce the amount
 //   of `callsite` macro expansion for generic functionality macros.
 // • 
+
+//*******************************************************
+//
+static inline int32_t ssimd_bitcast_fi_32  (float   a) { return type_pun(a,int32_t); }
+static inline float   ssimd_bitcast_if_32  (int32_t a) { return type_pun(a,float  ); }
+static inline int64_t ssimd_bitcast_fi_64  (double  a) { return type_pun(a,int64_t); }
+static inline double  ssimd_bitcast_if_64  (int64_t a) { return type_pun(a,double ); }
+static inline i32x2_t ssimd_bitcast_fi_32x2(f32x2_t a) { return type_pun(a,i32x2_t); }
+static inline f32x2_t ssimd_bitcast_if_32x2(i32x2_t a) { return type_pun(a,f32x2_t); }
+static inline i64x2_t ssimd_bitcast_fi_64x2(f64x2_t a) { return type_pun(a,i64x2_t); }
+static inline f64x2_t ssimd_bitcast_if_64x2(i64x2_t a) { return type_pun(a,f64x2_t); }
+static inline i32x4_t ssimd_bitcast_fi_32x4(f32x4_t a) { return type_pun(a,i32x4_t); }
+static inline f32x4_t ssimd_bitcast_if_32x4(i32x4_t a) { return type_pun(a,f32x4_t); }
+static inline i64x4_t ssimd_bitcast_fi_64x4(f64x4_t a) { return type_pun(a,i64x4_t); }
+static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4_t); }
 
 
 //*******************************************************
@@ -286,13 +302,93 @@ static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  
 //*******************************************************
 //
 
-static const float  ssmid_f32_ulp1       = 0x1.0p-23f;
-static const double ssimd_f64_ulp1       = 0x1.0p-52;
-static const float  ssimd_f32_min_normal = 0x1.0p-126f;
-static const double ssimd_f64_min_normal = 0x1.0p-1022;
+static const float   ssmid_f32_ulp1       = 0x1.0p-23f;
+static const double  ssimd_f64_ulp1       = 0x1.0p-52;
+static const float   ssimd_f32_min_normal = 0x1.0p-126f;
+static const double  ssimd_f64_min_normal = 0x1.0p-1022;
+static const int32_t ssimd_f32_sign_bit   = INT32_C(1)<<31;
+static const int64_t ssimd_f64_sign_bit   = INT64_C(1)<<63;
+static const int32_t ssimd_f32_one_bits   = INT32_C(0x3f800000);
+static const int64_t ssimd_f64_one_bits   = INT64_C(0x3ff0000000000000);
 
 static inline float  ssimd_f32_sgn(float  x) { return copysignf(1.f,x); }
 static inline double ssimd_f64_sgn(double x) { return copysign (1.0,x); }
+
+// broadcast(sign_bit(s)) 
+static inline i32x2_t vec2f_broadcast_signbit(float s)
+{
+  return (i32x2_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit);
+}
+
+static inline i64x2_t vec2d_broadcast_signbit(double s)
+{
+  return (i64x2_t){0} + ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit;
+}
+
+static inline i32x4_t quatf_broadcast_signbit(float s)
+{
+  return (i32x4_t){0} + ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit;
+}
+
+static inline i64x4_t quatd_broadcast_signbit(double s)
+{
+  return (i64x4_t){0} + ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit;
+}
+
+// flipping the sign bit of zero is OK
+static inline i32x4_t vec3f_broadcast_signbit(float  s) { return quatf_broadcast_signbit(s); }
+static inline i64x4_t vec3d_broadcast_signbit(double s) { return quatd_broadcast_signbit(s); }
+
+
+#define vec2_broadcast_signbit(x) ssimid_fwd_sfunc(vec2,broadcast_signbit,x)
+#define vec3_broadcast_signbit(x) ssimid_fwd_sfunc(vec3,broadcast_signbit,x)
+#define quat_broadcast_signbit(x) ssimid_fwd_sfunc(quat,broadcast_signbit,x)
+
+
+
+// these compute a * sgn(s).  much ado about nothing impedance matching:
+//  computes: a ^ broadcast(sign_bit(s))
+
+static inline vec2f_t vec2f_mul_sgn(vec2f_t a, float s)
+{
+  i32x2_t bs = vec2f_broadcast_signbit(s);
+  i32x2_t ai = ssimd_bitcast_fi_32x2(a);
+  
+  return ssimd_bitcast_if_32x2(bs^ai);
+}
+
+static inline vec2d_t vec2d_mul_sgn(vec2d_t a, double s)
+{
+  i64x2_t bs = vec2d_broadcast_signbit(s);
+  i64x2_t ai = ssimd_bitcast_fi_64x2(a);
+  
+  return ssimd_bitcast_if_64x2(bs^ai);
+}
+
+static inline quatf_t quatf_mul_sgn(quatf_t a, float s)
+{
+  i32x4_t bs = quatf_broadcast_signbit(s);
+  i32x4_t ai = ssimd_bitcast_fi_32x4(a);
+  
+  return ssimd_bitcast_if_32x4(bs^ai);
+}
+
+static inline quatd_t quatd_mul_sgn(quatd_t a, double s)
+{
+  i64x4_t bs = quatd_broadcast_signbit(s);
+  i64x4_t ai = ssimd_bitcast_fi_64x4(a);
+  
+  return ssimd_bitcast_if_64x4(bs^ai);
+}
+
+// this is fine because potentially have a negative zero 4th element is OK
+static inline vec3f_t vec3f_mul_sgn(vec3f_t v, float  s) { return quatf_mul_sgn(v,s); }
+static inline vec3d_t vec3d_mul_sgn(vec3d_t v, double s) { return quatd_mul_sgn(v,s); }
+
+#define vec2_mul_sgn(a,b) vec2_fwd(mul_sgn,a,b)
+#define vec3_mul_sgn(a,b) vec3_fwd(mul_sgn,a,b)
+#define quat_mul_sgn(a,b) quat_fwd(mul_sgn,a,b)
+
 
 //*******************************************************
 // dot product & norm
@@ -581,6 +677,43 @@ static inline quatd_t quatd_upow2(quatd_t q)
 #define quat_upow2(q) quat_fwd(upow2,q)
 
 
+// slerp(a,b,1/2) = b*sqrt(b^* a)
+//
+// Finds that rotation half-way between 'a' and
+// 'b' or '-b' whichever is the shortest path
+// 
+// if (dot(a,b) >= 0)
+//   return normalize(a+b)
+// else
+//   return normalize(a-b)
+
+static inline quatf_t quatf_bisect(quatf_t a, quatf_t b)
+{
+  float   d = quatf_dot(a,b);
+  i32x4_t s = quatf_broadcast_signbit(d);
+
+  // norm(a+b) = 2(1+dot(a+b)) and norm(a-b) = 2(1-dot(a+b))
+  // so compute: 2(1+sgn(dot(a,b))*dot(a,b))
+  d  = 2.f + ssimd_bitcast_if_32(ssimd_bitcast_fi_32(d+d) ^ s[0]);
+
+  // a + sgn(dot(a,b))*b
+  a += ssimd_bitcast_if_32x4(ssimd_bitcast_fi_32x4(b) ^ s);
+  a *= sqrtf(1.f/d);
+
+  return a;
+}
+
+static inline quatd_t quatd_bisect(quatd_t a, quatd_t b)
+{
+  double  d = quatd_dot(a,b);
+  i64x4_t s = quatd_broadcast_signbit(d);
+
+  d  = 2.0 + ssimd_bitcast_if_64(ssimd_bitcast_fi_64(d+d) ^ s[0]);
+  a += ssimd_bitcast_if_64x4(ssimd_bitcast_fi_64x4(b) ^ s);
+  a *= sqrt(1.0/d);
+
+  return a;
+}
 
 
 //**********************************************************
