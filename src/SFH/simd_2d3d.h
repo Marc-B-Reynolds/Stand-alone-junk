@@ -322,17 +322,17 @@ static inline i32x2_t vec2f_broadcast_signbit(float s)
 
 static inline i64x2_t vec2d_broadcast_signbit(double s)
 {
-  return (i64x2_t){0} + ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit;
+  return (i64x2_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit);
 }
 
 static inline i32x4_t quatf_broadcast_signbit(float s)
 {
-  return (i32x4_t){0} + ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit;
+  return (i32x4_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit);
 }
 
 static inline i64x4_t quatd_broadcast_signbit(double s)
 {
-  return (i64x4_t){0} + ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit;
+  return (i64x4_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit);
 }
 
 // flipping the sign bit of zero is OK
@@ -689,8 +689,8 @@ static inline quatd_t quatd_upow2(quatd_t q)
 
 static inline quatf_t quatf_bisect(quatf_t a, quatf_t b)
 {
-  float   d = quatf_dot(a,b);
-  i32x4_t s = quatf_broadcast_signbit(d);
+  float   d = quat_dot(a,b);
+  i32x4_t s = quat_broadcast_signbit(d);
 
   // norm(a+b) = 2(1+dot(a+b)) and norm(a-b) = 2(1-dot(a+b))
   // so compute: 2(1+sgn(dot(a,b))*dot(a,b))
@@ -705,8 +705,8 @@ static inline quatf_t quatf_bisect(quatf_t a, quatf_t b)
 
 static inline quatd_t quatd_bisect(quatd_t a, quatd_t b)
 {
-  double  d = quatd_dot(a,b);
-  i64x4_t s = quatd_broadcast_signbit(d);
+  double  d = quat_dot(a,b);
+  i64x4_t s = quat_broadcast_signbit(d);
 
   d  = 2.0 + ssimd_bitcast_if_64(ssimd_bitcast_fi_64(d+d) ^ s[0]);
   a += ssimd_bitcast_if_64x4(ssimd_bitcast_fi_64x4(b) ^ s);
@@ -714,6 +714,45 @@ static inline quatd_t quatd_bisect(quatd_t a, quatd_t b)
 
   return a;
 }
+
+#define quat_bisect(a,b) quat_fwd(upow2,a,b)
+
+
+// return 'v' rotated by 'q':  qvq^*
+// NOTE: no way to warn about types being backwards since they
+// are compatiable.
+static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
+{
+  // these are close ATM but need to think about a cross that sucks less.
+#if 1
+  // SEE: fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
+  vec3f_t t = vec3_cross(q+q,v);
+
+  v += q[3]*t + vec3_cross(q,t);
+
+  return v;
+#else
+  float   w  = q[3];
+  float   k0 = fmaf(w,w,-0.5f);
+  float   k1 = vec3_dot(v,q);
+  vec3f_t r  = vec3_wsum(v,q,k0,k1);
+
+  r += w*vec3_cross(q,v);
+
+  return r+r;
+#endif
+}
+
+static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
+{
+  // revisit as per above
+  vec3f_t t = vec3_cross(q+q,v);
+  v += q[3]*t + vec3_cross(q,t);
+  return v;
+}
+
+#define quat_rot(q,v) quat_fwd(rot,q,v)
+
 
 
 //**********************************************************
