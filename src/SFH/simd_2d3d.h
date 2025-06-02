@@ -70,7 +70,7 @@ typedef int64_t i64x4_t SSIMD_TYPE_ATTR(64,4);
 #endif
 #endif
 
-// 3D vector is stored 4 element
+// 3D vector is stored 4 elements
 typedef f32x2_t vec2f_t;
 typedef f64x2_t vec2d_t;
 typedef f32x4_t quatf_t;
@@ -101,6 +101,34 @@ static inline i32x4_t ssimd_bitcast_fi_32x4(f32x4_t a) { return type_pun(a,i32x4
 static inline f32x4_t ssimd_bitcast_if_32x4(i32x4_t a) { return type_pun(a,f32x4_t); }
 static inline i64x4_t ssimd_bitcast_fi_64x4(f64x4_t a) { return type_pun(a,i64x4_t); }
 static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4_t); }
+
+#define ssimd_bitcast_fi(X) ({      \
+  typeof(X) _x = X;                 \
+  _Generic((_x),                    \
+    float:   ssimd_bitcast_fi_32,   \
+    double:  ssimd_bitcast_fi_64,   \
+    f32x2_t: ssimd_bitcast_fi_32x2, \
+    f32x4_t: ssimd_bitcast_fi_32x4, \
+    f64x2_t: ssimd_bitcast_fi_64x2, \
+    f64x4_t: ssimd_bitcast_fi_64x4, \
+    default: (void*)0)(_x);         \
+  })
+
+// type pun: signed integer to floating point 
+#define ssimd_bitcast_if(X) ({      \
+  typeof(X) _x = X;                 \
+  _Generic((_x),                    \
+    int32_t: ssimd_bitcast_if_32,   \
+    int64_t: ssimd_bitcast_if_64,   \
+    i32x2_t: ssimd_bitcast_if_32x2, \
+    i32x4_t: ssimd_bitcast_if_32x4, \
+    i64x2_t: ssimd_bitcast_if_64x2, \
+    i64x4_t: ssimd_bitcast_if_64x4, \
+    default: (void*)0)(_x);         \
+  })
+
+
+
 
 
 //*******************************************************
@@ -163,6 +191,11 @@ static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 #define vec3_shuffle(V,A,B,C)   __builtin_shufflevector(V,V,A,B,C,3)
 #define quat_shuffle(Q,A,B,C,D) __builtin_shufflevector(Q,Q,A,B,C,D)
 
+// two "register" shuffles
+#define vec2_shuffle2(V0,V1,A,B)     __builtin_shufflevector(V0,V1,A,B)
+#define vec3_shuffle2(V0,V1,A,B,C)   __builtin_shufflevector(V0,V1,A,B,C,3)
+#define quat_shuffle2(Q0,Q1,A,B,C,D) __builtin_shufflevector(Q0,Q1,A,B,C,D)
+
 
 // promote/demote (widen/narrow) between binary32/binary64 elements
 static inline vec2d_t vec2f_promote(vec2f_t v) { return __builtin_convertvector(v,vec2d_t); }
@@ -188,30 +221,30 @@ static inline vec3d_t vec3d_fma(vec3d_t a, quatd_t b, quatd_t c) { return quatd_
 #define quat_fma(a,b,c) quat_fwd(fma,a,b,c)
 
 
-// float → int (bit conversion)
-static inline i32x2_t vec2f_as_int(vec2f_t x) { return type_pun(x, i32x2_t); }
-static inline i64x2_t vec2d_as_int(vec2d_t x) { return type_pun(x, i64x2_t); }
-static inline i32x4_t quatf_as_int(quatf_t x) { return type_pun(x, i32x4_t); }
-static inline i64x4_t quatd_as_int(quatd_t x) { return type_pun(x, i64x4_t); }
-static inline i32x4_t vec3f_as_int(vec3f_t x) { return quatf_as_int(x);      }
-static inline i64x4_t vec3d_as_int(vec3d_t x) { return quatd_as_int(x);      }
+// float → int
+static inline i32x2_t vec2f_as_int(vec2f_t x) { return __builtin_convertvector(x,i32x2_t); }
+static inline i64x2_t vec2d_as_int(vec2d_t x) { return __builtin_convertvector(x,i64x2_t); }
+static inline i32x4_t quatf_as_int(quatf_t x) { return __builtin_convertvector(x,i32x4_t); }
+static inline i64x4_t quatd_as_int(quatd_t x) { return __builtin_convertvector(x,i64x4_t); }
+static inline i32x4_t vec3f_as_int(vec3f_t x) { return __builtin_convertvector(x,i32x4_t); }
+static inline i64x4_t vec3d_as_int(vec3d_t x) { return __builtin_convertvector(x,i64x4_t); }
 
-#define vec2_as_int(x) vec2_fwd(as_int,a,b,c)
-#define vec3_as_int(x) vec3_fwd(as_int,a,b,c)
-#define quat_as_int(x) quat_fwd(as_int,a,b,c)
+#define vec2_as_int(x) vec2_fwd(as_int,x)
+#define vec3_as_int(x) vec3_fwd(as_int,x)
+#define quat_as_int(x) quat_fwd(as_int,x)
 
-
-// int → float (bit conversion)
-static inline vec2f_t vec2f_from_int(i32x2_t x) { return type_pun(x, vec2f_t); }
-static inline vec2d_t vec2d_from_int(i64x2_t x) { return type_pun(x, vec2d_t); }
-static inline quatf_t quatf_from_int(i32x4_t x) { return type_pun(x, quatf_t); }
-static inline quatd_t quatd_from_int(i64x4_t x) { return type_pun(x, quatd_t); }
-static inline vec3f_t vec3f_from_int(i32x4_t x) { return quatf_from_int(x);    }
-static inline vec3d_t vec3d_from_int(i64x4_t x) { return quatd_from_int(x);    }
+// int → float
+static inline vec2f_t vec2f_from_int(i32x2_t x) { return __builtin_convertvector(x,f32x2_t); }
+static inline vec2d_t vec2d_from_int(i64x2_t x) { return __builtin_convertvector(x,f64x2_t); }
+static inline quatf_t quatf_from_int(i32x4_t x) { return __builtin_convertvector(x,f32x4_t); }
+static inline quatd_t quatd_from_int(i64x4_t x) { return __builtin_convertvector(x,f64x4_t); }
+static inline vec3f_t vec3f_from_int(i32x4_t x) { return __builtin_convertvector(x,f32x4_t); }
+static inline vec3d_t vec3d_from_int(i64x4_t x) { return __builtin_convertvector(x,f64x4_t); }
 
 #define vec2_from_int(x) ({ _Generic(x, i32x2_t:vec2f_from_int, default:vec2d_from_int)(x); })
 #define vec3_from_int(x) ({ _Generic(x, i32x4_t:vec3f_from_int, default:vec3d_from_int)(x); })
 #define quat_from_int(x) ({ _Generic(x, i32x4_t:quatf_from_int, default:quatd_from_int)(x); })
+
 
 //*******************************************************
 // An special case implementations that have to punt to
@@ -303,28 +336,15 @@ static inline vec3d_t vec3d_fmadd_sub(vec3d_t a, vec3d_t b, vec3d_t c) { return 
 
 // (a & s) | (b & (~s)) : compiler needs to "know" 's' for this to
 // lower into any blend hardware op.
-static inline vec2f_t vec2f_blend(vec2f_t a, vec2f_t b, i32x2_t s)
-{
-  return vec2f_from_int((vec2f_as_int(a)&s)|(vec2f_as_int(b)& (~s))); 
-}
 
-static inline vec2d_t vec2d_blend(vec2d_t a, vec2d_t b, i64x2_t s)
-{
-  return vec2d_from_int((vec2d_as_int(a)&s)|(vec2d_as_int(b)& (~s))); 
-}
+#define ssimd_blend(a,b,c) ssimd_bitcast_if((ssimd_bitcast_fi(a)&s)|(ssimd_bitcast_fi(b)& (~s))); 
 
-static inline quatf_t quatf_blend(quatf_t a, quatf_t b, i32x4_t s)
-{
-  return quatf_from_int((quatf_as_int(a)&s)|(quatf_as_int(b)& (~s))); 
-}
-
-static inline quatd_t quatd_blend(quatd_t a, quatd_t b, i64x4_t s)
-{
-  return quatd_from_int((quatd_as_int(a)&s)|(quatd_as_int(b)& (~s))); 
-}
-
-static inline vec3f_t vec3f_blend(vec3f_t a, vec3f_t b, i32x4_t s) { return quatf_blend(a,b,s); }
-static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return quatd_blend(a,b,s); }
+static inline vec2f_t vec2f_blend(vec2f_t a, vec2f_t b, i32x2_t s) { return ssimd_blend(a,b,s); }
+static inline vec2d_t vec2d_blend(vec2d_t a, vec2d_t b, i64x2_t s) { return ssimd_blend(a,b,s); }
+static inline quatf_t quatf_blend(quatf_t a, quatf_t b, i32x4_t s) { return ssimd_blend(a,b,s); }
+static inline quatd_t quatd_blend(quatd_t a, quatd_t b, i64x4_t s) { return ssimd_blend(a,b,s); }
+static inline vec3f_t vec3f_blend(vec3f_t a, vec3f_t b, i32x4_t s) { return ssimd_blend(a,b,s); }
+static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssimd_blend(a,b,s); }
 
 #define vec2_blend(a,b,s) vec2_fwd(blend, a,b,s)
 #define vec3_blend(a,b,s) vec3_fwd(blend, a,b,s)
@@ -576,7 +596,7 @@ static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a
 // • (approximately) scale factor is correct for input magnitudes > 2^-50/2^-484 for binary32/binary64
 // • otherwise the factor is too small and the magnitude of the result decreased until it reaches
 //   zero (all zero input is zero output)
-// • all finite input returns finite results except when (a•a) overflows
+// • all finite inputs returns finite results except when (a•a) overflows
 static inline vec2f_t vec2f_normalize(vec2f_t a) { return sqrtf(1.f/(vec2f_biased_norm(a))) * a; }
 static inline vec2d_t vec2d_normalize(vec2d_t a) { return sqrt (1.0/(vec2d_biased_norm(a))) * a; }
 static inline vec3f_t vec3f_normalize(vec3f_t a) { return sqrtf(1.f/(vec3f_biased_norm(a))) * a; }
@@ -893,8 +913,8 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 #if !defined(__clang__)
 
 // Example of GCC attempting to elminate shuffles backfiring.
-// This explodes badly using the version below so just let
-// it work out how it wants to vectorize.
+// This explodes badly using the default version below so just
+// let it work out how it wants to vectorize from a scalar version.
 // Should attempt to match up the FMAs so it returns bit
 // identical results to below.
 
