@@ -83,7 +83,9 @@ typedef quatd_t vec3d_t;
 //   only have a very small number of types. Much more focus on
 //   explicit type implementations. This helps reduce the amount
 //   of `callsite` macro expansion for generic functionality macros.
-// • 
+// • On intel f32x2_t is synthesized (use 128-bit registers).
+//   need to figure out how to type pun to __m128 for any work-a-round
+//   direct to intrinsic calls. (SEE: vec2f_fmadd_sub)
 
 //*******************************************************
 //
@@ -966,19 +968,37 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 
 #define quat_mul(a,b) quat_fwd(mul,a,b)
 
-
-#if 0
-// complete
+// sqrt(ba^*)
+// Find the minimal angle rotation that maps 'a' to 'b'.
+// Requires b not approaching -a (infinite solution case)
+//   dot(a,b) > -0.9 : fine
+// SEE:
+//  (from vectors) https://marc-b-reynolds.github.io/quaternions/2018/06/12/SolveQRotVect.html
+//  (from quats)   https://marc-b-reynolds.github.io/quaternions/2016/08/09/TwoNormToRot.html
+//  the quaternion post has more details
 static inline quatf_t quatf_from_normals(vec3f_t a, vec3f_t b)
 {
-  float  d = 1.f+vec3f_dot(a,b);
-  float  s = sqrtf(1.f/(d+d));
-  vec3_t v = vec3f_cross(a,b);
-  quat_bv_set_scale(q,&v,s);
-  q->w = s*d;
-}
-#endif
+  float   d = 1.f+vec3_dot(a,b);
+  float   s = sqrtf(1.f/(d+d));
+  quatf_t v = vec3_cross(a,b);
 
+  v[3] = d;
+
+  return s*v;
+}
+
+static inline quatd_t quatd_from_normals(vec3d_t a, vec3d_t b)
+{
+  double  d = 1.0+vec3_dot(a,b);
+  double  s = sqrt(1.0/(d+d));
+  quatd_t v = vec3_cross(a,b);
+
+  v[3] = d;
+
+  return s*v;
+}
+
+#define quat_from_normals(a,b) quat_fwd(from_normals,a,b)
 
 
 
