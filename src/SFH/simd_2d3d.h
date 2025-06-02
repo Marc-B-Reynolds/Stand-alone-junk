@@ -7,15 +7,21 @@
 // If `simd.h` isn't include then:
 // • There's no attempt compiler option inspection. (expand)
 // • note other stuff
-
+// The construction methodology (however) are opposite. (expand)
+//
 // Usage: include this header (+simd.h):
 // • `SIMD_IMPLEMENTATION`
 // • make real note
 
 // NOTE:
 // • Since both 3D vectors and quaternions are 4 element vectors
-//   the routines can't distinguish between them.
-// • 
+//   (C compatible types) the routines can't distinguish between them
+//   which (sadly) requires programmer care. (expand)
+// • GCC specific:
+//     attempts to eliminate shuffles which can back-fire and blow-up
+//     the code.
+// • clang specific:
+//     
 // •
 
 // TODO: (tons)
@@ -121,7 +127,7 @@ static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1]
 #define quatd_set(x,...)                                                \
 ({_Generic(x, quatd_t:quatd_bs, default: quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
-#define quat(x,...) ({_Generic(x, quatf_t:quatf_##name, default:quatd_##name)(x __VA_OPT__(,__VA_ARGS__));})
+#define quat(x,...) ({_Generic(x, float:quatf, double:quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
 // expand generic expression which forward to a function and first parameter is a scalar
 // (no need to perform any parameter capturing)
@@ -204,6 +210,89 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return quatd_from_int(x);    }
 #define vec3_from_int(x) ({ _Generic(x, i32x4_t:vec3f_from_int, default:vec3d_from_int)(x); })
 #define quat_from_int(x) ({ _Generic(x, i32x4_t:quatf_from_int, default:quatd_from_int)(x); })
 
+//*******************************************************
+// An special case implementations that have to punt to
+// direct intrinsic calls for some reason or another.
+
+
+// Currently neither GCC/clang match intel FMAs with even/odd element
+// add/sub (or vice versa) additive part.
+// The intrisic used has the opposite name because of the notion of
+// element orderings are reversed.
+
+#if defined(__x86_64__)
+
+#include <x86intrin.h>
+
+// can't think of a way to handle this one since f32x2 is
+// synthesized on intel as 128-bit. humm...
+// I should be one op but it'll be many. 
+static inline vec2f_t vec2f_fmadd_sub(vec2f_t a, vec2f_t b, vec2f_t c)
+{
+  return vec2f(fmaf(a[0],b[0], c[0]), fmaf(a[1],b[1],-c[1]));
+}
+
+static inline vec2d_t vec2d_fmadd_sub(vec2d_t a, vec2d_t b, vec2d_t c)
+{
+  __m128d ia = type_pun(a,__m128d);
+  __m128d ib = type_pun(b,__m128d);
+  __m128d ic = type_pun(c,__m128d);
+  return type_pun(_mm_fmsubadd_pd(ia,ib,ic), vec2d_t);
+}
+
+static inline quatf_t quatf_fmadd_sub(quatf_t a, quatf_t b, quatf_t c)
+{
+  __m128 ia = type_pun(a,__m128);
+  __m128 ib = type_pun(b,__m128);
+  __m128 ic = type_pun(c,__m128);
+  return type_pun(_mm_fmsubadd_ps(ia,ib,ic), f32x4_t);
+}
+
+static inline quatd_t quatd_fmadd_sub(quatd_t a, quatd_t b, quatd_t c)
+{
+  __m256d ia = type_pun(a,__m256d);
+  __m256d ib = type_pun(b,__m256d);
+  __m256d ic = type_pun(c,__m256d);
+  return type_pun(_mm256_fmsubadd_pd(ia,ib,ic), f64x4_t);
+}
+
+#else
+
+static inline vec2f_t vec2f_fmadd_sub(vec2f_t a, vec2f_t b, vec2f_t c)
+{
+  return vec2f(fmaf(a[0],b[0], c[0]), fmaf(a[1],b[1],-c[1]));
+}
+
+static inline vec2d_t vec2d_fmadd_sub(vec2d_t a, vec2d_t b, vec2d_t c)
+{
+  return vec2d(fma(a[0],b[0], c[0]), fma(a[1],b[1],-c[1]));
+}
+
+static inline quatf_t quatf_fmadd_sub(quatf_t a, quatf_t b, quatf_t c)
+{
+  return quatf(fmaf(a[0],b[0], c[0]),
+               fmaf(a[1],b[1],-c[1]),
+               fmaf(a[2],b[2], c[2]),
+               fmaf(a[3],b[3],-c[3]));
+}
+
+static inline quatd_t quatd_fmadd_sub(quatd_t a, quatd_t b, quatd_t c)
+{
+  return quatf(fma(a[0],b[0], c[0]),
+               fma(a[1],b[1],-c[1]),
+               fma(a[2],b[2], c[2]),
+               fma(a[3],b[3],-c[3]));
+}
+
+#endif
+
+static inline vec3f_t vec3f_fmadd_sub(vec3f_t a, vec3f_t b, vec3f_t c) { return quatf_fmadd_sub(a,b,c); }
+static inline vec3d_t vec3d_fmadd_sub(vec3d_t a, vec3d_t b, vec3d_t c) { return quatd_fmadd_sub(a,b,c); }
+
+#define vec2_fmadd_sub(a,b,c) vec2_fwd(fmadd_sub, a,b,c)
+#define vec3_fmadd_sub(a,b,c) vec3_fwd(fmadd_sub, a,b,c)
+#define quat_fmadd_sub(a,b,c) quat_fwd(fmadd_sub, a,b,c)
+
 
 //*******************************************************
 //
@@ -253,7 +342,7 @@ static inline quatf_t quatf_vlerp(vec3f_t a, vec3f_t b, vec3f_t t) { return ssim
 static inline quatd_t quatd_vlerp(quatd_t a, quatd_t b, quatd_t t) { return ssimd_lerp_i(quatd,a,b,t); }
 
 //
-// • using `vec3` are using `quat_broadcast` on purpose (SEE: vec3_broadcast)
+// • `vec3` are using `quat_broadcast` on purpose (SEE: vec3_broadcast)
 static inline vec2f_t vec2f_lerp(vec2f_t a, vec2f_t b, float   t) { return vec2f_vlerp(a,b,vec2f_broadcast(t)); }
 static inline vec2d_t vec2d_lerp(vec2d_t a, vec2d_t b, double  t) { return vec2d_vlerp(a,b,vec2d_broadcast(t)); }
 static inline vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float   t) { return vec3f_vlerp(a,b,quatf_broadcast(t)); } // (1)
@@ -396,6 +485,29 @@ static inline vec3d_t vec3d_mul_sgn(vec3d_t v, double s) { return quatd_mul_sgn(
 #define vec3_mul_sgn(a,b) vec3_fwd(mul_sgn,a,b)
 #define quat_mul_sgn(a,b) quat_fwd(mul_sgn,a,b)
 
+// -conj(a)
+#if 0
+static inline quatf_t quatf_neg_scalar(quatf_t a)
+{
+  static const i32x4_t bs = {0,0,0,0x80000000};
+  i32x4_t ai = ssimd_bitcast_fi_32x4(a);
+  
+  return ssimd_bitcast_if_32x4(bs^ai);
+}
+
+static inline quatd_t quatd_neg_scalar(quatd_t a)
+{
+  static const i64x4_t bs = {0,0,0,0x8000000000000000};
+  i64x4_t ai = ssimd_bitcast_fi_64x4(a);
+  
+  return ssimd_bitcast_if_64x4(bs^ai);
+}
+
+#define quat_neg_scalar(a) quat_fwd(neg_scalar,a)
+#else
+#define quat_neg_scalar(a) ({typeof(a) _a=a; _a[3]=-_a[3]; _a;})
+#endif
+
 
 //*******************************************************
 // dot product & norm
@@ -490,7 +602,7 @@ static inline vec3d_t vec3d_reflect(vec3d_t a, vec3d_t b) { return a - 2.0*vec3d
 // complex conjugate: (x,y) → (x,-y)
 #define vec2_conj(v) ({ typeof(v) r = v; r = -r; r[1] = -r[1]; r; })
 
-// complex product
+// complex product:
 static inline vec2f_t vec2f_mul(vec2f_t a, vec2f_t b)
 {
   return vec2f(fmaf(a[0],b[0],-a[1]*b[1]), fmaf(a[1],b[0],a[0]*b[1]));
@@ -581,6 +693,8 @@ static inline vec2d_t vec2d_sq(vec2d_t a)
 
 static inline vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)
 {
+  // the fourth component is zero for any mixture of
+  // quatf_t and vec3f_t types.
   vec3f_t a1 = vec3_shuffle(a, 2,0,1);     // (az,ax,ay)
   vec3f_t b1 = vec3_shuffle(b, 1,2,0);     // (by,bz,bx)
   vec3f_t r0 = a1*b1;                      // (az by,ax bz,ay bx)
@@ -736,6 +850,7 @@ static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
 {
 #if 1
   // SEE: fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
+  // mixed cross-product return zero in the 4th element
   vec3f_t t = vec3_cross(q+q,v);
 
   v += q[3]*t + vec3_cross(q,t);
@@ -762,6 +877,96 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 }
 
 #define quat_rot(q,v) quat_fwd(rot,q,v)
+
+
+
+#if !defined(__clang__)
+
+// Example of GCC attempting to elminate shuffles backfiring.
+// This explodes badly using the version below so just let
+// it work out how it wants to vectorize.
+// Should attempt to match up the FMAs so it returns bit
+// identical results to below.
+
+static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
+{
+  float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[3]*b[1];  
+  float y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[3]*b[0];
+  float z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[3]*b[3];
+  float w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[3]*b[2];
+
+  return quatf(x,y,z,w);
+}
+
+static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
+{
+  double x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[3]*b[1];  
+  double y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[3]*b[0];
+  double z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[3]*b[3];
+  double w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[3]*b[2];
+
+  return quatd(x,y,z,w);
+}
+
+#else
+
+// (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
+
+static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
+{
+  quatf_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
+  quatf_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
+  quatf_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
+  quatf_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
+  quatf_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
+  quatf_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
+
+  quatf_t aw = quat_shuffle(a, 3,3,3,1);     // [aw   ,aw   ,aw   ,ay   ]
+  quatf_t b2 = quat_shuffle(b, 0,1,2,1);     // [   bx,   by,   bz,   by]
+  quatf_t t1 = quat_fma(aw,b2,t0);           // (AxB + aw B) + ax bx + ay by - aw bw
+  
+  quatf_t bw = quat_shuffle(b, 3,3,3,2);     // [   bw,   bw,   bw,   bz]
+  quatf_t a2 = quat_shuffle(a, 0,1,2,2);     // [ax   ,ay   ,az   ,az   ]
+  quatf_t t2 = quat_fma(bw,a2,t1);           // (AxB + bw A + aw B) + dot(A,B)-aw bw
+
+  return quat_neg_scalar(t2);
+}
+
+static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
+{
+  quatd_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
+  quatd_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
+  quatd_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
+  quatd_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
+  quatd_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
+  quatd_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
+
+  quatd_t aw = quat_shuffle(a, 3,3,3,1);     // [aw   ,aw   ,aw   ,ay   ]
+  quatd_t b2 = quat_shuffle(b, 0,1,2,1);     // [   bx,   by,   bz,   by]
+  quatd_t t1 = quat_fma(aw,b2,t0);           // (AxB + aw B) + ax bx + ay by - aw bw
+  
+  quatd_t bw = quat_shuffle(b, 3,3,3,2);     // [   bw,   bw,   bw,   bz]
+  quatd_t a2 = quat_shuffle(a, 0,1,2,2);     // [ax   ,ay   ,az   ,az   ]
+  quatd_t t2 = quat_fma(bw,a2,t1);           // (AxB + bw A + aw B) + dot(A,B)-aw bw
+
+  return quat_neg_scalar(t2);
+}
+
+#endif
+
+
+#if 0
+// complete
+static inline quatf_t quatf_from_normals(vec3f_t a, vec3f_t b)
+{
+  float  d = 1.f+vec3f_dot(a,b);
+  float  s = sqrtf(1.f/(d+d));
+  vec3_t v = vec3f_cross(a,b);
+  quat_bv_set_scale(q,&v,s);
+  q->w = s*d;
+}
+#endif
+
 
 
 
