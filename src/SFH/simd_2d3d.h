@@ -18,8 +18,9 @@
 //   (C compatible types) the routines can't distinguish between them
 //   which (sadly) requires programmer care. (expand)
 // • GCC specific:
-//     attempts to eliminate shuffles which can back-fire and blow-up
-//     the code.
+//   • attempts to eliminate shuffles which can back-fire and blow-up
+//     the code. Does it stem from making a "greedy" choice which
+//     helps initially but causes explosion latter? humm...
 // • clang specific:
 //     
 // •
@@ -226,7 +227,7 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return quatd_from_int(x);    }
 
 // can't think of a way to handle this one since f32x2 is
 // synthesized on intel as 128-bit. humm...
-// I should be one op but it'll be many. 
+// It should be one op but it'll be many. 
 static inline vec2f_t vec2f_fmadd_sub(vec2f_t a, vec2f_t b, vec2f_t c)
 {
   return vec2f(fmaf(a[0],b[0], c[0]), fmaf(a[1],b[1],-c[1]));
@@ -529,22 +530,29 @@ static inline double vec3d_dot_fma(vec3d_t a, vec3d_t b) { return fma (a[0],b[0]
 static inline float  quatf_dot_fma(quatf_t a, quatf_t b) { return fmaf(a[0],b[0],a[1]*b[1])+fmaf(a[2],b[2],a[3]*b[3]); }
 static inline double quatd_dot_fma(quatd_t a, quatd_t b) { return fma (a[0],b[0],a[1]*b[1])+fma (a[2],b[2],a[3]*b[3]); }
 
-#define vec2_dot(a,b) vec2_fwd(dot,a,b)
-#define vec3_dot(a,b) vec3_fwd(dot,a,b)
-#define quat_dot(a,b) quat_fwd(dot,a,b)
+#define vec2_dot_std(a,b) vec2_fwd(dot,a,b)
+#define vec3_dot_std(a,b) vec3_fwd(dot,a,b)
+#define quat_dot_std(a,b) quat_fwd(dot,a,b)
 
 #define vec2_dot_fma(a,b) vec2_fwd(dot_fma,a,b)
 #define vec3_dot_fma(a,b) vec3_fwd(dot_fma,a,b)
 #define quat_dot_fma(a,b) quat_fwd(dot_fma,a,b)
 
+#define vec2_dot vec2_dot_std
+#define vec3_dot vec3_dot_std
+#define quat_dot quat_dot_std
+
 // norm(a) = a•a
-#define vec2_norm(a) vec2_dot(a,a)
-#define vec3_norm(a) vec3_dot(a,a)
-#define quat_norm(a) quat_dot(a,a)
+#define vec2_norm_std(a) vec2_dot(a,a)
+#define vec3_norm_std(a) vec3_dot(a,a)
+#define quat_norm_std(a) quat_dot(a,a)
 #define vec2_norm_fma(a) vec2_dot_fma(a,a)
 #define vec3_norm_fma(a) vec3_dot_fma(a,a)
 #define quat_norm_fam(a) quat_dot_fma(a,a)
 
+#define vec2_norm vec2_norm_std
+#define vec3_norm vec3_norm_std
+#define quat_norm quat_norm_std
 
 
 // biased_norm(a) = a•a + min_normal
@@ -917,6 +925,7 @@ static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
   quatf_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
   quatf_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
   quatf_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
+  
   quatf_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
   quatf_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
   quatf_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
@@ -937,6 +946,7 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
   quatd_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
   quatd_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
   quatd_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
+  
   quatd_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
   quatd_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
   quatd_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
@@ -953,6 +963,8 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 }
 
 #endif
+
+#define quat_mul(a,b) quat_fwd(mul,a,b)
 
 
 #if 0
