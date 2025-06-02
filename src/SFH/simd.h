@@ -1039,7 +1039,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 
 //*******************************************************
-//
+// 
 
 // scalar FMA (generic binary32/binary64)
 #define simd_fma_s(A,B,C)            \
@@ -1133,6 +1133,11 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   _a;                           \
 })
 #endif
+
+// TODO: alternating sign version (even = add, odd = sub)
+// but neither GCC nor clang match the pattern so it'd
+// need to be explicit. (see simd_2d3d.h)
+
 
 //*******************************************************
 
