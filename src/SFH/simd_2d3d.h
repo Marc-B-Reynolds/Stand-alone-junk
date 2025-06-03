@@ -20,7 +20,8 @@
 // • GCC specific:
 //   • attempts to eliminate shuffles which can back-fire and blow-up
 //     the code. Does it stem from making a "greedy" choice which
-//     helps initially but causes explosion latter? humm...
+//     helps initially but causes explosion latter? humm... If I
+//     grokked it maybe there's a work-around.
 // • clang specific:
 //     
 // •
@@ -53,10 +54,16 @@ typedef float  f32x4_t SSIMD_TYPE_ATTR(32,4);
 typedef double f64x4_t SSIMD_TYPE_ATTR(64,4);
 
 // for bit manipulation based functionality
-typedef int32_t i32x2_t SSIMD_TYPE_ATTR(32,2);
-typedef int64_t i64x2_t SSIMD_TYPE_ATTR(64,2);
-typedef int32_t i32x4_t SSIMD_TYPE_ATTR(32,4);
-typedef int64_t i64x4_t SSIMD_TYPE_ATTR(64,4);
+typedef int32_t  i32x2_t SSIMD_TYPE_ATTR(32,2);
+typedef int64_t  i64x2_t SSIMD_TYPE_ATTR(64,2);
+typedef int32_t  i32x4_t SSIMD_TYPE_ATTR(32,4);
+typedef int64_t  i64x4_t SSIMD_TYPE_ATTR(64,4);
+
+typedef uint32_t u32x2_t SSIMD_TYPE_ATTR(32,2);
+typedef uint64_t u64x2_t SSIMD_TYPE_ATTR(64,2);
+typedef uint32_t u32x4_t SSIMD_TYPE_ATTR(32,4);
+typedef uint64_t u64x4_t SSIMD_TYPE_ATTR(64,4);
+
 
 #ifndef type_pun
 #define type_pun(X,TYPE) ({			    \
@@ -88,7 +95,8 @@ typedef quatd_t vec3d_t;
 //   direct to intrinsic calls. (SEE: vec2f_fmadd_sub)
 
 //*******************************************************
-//
+// type pun (bit pattern) float to int (fi) and int to float (if)
+
 static inline int32_t ssimd_bitcast_fi_32  (float   a) { return type_pun(a,int32_t); }
 static inline float   ssimd_bitcast_if_32  (int32_t a) { return type_pun(a,float  ); }
 static inline int64_t ssimd_bitcast_fi_64  (double  a) { return type_pun(a,int64_t); }
@@ -221,17 +229,17 @@ static inline vec3d_t vec3d_fma(vec3d_t a, quatd_t b, quatd_t c) { return quatd_
 #define quat_fma(a,b,c) quat_fwd(fma,a,b,c)
 
 
-// float → int
-static inline i32x2_t vec2f_as_int(vec2f_t x) { return __builtin_convertvector(x,i32x2_t); }
-static inline i64x2_t vec2d_as_int(vec2d_t x) { return __builtin_convertvector(x,i64x2_t); }
-static inline i32x4_t quatf_as_int(quatf_t x) { return __builtin_convertvector(x,i32x4_t); }
-static inline i64x4_t quatd_as_int(quatd_t x) { return __builtin_convertvector(x,i64x4_t); }
-static inline i32x4_t vec3f_as_int(vec3f_t x) { return __builtin_convertvector(x,i32x4_t); }
-static inline i64x4_t vec3d_as_int(vec3d_t x) { return __builtin_convertvector(x,i64x4_t); }
+// float → int (standard truncation)
+static inline i32x2_t vec2f_to_int(vec2f_t x) { return __builtin_convertvector(x,i32x2_t); }
+static inline i64x2_t vec2d_to_int(vec2d_t x) { return __builtin_convertvector(x,i64x2_t); }
+static inline i32x4_t quatf_to_int(quatf_t x) { return __builtin_convertvector(x,i32x4_t); }
+static inline i64x4_t quatd_to_int(quatd_t x) { return __builtin_convertvector(x,i64x4_t); }
+static inline i32x4_t vec3f_to_int(vec3f_t x) { return __builtin_convertvector(x,i32x4_t); }
+static inline i64x4_t vec3d_to_int(vec3d_t x) { return __builtin_convertvector(x,i64x4_t); }
 
-#define vec2_as_int(x) vec2_fwd(as_int,x)
-#define vec3_as_int(x) vec3_fwd(as_int,x)
-#define quat_as_int(x) quat_fwd(as_int,x)
+#define vec2_to_int(x) vec2_fwd(to_int,x)
+#define vec3_to_int(x) vec3_fwd(to_int,x)
+#define quat_to_int(x) quat_fwd(to_int,x)
 
 // int → float
 static inline vec2f_t vec2f_from_int(i32x2_t x) { return __builtin_convertvector(x,f32x2_t); }
@@ -353,9 +361,9 @@ static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssim
 
 //*******************************************************
 // end-point exact linear interpolation (LERP)
-//
+// (1-t)a + tb = a-ta+tb = (tb-(ta-a))
 
-#define ssimd_lerp_i(type,A,B,T) type##_fma(B,T,type##_fma(A,T,-A))
+#define ssimd_lerp_i(type,A,B,T) type##_fma(B,T,-type##_fma(A,T,-A))
 
 static inline vec2f_t vec2f_vlerp(vec2f_t a, vec2f_t b, vec2f_t t) { return ssimd_lerp_i(vec2f,a,b,t); }
 static inline vec2d_t vec2d_vlerp(vec2d_t a, vec2d_t b, vec2d_t t) { return ssimd_lerp_i(vec2d,a,b,t); }
@@ -382,10 +390,7 @@ static inline quatd_t quatd_lerp(quatd_t a, quatd_t b, double  t) { return quatd
 #define quat_lerp(a,b,t) quat_fwd(lerp,a,b,t)
 
 //*******************************************************
-// 
-//
-
-// a*sa + b*sb = fma(a,sa,b*sb)
+// weighted sum: a*sa + b*sb = fma(a,sa,b*sb)
 // vwsum: sb & sb are both vectors
 // wsum:  sb & sb are both scalars
 

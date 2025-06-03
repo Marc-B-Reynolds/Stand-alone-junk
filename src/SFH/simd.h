@@ -1107,7 +1107,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #define simd_lerp(A,B,T) ({                \
   simd_param_3(A,B,T);                     \
   typeof(_type) _r = simd_fms_i(_a,_c,_a); \
-  typeof(_type) _f = simd_fma_i(_b,_c,_r); \
+  typeof(_type) _f = simd_fms_i(_b,_c,_r); \
   _f;                                      \
 })
 
@@ -1118,7 +1118,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   simd_assert_vec(a);                        \
   typeof(a) _a=a,_b=b,_t=t;                  \
   _a = __builtin_elementwise_fma(_a,_t,-_a); \
-  _a = __builtin_elementwise_fma(_b,_t, _a); \
+  _a = __builtin_elementwise_fma(_b,_t,-_a); \
   _a;                                        \
 })
 #else
@@ -1128,7 +1128,7 @@ SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   typeof(a) _a=a,_b=b,_t=t;      \
   for(size_t i=0; i<simd_dim_v(_a); i++) {  \
     _a[i] = simd_fma_s(_a[i],_t[i],-_a[i]); \
-    _a[i] = simd_fma_s(_b[i],_t[i], _a[i]); \
+    _a[i] = simd_fma_s(_b[i],_t[i],-_a[i]); \
   }                             \
   _a;                           \
 })
