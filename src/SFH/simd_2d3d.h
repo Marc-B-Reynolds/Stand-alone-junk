@@ -36,6 +36,7 @@
 
 #if !defined(SFH_SIMD_H)
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
@@ -268,6 +269,10 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return __builtin_convertvector
 
 #include <x86intrin.h>
 
+
+
+
+
 // can't think of a way to handle this one since f32x2 is
 // synthesized on intel as 128-bit. humm...
 // It should be one op but it'll be many. 
@@ -345,18 +350,20 @@ static inline vec3d_t vec3d_fmadd_sub(vec3d_t a, vec3d_t b, vec3d_t c) { return 
 // (a & s) | (b & (~s)) : compiler needs to "know" 's' for this to
 // lower into any blend hardware op.
 
-#define ssimd_blend(a,b,c) ssimd_bitcast_if((ssimd_bitcast_fi(a)&s)|(ssimd_bitcast_fi(b)& (~s))); 
+#define ssimd_blend_i(a,b,c) ssimd_bitcast_if((ssimd_bitcast_fi(a)&s)|(ssimd_bitcast_fi(b)& (~s))); 
 
-static inline vec2f_t vec2f_blend(vec2f_t a, vec2f_t b, i32x2_t s) { return ssimd_blend(a,b,s); }
-static inline vec2d_t vec2d_blend(vec2d_t a, vec2d_t b, i64x2_t s) { return ssimd_blend(a,b,s); }
-static inline quatf_t quatf_blend(quatf_t a, quatf_t b, i32x4_t s) { return ssimd_blend(a,b,s); }
-static inline quatd_t quatd_blend(quatd_t a, quatd_t b, i64x4_t s) { return ssimd_blend(a,b,s); }
-static inline vec3f_t vec3f_blend(vec3f_t a, vec3f_t b, i32x4_t s) { return ssimd_blend(a,b,s); }
-static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssimd_blend(a,b,s); }
+static inline vec2f_t vec2f_blend(vec2f_t a, vec2f_t b, i32x2_t s) { return ssimd_blend_i(a,b,s); }
+static inline vec2d_t vec2d_blend(vec2d_t a, vec2d_t b, i64x2_t s) { return ssimd_blend_i(a,b,s); }
+static inline quatf_t quatf_blend(quatf_t a, quatf_t b, i32x4_t s) { return ssimd_blend_i(a,b,s); }
+static inline quatd_t quatd_blend(quatd_t a, quatd_t b, i64x4_t s) { return ssimd_blend_i(a,b,s); }
+static inline vec3f_t vec3f_blend(vec3f_t a, vec3f_t b, i32x4_t s) { return ssimd_blend_i(a,b,s); }
+static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssimd_blend_i(a,b,s); }
 
 #define vec2_blend(a,b,s) vec2_fwd(blend, a,b,s)
 #define vec3_blend(a,b,s) vec3_fwd(blend, a,b,s)
 #define quat_blend(a,b,s) quat_fwd(blend, a,b,s)
+
+#define ssimd_broadcast_intof(a,s) ((typeof(ssimd_bitcast_fi(a))){0}+s)
 
 
 //*******************************************************
@@ -774,15 +781,8 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 
 
 // if the scalar part (w) is positive returns `q` otherwise `-q`
-static inline quatf_t quatf_canonical(quatf_t q)
-{
-  return quatf_blend(q,-q, (quat_shuffle(q,3,3,3,3) < 0));
-}
-
-static inline quatd_t quatd_canonical(quatd_t q)
-{
-  return quatd_blend(q,-q, (quat_shuffle(q,3,3,3,3) < 0));
-}
+static inline quatf_t quatf_canonical(quatf_t q) { return quat_blend(q,-q, (quat_broadcast(q[3]) >= 0)); }
+static inline quatd_t quatd_canonical(quatd_t q) { return quat_blend(q,-q, (quat_broadcast(q[3]) >= 0)); }
 
 #define quat_canonical(a) quat_fwd(canonical,a)
 
