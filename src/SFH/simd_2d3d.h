@@ -625,7 +625,7 @@ static inline quatd_t quatd_normalize(quatd_t a) { return sqrt (1.0/(quatd_biase
 //
 
 // a - 2(a•b)b
-// could do fma version but had it lowering to longer...revisit. low priority function AFAIK
+// could do fma version but had it lowering to longer...revisit. low priority function AFAIC
 static inline vec2f_t vec2f_reflect(vec2f_t a, vec2f_t b) { return a - 2.f*vec2f_dot(a,b)*b; }
 static inline vec2d_t vec2d_reflect(vec2d_t a, vec2d_t b) { return a - 2.0*vec2d_dot(a,b)*b; }
 static inline vec3f_t vec3f_reflect(vec3f_t a, vec3f_t b) { return a - 2.f*vec3f_dot(a,b)*b; }
@@ -784,7 +784,24 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 static inline quatf_t quatf_canonical(quatf_t q) { return quat_blend(q,-q, (quat_broadcast(q[3]) >= 0)); }
 static inline quatd_t quatd_canonical(quatd_t q) { return quat_blend(q,-q, (quat_broadcast(q[3]) >= 0)); }
 
+#if 0
+// bithack version (should be about the same as above but I'll leave in place for now)
+static inline quatf_t quat_canonical(quatf_t q)
+{
+  i32x4_t s = (quat_broadcast(q[3]) < 0.f) << 31;
+  i32x4_t i = ssimd_bitcast_fi(q);
+  return ssimd_bitcast_if(i ^ s);
+}
+#endif
+
 #define quat_canonical(a) quat_fwd(canonical,a)
+
+// nearest equivalent of 'b' to 'a' 
+//   dot(a,b) >= 0 ? b : -b 
+static inline quatf_t quatf_nearest(quatf_t a, quatf_t b) { return quat_blend(b,-b, (quat_broadcast(quat_dot(a,b)) >= 0)); }
+static inline quatd_t quatf_nearest(quatd_t a, quatd_t b) { return quat_blend(b,-b, (quat_broadcast(quat_dot(a,b)) >= 0)); }
+
+#define quat_nearest(a,b) quat_fwd(nearnest,a,b)
 
 
 // scale bivector part by 's' and replace scalar with 'w'
@@ -885,7 +902,7 @@ static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
 {
 #if 1
   // SEE: fgiesen.wordpress.com/2019/02/09/rotating-a-single-vector-using-a-quaternion/
-  // mixed cross-product return zero in the 4th element
+  // mixed cross-product returns zero in the 4th element
   vec3f_t t = vec3_cross(q+q,v);
 
   v += q[3]*t + vec3_cross(q,t);
