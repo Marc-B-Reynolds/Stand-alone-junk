@@ -7,7 +7,13 @@
 // If `simd.h` isn't include then:
 // • There's no attempt compiler option inspection. (expand)
 // • note other stuff
-// The construction methodology (however) are opposite. (expand)
+// The construction methodology (however) is opposite. A smaller set
+// of types and expected interactions between scalar/vector types
+// because they usually explict with specific operations. So a much higher
+// rate of specialization and explict implementations. The reasoning
+// is much lighter weight macros expansions for faster compile times.
+// A side-effect is logical functionality duplication between the
+// two with local versions being more restrictive. 
 //
 // Usage: include this header (+simd.h):
 // • `SIMD_IMPLEMENTATION`
@@ -74,8 +80,30 @@ typedef uint64_t u64x4_t SSIMD_TYPE_ATTR(64,4);
   memcpy(&__d, &__x, sizeof(TYPE));                 \
   __d;                                              \
 })
+#endif
+
+#if defined(__x86_64__)
+#include <x86intrin.h>
+
+static inline __m128  f32x4_to_intel(f32x4_t x) { return type_pun(x,__m128);  }
+static inline __m128i i32x4_to_intel(i32x4_t x) { return type_pun(x,__m128i); }
+static inline __m128d f64x2_to_intel(f64x2_t x) { return type_pun(x,__m128d); }
+static inline __m256d f64x4_to_intel(f64x4_t x) { return type_pun(x,__m256d); }
+
+static inline f32x4_t f32x4_from_intel(__m128  x) { return type_pun(x,f32x4_t); }
+static inline i32x4_t i32x4_from_intel(__m128i x) { return type_pun(x,i32x4_t); }
+static inline f64x2_t f64x2_from_intel(__m128d x) { return type_pun(x,f64x2_t); }
+static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); }
 
 #endif
+
+
+
+#else
+
+// could put some forwarding to simd.h stuff here (esp if complexity
+// is about the same as any specialized versions in this file.
+
 #endif
 
 // 3D vector is stored 4 elements
@@ -91,9 +119,10 @@ typedef quatd_t vec3d_t;
 //   only have a very small number of types. Much more focus on
 //   explicit type implementations. This helps reduce the amount
 //   of `callsite` macro expansion for generic functionality macros.
-// • On intel f32x2_t is synthesized (use 128-bit registers).
-//   need to figure out how to type pun to __m128 for any work-a-round
-//   direct to intrinsic calls. (SEE: vec2f_fmadd_sub)
+// • On intel f32x2_t is synthesized (uses 128-bit registers).
+//   need to figure out a (zero overhead on expansion) way to
+//   type pun to __m128 for any work-a-round direct to intrinsic
+//   calls. (SEE: vec2f_fmadd_sub)
 
 //*******************************************************
 // type pun (bit pattern) float to int (fi) and int to float (if)
@@ -137,9 +166,6 @@ static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4
   })
 
 
-
-
-
 //*******************************************************
 // basic support functionality
 
@@ -151,8 +177,9 @@ static inline vec3d_t vec3d(double x, double y, double z)           { return (ve
 static inline quatf_t quatf(float  x, float  y, float  z, float  w) { return (quatf_t){x,y,z,w}; }
 static inline quatd_t quatd(double x, double y, double z, double w) { return (quatd_t){x,y,z,w}; }
 
-//#define vec2(x,y)   ({_Generic(x, float:vec2f, default:vec2d)(x,y)
-//#define vec3(x,y,z) ({_Generic(x, float:vec3f, default:vec3d)(x,y,z)
+#define vec2(x,y)   ({_Generic(x, float:vec2f, default: vec2d)(x,y);   })
+#define vec3(x,y,z) ({_Generic(x, float:vec3f, default: vec3d)(x,y,z); })
+
 
 // set from bivector + scalar: Q = (b,s)
 static inline quatf_t quatf_bs(vec3f_t b, float  s) { return (quatf_t){b[0],b[1],b[2],s}; }
@@ -171,8 +198,9 @@ static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1]
 
 // expand generic expression which forward to a function and first parameter is a scalar
 // (no need to perform any parameter capturing)
-#define ssimid_fwd_sfunc(type, name,x,...)  \
+#define ssimd_fwd_sfunc(type, name,x,...)  \
   ({_Generic(x, float:type##f_##name, default:type##d_##name)(x __VA_OPT__(,__VA_ARGS__));})
+
 
 // same but first parameter must be vector type
 #define vec2_fwd(name,x,...) ({_Generic(x, vec2f_t:vec2f_##name, default:vec2d_##name)(x __VA_OPT__(,__VA_ARGS__));})
@@ -191,9 +219,9 @@ static inline vec3d_t vec3d_broadcast(double v) { return vec3d(v,v,v); }
 static inline quatf_t quatf_broadcast(float  v) { return quatf(v,v,v,v); }
 static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 
-#define vec2_broadcast(x) ssimid_fwd_sfunc(vec2,broadcast,x)
-#define vec3_broadcast(x) ssimid_fwd_sfunc(vec3,broadcast,x)
-#define quat_broadcast(x) ssimid_fwd_sfunc(quat,broadcast,x)
+#define vec2_broadcast(x) ssimd_fwd_sfunc(vec2,broadcast,x)
+#define vec3_broadcast(x) ssimd_fwd_sfunc(vec3,broadcast,x)
+#define quat_broadcast(x) ssimd_fwd_sfunc(quat,broadcast,x)
 
 // single "register" shuffles
 #define vec2_shuffle(V,A,B)     __builtin_shufflevector(V,V,A,B)
@@ -214,7 +242,13 @@ static inline vec3f_t vec3d_demote (vec3d_t v) { return __builtin_convertvector(
 static inline quatd_t quatf_promote(quatf_t q) { return __builtin_convertvector(q,quatd_t); }
 static inline quatf_t quatd_demote (quatd_t q) { return __builtin_convertvector(q,quatf_t); }
 
-#define ssimd_sqrt(a)    (_Generic((a),float:sqrtf,default: sqrt)(x))
+// favor avoiding infinity for denormal input to improved average error: could flip for known I suppose
+static inline float  ssimd_rsqrt_f32(float  x) { return 1.f/sqrtf(x); }
+static inline double ssimd_rsqrt_f64(double x) { return 1.0/sqrt(x); }
+
+#define ssimd_rsqrt(x)   (_Generic((x),float:ssimd_rsqrt_f32,default:ssimd_rsqrt_f64)(x))
+
+#define ssimd_sqrt(x)    (_Generic((x),float:sqrtf,default: sqrt)(x))
 #define ssimd_fma(a,b,c) (_Generic((a),float:fmaf, default: fma)(a,b,c))
 
 // element-wise FMAs (unlike 'simd.h' it's up the the user to perform any broadcasts)
@@ -260,18 +294,12 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return __builtin_convertvector
 // direct intrinsic calls for some reason or another.
 
 
+#if defined(__x86_64__)
+
 // Currently neither GCC/clang match intel FMAs with even/odd element
 // add/sub (or vice versa) additive part.
 // The intrisic used has the opposite name because of the notion of
 // element orderings are reversed.
-
-#if defined(__x86_64__)
-
-#include <x86intrin.h>
-
-
-
-
 
 // can't think of a way to handle this one since f32x2 is
 // synthesized on intel as 128-bit. humm...
@@ -343,6 +371,47 @@ static inline vec3d_t vec3d_fmadd_sub(vec3d_t a, vec3d_t b, vec3d_t c) { return 
 #define quat_fmadd_sub(a,b,c) quat_fwd(fmadd_sub, a,b,c)
 
 
+// WARNING: no generic version because defined to direct match the intel ops (hence the name) and the ordering
+// of the sums are different. temp hack because it'll be a source of errors.
+
+#if defined(__clang__) || !defined(__x86_64__)
+static inline f32x4_t intel_hadd_f32x4(f32x4_t a, f32x4_t b) { return (f32x4_t){a[0]+a[1],a[2]+a[3],b[0]+b[1],b[2]+b[3]}; }
+static inline f64x4_t intel_hadd_f64x4(f64x4_t a, f64x4_t b) { return (f64x4_t){a[0]+a[1],b[0]+b[1],a[2]+a[3],b[2]+b[3]}; }
+static inline f32x4_t intel_hsub_f32x4(f32x4_t a, f32x4_t b) { return (f32x4_t){a[0]-a[1],a[2]-a[3],b[0]-b[1],b[2]-b[3]}; }
+static inline f64x4_t intel_hsub_f64x4(f64x4_t a, f64x4_t b) { return (f64x4_t){a[0]-a[1],b[0]-b[1],a[2]-a[3],b[2]-b[3]}; }
+#else
+
+static inline f32x4_t intel_hadd_f32x4(f32x4_t a, f32x4_t b)
+{
+  __m128 ia = type_pun(a,__m128);
+  __m128 ib = type_pun(b,__m128);
+  return type_pun(_mm_hadd_ps(ia,ib), f32x4_t);
+}
+
+static inline f64x4_t intel_hadd_f64x4(f64x4_t a, f64x4_t b)
+{
+  __m256d ia = type_pun(a,__m256d);
+  __m256d ib = type_pun(b,__m256d);
+  return type_pun(_mm256_hadd_pd(ia,ib), f64x4_t);
+}
+
+static inline f32x4_t intel_hsub_f32x4(f32x4_t a, f32x4_t b)
+{
+  __m128 ia = type_pun(a,__m128);
+  __m128 ib = type_pun(b,__m128);
+  return type_pun(_mm_hsub_ps(ia,ib), f32x4_t);
+}
+
+static inline f64x4_t intel_hsub_f64x4(f64x4_t a, f64x4_t b)
+{
+  __m256d ia = type_pun(a,__m256d);
+  __m256d ib = type_pun(b,__m256d);
+  return type_pun(_mm256_hsub_pd(ia,ib), f64x4_t);
+}
+
+#endif
+
+
 //*******************************************************
 //
 //
@@ -372,6 +441,7 @@ static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssim
 
 #define ssimd_lerp_i(type,A,B,T) type##_fma(B,T,-type##_fma(A,T,-A))
 
+// LERP with vector (per element) parameterization
 static inline vec2f_t vec2f_vlerp(vec2f_t a, vec2f_t b, vec2f_t t) { return ssimd_lerp_i(vec2f,a,b,t); }
 static inline vec2d_t vec2d_vlerp(vec2d_t a, vec2d_t b, vec2d_t t) { return ssimd_lerp_i(vec2d,a,b,t); }
 static inline vec3f_t vec3f_vlerp(vec3f_t a, vec3f_t b, vec3f_t t) { return ssimd_lerp_i(vec3f,a,b,t); }
@@ -434,7 +504,7 @@ static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  
 //*******************************************************
 //
 
-static const float   ssmid_f32_ulp1       = 0x1.0p-23f;
+static const float   ssimd_f32_ulp1       = 0x1.0p-23f;
 static const double  ssimd_f64_ulp1       = 0x1.0p-52;
 static const float   ssimd_f32_min_normal = 0x1.0p-126f;
 static const double  ssimd_f64_min_normal = 0x1.0p-1022;
@@ -472,9 +542,9 @@ static inline i32x4_t vec3f_broadcast_signbit(float  s) { return quatf_broadcast
 static inline i64x4_t vec3d_broadcast_signbit(double s) { return quatd_broadcast_signbit(s); }
 
 
-#define vec2_broadcast_signbit(x) ssimid_fwd_sfunc(vec2,broadcast_signbit,x)
-#define vec3_broadcast_signbit(x) ssimid_fwd_sfunc(vec3,broadcast_signbit,x)
-#define quat_broadcast_signbit(x) ssimid_fwd_sfunc(quat,broadcast_signbit,x)
+#define vec2_broadcast_signbit(x) ssimd_fwd_sfunc(vec2,broadcast_signbit,x)
+#define vec3_broadcast_signbit(x) ssimd_fwd_sfunc(vec3,broadcast_signbit,x)
+#define quat_broadcast_signbit(x) ssimd_fwd_sfunc(quat,broadcast_signbit,x)
 
 
 
@@ -610,12 +680,12 @@ static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a
 // • otherwise the factor is too small and the magnitude of the result decreased until it reaches
 //   zero (all zero input is zero output)
 // • all finite inputs returns finite results except when (a•a) overflows
-static inline vec2f_t vec2f_normalize(vec2f_t a) { return sqrtf(1.f/(vec2f_biased_norm(a))) * a; }
-static inline vec2d_t vec2d_normalize(vec2d_t a) { return sqrt (1.0/(vec2d_biased_norm(a))) * a; }
-static inline vec3f_t vec3f_normalize(vec3f_t a) { return sqrtf(1.f/(vec3f_biased_norm(a))) * a; }
-static inline vec3d_t vec3d_normalize(vec3d_t a) { return sqrt (1.0/(vec3d_biased_norm(a))) * a; }
-static inline quatf_t quatf_normalize(quatf_t a) { return sqrtf(1.f/(quatf_biased_norm(a))) * a; }
-static inline quatd_t quatd_normalize(quatd_t a) { return sqrt (1.0/(quatd_biased_norm(a))) * a; }
+static inline vec2f_t vec2f_normalize(vec2f_t a) { return ssimd_rsqrt(vec2f_biased_norm(a)) * a; }
+static inline vec2d_t vec2d_normalize(vec2d_t a) { return ssimd_rsqrt(vec2d_biased_norm(a)) * a; }
+static inline vec3f_t vec3f_normalize(vec3f_t a) { return ssimd_rsqrt(vec3f_biased_norm(a)) * a; }
+static inline vec3d_t vec3d_normalize(vec3d_t a) { return ssimd_rsqrt(vec3d_biased_norm(a)) * a; }
+static inline quatf_t quatf_normalize(quatf_t a) { return ssimd_rsqrt(quatf_biased_norm(a)) * a; }
+static inline quatd_t quatd_normalize(quatd_t a) { return ssimd_rsqrt(quatd_biased_norm(a)) * a; }
 
 #define vec2_normalize(a) vec2_fwd(normalize,a)
 #define vec3_normalize(a) vec3_fwd(normalize,a)
@@ -648,26 +718,19 @@ static inline vec3d_t vec3d_reflect(vec3d_t a, vec3d_t b) { return a - 2.0*vec3d
 // complex product:
 static inline vec2f_t vec2f_mul(vec2f_t a, vec2f_t b)
 {
-  return vec2f(fmaf(a[0],b[0],-a[1]*b[1]), fmaf(a[1],b[0],a[0]*b[1]));
+  return vec2(ssimd_fma(a[0],b[0],-a[1]*b[1]), ssimd_fma(a[1],b[0],a[0]*b[1]));
 }
 
 static inline vec2d_t vec2d_mul(vec2d_t a, vec2d_t b)
 {
-  return vec2d(fma(a[0],b[0],-a[1]*b[1]), fma(a[1],b[0],a[0]*b[1]));
+  return vec2(ssimd_fma(a[0],b[0],-a[1]*b[1]), ssimd_fma(a[1],b[0],a[0]*b[1]));
 }
 
 #define vec2_mul(a,b) vec2_fwd(mul,a,b)
 
 // SEE cmul below (bivector part as scalar)
-static inline float vec2f_cross(vec2f_t a, vec2f_t b)
-{
-  return fmaf(a[0],b[1],-a[1]*b[0]);
-}
-
-static inline double vec2d_cross(vec2d_t a, vec2d_t b)
-{
-  return fma(a[0],b[1],-a[1]*b[0]);
-}
+static inline float  vec2f_cross(vec2f_t a, vec2f_t b) { return ssimd_fma(a[0],b[1],-a[1]*b[0]); }
+static inline double vec2d_cross(vec2d_t a, vec2d_t b) { return ssimd_fma(a[0],b[1],-a[1]*b[0]); }
 
 
 #define vec2_cross(a,b) vec2_fwd(cross,a,b)
@@ -680,15 +743,8 @@ static inline double vec2d_cross(vec2d_t a, vec2d_t b)
 //             = (a•b, a×b)
 // 
 // This computes conj(a)*b = b*conj(a)
-static inline vec2f_t vec2f_cmul(vec2f_t a, vec2f_t b)
-{
-  return vec2f(vec2f_dot(a,b), vec2f_cross(a,b));
-}
-
-static inline vec2d_t vec2d_cmul(vec2d_t a, vec2d_t b)
-{
-  return vec2d(vec2d_dot(a,b), vec2d_cross(a,b));
-}
+static inline vec2f_t vec2f_cmul(vec2f_t a, vec2f_t b) { return vec2(vec2_dot(a,b), vec2_cross(a,b)); }
+static inline vec2d_t vec2d_cmul(vec2d_t a, vec2d_t b) { return vec2(vec2_dot(a,b), vec2_cross(a,b)); }
 
 #define vec2_cmul(a,b) vec2_fwd(cmul,a,b)
 
@@ -701,7 +757,7 @@ static inline vec2f_t vec2f_usqrt(vec2f_t a)
   float rx = 0.5f * m;
   float ry = y/(m + ssimd_f32_min_normal);
 
-  return vec2f(rx,ry);
+  return vec2(rx,ry);
 }
 
 static inline vec2d_t vec2d_usqrt(vec2f_t a)
@@ -711,22 +767,15 @@ static inline vec2d_t vec2d_usqrt(vec2f_t a)
   double rx = 0.5 * m;
   double ry = y/(m + ssimd_f64_min_normal);
 
-  return vec2d(rx,ry);
+  return vec2(rx,ry);
 }
 
 #define vec2_usqrt(a) vec2_fwd(usqrt,a)
 
 
 // complex square: (x,y)² = (x²-y², 2xy)
-static inline vec2f_t vec2f_sq(vec2f_t a)
-{
-  return vec2f(fmaf(a[0],a[0],-a[1]*a[1]), 2.f*a[0]*a[1]);
-}
-
-static inline vec2d_t vec2d_sq(vec2d_t a)
-{
-  return vec2d(fma(a[0],a[0],-a[1]*a[1]), 2.0*a[0]*a[1]);
-}
+static inline vec2f_t vec2f_sq(vec2f_t a) { return vec2(ssimd_fma(a[0],a[0],-a[1]*a[1]), 2.f*a[0]*a[1]); }
+static inline vec2d_t vec2d_sq(vec2d_t a) { return vec2(ssimd_fma(a[0],a[0],-a[1]*a[1]), 2.0*a[0]*a[1]); }
 
 #define vec2_sq(a) vec2_fwd(sq,a)
 
@@ -762,6 +811,34 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 
 // ensure the fourth component is zero
 #define vec3_canonical(v) ({ typeof(v) r = v; r[3] = 0; r; })
+
+
+// return a unit vector orthogonal to unit vector 'v'
+static inline vec3f_t vec3f_ortho(vec3f_t v)
+{
+  float x  = v[0], y = v[1], z = v[2]; 
+  float sz = ssimd_f32_sgn(z);
+  float a  = y/(z+sz);
+
+  x = -x;
+
+  return vec3(ssimd_fma(a,y,z), x*a, x);
+}
+
+static inline vec3d_t vec3d_ortho(vec3d_t v)
+{
+  double x  = v[0], y = v[1], z = v[2]; 
+  double sz = ssimd_f64_sgn(z);
+  double a  = y/(z+sz);
+
+  x = -x;
+
+  return vec3(ssimd_fma(a,y,z), x*a, x);
+}
+
+#define vec3_ortho(a) vec3_fwd(ortho,a,b)
+
+
 
 
 //**********************************************************
@@ -804,7 +881,7 @@ static inline quatd_t quatd_nearest(quatd_t a, quatd_t b) { return quat_blend(b,
 
 #define quat_nearest(a,b) quat_fwd(nearest,a,b)
 
-//
+// LERP between a and {b,-b} (shorter path choice)
 static inline quatf_t quatf_lerp_nearest(quatf_t a, quatf_t b, float  s) { return quat_lerp(a, quat_nearest(a,b), s); }
 static inline quatd_t quatd_lerp_nearest(quatd_t a, quatd_t b, double s) { return quat_lerp(a, quat_nearest(a,b), s); }
 
@@ -815,7 +892,7 @@ static inline quatd_t quatd_lerp_nearest(quatd_t a, quatd_t b, double s) { retur
 static inline quatf_t quatf_sb_rs(quatf_t q, float  s, float  w) { q *= s; q[3] = w; return q; }
 static inline quatd_t quatd_sb_rs(quatd_t q, double s, double w) { q *= s; q[3] = w; return q; }
 
-#define quat_sb_rs(a) quat_fwd(sb_rs,a)
+#define quat_sb_rs(q,s,w) quat_fwd(sb_rs,q,s,w)
 
 
 // Q = cos(t)+sin(t)U, |Q|=1
@@ -826,17 +903,17 @@ static inline quatd_t quatd_sb_rs(quatd_t q, double s, double w) { q *= s; q[3] 
 static inline quatf_t quatf_usqrt(quatf_t q)
 {
   float d = 1.f+q[3];
-  float s = sqrtf(1.f/(d+d));
+  float s = ssimd_rsqrt(d+d);
 
-  return quatf_sb_rs(q,s,d*s);
+  return quat_sb_rs(q,s,d*s);
 }
 
 static inline quatd_t quatd_usqrt(quatd_t q)
 {
-  double d = 1.0+q[3];
-  double s = sqrt(1.0/(d+d));
+  double d = 1.f+q[3];
+  double s = ssimd_rsqrt(d+d);
 
-  return quatd_sb_rs(q,s,d*s);
+  return quat_sb_rs(q,s,d*s);
 }
 
 #define quat_usqrt(q) quat_fwd(usqrt,q)
@@ -863,8 +940,9 @@ static inline quatd_t quatd_upow2(quatd_t q)
 
 // slerp(a,b,1/2) = b*sqrt(b^* a)
 //
-// Finds that rotation half-way between 'a' and
-// 'b' or '-b' whichever is the shortest path
+// Finds the rotation half-way between 'a' and
+// 'b' or '-b' whichever is the shortest path.
+// More simply: normalize the midpoint:
 // 
 // if (dot(a,b) >= 0)
 //   return normalize(a+b)
@@ -882,7 +960,7 @@ static inline quatf_t quatf_bisect(quatf_t a, quatf_t b)
 
   // a + sgn(dot(a,b))*b  : (a+b) or (a-b)
   a += ssimd_bitcast_if_32x4(ssimd_bitcast_fi_32x4(b) ^ s);
-  a *= sqrtf(1.f/d);
+  a *= ssimd_rsqrt(d);
 
   return a;
 }
@@ -917,7 +995,7 @@ static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
   return v;
 #else
   float   w  = q[3];
-  float   k0 = fmaf(w,w,-0.5f);
+  float   k0 = ssimd_fma(w,w,-0.5f);
   float   k1 = vec3_dot(v,q);
   vec3f_t r  = vec3_wsum(v,q,k0,k1);
 
@@ -939,14 +1017,8 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 
 
 
-#if !defined(__clang__)
-
-// Example of GCC attempting to elminate shuffles backfiring.
-// This explodes badly using the default version below so just
-// let it work out how it wants to vectorize from a scalar version.
-// Should attempt to match up the FMAs so it returns bit
-// identical results to below.
-
+#if 1
+// scalar implementation: see notes below
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
   float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[3]*b[1];  
@@ -968,6 +1040,10 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 }
 
 #else
+
+// sigh: I must of tweaked something at some point and this
+// is lowering worse that the scalar version.
+// (uica predicts 24.75 cycle throughput on skylake)
 
 // (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
 
@@ -1028,7 +1104,7 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 static inline quatf_t quatf_from_normals(vec3f_t a, vec3f_t b)
 {
   float   d = 1.f+vec3_dot(a,b);
-  float   s = sqrtf(1.f/(d+d));
+  float   s = ssimd_rsqrt(d+d);
   quatf_t v = vec3_cross(a,b);
 
   v[3] = d;
@@ -1039,7 +1115,7 @@ static inline quatf_t quatf_from_normals(vec3f_t a, vec3f_t b)
 static inline quatd_t quatd_from_normals(vec3d_t a, vec3d_t b)
 {
   double  d = 1.0+vec3_dot(a,b);
-  double  s = sqrt(1.0/(d+d));
+  double  s = ssimd_rsqrt(d+d);
   quatd_t v = vec3_cross(a,b);
 
   v[3] = d;
