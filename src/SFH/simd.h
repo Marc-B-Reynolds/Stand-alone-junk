@@ -63,7 +63,16 @@
 //
 // Credits:
 // • David Mazières: SIMD_MAP
-
+//
+// Internal notes:
+// • fungus growth so there's a fair number of simplications possible
+// • some wavering about what is & isn't macro expanded (internal
+//   simplicity vs. compile time)
+// • some seemingly awkward constructions are due to attempting to
+//   support as wide a range of compiler versions as reasonable
+//   possible and plain-old C constraints (like all choices of
+//   _Generic must be syntatically legal)
+//
 // TODO: (there's tons of stuff. just starting some self notes) 
 // • #define performs no expansions so any exposed functionality defines
 //   should be as lightweigh WRT expansion required as possible.
@@ -842,6 +851,36 @@ static inline float    demote_f64 (double x)  { return (float) x; }
         simd_promote_i_x      \
     default: (void*)0)(_x);   \
   })
+
+//*******************************************************
+// base Intel intrinsic interop support
+
+#if defined(__x86_64__)
+
+#include <x86intrin.h>
+
+static inline __m128  f32x4_to_intel(f32x4_t x) { return type_pun(x,__m128);  }
+static inline __m128i i32x4_to_intel(i32x4_t x) { return type_pun(x,__m128i); }
+static inline __m128d f64x2_to_intel(f64x2_t x) { return type_pun(x,__m128d); }
+static inline __m256  f32x8_to_intel(f32x8_t x) { return type_pun(x,__m256);  }
+static inline __m256i i32x8_to_intel(i32x8_t x) { return type_pun(x,__m256i); }
+static inline __m256d f64x4_to_intel(f64x4_t x) { return type_pun(x,__m256d); }
+
+static inline f32x4_t f32x4_from_intel(__m128  x) { return type_pun(x,f32x4_t); }
+static inline i32x4_t i32x4_from_intel(__m128i x) { return type_pun(x,i32x4_t); }
+static inline f64x2_t f64x2_from_intel(__m128d x) { return type_pun(x,f64x2_t); }
+static inline f32x8_t f32x8_from_intel(__m256  x) { return type_pun(x,f32x8_t); }
+static inline i32x8_t i32x8_from_intel(__m256i x) { return type_pun(x,i32x8_t); }
+static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); }
+
+#if defined(SIMD_ENABLE_512)
+
+
+#endif
+
+
+
+#endif
 
 
 //*******************************************************
