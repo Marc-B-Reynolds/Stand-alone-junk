@@ -379,8 +379,9 @@ static inline vec3d_t vec3d_vlerp(vec3d_t a, vec3d_t b, vec3d_t t) { return ssim
 static inline quatf_t quatf_vlerp(vec3f_t a, vec3f_t b, vec3f_t t) { return ssimd_lerp_i(quatf,a,b,t); }
 static inline quatd_t quatd_vlerp(quatd_t a, quatd_t b, quatd_t t) { return ssimd_lerp_i(quatd,a,b,t); }
 
-//
+// LERP with scalar parameterization
 // • `vec3` are using `quat_broadcast` on purpose (SEE: vec3_broadcast)
+// • `quat_nearest_lerp` is later in file.
 static inline vec2f_t vec2f_lerp(vec2f_t a, vec2f_t b, float   t) { return vec2f_vlerp(a,b,vec2f_broadcast(t)); }
 static inline vec2d_t vec2d_lerp(vec2d_t a, vec2d_t b, double  t) { return vec2d_vlerp(a,b,vec2d_broadcast(t)); }
 static inline vec3f_t vec3f_lerp(vec3f_t a, vec3f_t b, float   t) { return vec3f_vlerp(a,b,quatf_broadcast(t)); } // (1)
@@ -799,9 +800,15 @@ static inline quatf_t quat_canonical(quatf_t q)
 // nearest equivalent of 'b' to 'a' 
 //   dot(a,b) >= 0 ? b : -b 
 static inline quatf_t quatf_nearest(quatf_t a, quatf_t b) { return quat_blend(b,-b, (quat_broadcast(quat_dot(a,b)) >= 0)); }
-static inline quatd_t quatf_nearest(quatd_t a, quatd_t b) { return quat_blend(b,-b, (quat_broadcast(quat_dot(a,b)) >= 0)); }
+static inline quatd_t quatd_nearest(quatd_t a, quatd_t b) { return quat_blend(b,-b, (quat_broadcast(quat_dot(a,b)) >= 0)); }
 
-#define quat_nearest(a,b) quat_fwd(nearnest,a,b)
+#define quat_nearest(a,b) quat_fwd(nearest,a,b)
+
+//
+static inline quatf_t quatf_lerp_nearest(quatf_t a, quatf_t b, float  s) { return quat_lerp(a, quat_nearest(a,b), s); }
+static inline quatd_t quatd_lerp_nearest(quatd_t a, quatd_t b, double s) { return quat_lerp(a, quat_nearest(a,b), s); }
+
+#define quat_nearest_lerp(a,b) quat_fwd(lerp_nearnest,a,b)
 
 
 // scale bivector part by 's' and replace scalar with 'w'
@@ -870,10 +877,10 @@ static inline quatf_t quatf_bisect(quatf_t a, quatf_t b)
   i32x4_t s = quat_broadcast_signbit(d);
 
   // norm(a+b) = 2(1+dot(a+b)) and norm(a-b) = 2(1-dot(a+b))
-  // so compute: 2(1+sgn(dot(a,b))*dot(a,b))
+  // so compute: 2(1+sgn(dot(a,b))
   d  = 2.f + ssimd_bitcast_if_32(ssimd_bitcast_fi_32(d+d) ^ s[0]);
 
-  // a + sgn(dot(a,b))*b
+  // a + sgn(dot(a,b))*b  : (a+b) or (a-b)
   a += ssimd_bitcast_if_32x4(ssimd_bitcast_fi_32x4(b) ^ s);
   a *= sqrtf(1.f/d);
 
@@ -1050,12 +1057,12 @@ static inline quatd_t quatd_from_normals(vec3d_t a, vec3d_t b)
 //   (point to an example of doing this)
 #define quat_map_i(a,b,c)  typeof(q) r = quat_shuffle(q,a,b,c,3)
 
-#define quat_map_x2y(q) ({ quat_map_i(Y,X,Z,W); r[X] = -r[X]; r;})
-#define quat_map_x2z(q) ({ quat_map_i(Z,Y,X,W); r[X] = -r[X]; r;})
-#define quat_map_y2x(q) ({ quat_map_i(Y,X,Z,W); r[Y] = -r[Y]; r;})
-#define quat_map_y2z(q) ({ quat_map_i(X,Z,Y,W); r[Y] = -r[Y]; r;})
-#define quat_map_z2x(q) ({ quat_map_i(Z,Y,X,W); r[Z] = -r[Z]; r;})
-#define quat_map_z2y(q) ({ quat_map_i(X,Z,Y,W); r[Z] = -r[Z]; r;})
+#define quat_map_x2y(q) ({ quat_map_i(1,0,2); r[0] = -r[0]; r;})
+#define quat_map_x2z(q) ({ quat_map_i(2,1,0); r[0] = -r[0]; r;})
+#define quat_map_y2x(q) ({ quat_map_i(1,0,2); r[1] = -r[1]; r;})
+#define quat_map_y2z(q) ({ quat_map_i(0,2,1); r[1] = -r[1]; r;})
+#define quat_map_z2x(q) ({ quat_map_i(2,1,0); r[2] = -r[2]; r;})
+#define quat_map_z2y(q) ({ quat_map_i(0,2,1); r[2] = -r[2]; r;})
 
 //**********************************************************
 
