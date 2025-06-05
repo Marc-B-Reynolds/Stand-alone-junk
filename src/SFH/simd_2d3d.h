@@ -423,7 +423,7 @@ static inline double quatd_asum(quatd_t a) { return (ssimd_abs(a[0]) + ssimd_abs
 #define vec3_asum(a) vec3_fwd(asum, a)
 #define quat_asum(a) quat_fwd(asum, a)
 
-// sum of absolute difference
+// sum of absolute difference (the L^1 norm)
 #define vec2_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; vec2_asum(_a);})
 #define vec3_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; vec3_asum(_a);})
 #define quat_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; quat_asum(_a);})
@@ -1245,7 +1245,7 @@ static inline vec3f_t quatf_fct(quatf_t q)
   return q;
 }
 
-static inline vec3d_t quatf_fct(quatd_t q)
+static inline vec3d_t quatd_fct(quatd_t q)
 {
   q *= 1.f/(1.f+q[3]); q[3] = 0;
 
@@ -1259,14 +1259,66 @@ static inline quatf_t quatf_ict(vec3f_t v)
   return quat_sb_rs(v, s, s-1.f);
 }
 
-static inline quatd_t quatf_ict(vec3d_t v)
+static inline quatd_t quatd_ict(vec3d_t v)
 {
   double s = 2.f/(1.f+vec3_norm(v));
   return quat_sb_rs(v, s, s-1.f);
 }
 
-#define quat_fha(a) quat_fwd(fct,a)
-#define quat_iha(a) quat_fwd(ict,a)
+#define quat_fct(a) quat_fwd(fct,a)
+#define quat_ict(a) quat_fwd(ict,a)
+
+
+// harmonic mean:  (q-1)(q+1)^-1
+static inline vec3f_t quatf_fhm(quatf_t q)
+{
+  static const float K = 0x1.3504f4p1f;    // sqrt(2)+1
+  float s = K/(1.f+q[3]+ssimd_sqrt(2.f+2.f*q[3]));
+
+  q *= s; q[3] = 0;
+  
+  return q;
+}
+
+static inline vec3d_t quatd_fhm(quatd_t q)
+{
+  static const double K = 0x1.3504f333f9de6p1; // sqrt(2)+1
+  double s = K/(1.0+q[3]+ssimd_sqrt(2.0+2.0*q[3]));
+
+  q *= s; q[3] = 0;
+  
+  return q;
+}
+
+static inline quatf_t quatf_ihm(vec3f_t v)
+{
+  static const float K0 = 4.f*0x1.a8279ap-2f;  // 4(sqrt(2)-1)
+  static const float K1 = 0x1.5f619ap-3f;      // 3-2*sqrt(2)
+
+  float d = K1*vec3_norm(v);
+  float a = (1.f+d);
+  float b = (1.f-d)*K0;
+  float c = 1.f/(a*a);
+
+  return quat_bs(v*b*c, (1.f+d*(d-6.f))*c);
+}
+
+static inline quatd_t quatd_ihm(vec3d_t v)
+{
+  static const double K0 = 4.0*0x1.a827999fcef32p-2; // 4(sqrt(2)-1)
+  static const double K1 = 0x1.5f619980c4337p-3;     // 3-2*sqrt(2)
+
+  double d = K1*vec3_norm(v);
+  double a = (1.0+d);
+  double b = (1.0-d)*K0;
+  double c = 1.0/(a*a);
+
+  return quat_bs(v*b*c, (1.0+d*(d-6.0))*c);
+}
+
+
+#define quat_fhm(a) quat_fwd(fhm,a)
+#define quat_ihm(a) quat_fwd(ihm,a)
 
 
 #if defined(SIMD_IMPLEMENTATION)
