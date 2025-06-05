@@ -697,6 +697,8 @@ static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a
 // • otherwise the factor is too small and the magnitude of the result decreased until it reaches
 //   zero (all zero input is zero output)
 // • all finite inputs returns finite results except when (a•a) overflows
+// flip to explict sqrt(1/biased_norm) since better average error and
+// no overflow?
 static inline vec2f_t vec2f_normalize(vec2f_t a) { return ssimd_rsqrt(vec2f_biased_norm(a)) * a; }
 static inline vec2d_t vec2d_normalize(vec2d_t a) { return ssimd_rsqrt(vec2d_biased_norm(a)) * a; }
 static inline vec3f_t vec3f_normalize(vec3f_t a) { return ssimd_rsqrt(vec3f_biased_norm(a)) * a; }
@@ -1190,10 +1192,81 @@ static inline quatd_t quatd_factor_twist(quatd_t q, vec3d_t a)
 #define quat_map_z2x(q) ({ quat_map_i(2,1,0); r[2] = -r[2]; r;})
 #define quat_map_z2y(q) ({ quat_map_i(0,2,1); r[2] = -r[2]; r;})
 
+
 //**********************************************************
 
+// sqrt(Q), |Q|=1, Q.1 >= 0, return bivector part
+static inline vec3f_t quatf_fha(quatf_t q)
+{
+  float d = 1.f + q[3];
+  float s = ssimd_rsqrt(d+d);
+
+  q *= s; q[3] = 0;
+  
+  return q;
+}
+
+static inline vec3d_t quatd_fha(quatd_t q)
+{
+  double d = 1.f + q[3];
+  double s = ssimd_rsqrt(d+d);
+
+  q *= s; q[3] = 0;
+  
+  return q;
+}
+
+// inverse half-angle from bivector part
+static inline quatf_t quatf_iha(vec3f_t v)
+{
+  float d = vec3_norm(v);
+  float s = ssimd_sqrt(1.f-d);
+
+  return quat_sb_rs(v, s+s, 1.0f-(d+d));
+}
+
+static inline quatd_t quatd_iha(vec3d_t v)
+{
+  double d = vec3_norm(v);
+  double s = ssimd_sqrt(1.f-d);
+
+  return quat_sb_rs(v, s+s, 1.0f-(d+d));
+}
+
+#define quat_fha(a) quat_fwd(fha,a)
+#define quat_iha(a) quat_fwd(iha,a)
 
 
+// forward Cayley: |Q|=1, Q.1 >= 0
+static inline vec3f_t quatf_fct(quatf_t q)
+{
+  q *= 1.f/(1.f+q[3]); q[3] = 0;
+
+  return q;
+}
+
+static inline vec3d_t quatf_fct(quatd_t q)
+{
+  q *= 1.f/(1.f+q[3]); q[3] = 0;
+
+  return q;
+}
+
+// inverse Cayley: Q.1 = 0
+static inline quatf_t quatf_ict(vec3f_t v)
+{
+  float s = 2.f/(1.f+vec3_norm(v));
+  return quat_sb_rs(v, s, s-1.f);
+}
+
+static inline quatd_t quatf_ict(vec3d_t v)
+{
+  double s = 2.f/(1.f+vec3_norm(v));
+  return quat_sb_rs(v, s, s-1.f);
+}
+
+#define quat_fha(a) quat_fwd(fct,a)
+#define quat_iha(a) quat_fwd(ict,a)
 
 
 #if defined(SIMD_IMPLEMENTATION)
