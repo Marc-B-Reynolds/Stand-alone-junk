@@ -247,8 +247,8 @@ static inline float  ssimd_rsqrt_f32(float  x) { return 1.f/sqrtf(x); }
 static inline double ssimd_rsqrt_f64(double x) { return 1.0/sqrt(x); }
 
 #define ssimd_rsqrt(x)   (_Generic((x),float:ssimd_rsqrt_f32,default:ssimd_rsqrt_f64)(x))
-
 #define ssimd_sqrt(x)    (_Generic((x),float:sqrtf,default: sqrt)(x))
+#define ssimd_abs(x)     (_Generic((x),float:fabsf,default: fabs)(x))
 #define ssimd_fma(a,b,c) (_Generic((a),float:fmaf, default: fma)(a,b,c))
 
 // element-wise FMAs (unlike 'simd.h' it's up the the user to perform any broadcasts)
@@ -411,6 +411,22 @@ static inline f64x4_t intel_hsub_f64x4(f64x4_t a, f64x4_t b)
 
 #endif
 
+// sum the abs of the elements
+static inline float  vec2f_asum(vec2f_t a) { return ssimd_abs(a[0]) + ssimd_abs(a[1]); }
+static inline double vec2d_asum(vec2d_t a) { return ssimd_abs(a[0]) + ssimd_abs(a[1]); }
+static inline float  vec3f_asum(vec3f_t a) { return ssimd_abs(a[0]) + ssimd_abs(a[1]) + ssimd_abs(a[2]); }
+static inline double vec3d_asum(vec3d_t a) { return ssimd_abs(a[0]) + ssimd_abs(a[1]) + ssimd_abs(a[2]); }
+static inline float  quatf_asum(quatf_t a) { return (ssimd_abs(a[0]) + ssimd_abs(a[1])) + (ssimd_abs(a[2]) + ssimd_abs(a[3])); }
+static inline double quatd_asum(quatd_t a) { return (ssimd_abs(a[0]) + ssimd_abs(a[1])) + (ssimd_abs(a[2]) + ssimd_abs(a[3])); }
+
+#define vec2_asum(a) vec2_fwd(asum, a)
+#define vec3_asum(a) vec3_fwd(asum, a)
+#define quat_asum(a) quat_fwd(asum, a)
+
+// sum of absolute difference
+#define vec2_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; vec2_asum(_a);})
+#define vec3_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; vec3_asum(_a);})
+#define quat_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; quat_asum(_a);})
 
 //*******************************************************
 //
@@ -513,8 +529,9 @@ static const int64_t ssimd_f64_sign_bit   = INT64_C(1)<<63;
 static const int32_t ssimd_f32_one_bits   = INT32_C(0x3f800000);
 static const int64_t ssimd_f64_one_bits   = INT64_C(0x3ff0000000000000);
 
-static inline float  ssimd_f32_sgn(float  x) { return copysignf(1.f,x); }
-static inline double ssimd_f64_sgn(double x) { return copysign (1.0,x); }
+static inline float  ssimd_sgn_f32(float  x) { return copysignf(1.f,x); }
+static inline double ssimd_sgn_f64(double x) { return copysign (1.0,x); }
+#define ssimd_sgn(x)   (_Generic((x),float:ssimd_sgn_f32,default:ssimd_sgn_f64)(x))
 
 // broadcast(sign_bit(s)) 
 static inline i32x2_t vec2f_broadcast_signbit(float s)
@@ -583,7 +600,7 @@ static inline quatd_t quatd_mul_sgn(quatd_t a, double s)
   return ssimd_bitcast_if_64x4(bs^ai);
 }
 
-// this is fine because potentially have a negative zero 4th element is OK
+// this is fine because having a negative zero 4th element is OK
 static inline vec3f_t vec3f_mul_sgn(vec3f_t v, float  s) { return quatf_mul_sgn(v,s); }
 static inline vec3d_t vec3d_mul_sgn(vec3d_t v, double s) { return quatd_mul_sgn(v,s); }
 
@@ -814,10 +831,11 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 
 
 // return a unit vector orthogonal to unit vector 'v'
+// (expand comments)
 static inline vec3f_t vec3f_ortho(vec3f_t v)
 {
   float x  = v[0], y = v[1], z = v[2]; 
-  float sz = ssimd_f32_sgn(z);
+  float sz = ssimd_sgn(z);
   float a  = y/(z+sz);
 
   x = -x;
@@ -828,7 +846,7 @@ static inline vec3f_t vec3f_ortho(vec3f_t v)
 static inline vec3d_t vec3d_ortho(vec3d_t v)
 {
   double x  = v[0], y = v[1], z = v[2]; 
-  double sz = ssimd_f64_sgn(z);
+  double sz = ssimd_sgn(z);
   double a  = y/(z+sz);
 
   x = -x;
@@ -1021,20 +1039,20 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 // scalar implementation: see notes below
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
-  float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[3]*b[1];  
-  float y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[3]*b[0];
-  float z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[3]*b[3];
-  float w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[3]*b[2];
+  float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1];  
+  float y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0];
+  float z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3];
+  float w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2];
 
   return quatf(x,y,z,w);
 }
 
 static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 {
-  double x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[3]*b[1];  
-  double y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[3]*b[0];
-  double z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[3]*b[3];
-  double w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[3]*b[2];
+  double x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1];  
+  double y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0];
+  double z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3];
+  double w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2];
 
   return quatd(x,y,z,w);
 }
@@ -1093,6 +1111,14 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 
 #define quat_mul(a,b) quat_fwd(mul,a,b)
 
+
+// unit quaterions Q and Ql where Q=QlQr: solve for Qr
+#define quat_solve_qr(q,ql) quat_mul(quat_conj(ql),q)
+
+// unit quaterions Q and Qr where Q=QlQr: solve for Ql
+#define quat_solve_ql(q,qr) quat_mul(q,quat_conj(qr))
+
+
 // sqrt(ba^*)
 // Find the minimal angle rotation that maps 'a' to 'b'.
 // Requires b not approaching -a (infinite solution case)
@@ -1124,6 +1150,30 @@ static inline quatd_t quatd_from_normals(vec3d_t a, vec3d_t b)
 }
 
 #define quat_from_normals(a,b) quat_fwd(from_normals,a,b)
+
+
+// factor the "twist" component of 'q' in reference direction 'a'
+// (where both are unit magnitude)
+//    Q = Qs*Qt (standard order, Qs = swing, Qt = twist)
+// to compute Qt & Qs from above convention use:
+//    qt = quat_factor_twist(q,v)
+//    qs = quat_solve_ql(q,qt)
+// for the opposite (Q=Qt*Qs) then 'qs':
+//    qs = quat_solve_qr(q,qt)
+// (point to specialized version after I adapt)
+static inline quatf_t quatf_factor_twist(quatf_t q, vec3f_t a)
+{
+  vec3f_t t = vec3_dot(q,a)*a;
+  return quat_normalize(quat_bs(t,q[3]));
+}
+
+static inline quatd_t quatd_factor_twist(quatd_t q, vec3d_t a)
+{
+  vec3d_t t = vec3_dot(q,a)*a;
+  return quat_normalize(quat_bs(t,q[3]));
+}
+
+#define quat_factor_twist(a,b) quat_fwd(factor_twist,a,b)
 
 
 
