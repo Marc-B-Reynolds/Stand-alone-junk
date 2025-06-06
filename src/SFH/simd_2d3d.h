@@ -2,6 +2,7 @@
 // Marc B. Reynolds, 2022-2025
 // Public Domain under http://unlicense.org, see link for details.
 
+// ssimd (2D/3D spatial SIMD)
 // Logically extends `simd.h` with some 2D & 3D types. Meaning that
 // it can be used either in isolation or with `simd.h` (expand a bit)
 // If `simd.h` isn't include then:
@@ -165,6 +166,10 @@ static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4
     default: (void*)0)(_x);         \
   })
 
+// same number of elements and width type of opposite (int vs. float)
+// should probably add (ssimd) base element type versions as well
+#define ssimd_itypeof(x) typeof(ssimd_bitcast_fi(x))
+#define ssimd_ftypeof(x) typeof(ssimd_bitcast_if(x))
 
 //*******************************************************
 // basic support functionality
@@ -242,9 +247,9 @@ static inline vec3f_t vec3d_demote (vec3d_t v) { return __builtin_convertvector(
 static inline quatd_t quatf_promote(quatf_t q) { return __builtin_convertvector(q,quatd_t); }
 static inline quatf_t quatd_demote (quatd_t q) { return __builtin_convertvector(q,quatf_t); }
 
-// favor avoiding infinity for denormal input to improved average error: could flip for known I suppose
+// favor avoiding spurious overflow (infinity for denormal input) to improved average error
 static inline float  ssimd_rsqrt_f32(float  x) { return 1.f/sqrtf(x); }
-static inline double ssimd_rsqrt_f64(double x) { return 1.0/sqrt(x); }
+static inline double ssimd_rsqrt_f64(double x) { return 1.0/sqrt(x);  }
 
 #define ssimd_rsqrt(x)   (_Generic((x),float:ssimd_rsqrt_f32,default:ssimd_rsqrt_f64)(x))
 #define ssimd_sqrt(x)    (_Generic((x),float:sqrtf,default: sqrt)(x))
@@ -520,38 +525,51 @@ static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  
 //*******************************************************
 //
 
-static const float   ssimd_f32_ulp1       = 0x1.0p-23f;
-static const double  ssimd_f64_ulp1       = 0x1.0p-52;
-static const float   ssimd_f32_min_normal = 0x1.0p-126f;
-static const double  ssimd_f64_min_normal = 0x1.0p-1022;
-static const int32_t ssimd_f32_sign_bit   = INT32_C(1)<<31;
-static const int64_t ssimd_f64_sign_bit   = INT64_C(1)<<63;
-static const int32_t ssimd_f32_one_bits   = INT32_C(0x3f800000);
-static const int64_t ssimd_f64_one_bits   = INT64_C(0x3ff0000000000000);
+static const float   ssimd_ulp1_f32       = 0x1.0p-23f;
+static const double  ssimd_ulp1_f64       = 0x1.0p-52;
+static const float   ssimd_min_normal_f32 = 0x1.0p-126f;
+static const double  ssimd_min_normal_f64 = 0x1.0p-1022;
+static const int32_t ssimd_sign_bit_f32   = INT32_C(1)<<31;
+static const int64_t ssimd_sign_bit_f64   = INT64_C(1)<<63;
+static const int32_t ssimd_one_bits_f32   = INT32_C(0x3f800000);
+static const int64_t ssimd_one_bits_f64   = INT64_C(0x3ff0000000000000);
 
 static inline float  ssimd_sgn_f32(float  x) { return copysignf(1.f,x); }
 static inline double ssimd_sgn_f64(double x) { return copysign (1.0,x); }
-#define ssimd_sgn(x)   (_Generic((x),float:ssimd_sgn_f32,default:ssimd_sgn_f64)(x))
 
-// broadcast(sign_bit(s)) 
+#define ssimd_sgn(x)  (_Generic((x),float:ssimd_sgn_f32,default:ssimd_sgn_f64)(x))
+
+// yields F for binary32 and D for binary64
+#define ssimd_select_const(x,F,D) \
+  ({(x)+__builtin_choose_expr(__builtin_types_compatible_p(typeof(x), float),F,D);})
+
+#define ssimd_min_normal(x) ssimd_select_const(x,ssimd_min_normal_f32,ssimd_min_normal_f64)
+#define ssimd_ulp1(x)       ssimd_select_const(x,ssimd_min_normal_f32,ssimd_min_normal_f64)
+#define ssimd_sign_bit(x)   ssimd_select_const(x,ssimd_sign_bit_f32,  ssimd_sign_bit_f64)
+#define ssimd_one_bits(x)   ssimd_select_const(x,ssimd_one_bits_f32,  ssimd_one_bits_f64)
+
+// returns: x+min_normal
+#define ssimd_bias_min_normal(x) ((x)+ssimd_min_normal(x))
+
+// broadcast(sign_bit(s))  (clean these up)
 static inline i32x2_t vec2f_broadcast_signbit(float s)
 {
-  return (i32x2_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit);
+  return (i32x2_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_sign_bit_f32);
 }
 
 static inline i64x2_t vec2d_broadcast_signbit(double s)
 {
-  return (i64x2_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit);
+  return (i64x2_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_sign_bit_f64);
 }
 
 static inline i32x4_t quatf_broadcast_signbit(float s)
 {
-  return (i32x4_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_f32_sign_bit);
+  return (i32x4_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_sign_bit_f32);
 }
 
 static inline i64x4_t quatd_broadcast_signbit(double s)
 {
-  return (i64x4_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_f64_sign_bit);
+  return (i64x4_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_sign_bit_f64);
 }
 
 // flipping the sign bit of zero is OK
@@ -681,12 +699,12 @@ static inline double quatd_dot_fma(quatd_t a, quatd_t b) { return fma (a[0],b[0]
 //  the bias can't contribute to the result if 1/2 ulp(a•a) > min_normal
 //  (1+u)2^-101 / (1+u)2^-969 for binary32/binary64 respectively with u = ulp(1)
 //  cost: transforms a mul into an fma (~zero cost) and constant load
-static inline float  vec2f_biased_norm(vec2f_t a) { return fmaf(a[0],a[0],fmaf(a[1],a[1],ssimd_f32_min_normal)); }
-static inline double vec2d_biased_norm(vec2d_t a) { return fma (a[0],a[0],fma (a[1],a[1],ssimd_f64_min_normal)); }
-static inline float  vec3f_biased_norm(vec3f_t a) { return fmaf(a[0],a[0],fmaf(a[1],a[1],fmaf(a[2],a[2],ssimd_f32_min_normal))); }
-static inline double vec3d_biased_norm(vec3d_t a) { return fma (a[0],a[0],fma (a[1],a[1],fma (a[2],a[2],ssimd_f64_min_normal))); }
-static inline float  quatf_biased_norm(quatf_t a) { return fmaf(a[0],a[0],a[1]*a[1])+fmaf(a[2],a[2],fmaf(a[3],a[3],ssimd_f32_min_normal)); }
-static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a[1])+fma (a[2],a[2],fma (a[3],a[3],ssimd_f64_min_normal)); }
+static inline float  vec2f_biased_norm(vec2f_t a) { return fmaf(a[0],a[0],fmaf(a[1],a[1],ssimd_min_normal_f32)); }
+static inline double vec2d_biased_norm(vec2d_t a) { return fma (a[0],a[0],fma (a[1],a[1],ssimd_min_normal_f64)); }
+static inline float  vec3f_biased_norm(vec3f_t a) { return fmaf(a[0],a[0],fmaf(a[1],a[1],fmaf(a[2],a[2],ssimd_min_normal_f32))); }
+static inline double vec3d_biased_norm(vec3d_t a) { return fma (a[0],a[0],fma (a[1],a[1],fma (a[2],a[2],ssimd_min_normal_f64))); }
+static inline float  quatf_biased_norm(quatf_t a) { return fmaf(a[0],a[0],a[1]*a[1])+fmaf(a[2],a[2],fmaf(a[3],a[3],ssimd_min_normal_f32)); }
+static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a[1])+fma (a[2],a[2],fma (a[3],a[3],ssimd_min_normal_f64)); }
 
 #define vec2_biased_norm(a) vec2_fwd(biased_norm,a)
 #define vec3_biased_norm(a) vec3_fwd(biased_norm,a)
@@ -697,14 +715,13 @@ static inline double quatd_biased_norm(quatd_t a) { return fma (a[0],a[0],a[1]*a
 // • otherwise the factor is too small and the magnitude of the result decreased until it reaches
 //   zero (all zero input is zero output)
 // • all finite inputs returns finite results except when (a•a) overflows
-// flip to explict sqrt(1/biased_norm) since better average error and
-// no overflow?
-static inline vec2f_t vec2f_normalize(vec2f_t a) { return ssimd_rsqrt(vec2f_biased_norm(a)) * a; }
-static inline vec2d_t vec2d_normalize(vec2d_t a) { return ssimd_rsqrt(vec2d_biased_norm(a)) * a; }
-static inline vec3f_t vec3f_normalize(vec3f_t a) { return ssimd_rsqrt(vec3f_biased_norm(a)) * a; }
-static inline vec3d_t vec3d_normalize(vec3d_t a) { return ssimd_rsqrt(vec3d_biased_norm(a)) * a; }
-static inline quatf_t quatf_normalize(quatf_t a) { return ssimd_rsqrt(quatf_biased_norm(a)) * a; }
-static inline quatd_t quatd_normalize(quatd_t a) { return ssimd_rsqrt(quatd_biased_norm(a)) * a; }
+// • NOT using ssimd_rsqrt since denormal input is *impossible*
+static inline vec2f_t vec2f_normalize(vec2f_t a) { return ssimd_sqrt(1.f/vec2f_biased_norm(a)) * a; }
+static inline vec2d_t vec2d_normalize(vec2d_t a) { return ssimd_sqrt(1.f/vec2d_biased_norm(a)) * a; }
+static inline vec3f_t vec3f_normalize(vec3f_t a) { return ssimd_sqrt(1.f/vec3f_biased_norm(a)) * a; }
+static inline vec3d_t vec3d_normalize(vec3d_t a) { return ssimd_sqrt(1.f/vec3d_biased_norm(a)) * a; }
+static inline quatf_t quatf_normalize(quatf_t a) { return ssimd_sqrt(1.f/quatf_biased_norm(a)) * a; }
+static inline quatd_t quatd_normalize(quatd_t a) { return ssimd_sqrt(1.f/quatd_biased_norm(a)) * a; }
 
 #define vec2_normalize(a) vec2_fwd(normalize,a)
 #define vec3_normalize(a) vec3_fwd(normalize,a)
@@ -774,7 +791,7 @@ static inline vec2f_t vec2f_usqrt(vec2f_t a)
   float x  = a[0], y = a[1];
   float m  = x+1.f; m = ssimd_sqrt(m+m);
   float rx = 0.5f * m;
-  float ry = y/(m + ssimd_f32_min_normal);
+  float ry = y/(m + ssimd_min_normal_f32);
 
   return vec2(rx,ry);
 }
@@ -784,7 +801,7 @@ static inline vec2d_t vec2d_usqrt(vec2f_t a)
   double x  = a[0], y = a[1];
   double m  = x+1.0; m = ssimd_sqrt(m+m);
   double rx = 0.5 * m;
-  double ry = y/(m + ssimd_f64_min_normal);
+  double ry = y/(m + ssimd_min_normal_f64);
 
   return vec2(rx,ry);
 }
@@ -1163,6 +1180,7 @@ static inline quatd_t quatd_from_normals(vec3d_t a, vec3d_t b)
 // for the opposite (Q=Qt*Qs) then 'qs':
 //    qs = quat_solve_qr(q,qt)
 // (point to specialized version after I adapt)
+// (this isn't very efficient. esp for computing both)
 static inline quatf_t quatf_factor_twist(quatf_t q, vec3f_t a)
 {
   vec3f_t t = vec3_dot(q,a)*a;
@@ -1194,6 +1212,10 @@ static inline quatd_t quatd_factor_twist(quatd_t q, vec3d_t a)
 
 
 //**********************************************************
+// some maps between unit quaterions and 3D unit ball
+// SEE:
+//   https://marc-b-reynolds.github.io/quaternions/2016/05/30/QuatHDAngleCayley.html
+//   https://marc-b-reynolds.github.io/quaternions/2017/05/02/QuatQuantPart1.html
 
 // sqrt(Q), |Q|=1, Q.1 >= 0, return bivector part
 static inline vec3f_t quatf_fha(quatf_t q)
