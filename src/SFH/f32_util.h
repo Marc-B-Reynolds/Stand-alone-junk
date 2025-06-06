@@ -222,11 +222,9 @@ static inline float f32_sqrt(float a)
 #endif  
 }
 
-// 1/sqrt(a) : lowest error "naive" version
+// 1/sqrt(a) : avoid spurious overflow choice
 // SEE: https://gist.github.com/Marc-B-Reynolds/9fb24a7a4ee915e6e973bf9f4d08c404
-// correctly:   86.991060% (14594678)
-// faithfully:  13.008940% (2182538)
-static inline float f32_rsqrt(float a) { return f32_sqrt(1.f/a); }
+static inline float f32_rsqrt(float a) { return 1.f/f32_sqrt(a); }
 
 // promote/demote double is correctly rounded (full domain)
 static inline float f32_rsqrt_cr(float x)
