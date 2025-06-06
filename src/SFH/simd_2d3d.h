@@ -503,9 +503,9 @@ static inline quatd_t quatd_vwsum(quatd_t a, quatd_t b, quatd_t sa, quatd_t sb) 
 static inline vec3f_t vec3f_vwsum(vec3f_t a, vec3f_t b, vec3f_t sa, vec3f_t sb) { return quatf_vwsum(a,b,sa,sb); }
 static inline vec3d_t vec3d_vwsum(vec3d_t a, vec3d_t b, vec3d_t sa, vec3d_t sb) { return quatd_vwsum(a,b,sa,sb); }
 
-#define vec2_blend(a,b,s) vec2_fwd(blend, a,b,s)
-#define vec3_blend(a,b,s) vec3_fwd(blend, a,b,s)
-#define quat_blend(a,b,s) quat_fwd(blend, a,b,s)
+#define vec2_vwsum(a,b,sa,sb) vec2_fwd(vwsum, a,b,sa,sb)
+#define vec3_vwsum(a,b,sa,sb) vec3_fwd(vwsum, a,b,sa,sb)
+#define quat_vwsum(a,b,sa,sb) quat_fwd(vwsum, a,b,sa,sb)
 
 
 #define ssimd_wsum_x(type,A,B,SA,SB) type##_vwsum(A,B,type##_broadcast(SA),B*type##_broadcast(SB))
@@ -694,6 +694,15 @@ static inline double quatd_dot_fma(quatd_t a, quatd_t b) { return fma (a[0],b[0]
 #define vec3_norm vec3_norm_std
 #define quat_norm quat_norm_std
 
+// broadcast (a•b) to all elements
+// (maybe capture the inputs)
+#define vec2_broadcast_dot(a,b) vec2_broadcast(vec2_dot(a,b))
+#define vec3_broadcast_dot(a,b) vec3_broadcast(vec3_dot(a,b))
+#define quat_broadcast_dot(a,b) quat_broadcast(quat_dot(a,b))
+
+// to all 4 elements 
+#define vec3_broadcast_dot_i(a,b) quat_broadcast(vec3_dot(a,b))
+
 
 // biased_norm(a) = a•a + min_normal
 //  the bias can't contribute to the result if 1/2 ulp(a•a) > min_normal
@@ -846,7 +855,26 @@ static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 #define vec3_cross(a,b) vec3_fwd(cross,a,b)
 
 // ensure the fourth component is zero
+// move to a more logical spot in the file
 #define vec3_canonical(v) ({ typeof(v) r = v; r[3] = 0; r; })
+
+
+// vector triple product: a×(b×c) = (a•c)b-(a•b)c
+static inline vec3f_t vec3f_triple_product(vec3f_t a, vec3f_t b, vec3f_t c)
+{
+  vec3f_t sb = vec3_broadcast_dot_i(a,c);
+  vec3f_t sc = vec3_broadcast_dot_i(a,b);
+  return vec3_vwsum(b,c,sb,-sc);
+}
+
+static inline vec3d_t vec3d_triple_product(vec3d_t a, vec3d_t b, vec3d_t c)
+{
+  vec3d_t sb = vec3_broadcast_dot_i(a,c);
+  vec3d_t sc = vec3_broadcast_dot_i(a,b);
+  return vec3_vwsum(b,c,sb,-sc);
+}
+
+#define vec3_triple_product(a,b,c) vec3_fwd(triple_product,a,b,c)
 
 
 // return a unit vector orthogonal to unit vector 'v'
