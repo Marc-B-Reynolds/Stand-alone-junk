@@ -83,6 +83,7 @@ typedef uint64_t u64x4_t SSIMD_TYPE_ATTR(64,4);
 })
 #endif
 
+
 #if defined(__x86_64__)
 #include <x86intrin.h>
 
@@ -293,6 +294,18 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return __builtin_convertvector
 #define vec3_from_int(x) ({ _Generic(x, i32x4_t:vec3f_from_int, default:vec3d_from_int)(x); })
 #define quat_from_int(x) ({ _Generic(x, i32x4_t:quatf_from_int, default:quatd_from_int)(x); })
 
+// elementwise absolute value
+static inline vec2f_t vec2f_abs(vec2f_t x) { return vec2f(fabsf(x[0]),fabsf(x[1])) ; }
+static inline vec2d_t vec2d_abs(vec2d_t x) { return vec2d(fabs (x[0]),fabs (x[1])) ; }
+static inline quatf_t quatf_abs(quatf_t x) { return quatf(fabsf(x[0]),fabsf(x[1]),fabsf(x[2]), fabsf(x[3])) ; }
+static inline quatd_t quatd_abs(quatd_t x) { return quatd(fabs (x[0]),fabs (x[1]),fabs (x[2]), fabs (x[3])) ; }
+
+#define vec3f_abs quatf_abs
+#define vec3d_abs quatd_abs
+
+#define vec2_abs(x) vec2_fwd(abs,x)
+#define vec3_abs(x) vec3_fwd(abs,x)
+#define quat_abs(x) quat_fwd(abs,x)
 
 //*******************************************************
 // An special case implementations that have to punt to
