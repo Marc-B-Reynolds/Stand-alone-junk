@@ -294,6 +294,18 @@ static inline vec3d_t vec3d_from_int(i64x4_t x) { return __builtin_convertvector
 #define vec3_from_int(x) ({ _Generic(x, i32x4_t:vec3f_from_int, default:vec3d_from_int)(x); })
 #define quat_from_int(x) ({ _Generic(x, i32x4_t:quatf_from_int, default:quatd_from_int)(x); })
 
+
+// float → int : input is scaled by 's', rounded to nearest and converted to an integer (logically)
+static inline i32x2_t vec2f_scale_round_to_int(vec2f_t x, float  s) { return vec2f_to_int(vec2f_fma(x,vec2f_broadcast(s), vec2f_broadcast(0.5f))); }
+static inline i64x2_t vec2d_scale_round_to_int(vec2d_t x, double s) { return vec2d_to_int(vec2d_fma(x,vec2d_broadcast(s), vec2d_broadcast(0.5)));  }
+static inline i32x4_t quatf_scale_round_to_int(quatf_t x, float  s) { return vec3f_to_int(quatf_fma(x,quatf_broadcast(s), quatf_broadcast(0.5f))); }
+static inline i64x4_t quatd_scale_round_to_int(quatd_t x, double s) { return vec3d_to_int(quatd_fma(x,quatd_broadcast(s), quatd_broadcast(0.5)));  }
+
+#define vec2_scale_round_to_int(x,s) vec2_fwd(scale_round_to_int,x,s)
+#define quat_scale_round_to_int(x,s) vec2_fwd(scale_round_to_int,x,s)
+#define vec3_scale_round_to_int(x,s) quat_scale_round_to_int(x,s)
+
+
 // elementwise absolute value
 static inline vec2f_t vec2f_abs(vec2f_t x) { return vec2f(fabsf(x[0]),fabsf(x[1])) ; }
 static inline vec2d_t vec2d_abs(vec2d_t x) { return vec2d(fabs (x[0]),fabs (x[1])) ; }
