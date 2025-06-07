@@ -307,6 +307,24 @@ static inline quatd_t quatd_abs(quatd_t x) { return quatd(fabs (x[0]),fabs (x[1]
 #define vec3_abs(x) vec3_fwd(abs,x)
 #define quat_abs(x) quat_fwd(abs,x)
 
+// elementwise floor
+static inline vec2f_t vec2f_floor(vec2f_t x) { return vec2f(floorf(x[0]),floorf(x[1])) ; }
+static inline vec2d_t vec2d_floor(vec2d_t x) { return vec2d(floor (x[0]),floor (x[1])) ; }
+static inline quatf_t quatf_floor(quatf_t x) { return quatf(floorf(x[0]),floorf(x[1]),floorf(x[2]), floorf(x[3])) ; }
+static inline quatd_t quatd_floor(quatd_t x) { return quatd(floor (x[0]),floor (x[1]),floor (x[2]), floor (x[3])) ; }
+
+#define vec3f_floor quatf_floor
+#define vec3d_floor quatd_floor
+
+#define vec2_floor(x) vec2_fwd(floor,x)
+#define vec3_floor(x) vec3_fwd(floor,x)
+#define quat_floor(x) quat_fwd(floor,x)
+
+#define vec2_round_up(x) vec2_floor((x)+0.5f)
+#define vec3_round_up(x) vec3_floor((x)+0.5f)
+#define quat_round_up(x) quat_floor((x)+0.5f)
+
+
 //*******************************************************
 // An special case implementations that have to punt to
 // direct intrinsic calls for some reason or another.
@@ -748,6 +766,18 @@ static inline quatd_t quatd_normalize(quatd_t a) { return ssimd_sqrt(1.f/quatd_b
 #define vec2_normalize(a) vec2_fwd(normalize,a)
 #define vec3_normalize(a) vec3_fwd(normalize,a)
 #define quat_normalize(a) quat_fwd(normalize,a)
+
+// 
+static inline float   vec2f_dist_sq(vec2f_t a, vec2f_t b) { a-=b; return vec2_norm_std(a); }
+static inline double  vec2d_dist_sq(vec2d_t a, vec2d_t b) { a-=b; return vec2_norm_std(a); }
+static inline float   vec3f_dist_sq(vec3f_t a, vec3f_t b) { a-=b; return vec3_norm_std(a); }
+static inline double  vec3d_dist_sq(vec3d_t a, vec3d_t b) { a-=b; return vec3_norm_std(a); }
+static inline float   quatf_dist_sq(quatf_t a, quatf_t b) { a-=b; return quat_norm_std(a); }
+static inline double  quatd_dist_sq(quatd_t a, quatd_t b) { a-=b; return quat_norm_std(a); }
+
+#define vec2_dist_sq(a,b) vec2_fwd(dist_sq,a,b)
+#define vec3_dist_sq(a,b) vec3_fwd(dist_sq,a,b)
+#define quat_dist_sq(a,b) quat_fwd(dist_sq,a,b)
 
 
 //**********************************************************
