@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2011-2024
 // Public Domain under http://unlicense.org, see link for details.
 
