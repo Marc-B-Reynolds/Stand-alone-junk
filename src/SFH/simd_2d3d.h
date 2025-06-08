@@ -1137,8 +1137,11 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 
 
 
-#if 1
+#if !defined(__clang__)
+
 // scalar implementation: see notes below
+// not happy because not bit identical. could be made so
+// but that means the alternate is "really" fixed.
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
   float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1];  
@@ -1161,52 +1164,60 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 
 #else
 
-// sigh: I must of tweaked something at some point and this
-// is lowering worse that the scalar version.
-// (uica predicts 24.75 cycle throughput on skylake)
-
 // (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
-
+// 
+//                r
+//        r0             r1
+//    t0      t1     t2       tn
+//   ax bw + aw bx + ay bz - az by
+//   az bx + ay bw + aw by - ax bz
+//   ax by + az bw + aw bz - ay bx
+// -(az bz + ax bx + ay by - aw bw)
+//
+// uiCA througput prediction (skylake)
+//   clang 17.5 / gcc 29.00
+//   clang 18.0 / gcc 21.50 {scalar version}
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
-  quatf_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
-  quatf_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
-  quatf_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
-  
-  quatf_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
-  quatf_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
-  quatf_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
+  // use of typeof(a) is to be able to copy-paste between
+  // bit-width versions (poor man's auto)
 
-  quatf_t aw = quat_shuffle(a, 3,3,3,1);     // [aw   ,aw   ,aw   ,ay   ]
-  quatf_t b2 = quat_shuffle(b, 0,1,2,1);     // [   bx,   by,   bz,   by]
-  quatf_t t1 = quat_fma(aw,b2,t0);           // (AxB + aw B) + ax bx + ay by - aw bw
-  
-  quatf_t bw = quat_shuffle(b, 3,3,3,2);     // [   bw,   bw,   bw,   bz]
-  quatf_t a2 = quat_shuffle(a, 0,1,2,2);     // [ax   ,ay   ,az   ,az   ]
-  quatf_t t2 = quat_fma(bw,a2,t1);           // (AxB + bw A + aw B) + dot(A,B)-aw bw
+  typeof(a) a0 = quat_shuffle(a, 0,2,0,2);     // [ax   ,az   ,ax   ,az   ] {t0}
+  typeof(a) b0 = quat_shuffle(b, 3,0,1,2);     // [   bw,   bx,   by,   bz] {t0}
+  typeof(a) a1 = quat_shuffle(a, 3,1,2,0);     // [aw   ,ay   ,az   ,ax   ] {t1}
+  typeof(a) b1 = quat_shuffle(b, 0,3,3,0);     // [   bx,   bw,   bw,   bx] {t1}
+  typeof(a) r0 = quat_fma(a0,b0,a1*b1);        //                           {r0}
+    
+  typeof(a) a2 = quat_shuffle(a, 1,3,3,1);     // [ay   ,aw   ,aw   ,ay   ] {t2}
+  typeof(a) b2 = quat_shuffle(b, 2,1,2,1);     // [   bz,   by,   bz,   by] {t2}
 
-  return quat_neg_scalar(t2);
+  typeof(a) an = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ] {tn}
+  typeof(a) bn = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw] {tn}
+  typeof(a) r1 = quat_fma(a2,b2,-an*bn);       //                           {t2 - tn}
+
+  typeof(a) r  = r0 + r1;
+
+  return quat_neg_scalar(r);
 }
 
 static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 {
-  quatd_t a1 = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ]
-  quatd_t b1 = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw]
-  quatd_t r0 = a1*b1;                        // [az by,ax bz,ay bx,aw bw]
-  
-  quatd_t a0 = quat_shuffle(a, 1,2,0,0);     // [ay   ,az,   ax   ,ax   ]
-  quatd_t b0 = quat_shuffle(b, 2,0,1,0);     // [   bz,   bx,   by,bx   ]
-  quatd_t t0 = quat_fma(a0,b0,-r0);          // (AxB) + ax bx - aw bw
+  typeof(a) a0 = quat_shuffle(a, 0,2,0,2);     // [ax   ,az   ,ax   ,az   ] {t0}
+  typeof(a) b0 = quat_shuffle(b, 3,0,1,2);     // [   bw,   bx,   by,   bz] {t0}
+  typeof(a) a1 = quat_shuffle(a, 3,1,2,0);     // [aw   ,ay   ,az   ,ax   ] {t1}
+  typeof(a) b1 = quat_shuffle(b, 0,3,3,0);     // [   bx,   bw,   bw,   bx] {t1}
+  typeof(a) r0 = quat_fma(a0,b0,a1*b1);        //                           {r0}
+    
+  typeof(a) a2 = quat_shuffle(a, 1,3,3,1);     // [ay   ,aw   ,aw   ,ay   ] {t2}
+  typeof(a) b2 = quat_shuffle(b, 2,1,2,1);     // [   bz,   by,   bz,   by] {t2}
 
-  quatd_t aw = quat_shuffle(a, 3,3,3,1);     // [aw   ,aw   ,aw   ,ay   ]
-  quatd_t b2 = quat_shuffle(b, 0,1,2,1);     // [   bx,   by,   bz,   by]
-  quatd_t t1 = quat_fma(aw,b2,t0);           // (AxB + aw B) + ax bx + ay by - aw bw
-  
-  quatd_t bw = quat_shuffle(b, 3,3,3,2);     // [   bw,   bw,   bw,   bz]
-  quatd_t a2 = quat_shuffle(a, 0,1,2,2);     // [ax   ,ay   ,az   ,az   ]
-  quatd_t t2 = quat_fma(bw,a2,t1);           // (AxB + bw A + aw B) + dot(A,B)-aw bw
+  typeof(a) an = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ] {tn}
+  typeof(a) bn = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw] {tn}
+  typeof(a) r1 = quat_fma(a2,b2,-an*bn);       //                           {t2 - tn}
 
-  return quat_neg_scalar(t2);
+  typeof(a) r  = r0 + r1;
+
+  return quat_neg_scalar(r);
 }
 
 #endif
