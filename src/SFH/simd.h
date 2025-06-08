@@ -4,7 +4,7 @@
 
 #pragma once
 
-#define SFH_SIMD_H  // marker define
+#define SFH_SIMD_H  // external marker define
 
 // WARNING: This is a "you might puke in your mouth" macro crimes
 //
@@ -28,7 +28,9 @@
 // Assumptions:
 // • target has hardware FMA
 // • user has disabled: math-errno and trapping-math (if GCC
-//   it will nag the user and set them via pragmas)
+//   it will nag the user and set them via pragmas).
+//   Doesn't care about signed zeros and there'll be some
+//   small wins from that.
 // • WARNING: weaking floating point (other various fast-math
 //   optimization will break some contracts). I'll try to
 //   remember to note them in the code.
@@ -67,7 +69,8 @@
 // Internal notes:
 // • fungus growth so there's a fair number of simplications possible
 // • some wavering about what is & isn't macro expanded (internal
-//   simplicity vs. compile time)
+//   simplicity vs. compile time). Since register sizes are mostly
+//   fixed: baking (vs. MAP expansions) probably should be prefered.
 // • some seemingly awkward constructions are due to attempting to
 //   support as wide a range of compiler versions as reasonable
 //   possible and plain-old C constraints (like all choices of
@@ -208,6 +211,25 @@
   }                                           \
   _x;                                         \
 })
+
+//  iBxN_t f(fBxN_t X,...)
+#define simd_component_map_fi(f,X,...) ({       \
+  simd_fi_typeof(X) _R = {0};                   \
+  typeof(X)         _X = X;                     \
+  for(size_t i=0; i<simd_dim(_X); i++)          \
+    _R[i] = f(_X[i] __VA_OPT__(,) __VA_ARGS__); \
+  _R;                                           \
+})
+
+//  fBxN_t f(iBxN_t X,...)
+#define simd_component_map_if(f,X,...) ({       \
+  simd_if_typeof(X) _R = {0};                   \
+  typeof(X)         _X = X;                     \
+  for(size_t i=0; i<simd_dim(_X); i++)          \
+    _R[i] = f(_X[i] __VA_OPT__(,) __VA_ARGS__); \
+  _R;                                           \
+})
+
 
 // for generic 'libm' style float unary & binary function defs:
 // binary64 is NAME and binary32 is NAME suffixed with 'f'
@@ -384,9 +406,16 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 //---------------------------
-// rework all of this (should be expanded)
-// defs for SIMD_MAP et al.
+// I keep wavering. stuff like could be expanded but do I
+// really want to? sizes are mostly fixed so why burden
+// compile times? 
+
 #if defined(SIMD_ENABLE_512)
+#define SIMD_B8_X   8x8,8x16,8x32,8x64
+#define SIMD_B16_X  16x4,16x8,16x16,16x32
+#define SIMD_B32_X  32x2,32x4,32x8,32x16
+#define SIMD_B64_X  64x2,64x4,64x8
+
 #define SIMD_U8_X   u8x8,u8x16,u8x32,u8x64
 #define SIMD_I8_X   i8x8,i8x16,i8x32,i8x64
 #define SIMD_U16_X u16x4,u16x8,u16x16,u16x32
@@ -397,7 +426,13 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define SIMD_U64_X u64x2,u64x4,u64x8
 #define SIMD_I64_X i64x2,i64x4,i64x8
 #define SIMD_F64_X f64x2,f64x4,f64x8
+
 #else
+
+#define SIMD_B8_X   8x8,8x16,8x32
+#define SIMD_B16_X  16x4,16x8,16x16
+#define SIMD_B32_X  32x2,32x4,32x8
+#define SIMD_B64_X  64x2,64x4
 
 #define SIMD_U8_X   u8x8,u8x16,u8x32
 #define SIMD_I8_X   i8x8,i8x16,i8x32
