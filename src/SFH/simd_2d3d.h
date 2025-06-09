@@ -230,9 +230,9 @@ static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 #define quat_broadcast(x) ssimd_fwd_sfunc(quat,broadcast,x)
 
 // single "register" shuffles
-#define vec2_shuffle(V,A,B)     __builtin_shufflevector(V,V,A,B)
-#define vec3_shuffle(V,A,B,C)   __builtin_shufflevector(V,V,A,B,C,3)
-#define quat_shuffle(Q,A,B,C,D) __builtin_shufflevector(Q,Q,A,B,C,D)
+#define vec2_shuffle(V,A,B)     __builtin_shuffle(V,A,B)
+#define vec3_shuffle(V,A,B,C)   __builtin_shuffle(V,A,B,C,3)
+#define quat_shuffle(Q,A,B,C,D) __builtin_shuffle(Q,A,B,C,D)
 
 // two "register" shuffles
 #define vec2_shuffle2(V0,V1,A,B)     __builtin_shufflevector(V0,V1,A,B)
@@ -1174,13 +1174,16 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 //   ax by + az bw + aw bz - ay bx
 // -(az bz + ax bx + ay by - aw bw)
 //
-// uiCA througput prediction (skylake)
-//   clang 17.5 / gcc 29.00
-//   clang 18.0 / gcc 21.50 {scalar version}
+// uiCA throughput prediction (skylake)
+//   clang 17.5 / gcc 29.00 {this}
+//   clang 18.0 / gcc 21.50 {scalar version above}
+//
+// structured to break dep-chains instead of minimizing
+// rounding error (nested FMAs)
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
   // use of typeof(a) is to be able to copy-paste between
-  // bit-width versions (poor man's auto)
+  // the two bit-width versions (pre C23 auto)
 
   typeof(a) a0 = quat_shuffle(a, 0,2,0,2);     // [ax   ,az   ,ax   ,az   ] {t0}
   typeof(a) b0 = quat_shuffle(b, 3,0,1,2);     // [   bw,   bx,   by,   bz] {t0}
@@ -1190,12 +1193,11 @@ static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
     
   typeof(a) a2 = quat_shuffle(a, 1,3,3,1);     // [ay   ,aw   ,aw   ,ay   ] {t2}
   typeof(a) b2 = quat_shuffle(b, 2,1,2,1);     // [   bz,   by,   bz,   by] {t2}
-
   typeof(a) an = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ] {tn}
   typeof(a) bn = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw] {tn}
   typeof(a) r1 = quat_fma(a2,b2,-an*bn);       //                           {t2 - tn}
 
-  typeof(a) r  = r0 + r1;
+  typeof(a) r  = r0 + r1;                      //                           {r}
 
   return quat_neg_scalar(r);
 }
