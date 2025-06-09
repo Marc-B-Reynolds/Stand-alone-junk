@@ -2,10 +2,16 @@
 // Marc B. Reynolds, 2017-2025
 // Public Domain under http://unlicense.org, see link for details.
 
-// Nearest lattice points for:
-//   2D: D₂
-//   3D: D₃,A₃
-// Z lattice..what's the point of a routine?
+// 1) Nearest lattice points for:
+//    2D: D₂
+//    3D: D₃,A₃
+// 
+// 2) Fixed package (bit size) quantization for the above
+//    lattices plus Z^2 and Z^3 with version for standard
+//    and tiled space.
+//    The routines accept the number of bits per direction
+//    'b' so 'b' must be a known constant to to compiler
+//    to not suck performance wise.
 
 #pragma once
 
@@ -162,3 +168,125 @@ static inline i64x4_t vec3d_lattice_nearest_a3(vec3d_t v, bool* s)
   
   return q;
 }
+
+
+//*******************************************************
+// 2D quantized to standard integer lattice (Z²),
+// b-bits per component for 2b bits total.
+// • covering radius (R) is 1/sqrt(2)
+// • maximum error is 2^{-b} R
+
+//  requires: b∈[1,16]
+//  bottom b bits 'x' followed by b bits of y.
+static inline uint32_t vec2f_tiled_square_encode_z2(vec2f_t v, uint32_t b)
+{
+  uint32_t s = (1<<b);
+  uint32_t m = s-1;
+  i32x2_t  r = vec2_scale_round_to_int(v,(float)s);
+  
+  r &= (int32_t)m;
+
+  return (uint32_t)((r[1]<<b)^r[0]);
+}
+
+// ditto execept requires: b∈[1,32]
+static inline uint64_t vec2d_tiled_square_encode_z2(vec2d_t v, uint32_t b)
+{
+  uint64_t s = (UINT64_C(1)<<b);
+  uint64_t m = s-1;
+  i64x2_t  r = vec2_scale_round_to_int(v,(double)s);
+  
+  r &= (int64_t)m;
+  
+  return (uint64_t)((r[1]<<b)^r[0]);
+}
+
+// decode.
+static inline vec2f_t vec2f_tiled_square_decode_z2(uint32_t u, uint32_t b)
+{
+  uint32_t s = (1<<b);
+  uint32_t m = s-1;
+  float    f = 1.f/((float)s);
+  float    x = (float)(u & m) * f; u >>= b;
+  float    y = (float)(u & m) * f;
+  
+  return vec2f(x,y);
+}
+
+static inline vec2d_t vec2d_tiled_square_decode_z2(uint64_t u, uint32_t b)
+{
+  uint64_t s = (1<<b);
+  uint64_t m = s-1;
+  double   f = 1.0/((double)s);
+  double   x = (double)(u & m) * f; u >>= b;
+  double   y = (double)(u & m) * f;
+  
+  return vec2d(x,y);
+}
+
+//*******************************************************
+// 2D quantized to D_2
+// b-bits per component for 2b+1 bits total.
+// • covering radius (R) is 1
+// • maximum error is 2^-(b+1)
+
+//  requires: b∈[1,15]
+static inline uint32_t vec2f_tiled_square_encode_d2(vec2f_t v, uint32_t b)
+{
+  // scale and find nearest lattice point
+  i32x2_t r = vec2f_lattice_nearest_d2(v * (float)(1<<(b+1)));
+  
+  // bit-pack the quantized point (r) low bit of
+  // either (using x) indicates if the coordinates
+  // are odd or even.
+  uint32_t m  = (uint32_t)((1<<(b+1))-1);
+  uint32_t ix = (uint32_t)(r[0]) & (m  );
+  uint32_t iy = (uint32_t)(r[1]) & (m^1);
+  uint32_t q  = ix ^ (iy << b);
+
+  return q;
+}
+
+//  requires: b∈[1,31]
+static inline uint64_t vec2d_tiled_square_encode_d2(vec2d_t v, uint32_t b)
+{
+  // scale and find nearest lattice point
+  i64x2_t r = vec2d_lattice_nearest_d2(v * (double)(1<<(b+1)));
+  
+  // bit-pack the quantized point (r) low bit of
+  // either (using x) indicates if the coordinates
+  // are odd or even.
+  uint64_t m  = (uint64_t)((1<<(b+1))-1);
+  uint64_t ix = (uint64_t)(r[0]) & (m  );
+  uint64_t iy = (uint64_t)(r[1]) & (m^1);
+  uint64_t q  = ix ^ (iy << b);
+
+  return q;
+}
+
+static inline vec2f_t vec2f_tiled_square_decode_d2(uint32_t u, uint32_t b)
+{
+  float    s  = 1.f/(float)(1<<(b+1));
+  uint32_t m  = (uint32_t)((1<<(b+1))-1);
+  uint32_t ix = u & m;
+  uint32_t iy = ((u >> b) & (m^1)) ^ (u & 1);
+  float    x  = (float)ix * s;
+  float    y  = (float)iy * s;
+
+  return vec2(x,y);
+}
+
+static inline vec2d_t vec2d_tiled_square_decode_d2(uint64_t u, uint32_t b)
+{
+  double   s  = 1.f/(double)(1<<(b+1));
+  uint64_t m  = (uint64_t)((1<<(b+1))-1);
+  uint64_t ix = u & m;
+  uint64_t iy = ((u >> b) & (m^1)) ^ (u & 1);
+  double   x  = (double)ix * s;
+  double   y  = (double)iy * s;
+
+  return vec2(x,y);
+}
+
+//*******************************************************
+// 
