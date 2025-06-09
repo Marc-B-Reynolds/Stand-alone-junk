@@ -230,9 +230,9 @@ static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 #define quat_broadcast(x) ssimd_fwd_sfunc(quat,broadcast,x)
 
 // single "register" shuffles
-#define vec2_shuffle(V,A,B)     __builtin_shuffle(V,A,B)
-#define vec3_shuffle(V,A,B,C)   __builtin_shuffle(V,A,B,C,3)
-#define quat_shuffle(Q,A,B,C,D) __builtin_shuffle(Q,A,B,C,D)
+#define vec2_shuffle(V,A,B)     __builtin_shufflevector(V,V,A,B)
+#define vec3_shuffle(V,A,B,C)   __builtin_shufflevector(V,V,A,B,C,3)
+#define quat_shuffle(Q,A,B,C,D) __builtin_shufflevector(Q,Q,A,B,C,D)
 
 // two "register" shuffles
 #define vec2_shuffle2(V0,V1,A,B)     __builtin_shufflevector(V0,V1,A,B)
@@ -1164,7 +1164,10 @@ static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 
 #else
 
-// (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
+// implementing directly like the expansion:
+//   (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
+//                = (AxB + bw A + aw B) -(dot(A,B) - aw bw)
+// doesn't (or I'm failing) lower well.
 // 
 //                r
 //        r0             r1
