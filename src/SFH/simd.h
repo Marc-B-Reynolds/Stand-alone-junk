@@ -261,15 +261,15 @@
 
 
 // map `macro` across all listed varargs (...)
-// SIMD_MAP_PEAL(F,P,0,1,2,...,N) -> F(P,0) F(P,1) F(P,2) .. F(P,N)
-#define SIMD_MAP_PEAL(macro, ...)                                       \
-  __VA_OPT__(SIMD_EXPAND(SIMD_MAP_PEAL_HELPER(macro,__VA_ARGS__)))
+// SIMD_MAP_PEEL(F,P,0,1,2,...,N) -> F(P,0) F(P,1) F(P,2) .. F(P,N)
+#define SIMD_MAP_PEEL(macro, ...)                                       \
+  __VA_OPT__(SIMD_EXPAND(SIMD_MAP_PEEL_HELPER(macro,__VA_ARGS__)))
 
-#define SIMD_MAP_PEAL_HELPER(macro,P0,P1, ...)                          \
+#define SIMD_MAP_PEEL_HELPER(macro,P0,P1, ...)                          \
   macro(P0,P1)                                                          \
-  __VA_OPT__(SIMD_MAP_PEAL_AGAIN SIMD_PARENS (macro,P0,__VA_ARGS__))
+  __VA_OPT__(SIMD_MAP_PEEL_AGAIN SIMD_PARENS (macro,P0,__VA_ARGS__))
 
-#define SIMD_MAP_PEAL_AGAIN() SIMD_MAP_PEAL_HELPER
+#define SIMD_MAP_PEEL_AGAIN() SIMD_MAP_PEEL_HELPER
 
 
 //*******************************************************
@@ -892,6 +892,7 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 
 #if defined(__x86_64__)
 
+// actually would like to avoid this heavy-weight thing. temp hack to always include
 #include <x86intrin.h>
 
 static inline __m128  f32x4_to_intel(f32x4_t x) { return type_pun(x,__m128);  }
@@ -960,12 +961,12 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 
 #if defined(SIMD_SPECIALIZE)
 // expand specialized: (example: floor_f32x4)
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, floor, SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, ceil,  SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, trunc, SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, round, SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
-//SIMD_MAP_PEAL(SIMD_MAKE_UFUN, fabs,  SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, floor, SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, ceil,  SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, trunc, SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, round, SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
+//SIMD_MAP_PEEL(SIMD_MAKE_UFUN, fabs,  SIMD_FP_X) 
 #endif
 
 // GCC only. break into integer and fp, explict and mask for fp
@@ -980,8 +981,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 #endif
 
 #if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, abs,  SIMD_FP_X) 
-SIMD_MAP_PEAL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X) 
 #endif
 
 
@@ -1076,17 +1077,17 @@ SIMD_MAP_PEAL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 #define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i))
 
 #if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
 #endif
 
 #if 0//defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_UI_X)
-SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_SI_X)
-SIMD_MAP_PEAL(SIMD_MAKE_3FUN, min, SIMD_FP_X);
-SIMD_MAP_PEAL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, min, SIMD_UI_X)
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, min, SIMD_SI_X)
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, min, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
 #endif
 
 
@@ -1100,8 +1101,8 @@ SIMD_MAP_PEAL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
 #define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
 
 #if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
-SIMD_MAP_PEAL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 #endif
 
