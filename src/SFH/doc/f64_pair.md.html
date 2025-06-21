@@ -1,0 +1,317 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-"><link rel="stylesheet" href="https://casual-effects.com/markdeep/latest/apidoc.css?">
+
+Overview
+==============================================================
+
+This is a single file header that implements the most basic *"floating point expansion"* which is where we represent some number by more than one floating-point value. Here using exactly two values and the implementation is limited to double precision. This might also be called *pair* or *double-double* arithmetic. This is all TL;DR see the provided references for greater details.
+
+The implementation uses the *C89* feature of passing and returning structures which compilers can handle well since we're limited to two primitive types (logically passed in register) and the code itself is *C99*.  We define two structures:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+typedef struct { double hi,lo; } fr_pair_t;
+typedef struct { double hi,lo; } fe_pair_t;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [pairty]: The data types]
+
+The first structure 
+
+
+foo bar baz
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+fe_pair_t fe_pair(double hi, double lo)
+fr_pair_t fr_pair(double hi, double lo)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+testing `uint64_t foo = x;`
+
+
+
+The methods work for almost all IEEE style floating-point formats.
+
+1. compiled with no relaxation of floating-point operations. (TODO: need to review if contraction break anything)
+2. assumes subnormal (denormals) number support
+3. the quoted bounds below will have some limitations on the number of precision bits which vary depending on the algorithm in question. Not any issue for single or double precision but
+4. 
+
+[#Muller2021][#LR2019]
+
+
+!!! WARNING
+    I'm a warning, perhaps. *Something might happen!*
+
+Error free transforms (EFT)
+==============================================================
+
+Worker routines. These are all error free transforms (EFT).  For fast_sum/diff to be EFT places requirements on the input.
+
+| method            |fops| fma| mul| add| common name   |
+| :---------        |---:|:---|:---|---:| :---          |
+| {fe,fr}_fast_sum  | 3  |    |    | 3  | Fast2Sum      |
+| {fe,fr}_fast_diff | 3  |    |    | 3  | Fast2Sum      |
+| {fe,fr}_two_sum   | 6  |    |    | 6  | 2Sum          |
+| {fe,fr}_two_diff  | 6  |    |    | 6  | 2Sum          |
+| {fe,fr}_two_mul   | 2  |  1 |  1 |    | 2Prod/2MulFMA |
+
+1. requires $ \vert x \vert \ge \vert y \vert $
+2. asd
+
+[#Fast2Sum]
+
+<details markdown="1"><summary>function list:</summary>
+
+#### EFT functions  
+  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+fe_pair_t fe_two_mul (double x, double y)
+fr_pair_t fr_two_mul (double x, double y)
+  
+fe_pair_t fe_two_sum (double x, double y)
+fr_pair_t fr_two_sum (double x, double y)
+fe_pair_t fe_two_diff(double x, double y)
+fr_pair_t fr_two_diff(double x, double y)
+
+// require: |x| >= |y|
+fe_pair_t fe_fast_sum (double x, double y)
+fr_pair_t fr_fast_sum (double x, double y)
+fe_pair_t fe_fast_diff(double x, double y)
+fr_pair_t fr_fast_diff(double x, double y)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+</details>
+
+Blah
+==============================================================
+
+
+Arithmetic operations
+==============================================================
+
+
+
+
+| method   | op             |~bound     | error bound   |fops| div|sqrt| fma| mul| add| common name    | notes|
+| :---     | :---:          |------     | --------      |---:|---:|---:|---:|---:|---:|  :---          |:---  |
+|fe_abs    | $\|(x)\|$      |           | 0             |    |    |    |    |    |    |                |      |
+|fe_neg    | $-(x)$         |           | 0             |    |    |    |    |    |    |                |      |
+|fe_add    | $(x) + (y)$    |$3u^2-11u^3$| $3u^2+13u^3$ | 20 |    |    |    |    | 20 |AccurateDWPlusDW| 1,4  |
+|fe_add_s  | $(x) + (y)$    |           | ---           | 11 |    |    |    |    | 11 |SloppyDWPlusDW  | 1,4  |
+|fe_add_d  | $(x) + y$      |$2u^2-6u^3$| $2u^2$        | 10 |    |    |    |    | 10 |DWPlusFP        | 1,4  |
+|fe_add_dd | $x + y$        |           | 0             |  6 |    |    |    |    |  6 |2Sum            | 1    |
+|fe_sub    | $(x) - (y)$    |           | $3u^2+13u^3$  | 20 |    |    |    |    | 20 |AccurateDWPlusDW| 1,4  |
+|fe_sub_s  | $(x) - (y)$    |           | ---           | 11 |    |    |    |    | 11 |SloppyDWPlusDW  | 1    |
+|fe_sub_d  | $(x) - y$      |           | $2u^2$        | 10 |    |    |    |    | 10 |DWPlusFP        | 1,4  |
+|fe_d_sub  | $x - (y)$      |           | $2u^2$        | 10 |    |    |    |    | 10 |DWPlusFP        | 1,4  |
+|fe_mul    | $(x)\times (y)$|$3.997u^2$ | $4u^2$        |  9 |    |    |  3 |  2 |  4 |DWTimesDW3      | 3,4  |
+| ---      | $(x)\times (y)$|$4.985u^2$ | $5u^2$        |    |    |    |  2 |  2 |  7 |DWTimesDW1      | 3    |
+| ---      | $(x)\times (y)$|$4.9433u^2$| $5u^2$        | 11 |    |    |  2 |  2 |  7 |DWTimesDW2      | 3    |
+|fe_mul_d  | $(x)\times y$  |$1.984u^2$ | $2u^2$        |  6 |    |    |  2 |  1 |  3 |DWTimesFP3      | 4    |
+|fe_mul_da | $(x)\times y$  | $1.5u^2$  | $1.5u^2+4u^3$ | 10 |    |    |  1 |  2 |  7 |DWTimesFP1      | 4    |
+| ---      | $(x)\times y$  |$2.517u^2$ | $3u^2$        |    |    |    |    |    |    |DWTimesFP2      | 2    |
+|fe_mul_dd | $x\times y$    |           | 0             |  2 |    |    |  1 |  1 |    |2Prod           |      |
+|fe_sq_d   | $x^2$          |           | 0             |  2 |    |    |  1 |  1 |    |2Prod           |      |
+|fe_div    | $(x) / (y)$    |$8.665u^2$ | $15u^2+56u^3$ | 14 |  2 |    |  2 |  1 |  9 |DWDivDW2        | 4    |
+|fe_div_a  | $(x) / (y)$    |$5.922u^2$ | $9.8u^2$      | 32 |  1 |    |  6 |  5 | 20 |DWDivDW3        |      |
+|fe_inv_a  | $ 1  / (y)$    |           |               | 24 |  1 |    |  3 |  4 | 16 |DWDivDW3        |      |
+|fe_div_d  | $(x) / y$      | $2.95u^2$ | $3u^2$        | 10 |  2 |    |  1 |  1 |  6 |DWDivFP3        | 4    |
+| ---      | $(x) / (y)$    |$8.465u^2$ | $15u^2+56u^3$ |    |    |    |    |    |    |DWDivDW1        |      |
+|fr_abs    | $\|x\|$        |           | 0             |    |    |    |    |    |    |                |      |
+|fr_neg    | $-x$           |           | 0             |    |    |    |    |    |    |                |      |
+|fr_add    | $(x) + (y)$    |           | ---           |  8 |    |    |    |    |  8 |CPairSum        | 1,4  |
+|fr_add_dd | $x + y$        |           | 0             |  6 |    |    |    |    |  6 |TwoSum          | 1    |
+|fr_add_d  | $(x) + y$      |           | ---           |  7 |    |    |    |    |  7 |CPairSum        | 1    |
+|fr_add_d  | $(x) + y$      |           |               |  4 |    |    |    |    |  4 |CPairSum        | 1    |
+|fr_add_dd | $x + y$        |           | 0             |  6 |    |    |    |    |  6 |2Sum            | 1    |
+|fr_sub    | $(x) - (y)$    |           | ---           |  8 |    |    |    |    |  8 |CPairSum        | 1    |
+|fr_mul_d  | $(x)\times y$  |           |               |    |    |    |    |    |    |CPairMul        |      |
+|fr_sub    | $x - (y)$      |           | ---           |  7 |    |    |    |    |  7 |CPairSum        | 1,4  |
+|fr_mul    | $(x)\times (y)$|           |               |  7 |    |    |    |    |    |CPairMul        |      |
+|fr_mul_x  | $(x)\times y$  |           |               |    |    |    |    |    |    |CPairMul        |      |
+|fr_mul_dd | $x\times y$    |           | 0             |  2 |    |    |  1 |  1 |    |2Prod           |      |
+|fr_inv    | $1 / (x)$      |           |               |  3 |  2 |    |  1 |    |    |CPairDiv        |      |
+|fr_inv_d  | $1 / x$        |           |               |  3 |  2 |    |  1 |    |    |CPairDiv        |      |
+|fr_div    | $(x) /  (y)$   |           |               |  5 |  2 |    |  1 |  1 |  2 |CPairDiv        |      |
+|fr_sqrt   | $\sqrt{(x)}$   |           |               |  5 |  1 |  1 |  1 |    |  2 |CPairSqrt       |      |
+|fr_sqrt_d | $\sqrt{x}$     |           |               |  4 |  1 |  1 |  1 |    |  1 |CPairSqrt       |      |
+
+* `method` is the name of the routine. 
+* `op` is the arithmetic operation performed where parenthesis (e.g. $\left(x\right)$) indicate a pair and without a `double`
+* `~bounds` [#MR2021].
+* `error bounds` are proven values and if rounding mode matters then it's the round-to-nearest ties-to-even. Most results are from "title"[^2].
+* `fops` number of floating point ops. exact number is arch specific.
+* `common name` is
+* `notes`
+  1. the function has ordered parameter variant which requires $\vert x \vert \ge \vert y \vert$. The constraint drops 3 adds and produces identical results. The variant's name prefixes an "o" before the op (e.g. `fe_add` becomes `fe_oadd`)
+  2. not implementation. variant w/o FMA or slower & larger error bound.
+  3. error bound from "Muller2001"[^1]
+  4. final step is (including any ordered variant) is `Fast2Sum`. If this is the final pair operation before returning a result with `fe_result` then compiler will trivially remove 2 additions.
+
+
+Lowering to double and composed lowering functions
+==============================================================
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+static inline double fe_result(fe_pair_t x) { return x.hi;      }
+static inline double fr_result(fr_pair_t x) { return x.hi+x.lo; }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+Comparision
+==============================================================
+
+
+Common constants
+==============================================================
+
+
+| name        | value |
+| :---        |:---:  |
+|fe_k_e       | $e$   |
+|fe_k_e_i     | $\frac{1}{e}$ |
+|fe_k_log2    | $\text{log}\left(2\right)$ |
+|fe_k_log2_i  | $\frac{1}{\text{log}\left(2\right)}$ |
+|fe_k_log10   | $\text{log}\left(10\right)$ |
+|fe_k_log10_i | $\frac{1}{\text{log}\left(10\right)}$ |
+|fe_k_pi      | $\pi$ |
+|fe_k_pi_i    | $\frac{1}{\pi}$ |
+|fe_k_sqrt_2  | $\sqrt{2}$ |
+|fe_k_sqrt_2_i| $\frac{1}{\sqrt{2}}$ |
+<br>
+SEE: https://marc-b-reynolds.github.io/math/2020/01/09/ConstAddMul.html (and references)
+
+
+
+Small Examples
+==============================================================
+
+#### Known in advance or repeated divisor
+
+If you need to perform a division where the divisor is either known in advance or is used multiple times then it is possible to almost always get a correctly rounded xxx
+
+
+A 2003 paper [#CrDiv2003] describes 
+
+[post](https://marc-b-reynolds.github.io/math/2019/03/12/FpDiv.html)
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+fr_pair_t inv = fr_inv_d(k);       //
+//....
+result = fr_mul_d(inv,x);          // no..need the lowering version
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+
+#### bar
+
+
+
+
+
+Blah
+==============================================================
+
+
+----------
+
+## bmat_bracket_*n*(c,a,b)
+
+Computes $ C = \left[ A,B \right] = AB+BA $
+
+Calling this the [commutator](https://en.wikipedia.org/wiki/Commutator#Ring_theory) seems a bit akward since the *anticommutator* is the same operation. It makes sense since $M=-M$ and $A+B=A-B$ but still.
+
+<details markdown="1"><summary>function list:</summary>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+void bmat_bracket_8 (bmat_rparam_8 (c), bmat_param_8(a),  bmat_param_8 (b))
+void bmat_bracket_16(bmat_rparam_16(c), bmat_param_16(a), bmat_param_16(b))
+void bmat_bracket_32(bmat_rparam_32(c), bmat_param_32(a), bmat_param_32(b))
+void bmat_bracket_64(bmat_rparam_64(c), bmat_param_64(a), bmat_param_64(b))
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</details>
+
+
+
+Basic setting
+==============================================================
+
+note to randomization
+
+## bmat_zero_*n*(m)
+
+Sets all the elements of matrix $m$ to zero.
+
+<details markdown="1"><summary>function list:</summary>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+void bmat_zero_8 (uint8_t  m[static  8])
+void bmat_zero_16(uint16_t m[static 16])
+void bmat_zero_32(uint32_t m[static 32])
+void bmat_zero_64(uint64_t m[static 64])
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</details>
+
+----------
+
+## bmat_dup_*n*(d,s)
+
+Copies matrix $s$ to $d$
+
+<details markdown="1"><summary>function list:</summary>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+void bmat_dup_8 (uint8_t  d[restrict static  8], uint8_t  s[static  8])
+void bmat_dup_16(uint16_t d[restrict static 16], uint16_t s[static 16])
+void bmat_dup_32(uint32_t d[restrict static 32], uint32_t s[static 32])
+void bmat_dup_64(uint64_t d[restrict static 64], uint64_t s[static 64])
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</details>
+
+----------
+
+
+## bmat_set_unit_*n*(m)
+
+Initializes matrix $m$ to the [identity matrix](https://en.wikipedia.org/wiki/Identity_matrix).
+
+<details markdown="1"><summary>function list:</summary>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+void bmat_set_unit_8 (uint8_t  m[static  8])
+void bmat_set_unit_16(uint16_t m[static 16])
+void bmat_set_unit_32(uint32_t m[static 32])
+void bmat_set_unit_64(uint64_t m[static 64])
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+</details>
+
+----------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ c
+extern uint32_t example(uint32_t x, uint32_t k) { return m & k;}
+
+uint32_t t = bmat_from_ufunc_p_32(m,example,k);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+
+
+
+----------
+
+
+References
+==============================================================
+
+[#JMP2017]: *"Tight and rigorous error bounds for basic building blocks of double-word arithmetic"*, Joldes, Muller, Popescu, 2017 [(link)](https://hal.science/hal-01351529)
+
+[#MR2021]: *"Formalization of double-word arithmetic, and comments on Tight and rigorous error bounds for basic building blocks of double-word arithmetic"*, Muller & Rideau, 2021 [(link)](https://hal.science/hal-02972245)
+
+[#LR2019]: *"Faithfully rounded floating-point operations"*, M. Lange and S.M. Rump, 2019 [(link)](https://www.tuhh.de/ti3/paper/rump/LaRu2017b.pdf)
+
+[#R2019]:  *"Error bounds for computer arithmetics"*, S.M. Rump, 2019, [(PDF)](https://www.tuhh.de/ti3/paper/rump/Ru19.pdf)
+
+[#CrDiv2003]: *"Accelerating Correctly Rounded Floating-Point Division When the Divisor is Known in Advance"*, Brisebarre, Muller & Raina, 2003 [(link)][https://perso.ens-lyon.fr/jean-michel.muller/fpdiv.html]
+
+[#Fast2Sum]:  *"FastTwoSum revisited"*, Jeannerod & Zimmermann, 2025, [(link)][https://inria.hal.science/hal-04875749]
+
+<style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'none', inlineCodeLang: 'c'};</script>
+<!-- Markdeep: --><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
+
