@@ -79,11 +79,24 @@
 // David Mazières' modernized X macro
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 
-#define SFH_EXPAND(...)  SFH_EXPAND4(SFH_EXPAND4(SFH_EXPAND4(SFH_EXPAND4(__VA_ARGS__))))
-#define SFH_EXPAND4(...) SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(__VA_ARGS__))))
-#define SFH_EXPAND3(...) SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(__VA_ARGS__))))
-#define SFH_EXPAND2(...) SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(__VA_ARGS__))))
-#define SFH_EXPAND1(...) __VA_ARGS__
+// All of the macros that use SFH_EXPAND can be extended by making a duplicate
+// of the base macro and swapping SFH_EXPAND with a longer expansion. 
+//   rescans: c = count/expansion (here 4), n = number of expansions (here 4)
+//     f(c,1) = c+1
+//     f(c,n) = c*f(c,n-1)+1
+//   total f(c,n)+1
+//
+// SFH_EXPAND: 342 rescans (see side comments for others). 
+//#define SFH_EXPAND7(...) SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(__VA_ARGS__))))  // 21846 
+#define SFH_EXPAND7(...)             SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__)))   // 16384
+#define SFH_EXPAND6(...) SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__))))  //  5462
+#define SFH_EXPAND5(...) SFH_EXPAND (SFH_EXPAND (SFH_EXPAND (SFH_EXPAND (__VA_ARGS__))))  //  1366
+#define SFH_EXPAND(...)  SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(__VA_ARGS__))))  //   342
+#define SFH_EXPAND3(...) SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(__VA_ARGS__))))  //    82
+#define SFH_EXPAND2(...) SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(__VA_ARGS__))))  //    22
+#define SFH_EXPAND1(...) SFH_EXPAND0(SFH_EXPAND0(SFH_EXPAND0(SFH_EXPAND0(__VA_ARGS__))))  //     6
+#define SFH_EXPAND0(...) __VA_ARGS__
+
 
 // SFH_MAP(F,...)
 //   map `macro` across all listed varargs (...)
