@@ -889,8 +889,9 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 
 //*******************************************************
 // base Intel intrinsic interop support
+// (actually nope...and probably shouldn't be in this file anyway)
 
-#if defined(__x86_64__)
+#if 0 // defined(__x86_64__)
 
 // actually would like to avoid this heavy-weight thing. temp hack to always include
 #include <x86intrin.h>
@@ -913,9 +914,6 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 
 
 #endif
-
-
-
 #endif
 
 
