@@ -20,6 +20,10 @@
 //
 //   SFH_SIMPLE_FLATTEN((a))   → a
 //   SFH_SIMPLE_FLATTEN((a,b)) → a,b
+//
+//   SFH_SIMPLE_FLATTEN(a)     → SFH_SIMPLE_FLATTEN_ a  { illegal }
+//   SFH_SIMPLE_FLATTEN()      → SFH_SIMPLE_FLATTEN_    { illegal }
+
 #define SFH_SIMPLE_FLATTEN(x) SFH_SIMPLE_FLATTEN_ x
 #define SFH_SIMPLE_FLATTEN_(...) __VA_ARGS__
 
@@ -43,17 +47,17 @@
 
 
 // these require at least as long as the specified length
-#define SFH_TAKE_2(_1,_2,x,...) x
-#define SFH_TAKE_3(_1,_2,_3,x,...) x
-#define SFH_TAKE_4(_1,_2,_3,_4,x,...) x
-#define SFH_TAKE_5(_1,_2,_3,_4,_5,x,...) x
-#define SFH_TAKE_6(_1,_2,_3,_4,_5,_6,x,...) x
-#define SFH_TAKE_7(_1,_2,_3,_4,_5,_6,_7,x,...) x
-#define SFH_TAKE_8(_1,_2,_3,_4,_5,_6,_7,_8,x,...) x
-#define SFH_TAKE_9(_1,_2,_3,_4,_5,_6,_7,_8,_9,x,...) x
+#define SFH_PART_2(_1,_2,x,...) x
+#define SFH_PART_3(_1,_2,_3,x,...) x
+#define SFH_PART_4(_1,_2,_3,_4,x,...) x
+#define SFH_PART_5(_1,_2,_3,_4,_5,x,...) x
+#define SFH_PART_6(_1,_2,_3,_4,_5,_6,x,...) x
+#define SFH_PART_7(_1,_2,_3,_4,_5,_6,_7,x,...) x
+#define SFH_PART_8(_1,_2,_3,_4,_5,_6,_7,_8,x,...) x
+#define SFH_PART_9(_1,_2,_3,_4,_5,_6,_7,_8,_9,x,...) x
 
 // for argcount based selection expansions
-#define SFH_ARGCOUNT_8(...) SFH_TAKE_8(__VA_OPT__(__VA_ARGS__,) 8,7,6,5,4,3,2,1,0)
+#define SFH_ARGCOUNT_8(...) SFH_PART_8(__VA_OPT__(__VA_ARGS__,) 8,7,6,5,4,3,2,1,0)
 
 
 // drop first parameter (Drop[1,list])
@@ -116,6 +120,19 @@
 
 #define SFH_MAP_PEEL_REP() SFH_MAP_PEEL_
 
+// SFH_THROUGH((P),...)
+//   expands the list of macros with parameter(s) P
+//
+//   SFH_THROUGH((P),A,B,...) → A(P) B(P) ...
+
+#define SFH_THROUGH(params, ...)                                \
+  __VA_OPT__(SFH_EXPAND(SFH_THROUGH_(params, __VA_ARGS__)))
+
+#define SFH_THROUGH_(params, macro, ...)                        \
+  macro params                                                  \
+  __VA_OPT__(SFH_THROUGH_REP SFH_PARENS (params, __VA_ARGS__))
+
+#define SFH_THROUGH_REP() SFH_THROUGH_
 
 
 //*******************************************************
@@ -123,8 +140,7 @@
 // varargs. Lighter weight preprocessing time than SFH_MAP.
 
 // SFH_SMAP(F,...)
-//
-// Like SFH_MAP just limited to max list of 8
+//   SFH_MAP but limited to max list of 8
 
 #define SFH_SMAP1(F,A)               F(A)
 #define SFH_SMAP2(F,A,B)             F(A) F(B)
@@ -139,12 +155,7 @@
 #define SFH_SMAP_(F,N,...) SFH_CAT2(SFH_SMAP,N)(F,__VA_ARGS__)
 
 // SFH_SMAP_PEEL(F,X,...)
-// maps macro 'F' across the vararg list (up to 8 long) where X
-// is one or more additional parameters enclosed in parens.
-//
-// examples of passing one and two:
-//   SFH_SMAP_PEEL(F,(A),0,1,...)   → F(A,0) F(A,1) ...
-//   SFH_SMAP_PEEL(F,(A,B),0,1,...) → F(A,B,0) F(A,B,1) ...
+//   SFH_MAP_PEEL but limited to max list of 8
 
 #define SFH_SMAP_PEEL1(F,X,A)               F(X,A)
 #define SFH_SMAP_PEEL2(F,X,A,B)             F(X,A) F(X,B)
@@ -157,6 +168,21 @@
 
 #define SFH_SMAP_PEEL(F,X,...)    SFH_SMAP_PEEL_(F,X, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
 #define SFH_SMAP_PEEL_(F,X,N,...) SFH_CAT2(SFH_SMAP_PEEL,N)(F,SFH_SIMPLE_FLATTEN(X),__VA_ARGS__)
+
+
+// SFH_STHROUGH(F,X,...)
+//   SFH_THROUGH but limited to max list of 8
+#define SFH_STHROUGH1(P,A)               A P 
+#define SFH_STHROUGH2(P,A,B)             A P  B P 
+#define SFH_STHROUGH3(P,A,B,C)           A P  B P  C P 
+#define SFH_STHROUGH4(P,A,B,C,D)         A P  B P  C P  D P 
+#define SFH_STHROUGH5(P,A,B,C,D,E)       A P  B P  C P  D P  E P 
+#define SFH_STHROUGH6(P,A,B,C,D,E,F)     A P  B P  C P  D P  E P  F P 
+#define SFH_STHROUGH7(P,A,B,C,D,E,F,G)   A P  B P  C P  D P  E P  F P  G P 
+#define SFH_STHROUGH8(P,A,B,C,D,E,F,G,H) A P  B P  C P  D P  E P  F P  G P  H P 
+
+#define SFH_STHROUGH(F,...)    SFH_STHROUGH_(F, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
+#define SFH_STHROUGH_(F,N,...) SFH_CAT2(SFH_STHROUGH,N)(F,__VA_ARGS__)
 
 
 //*******************************************************
@@ -173,7 +199,7 @@
 #define SFH_CAT8(A,B,C,D,E,F,G,H) A##B##C##D##E##F##G##H
 
 #define SFH_CAT_(_0,_1,_2,_3,_4,_5,_6,_7,M,...) M
-#define SFH_CAT(...) SFH_TAKE_8(__VA_ARGS__,SFH_CAT8,SFH_CAT7,SFH_CAT6,SFH_CAT5,SFH_CAT4,SFH_CAT3,SFH_CAT2,SFH_CAT1,SFH_CAT0)(__VA_ARGS__)
+#define SFH_CAT(...) SFH_PART_8(__VA_ARGS__,SFH_CAT8,SFH_CAT7,SFH_CAT6,SFH_CAT5,SFH_CAT4,SFH_CAT3,SFH_CAT2,SFH_CAT1,SFH_CAT0)(__VA_ARGS__)
 
 
 //*******************************************************
@@ -193,9 +219,9 @@
 // if target is a C call than can use the same name
 //   #define foo(...) SFH_DEF_PARAM_3(foo,2,3,__VA_ARGS__)
 
-#define SFH_DEF_PARAM_2(F,D2,...)       SFH_TAKE_2(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2),)
-#define SFH_DEF_PARAM_3(F,D2,D3,...)    SFH_TAKE_3(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2), F(__VA_ARGS__,D2,D3),)
-#define SFH_DEF_PARAM_4(F,D2,D3,D4,...) SFH_TAKE_4(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2), F(__VA_ARGS__,D2,D3), F(__VA_ARGS__,D2,D3,D4),)
+#define SFH_DEF_PARAM_2(F,D2,...)       SFH_PART_2(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2),)
+#define SFH_DEF_PARAM_3(F,D2,D3,...)    SFH_PART_3(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2), F(__VA_ARGS__,D2,D3),)
+#define SFH_DEF_PARAM_4(F,D2,D3,D4,...) SFH_PART_4(__VA_ARGS__, F(__VA_ARGS__), F(__VA_ARGS__,D2), F(__VA_ARGS__,D2,D3), F(__VA_ARGS__,D2,D3,D4),)
 
 
 // map the supplied # of parameters to a unique macro or C call (up to 8)
