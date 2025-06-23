@@ -14,6 +14,7 @@
 // allow selecting the default number of rescans. See
 // SFH_EXPAND_P{n} description below.
 #ifndef SFH_EXPAND
+// current default is 512
 #define SFH_EXPAND SFH_EXPAND_P9
 #endif
 
@@ -136,7 +137,7 @@
 // SFH_MAP(F,...)
 //   map `macro` across all listed varargs (...)
 //
-// SFH_MAP(F,0,1,2,...,N) → F(0) F(1) F(2) .. F(N)
+// SFH_MAP(F,0,1,2,...,N) → F(0) F(1) F(2) ... F(N)
 //
 // SFH_SMAP performs same but for lists limited to 8 or less
 
@@ -151,6 +152,29 @@
   __VA_OPT__(SFH_MAP_AGAIN SFH_PARENS (macro, __VA_ARGS__))
 
 #define SFH_MAP_AGAIN() SFH_MAP_HELPER
+
+
+// SFH_MAP_LIST(F,...)
+//   map `macro` across all listed varargs (...) forming a comma
+//   seperated list. The same can be performed with SFH_MAP except
+//   it will contain a trailing comma. If this is an issue.
+//
+//   #define G(X) F(X),
+//   SFH_MAP(G,0,1,2,...,N)      → F(0),F(1),F(2),...F(N),
+//   SFH_MAP_LIST(F,0,1,2,...,N) → F(0),F(1),F(2),...F(N)
+
+// copy-pasta duplicate of MAP except macro expansion places a comma
+// in front. The tail-end of the macro simply drops the "empty" parameter.
+#define SFH_MAP_LIST(macro,...) SFH_MAP_LIST_X(macro,SFH_EXPAND,__VA_ARGS__)
+
+#define SFH_MAP_LIST_(macro, a1, ...)                                   \
+  ,macro(a1)                                                            \
+  __VA_OPT__(SFH_MAP_LIST_REP SFH_PARENS (macro, __VA_ARGS__))
+
+#define SFH_MAP_LIST_REP() SFH_MAP_LIST_
+
+#define SFH_MAP_LIST_X(macro,rescan,...)                              \
+  SFH_DROP(__VA_OPT__(rescan(SFH_MAP_LIST_(macro, __VA_ARGS__))))
 
 
 // SFH_MAP_PEEL(F,P,...)
