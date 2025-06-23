@@ -6,8 +6,17 @@
 
 #define SFH_MACRO_H    // marker define
 
+
 //*******************************************************
 // common defines
+
+
+// allow selecting the default number of rescans. See
+// SFH_EXPAND_P{n} description below.
+#ifndef SFH_EXPAND
+#define SFH_EXPAND SFH_EXPAND_P9
+#endif
+
 
 #define SFH_PARENS ()
 
@@ -85,28 +94,40 @@
 #define SFH_APPEND(X,...)      __VA_OPT__(__VA_ARGS__,)X
 #define SFH_PREPEND(X,...)     X __VA_OPT__(,__VA_ARGS__)
 
-
 //*******************************************************
 
 // Paul Fultz's rescan
 // https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
 //
-// rescans: c = count/expansion (here 4), n = number of expansions (here 4)
+// rescans: c = count/expansion, n = number of expansions. 
 //   f(c,1) = c+1
-//   f(c,n) = c*f(c,n-1)+1
-// total f(c,n)+1
+//   f(c,n) = c*f(c,n-1)+1 = Sum[i,0,n] c^i = (c^(n+1)-1)/(c-1)
+// total rescans = f(c,n)+1
 //
-// SFH_EXPAND: 342 rescans.  See side comments for others. some of which will probably
-// explode some CPPs. 
-//#define SFH_EXPAND7(...) SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(__VA_ARGS__))))  // 21846 
-#define SFH_EXPAND7(...)             SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__)))   // 16384
-#define SFH_EXPAND6(...) SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__))))  //  5462
-#define SFH_EXPAND5(...) SFH_EXPAND (SFH_EXPAND (SFH_EXPAND (SFH_EXPAND (__VA_ARGS__))))  //  1366
-#define SFH_EXPAND(...)  SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(SFH_EXPAND3(__VA_ARGS__))))  //   342
-#define SFH_EXPAND3(...) SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(SFH_EXPAND2(__VA_ARGS__))))  //    82
-#define SFH_EXPAND2(...) SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(SFH_EXPAND1(__VA_ARGS__))))  //    22
-#define SFH_EXPAND1(...) SFH_EXPAND0(SFH_EXPAND0(SFH_EXPAND0(SFH_EXPAND0(__VA_ARGS__))))  //     6
-#define SFH_EXPAND0(...) __VA_ARGS__
+// BUT! Let c=2 then: f(2,n)+1 = 2^(n+1)
+//
+// SFH_EXPAND_P{n} expands 2^n times.  By addition chains (of the exponent) we can
+// construct any length. Trivial example: 12 = 2^3 + 2^2 so a specialized expansion
+// that handles lists up to 12 long is:
+// 
+//   #define SFH_EXPAND_12(...) SFH_EXPAND_P3(SFH_EXPAND_P2(__VA_ARGS__))
+
+#define SFH_EXPAND_P16(...) SFH_EXPAND_P15(SFH_EXPAND_P15(__VA_ARGS__))
+#define SFH_EXPAND_P15(...) SFH_EXPAND_P14(SFH_EXPAND_P14(__VA_ARGS__))
+#define SFH_EXPAND_P14(...) SFH_EXPAND_P13(SFH_EXPAND_P13(__VA_ARGS__))
+#define SFH_EXPAND_P13(...) SFH_EXPAND_P12(SFH_EXPAND_P12(__VA_ARGS__))
+#define SFH_EXPAND_P12(...) SFH_EXPAND_P11(SFH_EXPAND_P11(__VA_ARGS__))
+#define SFH_EXPAND_P11(...) SFH_EXPAND_P10(SFH_EXPAND_P10(__VA_ARGS__))
+#define SFH_EXPAND_P10(...) SFH_EXPAND_P9(SFH_EXPAND_P9(__VA_ARGS__))
+#define SFH_EXPAND_P9(...)  SFH_EXPAND_P8(SFH_EXPAND_P8(__VA_ARGS__))
+#define SFH_EXPAND_P8(...)  SFH_EXPAND_P7(SFH_EXPAND_P7(__VA_ARGS__))
+#define SFH_EXPAND_P7(...)  SFH_EXPAND_P6(SFH_EXPAND_P6(__VA_ARGS__))
+#define SFH_EXPAND_P6(...)  SFH_EXPAND_P5(SFH_EXPAND_P5(__VA_ARGS__))
+#define SFH_EXPAND_P5(...)  SFH_EXPAND_P4(SFH_EXPAND_P4(__VA_ARGS__))
+#define SFH_EXPAND_P4(...)  SFH_EXPAND_P3(SFH_EXPAND_P3(__VA_ARGS__))
+#define SFH_EXPAND_P3(...)  SFH_EXPAND_P2(SFH_EXPAND_P2(__VA_ARGS__))
+#define SFH_EXPAND_P2(...)  SFH_EXPAND_P1(SFH_EXPAND_P1(__VA_ARGS__))
+#define SFH_EXPAND_P1(...) __VA_ARGS__
 
 
 // David Mazières' modernized X macro
