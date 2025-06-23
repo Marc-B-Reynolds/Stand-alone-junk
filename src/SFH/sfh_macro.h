@@ -46,15 +46,26 @@
 #define SFH_TAKE_(N,...) N
 
 
-// these require at least as long as the specified length
-#define SFH_PART_2(_1,_2,x,...) x
-#define SFH_PART_3(_1,_2,_3,x,...) x
-#define SFH_PART_4(_1,_2,_3,_4,x,...) x
-#define SFH_PART_5(_1,_2,_3,_4,_5,x,...) x
-#define SFH_PART_6(_1,_2,_3,_4,_5,_6,x,...) x
-#define SFH_PART_7(_1,_2,_3,_4,_5,_6,_7,x,...) x
-#define SFH_PART_8(_1,_2,_3,_4,_5,_6,_7,_8,x,...) x
-#define SFH_PART_9(_1,_2,_3,_4,_5,_6,_7,_8,_9,x,...) x
+// require at least as long as the specified length
+#define SFH_PART_0(x,...) x
+#define SFH_PART_1(_0,x,...) x
+#define SFH_PART_2(_0,_1,x,...) x
+#define SFH_PART_3(_0,_1,_2,x,...) x
+#define SFH_PART_4(_0,_1,_2,_3,x,...) x
+#define SFH_PART_5(_0,_1,_2,_3,_4,x,...) x
+#define SFH_PART_6(_0,_1,_2,_3,_4,_5,x,...) x
+#define SFH_PART_7(_0,_1,_2,_3,_4,_5,_6,x,...) x
+#define SFH_PART_8(_0,_1,_2,_3,_4,_5,_6,_7,x,...) x
+#define SFH_PART_9(_0,_1,_2,_3,_4,_5,_6,_7,_8,x,...) x
+
+#define SFH_SPART(N,...) __VA_OPT__(SFH_CAT2(SFH_PART_,N)(__VA_ARGS__))
+
+// require at least as long as the specified length
+#define SFH_SIMPLE_TAKE_1(A,...)       A
+#define SFH_SIMPLE_TAKE_2(A,B,...)     A,B
+#define SFH_SIMPLE_TAKE_3(A,B,C,...)   A,B,C
+#define SFH_SIMPLE_TAKE_4(A,B,C,D,...) A,B,C,D
+
 
 // for argcount based selection expansions
 #define SFH_ARGCOUNT_8(...) SFH_PART_8(__VA_OPT__(__VA_ARGS__,) 8,7,6,5,4,3,2,1,0)
@@ -76,17 +87,17 @@
 
 
 //*******************************************************
-// David Mazières' modernized X macro
-// https://www.scs.stanford.edu/~dm/blog/va-opt.html
 
-// All of the macros that use SFH_EXPAND can be extended by making a duplicate
-// of the base macro and swapping SFH_EXPAND with a longer expansion. 
-//   rescans: c = count/expansion (here 4), n = number of expansions (here 4)
-//     f(c,1) = c+1
-//     f(c,n) = c*f(c,n-1)+1
-//   total f(c,n)+1
+// Paul Fultz's rescan
+// https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
 //
-// SFH_EXPAND: 342 rescans (see side comments for others). 
+// rescans: c = count/expansion (here 4), n = number of expansions (here 4)
+//   f(c,1) = c+1
+//   f(c,n) = c*f(c,n-1)+1
+// total f(c,n)+1
+//
+// SFH_EXPAND: 342 rescans.  See side comments for others. some of which will probably
+// explode some CPPs. 
 //#define SFH_EXPAND7(...) SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(SFH_EXPAND6(__VA_ARGS__))))  // 21846 
 #define SFH_EXPAND7(...)             SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__)))   // 16384
 #define SFH_EXPAND6(...) SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(SFH_EXPAND5(__VA_ARGS__))))  //  5462
@@ -98,14 +109,21 @@
 #define SFH_EXPAND0(...) __VA_ARGS__
 
 
+// David Mazières' modernized X macro
+// https://www.scs.stanford.edu/~dm/blog/va-opt.html
+//
 // SFH_MAP(F,...)
 //   map `macro` across all listed varargs (...)
 //
 // SFH_MAP(F,0,1,2,...,N) → F(0) F(1) F(2) .. F(N)
 //
 // SFH_SMAP performs same but for lists limited to 8 or less
-#define SFH_MAP(macro, ...) \
-  __VA_OPT__(SFH_EXPAND(SFH_MAP_HELPER(macro, __VA_ARGS__)))
+
+// pass in `rescan` to allow time\length tradeoffs
+#define SFH_MAP_X(macro,rescan,...)                            \
+  __VA_OPT__(rescan(SFH_MAP_HELPER(macro, __VA_ARGS__)))
+
+#define SFH_MAP(macro,...) SFH_MAP_X(macro,SFH_EXPAND,__VA_ARGS__)
 
 #define SFH_MAP_HELPER(macro, a1, ...)                     \
   macro(a1)                                                \
@@ -124,11 +142,13 @@
 //
 // SFH_SMAP_PEEL performs same but for lists limited to 8 or less
 
-#define SFH_MAP_PEEL(macro, ...)                                  \
-  __VA_OPT__(SFH_EXPAND(SFH_MAP_PEEL_(macro,__VA_ARGS__)))
+#define SFH_MAP_PEEL_X(macro,rescan,...) \
+  __VA_OPT__(rescan(SFH_MAP_PEEL_(macro, __VA_ARGS__)))
 
-#define SFH_MAP_PEEL_(macro,P,P1, ...)                            \
-  macro(SFH_SIMPLE_FLATTEN(P),P1)                                 \
+#define SFH_MAP_PEEL(macro, ...) SFH_MAP_PEEL_X(macro,SFH_EXPAND,__VA_ARGS__)
+
+#define SFH_MAP_PEEL_(macro,P,P1, ...)                          \
+  macro(SFH_SIMPLE_FLATTEN(P),P1)                               \
   __VA_OPT__(SFH_MAP_PEEL_REP SFH_PARENS (macro,P,__VA_ARGS__))
 
 #define SFH_MAP_PEEL_REP() SFH_MAP_PEEL_
@@ -138,8 +158,10 @@
 //
 //   SFH_THROUGH((P),A,B,...) → A(P) B(P) ...
 
-#define SFH_THROUGH(params, ...)                                \
-  __VA_OPT__(SFH_EXPAND(SFH_THROUGH_(params, __VA_ARGS__)))
+#define SFH_THROUGH_X(macro,rescan,...)                         \
+  __VA_OPT__(rescan(SFH_THROUGH_(macro, __VA_ARGS__)))
+
+#define SFH_THROUGH(macro,...) SFH_THROUGH_X(macro,SFH_EXPAND,__VA_ARGS__)
 
 #define SFH_THROUGH_(params, macro, ...)                        \
   macro params                                                  \
