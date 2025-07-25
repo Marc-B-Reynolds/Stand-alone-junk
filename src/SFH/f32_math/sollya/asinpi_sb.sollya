@@ -9,7 +9,7 @@
 // set up some globals
 T  = floating;
 E  = absolute;
-B  = [|24...|];
+B  = [|SG...|];
 F  = asin(x)/pi;
 tx = sqrt(1-x);
 x0 = 2^-128;

@@ -4,7 +4,7 @@
 
 // set up some globals
 E  = absolute;
-B  = [|24...|];
+B  = [|SG...|];
 F  = acos(x)/pi;
 tx = sqrt(1-x);
 

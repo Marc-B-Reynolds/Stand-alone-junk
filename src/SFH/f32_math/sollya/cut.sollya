@@ -82,6 +82,7 @@ procedure find_cut_initial(build,x0,x1,cut)
 
   print(" cut=", cut, " [", c_lo,",",c_hi,"]");
 
+  // change to while to early exit
   for cnt from 1 to 32 do {
     display=decimal!;
    
@@ -102,7 +103,7 @@ procedure find_cut_initial(build,x0,x1,cut)
     if (cnt < 10) then { write(" "); };
     write(cnt, ": ");
     display=hexadecimal!;
-    write(lo.aerror, " ", hi.aerror);
+    write("lo/hi error=", lo.aerror, " ", hi.aerror);
     print(" cut=", cut, " [", c_lo,",",c_hi,"]", single(e_diff));
   };
 

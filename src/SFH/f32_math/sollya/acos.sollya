@@ -6,7 +6,7 @@ t2  = (1-x)/2;
 t   = sqrt(t2);
 E   = absolute;
 ACR = [2^-128;1-2^-25];
-B   = [|24...|];
+B   = [|SG...|];
 
 procedure dump(f,a,r)
 {
