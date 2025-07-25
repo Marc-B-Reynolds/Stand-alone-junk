@@ -50,7 +50,6 @@
 
 /*
 
-
 [^1]: *Formalization of double-word arithmetic, and comments on [^2]*, Muller & Rideau, 2021 [link](https://hal.science/hal-02972245)
 [^2]: *Tight and rigorous error bounds for basic building blocks of double-word arithmetic*, Joldes, Muller, Popescu, 2017 [link](https://hal.science/hal-01351529)
 [^3]: *Faithfully rounded floating-point operations*, M. Lange and S.M. Rump, 2019 [link](https://www.tuhh.de/ti3/paper/rump/LaRu2017b.pdf)
@@ -58,12 +57,9 @@
 [^5]: *On the robustness of double-word addition algorithms*, 2024, [link](https://arxiv.org/abs/2404.05948)
 [^6]: *FastTwoSum revisited*, []()
 
-
  */
 
 
-
-// use distinct types for warnings/errors
 typedef struct { double hi,lo; } fr_pair_t;
 typedef struct { double hi,lo; } fe_pair_t;
 
@@ -220,6 +216,9 @@ static inline fe_pair_t fe_add_d(fe_pair_t x, double y)
   return fe_fast_sum(t.hi,l);
 }
 
+static inline fe_pair_t fe_d_add(double x, fe_pair_t y) { return fe_add_d(y,x); }
+
+
 static inline fe_pair_t fe_oadd_d(fe_pair_t x, double y)
 {
   // DWPlusFP (mod): 7 adds
@@ -228,6 +227,11 @@ static inline fe_pair_t fe_oadd_d(fe_pair_t x, double y)
   
   return fe_fast_sum(t.hi,l);
 }
+
+static inline fe_pair_t fe_d_oadd(double x, fe_pair_t y) { return fe_oadd_d(y,x); } 
+
+
+static inline fe_pair_t fe_sub_dd(double x, double y) { return fe_two_diff(x,y); }
 
 static inline fe_pair_t fe_sub_d(fe_pair_t x, double y)
 {
@@ -642,7 +646,7 @@ static inline fe_pair_t fe_div(fe_pair_t x, fe_pair_t y)
   return fe_fast_sum(h,l);              // 3 add
 }
 
-// todo: think about double return straight afters
+// todo: think about double return straight after
 static inline fe_pair_t fe_div_a(fe_pair_t x, fe_pair_t y)
 {
   // DWDivDW3: 1 div, 6 fma, 4 mul, 20 adds
@@ -658,7 +662,7 @@ static inline fe_pair_t fe_div_a(fe_pair_t x, fe_pair_t y)
 }
 
 
-// todo: think about double return straight afters
+// todo: think about double return straight after
 static inline fr_pair_t fr_div(fr_pair_t x, fr_pair_t y)
 {
   // CPairDiv:
@@ -703,7 +707,7 @@ static inline fr_pair_t fr_inv(fr_pair_t x)
 {
   double c = 1.0/x.hi;
   double t = -fma(x.hi,c,-1.0);
-  double q = c*x.lo;                 // FMA?
+  double q = c*x.lo;                 // FMA? (with next line)
   double r = t-q;
   double s = x.hi+x.lo;              // s = x.hi if UP
   double g = r/s;
@@ -721,7 +725,7 @@ static inline fr_pair_t fr_inv_d(double x)
   return fr_pair(h,l);
 }
 
-// todo: think about double return straight afters
+// todo: think about double return straight after
 static inline fr_pair_t fr_sqrt(fr_pair_t x)
 {
   // CPairSqrt: 1 sqrt, 1 div, 1 fma, 2 add  
@@ -732,7 +736,7 @@ static inline fr_pair_t fr_sqrt(fr_pair_t x)
   return fr_pair(h,l);
 }
 
-// todo: think about double return straight afters
+// todo: think about double return straight after
 static inline fr_pair_t fr_sqrt_d(double x)
 {
   // CPairSqrt (mod): 1 sqrt, 1 div, 1 fma, 1 add
@@ -807,6 +811,28 @@ static inline f64_pair_t f64_pair_recip_f(double x)
   return (f64_pair_t){.h = rh, .l = rl};
 }
 
-
 #endif
+
+
+// generics versions (dd = double-double)
+
+#define dd_def_bop(x,y,OP) _Generic((x),   \
+    double: _Generic((y),                  \
+        fe_pair_t: fe_d_##OP,              \
+        double:    fe_##OP##_dd            \
+    ),                                     \
+    fe_pair_t: _Generic((y),               \
+        fe_pair_t: fe_##OP,                \
+        double:    fe_##OP##_d             \
+    )                                      \
+)(x,y)
+
+#define dd_add(x,y)  dd_def_bop(x,y,add)
+#define dd_sub(x,y)  dd_def_bop(x,y,sub)   
+#define dd_mul(x,y)  dd_def_bop(x,y,mul)
+
+// ordered binary ops: |x| >= |y|
+#define dd_oadd(x,y) dd_def_bop(x,y,oadd)
+#define dd_osub(x,y) dd_def_bop(x,y,osub)   
+
 
