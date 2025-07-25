@@ -91,7 +91,7 @@ static inline void vec2_sq(vec2_t* d, vec2_t* a)
 static inline void vec2_usqrt(vec2_t* d, vec2_t* a)
 {
   float x  = a->x, y = a->y;
-  float m  = x+1.f; m = f32_sqrtf(m+m);
+  float m  = x+1.f; m = f32_sqrt(m+m);
   float rx = 0.5f * m;
   float ry = y/(m + 0x1p-126f);
   vec2_set(d, rx,ry);
