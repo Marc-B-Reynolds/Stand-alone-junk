@@ -31,8 +31,6 @@
 
 #pragma once
 
-
-
 // duct-tape and super-glue. the good answer is properly set compiler options instead
 // of attempting to modifiy them in source. it'd be nice if compilers provided the
 // features needed to go this route but...
@@ -55,7 +53,7 @@
 [^3]: *Faithfully rounded floating-point operations*, M. Lange and S.M. Rump, 2019 [link](https://www.tuhh.de/ti3/paper/rump/LaRu2017b.pdf)
 [^4]: *Error bounds for computer arithmetics*, S.M. Rump, 2019, [PDF](https://www.tuhh.de/ti3/paper/rump/Ru19.pdf)
 [^5]: *On the robustness of double-word addition algorithms*, 2024, [link](https://arxiv.org/abs/2404.05948)
-[^6]: *FastTwoSum revisited*, []()
+[^6]: *FastTwoSum revisited*, Jeannerod & Zimmermann, 2025, [link](https://inria.hal.science/hal-04875749)
 
  */
 
@@ -73,6 +71,10 @@ static inline fr_pair_t fr_pair(double hi, double lo)
 {
   return (fr_pair_t){.hi=hi, .lo=lo};
 }
+
+static inline fe_pair_t fe_set_d(double x) { return fe_pair(x,0.0); }
+static inline fr_pair_t fr_set_d(double x) { return fr_pair(x,0.0); }
+
 
 // hack type specialization to lower copy-pasta & eye-ball identical functionality
 // 1) type pun: the type part
@@ -117,20 +119,11 @@ static inline fr_pair_t fr_abs(fr_pair_t x) { return fr2fe_uo_wrap(fe_abs,x); }
 static inline fe_pair_t fe_two_sum(double a, double b)
 {
   // 2Sum: 6 adds
-  double x  = a+b;
-  double bp = x-a;
-  double ap = x-bp;
-  double eb = b-bp;
-  double ea = a-ap;
-  double y  = ea+eb;
+  double x = a + b;
+  double t = x - a;
+  double y = (a - (x - t)) + (b - t);
 
   return fe_pair(x,y);
-}
-
-static inline fr_pair_t fr_two_sum(double x, double y)
-{
-  // 2Sum: 6 adds
-  return fe2fr(fe_two_sum(x,y));
 }
 
 
@@ -139,21 +132,25 @@ static inline fr_pair_t fr_two_sum(double x, double y)
 static inline fe_pair_t fe_two_diff(double a, double b)
 {
   // 2Sum: 6 adds
-  double x  = a-b;
-  double bp = x-a;
-  double ap = x-bp;
-  double eb = b-bp;
-  double ea = a+ap;    // recheck last two
-  double y  = ea-eb;
+  double x = a - b;
+  double t = a - x;
+  double y = (a - (x + t)) + (t - b);
 
   return fe_pair(x,y);
 }
 
-static inline fr_pair_t fr_two_diff(double x, double y)
+
+static inline fr_pair_t fr_two_sum(double x, double y)  { return fe2fr(fe_two_sum(x,y));  }
+static inline fr_pair_t fr_two_diff(double x, double y) { return fe2fr(fe_two_diff(x,y)); }
+
+
+// return x*y where 'y' is a power-of-two value
+static inline fe_pair_t fe_mul_pot(fe_pair_t x, double y)
 {
-  // 2Sum: 6 adds
-  return fe2fr(fe_two_diff(x,y));
+  return fe_pair(x.hi*y,x.lo*y);
 }
+
+static inline fr_pair_t fr_mul_pot(fr_pair_t x, double y)  { return fe2fr(fe_mul_pot(fr2fe(x),y));  }
 
 
 /// returns: $(hi,lo) = x+y$. requires |x| >= |y| (or x = 0)
@@ -315,12 +312,16 @@ static inline fe_pair_t fe_oadd_s(fe_pair_t x, fe_pair_t y)
 
 static inline fe_pair_t fe_sub_s(fe_pair_t x, fe_pair_t y)
 {
+#if 1
+  return fe_add_s(x,fe_neg(y));
+#else  
   // SloppyDWPlusDW: 11 adds
   fe_pair_t s = fe_two_diff(x.hi,y.hi);
   double    v = x.lo - y.lo;
   double    w = s.lo + v;
 
   return fe_fast_sum(s.hi,w);
+#endif  
 }
 
 static inline fe_pair_t fe_osub_s(fe_pair_t x, fe_pair_t y)
@@ -370,6 +371,10 @@ static inline fr_pair_t fr_oadd_d(fr_pair_t a, double b)
 /// returns: $x-y$
 static inline fe_pair_t fe_sub(fe_pair_t x, fe_pair_t y)
 {
+#if 1
+  // temp hack
+  return fe_add(x,fe_neg(y));
+#else  
   // AccurateDWPlusDW: 20 adds
   fe_pair_t s = fe_two_diff(x.hi,y.hi); // 6 adds
   fe_pair_t t = fe_two_diff(x.lo,y.lo); // 6 adds
@@ -378,6 +383,7 @@ static inline fe_pair_t fe_sub(fe_pair_t x, fe_pair_t y)
   double    w = t.lo + v.lo;
 
   return fe_fast_sum(v.hi,w);           // 3 adds
+#endif  
 }
 
 static inline fe_pair_t fe_osub(fe_pair_t x, fe_pair_t y)
@@ -394,10 +400,13 @@ static inline fe_pair_t fe_osub(fe_pair_t x, fe_pair_t y)
 
 static inline fr_pair_t fr_sub(fr_pair_t x, fr_pair_t y)
 {
+#if 0
+  return fr_add(x,fr_neg(y));
+#else  
   // CPairSum: 8 adds
-  fr_pair_t t = fr_two_diff(x.hi,y.hi); // 6 adds
-  
-  return fr_pair(t.hi, t.lo+(x.lo-y.lo));
+  fr_pair_t t = fr_two_diff(x.hi,y.hi);
+  return fr_pair(t.hi,t.lo+(x.lo-y.lo));
+#endif  
 }
 
 static inline fr_pair_t fr_osub(fr_pair_t x, fr_pair_t y)
@@ -449,6 +458,9 @@ static inline fe_pair_t fe_mul_d(fe_pair_t x, double y)
   
   return fe_fast_sum(c.hi,t);           // 3 adds
 }
+
+static inline fe_pair_t fe_d_mul(double x, fe_pair_t y) { return fe_mul_d(y,x); }
+
 
 static inline fe_pair_t fe_mul_dd(double x, double y)
 {
@@ -580,8 +592,8 @@ static inline fe_pair_t fe_inv_d(double x)
 {
   // DWDivDW2 (mod): 
   double    h = 1.0/x;
-  fe_pair_t r = fe_mul_d(x,h);         // DWTimesFP3: 2 fma, 1 mul, 3 add
-  double    a = 1.0 - r.hi;            // (exact operation)
+  fe_pair_t r = fe_mul_dd(x,h);         // 1 fma, 1 mul
+  double    a = 1.0 - r.hi;             // (exact operation)
   double    c = a   - r.lo;
   double    l = c / x;
 
@@ -596,7 +608,7 @@ static inline fe_pair_t fe_inv_da(double x)
   // DWDivDW3 (mod): RECHECK I THIS THIS RIGHT
   double    i = 1.0 / x;
   double    a = -fma(x,i, -1.0);        // (exact operation)
-  fe_pair_t d = fe_two_mul(a, i);       // 1 fma, 1 mul
+  fe_pair_t d = fe_mul_dd(a, i);        // 1 fma, 1 mul
 
   return fe_add_d(d, i);                // 
 }
@@ -645,6 +657,22 @@ static inline fe_pair_t fe_div(fe_pair_t x, fe_pair_t y)
 
   return fe_fast_sum(h,l);              // 3 add
 }
+
+static inline fe_pair_t fe_d_div(double x, fe_pair_t y) { return fe_div(fe_set_d(x),y); } 
+
+// local hack: recheck
+static inline fe_pair_t fe_div_dd(double x, double y)
+{
+  double    h = x/y;
+  fe_pair_t r = fe_mul_dd(y,h);
+  double    a = x - r.hi; 
+  double    b =   - r.lo;
+  double    c = a + b;
+  double    l = c / y;
+
+  return fe_fast_sum(h,l);
+}
+
 
 // todo: think about double return straight after
 static inline fe_pair_t fe_div_a(fe_pair_t x, fe_pair_t y)
@@ -725,25 +753,26 @@ static inline fr_pair_t fr_inv_d(double x)
   return fr_pair(h,l);
 }
 
-// todo: think about double return straight after
 static inline fr_pair_t fr_sqrt(fr_pair_t x)
 {
   // CPairSqrt: 1 sqrt, 1 div, 1 fma, 2 add  
   double h = sqrt(x.hi);
-  double r = x.lo-fma(h,h,x.hi);
-  double l = r/(h+h);
-  
+  double d = x.hi != 0 ? h+h : 1.0;
+  double r = x.hi-fma(h,h,-x.hi);
+  double l = (r+x.lo)/d;
+
   return fr_pair(h,l);
 }
 
-// todo: think about double return straight after
 static inline fr_pair_t fr_sqrt_d(double x)
 {
   // CPairSqrt (mod): 1 sqrt, 1 div, 1 fma, 1 add
   double h = sqrt(x);
-  double l = -fma(h,h,x)/(h+h);
-  
-  return fr_pair(h,l);
+  double d = x != 0 ? h+h : 1.0;
+  double t = -fma(h,h,-x);
+  double l = t/d;
+
+  return fe_pair(h,l);
 }
 
 /// ## Extended precision constants
@@ -779,8 +808,6 @@ static const fe_pair_t fe_k_sqrt_2   = {.hi = 0x1.6a09e667f3bcdp0,  .lo=-0x1.bdd
 static const fe_pair_t fe_k_sqrt_2_i = {.hi = 0x1.6a09e667f3bcdp-1, .lo=-0x1.bdd3413b26456p-55};
 
 
-static inline fe_pair_t fe_set_d(double x) { return fe_pair(x,0.0); }
-static inline fr_pair_t fr_set_d(double x) { return fr_pair(x,0.0); }
 
 static inline fe_pair_t fe_one(void)       { return fe_set_d( 1.0);  }
 static inline fr_pair_t fr_one(void)       { return fr_set_d( 1.0);  }
@@ -830,6 +857,7 @@ static inline f64_pair_t f64_pair_recip_f(double x)
 #define dd_add(x,y)  dd_def_bop(x,y,add)
 #define dd_sub(x,y)  dd_def_bop(x,y,sub)   
 #define dd_mul(x,y)  dd_def_bop(x,y,mul)
+#define dd_div(x,y)  dd_def_bop(x,y,div)
 
 // ordered binary ops: |x| >= |y|
 #define dd_oadd(x,y) dd_def_bop(x,y,oadd)
