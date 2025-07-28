@@ -520,35 +520,35 @@ static inline fe_pair_t fe_mul(fe_pair_t x, fe_pair_t y)
   return fe_fast_sum(p.hi,d);           // 3 adds
 }
 
-#if 0
+// homegrown square
 static inline fe_pair_t fe_sq(fe_pair_t x)
 {
-  fe_pair_t p = fe_two_mul(x.hi,x.hi);
-  double    a = x.lo * x.lo;
-  double    b = fma(x.hi,x.lo,a);
-  double    c = fma(x.hi,x.lo,b);
-  double    d = p.lo + c;
-  return fe_fast_sum(p.hi,d);
+  fe_pair_t a = fe_two_mul(x.hi,x.hi);     // 1 fma, 1 mul
+
+  a.lo = fma(x.hi,x.lo+x.lo,a.lo);         // 1 fma, 1 add
+
+  // TODO:
+  // fix the invariant: (x.hi+x.lo == x.hi)
+  // could probably rework and maybe reduce error
+  double t = a.hi + a.lo;
+  a.lo += a.hi-t;
+  a.hi  = t;
+
+  return  a;
 }
-#elif 1
-static inline fe_pair_t fe_sq(fe_pair_t x)
+
+static inline fr_pair_t fr_sq(fr_pair_t x)
 {
-  fe_pair_t h  = fe_two_mul(x.hi,x.hi);
-  fe_pair_t ab = fe_two_mul(x.hi,x.lo);
+  fr_pair_t a = fr_two_mul(x.hi,x.hi);     // 1 fma, 1 mul
 
-  ab.hi += ab.hi;
-  ab.lo += ab.lo;
+  a.lo = fma(x.hi,x.lo+x.lo,a.lo);         // 1 fma, 1 add
 
-  return fe_add(h,ab);
+  return  a;
 }
-#else
-static inline fe_pair_t fe_sq(fe_pair_t x) { return fe_mul(x,x); }
-#endif
-   
 
 
 #if 0
-// higher op count and error. 
+// higher op count and error. (why commented out)
 static inline fe_pair_t fe_mul_a(fe_pair_t x, fe_pair_t y)
 {
   // DWTimeDW2: 2 fma, 2 mul, 7 add
@@ -758,11 +758,15 @@ static inline fr_pair_t fr_sqrt(fr_pair_t x)
   // CPairSqrt: 1 sqrt, 1 div, 1 fma, 2 add  
   double h = sqrt(x.hi);
   double d = x.hi != 0 ? h+h : 1.0;
-  double r = x.hi-fma(h,h,-x.hi);
-  double l = (r+x.lo)/d;
+  double t = -fma(h,h,-x.hi);
+  double l = (t+x.lo)/d;
 
   return fr_pair(h,l);
 }
+
+// "High Precision Division and Square Root", Karp & Markstein, 1997
+// [link](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=e011110a5c81454b8dd7bf46f6b636ed2b2c6774)
+
 
 static inline fr_pair_t fr_sqrt_d(double x)
 {
@@ -772,7 +776,7 @@ static inline fr_pair_t fr_sqrt_d(double x)
   double t = -fma(h,h,-x);
   double l = t/d;
 
-  return fe_pair(h,l);
+  return fr_pair(h,l);
 }
 
 /// ## Extended precision constants
