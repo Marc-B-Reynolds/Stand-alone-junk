@@ -28,6 +28,8 @@
 // ATM: GCC & clang successfully transform:
 // {fe,fr}_result(op) - where result pair of 'op'
 //   fast_sum,fast_diff
+// uiCA comments are skylake throughput estimates thereof
+// `~ulp:` are sloppy measures not worth much (from running test/fp64_pair_test)
 
 #pragma once
 
@@ -45,6 +47,9 @@
 #else
 #warning "this is sad"
 #endif
+
+
+#define F64_PAIR_CPAIR_DIV_FMA     // not certain this is legal
 
 /*
 
@@ -199,7 +204,7 @@ static inline fr_pair_t fr_normalize(fr_pair_t x)
 }
 
 static inline fr_pair_t fr_add_dd(double x, double y)  { return fr_two_sum(x,y);  }
-static inline fe_pair_t fe_add_dd(double x, double y)  { return fe_two_sum(x,y);  }
+static inline fe_pair_t fe_addo_dd(double x, double y)  { return fe_two_sum(x,y);  }
 static inline fr_pair_t fr_oadd_dd(double x, double y) { return fr_fast_sum(x,y); }
 static inline fe_pair_t fe_oadd_dd(double x, double y) { return fe_fast_sum(x,y); }
 
@@ -269,6 +274,7 @@ static inline fe_pair_t fe_d_osub(double x, fe_pair_t y)
 static inline fe_pair_t fe_add(fe_pair_t x, fe_pair_t y)
 {
   // AccurateDWPlusDW: 20 adds
+  // uiCA: 49.00
   fe_pair_t s = fe_two_sum(x.hi,y.hi);  // 6 adds
   fe_pair_t t = fe_two_sum(x.lo,y.lo);  // 6 adds
   double    c = s.lo + t.hi;
@@ -281,6 +287,7 @@ static inline fe_pair_t fe_add(fe_pair_t x, fe_pair_t y)
 static inline fe_pair_t fe_oadd(fe_pair_t x, fe_pair_t y)
 {
   // AccurateDWPlusDW (mod): 17 adds
+  // uiCA: 41.50
   fe_pair_t s = fe_fast_sum(x.hi,y.hi); // 3 adds
   fe_pair_t t = fe_two_sum(x.lo,y.lo);  // 6 adds
   double    c = s.lo + t.hi;
@@ -343,6 +350,7 @@ static inline fr_pair_t fr_osub_s(fr_pair_t x, fr_pair_t y) { return fr2fe_bo_wr
 static inline fr_pair_t fr_add(fr_pair_t x, fr_pair_t y)
 {
   // CPairSum: 8 adds
+  // uiCA: 13
   fr_pair_t t = fr_two_sum(x.hi,y.hi);
   return fr_pair(t.hi,t.lo+(x.lo+y.lo));
 }
@@ -350,6 +358,7 @@ static inline fr_pair_t fr_add(fr_pair_t x, fr_pair_t y)
 static inline fr_pair_t fr_oadd(fr_pair_t x, fr_pair_t y)
 {
   // CPairSum (mod): 5 adds
+  // uiCA: 8
   fr_pair_t t = fr_fast_sum(x.hi,y.hi);
   return fr_pair(t.hi,t.lo+(x.lo+y.lo));
 }
@@ -371,11 +380,8 @@ static inline fr_pair_t fr_oadd_d(fr_pair_t a, double b)
 /// returns: $x-y$
 static inline fe_pair_t fe_sub(fe_pair_t x, fe_pair_t y)
 {
-#if 1
-  // temp hack
-  return fe_add(x,fe_neg(y));
-#else  
   // AccurateDWPlusDW: 20 adds
+  // uiCA: 49.00
   fe_pair_t s = fe_two_diff(x.hi,y.hi); // 6 adds
   fe_pair_t t = fe_two_diff(x.lo,y.lo); // 6 adds
   double    c = s.lo + t.hi;
@@ -383,35 +389,34 @@ static inline fe_pair_t fe_sub(fe_pair_t x, fe_pair_t y)
   double    w = t.lo + v.lo;
 
   return fe_fast_sum(v.hi,w);           // 3 adds
-#endif  
 }
 
+
+/// returns: $x-y$ when |x| >= |y|
 static inline fe_pair_t fe_osub(fe_pair_t x, fe_pair_t y)
 {
-  // AccurateDWPlusDW (mod): 17 adds
-  fe_pair_t s = fe_fast_diff(x.hi,y.hi); 
-  fe_pair_t t = fe_two_diff (x.lo,y.lo); 
+  // 14 adds
+  // uiCA: 40.80 
+  fe_pair_t s = fe_fast_diff(x.hi,y.hi); // 3 adds
+  fe_pair_t t = fe_fast_diff(x.lo,y.lo); // 3 adds
   double    c = s.lo + t.hi;
-  fe_pair_t v = fe_fast_sum(s.hi, c);   
+  fe_pair_t v = fe_fast_sum(s.hi, c);    // 3 adds
   double    w = t.lo + v.lo;
 
-  return fe_fast_sum(v.hi,w);           
+  return fe_fast_sum(v.hi,w);            // 3 adds
 }
 
 static inline fr_pair_t fr_sub(fr_pair_t x, fr_pair_t y)
 {
-#if 0
-  return fr_add(x,fr_neg(y));
-#else  
   // CPairSum: 8 adds
   fr_pair_t t = fr_two_diff(x.hi,y.hi);
   return fr_pair(t.hi,t.lo+(x.lo-y.lo));
-#endif  
 }
 
 static inline fr_pair_t fr_osub(fr_pair_t x, fr_pair_t y)
 {
   // CPairSum (mod): 5 adds
+  // uiCA: 8.00
   fr_pair_t t = fr_fast_diff(x.hi,y.hi);
   
   return fr_pair(t.hi, t.lo+(x.lo-y.lo));
@@ -512,6 +517,7 @@ static inline fr_pair_t fr_mul_d(fr_pair_t x, double y)
 static inline fe_pair_t fe_mul(fe_pair_t x, fe_pair_t y)
 {
   // DWTimeDW3: 3 fma, 2 mul, 4 add
+  // uiCA: 28.00
   fe_pair_t p = fe_two_mul(x.hi,y.hi);  // 1 fma, 1 mul
   double    a = x.lo * y.lo;
   double    b = fma(x.hi,y.lo,a);
@@ -523,6 +529,8 @@ static inline fe_pair_t fe_mul(fe_pair_t x, fe_pair_t y)
 // homegrown square
 static inline fe_pair_t fe_sq(fe_pair_t x)
 {
+  // uiCA: 20.00
+  // ulp:  ~2.998
   fe_pair_t a = fe_two_mul(x.hi,x.hi);     // 1 fma, 1 mul
 
   a.lo = fma(x.hi,x.lo+x.lo,a.lo);         // 1 fma, 1 add
@@ -539,6 +547,8 @@ static inline fe_pair_t fe_sq(fe_pair_t x)
 
 static inline fr_pair_t fr_sq(fr_pair_t x)
 {
+  // uiCA: 8.00
+  // ulp: ~2.998
   fr_pair_t a = fr_two_mul(x.hi,x.hi);     // 1 fma, 1 mul
 
   a.lo = fma(x.hi,x.lo+x.lo,a.lo);         // 1 fma, 1 add
@@ -548,7 +558,7 @@ static inline fr_pair_t fr_sq(fr_pair_t x)
 
 
 #if 0
-// higher op count and error. (why commented out)
+// higher op count and error. (which is why it's commented out)
 static inline fe_pair_t fe_mul_a(fe_pair_t x, fe_pair_t y)
 {
   // DWTimeDW2: 2 fma, 2 mul, 7 add
@@ -566,6 +576,8 @@ static inline fr_pair_t fr_mul(fr_pair_t x, fr_pair_t y)
 {
   // CPairMul:
   // (1) what about Kahn's mma here as variant? or use FMA?
+  // uiCA: 21.60
+  // ulp: ~4.85
   double h = x.hi*y.hi;              // ab
   double s = x.hi*y.lo + y.hi*x.lo;  // af+be (1)
   double g = fma(x.hi,y.hi,-h)+s;    // ab-RN(ab)+af+be
@@ -586,39 +598,45 @@ static inline fe_pair_t fe_div_d(fe_pair_t x, double y)
   return fe_fast_sum(h,l);              // 3 add
 }
 
-
-#if 0
 static inline fe_pair_t fe_inv_d(double x)
 {
-  // DWDivDW2 (mod): 
-  double    h = 1.0/x;
-  fe_pair_t r = fe_mul_dd(x,h);         // 1 fma, 1 mul
-  double    a = 1.0 - r.hi;             // (exact operation)
-  double    c = a   - r.lo;
-  double    l = c / x;
+  // uiCA: 13.00 
+  double h = 1.0/x;
+  double l = -fma(x,h,-1.0)/x;
 
-  return fe_fast_sum(h,l);              // 3 add
+  return fe_pair(h,l);
 }
-#endif
 
-
-#if 0
-static inline fe_pair_t fe_inv_da(double x)
+static inline fe_pair_t fe_inv_dn(double x)
 {
-  // DWDivDW3 (mod): RECHECK I THIS THIS RIGHT
-  double    i = 1.0 / x;
-  double    a = -fma(x,i, -1.0);        // (exact operation)
-  fe_pair_t d = fe_mul_dd(a, i);        // 1 fma, 1 mul
-
-  return fe_add_d(d, i);                // 
+  // 1 div, 1 fma, 1 mul
+  // lo is computed with one Newton step
+  // uiCA: 13.00 
+  double h = 1.0/x;
+  double t = fma(x,h,-1.f);
+  double l = -t*h;
+  
+  return fe_pair(h,l);
 }
-#endif
+
+static inline fe_pair_t fe_inv_dh(double x)
+{
+  // 1 div, 2 fma, 1 mul
+  // lo is computed with one Halley step
+  // uiCA: 13.18
+  double h = 1.0/x;
+  double t = fma(x,-h,1.f);
+  double l = h*fma(t,t,t);
+  
+  return fe_pair(h,l);
+}
 
 
 // add to doc/table
 static inline fe_pair_t fe_inv(fe_pair_t x)
 {
   // DWDivDW2 (mod): 2 div, 2 fma, 1 mul, 8 add
+  // ulp: ~6.69
   double    h = 1.0/x.hi;
   fe_pair_t r = fe_mul_d(x,h);         // DWTimesFP3: 2 fma, 1 mul, 3 add
   double    a = 1.0 - r.hi;            // (exact operation)
@@ -690,10 +708,11 @@ static inline fe_pair_t fe_div_a(fe_pair_t x, fe_pair_t y)
 }
 
 
-// todo: think about double return straight after
 static inline fr_pair_t fr_div(fr_pair_t x, fr_pair_t y)
 {
   // CPairDiv:
+#if !defined(F64_PAIR_CPAIR_DIV_FMA)
+  // uiCA: 21.60
   double c = x.hi/y.hi;
   double t = fma(y.hi,c,-x.hi);      // (exact)
   double p = x.lo-t;
@@ -701,11 +720,16 @@ static inline fr_pair_t fr_div(fr_pair_t x, fr_pair_t y)
   double r = p-q;
   double s = y.hi+y.lo;              // s = y.hi if UP
   double g = r/s;
-
-  return fr_pair(c,g);
+#else  
+  // uiCA: 21.10
+  double h = x.hi/y.hi;
+  double t = fma(y.hi,h,-x.hi);
+  double n = -fma(h,y.lo,t-x.lo);
+  double l = n/(y.hi+y.lo);
+  return fr_pair(h,l);
+#endif  
 }
 
-// todo: think about double return straight afters
 static inline fr_pair_t fr_d_div(double x, fr_pair_t y)
 {
   // 2 div, 1 fma, 1 mul, 2 add
@@ -753,9 +777,53 @@ static inline fr_pair_t fr_inv_d(double x)
   return fr_pair(h,l);
 }
 
+
+// Newton-Raphson step for 1/sqrt(x)
+static inline double fe_rsqrt_nr(double y, double h, double r)
+{
+  double s = fma(h,r,0.5);
+  double u = fma(y,y, -r);
+  double v = fma(h,u,  s);
+
+  return y*v;
+}
+
+// Halley method step for 1/sqrt(x)
+static inline double fe_rsqrt_hm(double y, double a, double r)
+{
+  double s = fma(r,a,0.5);
+  double t = fma(y,y,-r);
+  double v = fma(a,t, s);
+  double w = fma(1.5*v,v,v);
+
+  return y*w;
+}
+
+static inline fe_pair_t fe_rsqrt_d(double x)
+{
+  double r = 1.f/x;
+  double a = -0.5*x;
+  double h = sqrt(r);
+  double l = fe_rsqrt_nr(h,a,r);
+  
+  return fe_pair(h,l);
+}
+
+static inline fe_pair_t fe_rsqrt_dh(double x)
+{
+  double r = 1.f/x;
+  double t = -0.5*x;
+  double h = sqrt(r);
+  double l = fe_rsqrt_hm(h,t,r);
+  
+  return fe_pair(h,l);
+}
+
 static inline fr_pair_t fr_sqrt(fr_pair_t x)
 {
   // CPairSqrt: 1 sqrt, 1 div, 1 fma, 2 add  
+  // uiCA: 17.00 
+  // ~3.03 ulp
   double h = sqrt(x.hi);
   double d = x.hi != 0 ? h+h : 1.0;
   double t = -fma(h,h,-x.hi);
@@ -764,8 +832,33 @@ static inline fr_pair_t fr_sqrt(fr_pair_t x)
   return fr_pair(h,l);
 }
 
+#if 0
 // "High Precision Division and Square Root", Karp & Markstein, 1997
 // [link](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=e011110a5c81454b8dd7bf46f6b636ed2b2c6774)
+static inline fe_pair_t fe_sqrt(fe_pair_t a)
+{
+  // ~6.97 ulp
+  // uiCA: 73.50 
+  double    x   = 1.0 / sqrt(a.hi);
+  double    ax  = a.hi * x;
+  fe_pair_t ax2 = fe_sq_d(ax);
+
+  return fe_fast_sum(ax, fe_sub(a,ax2).hi * (x * 0.5));
+}
+#else
+static inline fe_pair_t fe_sqrt(fe_pair_t x)
+{
+  // CPairSqrt: 1 sqrt, 1 div, 1 fma, 2 add
+  // uiCA: 17.00 
+  // ~3.09 ulp
+  double h = sqrt(x.hi);
+  double d = x.hi != 0 ? h+h : 1.0;
+  double t = -fma(h,h,-x.hi);
+  double l = (t+x.lo)/d;
+
+  return fe_pair(h,l);
+}
+#endif
 
 
 static inline fr_pair_t fr_sqrt_d(double x)
