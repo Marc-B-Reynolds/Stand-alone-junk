@@ -41,6 +41,8 @@
 
 #if defined(__GNUC__)
 
+#define SFH_SIMD_2D3D_H
+
 #if !defined(SFH_SIMD_H)
 #include <stdint.h>
 #include <stdbool.h>
