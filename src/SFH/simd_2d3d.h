@@ -733,7 +733,7 @@ static inline double quatd_dot_fma(quatd_t a, quatd_t b) { return fma (a[0],b[0]
 #define quat_norm_std(a) quat_dot(a,a)
 #define vec2_norm_fma(a) vec2_dot_fma(a,a)
 #define vec3_norm_fma(a) vec3_dot_fma(a,a)
-#define quat_norm_fam(a) quat_dot_fma(a,a)
+#define quat_norm_fma(a) quat_dot_fma(a,a)
 
 #define vec2_norm vec2_norm_std
 #define vec3_norm vec3_norm_std
@@ -968,7 +968,7 @@ static inline vec3d_t vec3d_ortho(vec3d_t v)
 
 // norm of the bivector part
 #define quat_bdot(a,b) \
-  ({_Generic(x, quatf_t:vec3f_dot, default: vec3d_dot)(a,b);})  
+  ({_Generic(a, quatf_t:vec3f_dot, default: vec3d_dot)(a,b);})  
 
 // norm of the bivector part
 #define quat_bnorm(q) quat_bdot(q,q)
