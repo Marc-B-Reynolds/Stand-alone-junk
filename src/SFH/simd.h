@@ -1258,7 +1258,22 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 
 
-
+// compute the n^th order polynomial with coefficients
+// C (from highest to lowest order. e.g. C[N-1] is the
+// constant term). X must be a vector type.
+#define simd_horner(X,N,C)                            \
+({                                                    \
+  simd_assert_vec(X);                                 \
+  simd_assert_same_type(X[0],C[0]);                   \  
+                                                      \
+  typeof(X) _x = (X);                                 \
+  typeof(X) _r = simd_splat_i(typeof(X), C[0]);       \
+                                                      \
+  for (int i=1; i<(N); i++)                           \
+    _r = simd_fma_v(_r,_x,simd_splat_i(typeof(X),C[i])); \
+                                                      \
+  _r;                                                 \
+})
 
 // clean-up compiler option mods
 #pragma GCC diagnostic pop
