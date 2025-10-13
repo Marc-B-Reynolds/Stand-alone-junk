@@ -1300,14 +1300,14 @@ SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X)
 // constant term). X must be a vector type.
 #define simd_horner(X,N,C)                            \
 ({                                                    \
-  simd_assert_vec(X);                                 \
-  simd_assert_same_type(X[0],C[0]);                   \
-                                                      \
   typeof(X) _x = (X);                                 \
-  typeof(X) _r = simd_splat_i(typeof(X), C[0]);       \
+  simd_assert_vec(_x);                                \
+  simd_assert_same_type(_x[0],C[0]);                  \
+                                                      \
+  typeof(_x) _r = simd_splat_i(typeof(_x), C[0]);     \
                                                       \
   for (int i=1; i<(N); i++)                           \
-    _r = simd_fma_v(_r,_x,simd_splat_i(typeof(X),C[i])); \
+    _r = simd_fma_v(_r,_x,simd_splat_i(typeof(_x),C[i])); \
                                                       \
   _r;                                                 \
 })
