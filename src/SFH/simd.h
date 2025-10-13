@@ -926,14 +926,17 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 #define SIMD_MAKE_UFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
 #define SIMD_MAKE_BFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
 #define SIMD_MAKE_3FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
+#define SIMD_MAKE_4FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d) { return CAT(simd_,name)(a,b,c,d); }
 #elif defined(SIMD_IMPLEMENTATION)
-#define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a)                          { return CAT(simd_,name)(a);     }
-#define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b)             { return CAT(simd_,name)(a,b);   }
-#define SIMD_MAKE_3FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
+#define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a)                                      { return CAT(simd_,name)(a);       }
+#define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b)                         { return CAT(simd_,name)(a,b);     }
+#define SIMD_MAKE_3FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c)             { return CAT(simd_,name)(a,b,c);   }
+#define SIMD_MAKE_4FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c,CAT(T,_t) d) { return CAT(simd_,name)(a,b,c,d); }
 #else
 #define SIMD_MAKE_UFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a);
 #define SIMD_MAKE_BFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b);
 #define SIMD_MAKE_3FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c);
+#define SIMD_MAKE_4FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d);
 #endif
 
 //*******************************************************
@@ -1257,6 +1260,40 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   simd_blend_i(A,B,S);            \
 })
 
+// ab+cd
+// • within ±3/2 ulp
+// • within ±1   ulp, if sign(ab) = sign(cd)
+// • currently requires all parameter be same vector type
+//   so any scalars need to be broadcasted if needed 
+#define simd_mma(A,B,C,D)         \
+({                                \
+  simd_assert_same_type(A,B,C,D); \
+  typeof(A) _c = C;               \
+  typeof(A) _d = D;               \
+  typeof(A)  t = _c*_d;           \
+  simd_fma_v(A,B,t) + simd_fma_v(_c,_d,-t); \
+})
+
+// ab-cd
+// • within ±3/2 ulp
+// • within ±1   ulp, if sign(ab) != sign(cd)
+// • currently requires all parameter be same vector type
+//   so any scalars need to be broadcasted if needed 
+#define simd_mms(A,B,C,D)         \
+({                                \
+  simd_assert_same_type(A,B,C,D); \
+  typeof(A) _c = C;               \
+  typeof(A) _d = D;               \
+  typeof(A)  t = _c*_d;           \
+  simd_fma_v(A,B,-t) - simd_fma_v(_c,_d,-t); \
+})
+
+
+#if defined(SIMD_SPECIALIZE)
+SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mma, SIMD_FP_X) 
+SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X) 
+#endif
+
 
 // compute the n^th order polynomial with coefficients
 // C (from highest to lowest order. e.g. C[N-1] is the
@@ -1264,7 +1301,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #define simd_horner(X,N,C)                            \
 ({                                                    \
   simd_assert_vec(X);                                 \
-  simd_assert_same_type(X[0],C[0]);                   \  
+  simd_assert_same_type(X[0],C[0]);                   \
                                                       \
   typeof(X) _x = (X);                                 \
   typeof(X) _r = simd_splat_i(typeof(X), C[0]);       \
