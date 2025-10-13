@@ -972,6 +972,7 @@ static inline vec3d_t vec3d_ortho(vec3d_t v)
 
 // norm of the bivector part
 #define quat_bnorm(q) quat_bdot(q,q)
+#define quat_bnorm_fma(q) vec3_dot_fma(q,q)
 
 // complex conjugate: (s,V) → (s,-V)
 #define quat_conj(q) ({ typeof(q) r = q; r = -r; r[3] = -r[3]; r; })
