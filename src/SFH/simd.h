@@ -1267,7 +1267,6 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 //   so any scalars need to be broadcasted if needed 
 #define simd_mma(A,B,C,D)         \
 ({                                \
-  simd_assert_same_type(A,B,C,D); \
   typeof(A) _c = C;               \
   typeof(A) _d = D;               \
   typeof(A)  t = _c*_d;           \
@@ -1281,7 +1280,6 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 //   so any scalars need to be broadcasted if needed 
 #define simd_mms(A,B,C,D)         \
 ({                                \
-  simd_assert_same_type(A,B,C,D); \
   typeof(A) _c = C;               \
   typeof(A) _d = D;               \
   typeof(A)  t = _c*_d;           \
@@ -1298,7 +1296,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X)
 // compute the n^th order polynomial with coefficients
 // C (from highest to lowest order. e.g. C[N-1] is the
 // constant term). X must be a vector type.
-#define simd_horner(X,N,C)                            \
+#define simd_horner_i(X,N,C)                          \
 ({                                                    \
   typeof(X) _x = (X);                                 \
   simd_assert_vec(_x);                                \
@@ -1311,6 +1309,8 @@ SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X)
                                                       \
   _r;                                                 \
 })
+
+#define simd_horner(X,C) simd_horner_i(X,sizeof(C)/sizeof(C[0]),C)
 
 // clean-up compiler option mods
 #pragma GCC diagnostic pop
