@@ -36,11 +36,14 @@ procedure list_of_odd_coeff(p)
 
 procedure fp_write(v)
 {
-  if (v != nearestint(v)) then {
-   write(v);
-  } else {
-   write(v,".0");
-  };
+  write(v);
+
+  // sigh: this created junk in hexadecimal mode
+  //  if (v != nearestint(v)) then {
+  //  write(v);
+  // } else {
+  //  write(v,".0");
+  // };
 };
 
 procedure f32_write_list(p,l)
@@ -236,6 +239,11 @@ procedure f32_print_kernel_even(name, a)
 procedure f32_print_kernel(name, a)
 {
   f32_print_kernel_list(name @ (degree(a)), list_of_coeff(a));
+};
+
+procedure f64_print_kernel(name, a)
+{
+  f64_print_kernel_list(name @ (degree(a)), list_of_coeff(a));
 };
 
 
