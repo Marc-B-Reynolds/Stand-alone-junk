@@ -178,7 +178,7 @@ void test_const_range(uint32_t x0, uint32_t x1, float k)
 }
 
 // correctly rounded f(x) = RN(RN(kx,53),24) on [x0,x1]
-void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t* k)
+void test_linear_range_dp_up(uint32_t x0, uint32_t x1, const f64_pair_t k)
 {
   func_error_t error[LENGTHOF(func_table)] = {{0}};
   

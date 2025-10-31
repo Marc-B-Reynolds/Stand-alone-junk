@@ -148,7 +148,7 @@ void scan_linear(void) {
 
   do {
     float x = f32_from_bits(++ix);
-    r = (float)f64_up_mul(&f64_mul_k_pi_i, (double)x);
+    r = (float)f64_up_mul(f64_mul_k_pi_i, (double)x);
     cr = cr_func(x);
   } while(r == cr);
 
@@ -167,7 +167,7 @@ void test_all(void)
   uint32_t x0 = 0;
   uint32_t x1 = 0x332332e8;
   
-  test_linear_range_dp_up(x0, x1, &f64_mul_k_pi_i);
+  test_linear_range_dp_up(x0, x1, f64_mul_k_pi_i);
 
   x0 = x1+1; x1=f32_to_bits(1.f/64.f);
   test_force(x0,x1);

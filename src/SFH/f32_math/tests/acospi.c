@@ -45,7 +45,7 @@
 float libm(float x) { return acosf(x)/((float)M_PI); }
 
 // stdlib version with correctly rounded division by pi
-float libm_crdiv(float x) { return f32_up_mul(&f32_mul_k_pi_i, acosf(x)); }
+float libm_crdiv(float x) { return f32_up_mul(f32_mul_k_pi_i, acosf(x)); }
 
 
 

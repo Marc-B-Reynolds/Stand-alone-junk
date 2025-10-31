@@ -165,7 +165,7 @@ void scan_linear(void)
 
   do {
     float x = f32_from_bits(++ix);
-    r = (float)f64_up_mul(&f64_mul_k_pi, (double)x);
+    r = (float)f64_up_mul(f64_mul_k_pi, (double)x);
     cr = cr_sinpif(x);
   } while(r == cr);
 
@@ -186,7 +186,7 @@ void test_all(void)
 {
   // sinpi(x) = RN(pi*x) up to 0x1.f82a6ep-24 0x33fc1537
   static const uint32_t cut = 0x33fc1537;
-  test_linear_range_dp_up(0, cut, &f64_mul_k_pi);  
+  test_linear_range_dp_up(0, cut, f64_mul_k_pi);  
   test_force(cut+1, f32_to_bits(1.f/32.f));
   
   // partition the rest into POT intervals

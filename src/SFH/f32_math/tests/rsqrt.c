@@ -217,7 +217,7 @@ float rsqrt_day_r1(float x)
 float rsqrt_day_r2(float x)
 {
   float y = rsqrt_day(x);
-  return f32_rsqrt_nr_step_cb(y, -0.5f*x, y*y);
+  return f32_rsqrt_nr_step(y, -0.5f*x, y*y);
 }
 
 // max-ulp:      1
