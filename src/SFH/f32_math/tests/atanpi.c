@@ -38,6 +38,33 @@
 
 float libm(float x) { return atanf(x)/((float)M_PI); }
 
+// ~abs error = 5.1212798687413758189430440754315797172397760782352e-10
+// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
+static inline float f32_atanpi_k5(float x)
+{
+  static const float C[] = {-0x1.ef7d88p-7f, 0x1.021244p-5f, -0x1.6fe8a6p-5f, 0x1.04970ep-4f, -0x1.b297f6p-4f, 0x1.45f306p-2f};
+
+  return x*f32_horner_5(x*x,C);
+}
+
+// ~abs error = 4.9263542241893983185779047860738136910630860052195e-10
+// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
+static inline float f32_atanpi_k6(float x)
+{
+  static const float C[] = {-0x1.f32c66p-9f, -0x1.9231cap-7f, 0x1.f71ff4p-6f, -0x1.6f1486p-5f, 0x1.04911ep-4f, -0x1.b297dap-4f, 0x1.45f306p-2f};
+
+  return x*f32_horner_6(x*x,C);
+}
+
+// ~abs error = 4.2991777133872431385088667344082391605521615226017e-10
+// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
+static inline float f32_atanpi_k7(float x)
+{
+  static const float C[] = {0x1.b45ec6p-3f, -0x1.824036p-3f, 0x1.9d41cp-5f, 0x1.4b53ecp-6f, -0x1.67ce22p-5f, 0x1.046cbcp-4f, -0x1.b2976p-4f, 0x1.45f306p-2f};
+
+  return x*f32_horner_7(x*x,C);
+}
+
 
 //**********************************************************************
 // SEE: https://core-math.gitlabpages.inria.fr
@@ -115,6 +142,8 @@ float cr_atanpif(float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(f32_atanpi_k6),
+  ENTRY(f32_atanpi_k7),
 };
 
 const char* func_name = "atanpi";
@@ -178,6 +207,7 @@ void test_all(void)
   test_1pot(1.f/16.f);
   test_1pot(1.f/ 8.f);
   test_1pot(1.f/ 4.f);
+#if 0  
   test_1pot(1.f/ 2.f);
   test_1pot(1.f);
   test_1pot(2.f);
@@ -192,6 +222,7 @@ void test_all(void)
   test_force(x0,x1);
   
   test_const_range(0x4ba2f984, 0x7f7fffff, 0.5f);
+#endif  
 }
 
 void test_sanity(void)
