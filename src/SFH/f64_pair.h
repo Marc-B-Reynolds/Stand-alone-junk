@@ -49,7 +49,7 @@
 #pragma GCC optimize ("no-math-errno")
 #pragma GCC optimize ("no-trapping-math")
 #else
-#warning "this is sad"
+//#warning "this is sad"
 #endif
 
 #if defined(__GNUC__)
