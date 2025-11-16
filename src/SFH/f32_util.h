@@ -220,6 +220,15 @@ static inline float f32_sign_select(float a, float b, float cond)
 #endif  
 }
 
+// returns 2^e.
+// happily wraps: {in,out}
+// { 128,inf},{ 129,  -0}, { 130,-2^-126}
+// {-127,0},  {-128,-inf}, {-129,-2^ 127}
+static inline float f32_ipow2(int e)
+{
+  return f32_from_bits((0x7f+(uint32_t)e) << 23);
+}
+
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
 // your using visual-c. Then: I feel your pain.
@@ -258,8 +267,8 @@ static inline float f32_min1(float a, float b) { return !(a > b) ? a : b; }
 static inline float f32_max1(float a, float b) { return !(a < b) ? a : b; }
 
 // min/max : returns second if either are NaN
-static inline float f64_min2(float a, float b) { return  (a < b) ? a : b; }
-static inline float f64_max2(float a, float b) { return  (a > b) ? a : b; }
+static inline float f32_min2(float a, float b) { return  (a < b) ? a : b; }
+static inline float f32_max2(float a, float b) { return  (a > b) ? a : b; }
 
 
 static inline float f32_clamp(float x, float min, float max)
