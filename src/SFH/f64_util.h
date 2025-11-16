@@ -20,7 +20,7 @@
 
 // evil temp hack
 #if !defined(__X86INTRIN_H)
-#include <x86intrin.h>
+//#include <x86intrin.h>
 #endif
 
 #elif defined(__ARM_ARCH)
@@ -130,9 +130,54 @@ static inline uint64_t f64_sign_bit(double a)
   return f64_to_bits(a) & f64_sign_bit_k;
 }
 
+// v * copysign(1.0, s)
+static inline double f64_mul_by_sign(double v, double s)
+{
+  return f64_mulsign(v, f64_sign_bit(s));
+}
+
 static inline uint64_t f64_sign_mask(double x)
 {
   return sgn_mask_u64(f64_to_bits(x));
+}
+
+// equivalent to: copysign(1.0,a) == copysign(1.0,b)
+// but lowers better. Also note that !f32_same_sign
+// should lower better yet.
+static inline bool f64_same_sign(double a, double b)
+{
+  return (int64_t)f64_xor_to_bits(a,b) >= 0;
+}
+
+// returns true if all the explicit significand bits are zero
+// This includes: x = 2^k, zeroes, infinites.
+// denormals that are POT will return false
+static inline bool f64_is_pot(double x)
+{
+  return (f64_to_bits(x) & f64_mag_bits_k) == 0 ;
+}
+
+// 53 - trailing zeros count of the explicit
+// significand bits. 2^k, zeroes & infinites return 1.
+// Normal in binary (and times some 2^k): 1.1 = 2,
+// 1.01 = 3, etc. And odd number returns 53 (the number
+// of binary digits in a double)
+
+#if !defined(_MSC_VER)
+static inline uint32_t f64_significant_digits(double x)
+{
+  static const uint64_t k = f64_exp_bits_k & (-f64_exp_bits_k);
+  
+  uint64_t u = (f64_to_bits(x) & f64_mag_bits_k) | k;
+  
+  return 53-ctz_64(u);
+}
+#endif
+
+// return x with the lowest digit set
+static inline double f64_make_odd(double x)
+{
+  return f64_from_bits(f64_to_bits(x) | 1);
 }
 
 // returns 'c' if 'cond' is negative. otherwise zero
@@ -187,22 +232,24 @@ static inline double f64_rsqrt(double a)
 static inline double f64_min(double a, double b)  { return fmin(a,b); }
 static inline double f64_max(double a, double b)  { return fmax(a,b); }
 
-// Intel min/max ops returns second source if either are NaN so the
-// previous defs are 3 op sequences and the following are 1 op:
+// Intel: min/max ops returns second source if either are NaN.
+// ARM:   
 
+// only need one of these
 // min/max : returns first if either are NaN
 static inline double f64_min1(double a, double b) { return !(a > b) ? a : b; }
 static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
 
-// 2 ops on ARM & Intel. Returns x if both are NaN
-static inline double f64_clamp(double x, double lo, double hi)
+// min/max : returns second if either are NaN
+static inline double f64_min2(double a, double b) { return  (a < b) ? a : b; }
+static inline double f64_max2(double a, double b) { return  (a > b) ? a : b; }
+
+
+static inline double f64_clamp(double x, double min, double max)
 {
-#if defined(F64_INTEL)
-  return f64_min1(f64_max1(x,lo),hi);
-#else
-  return f64_min(f64_max(x,lo),hi);
-#endif  
+  return f64_max2(max,f64_min2(min,x));
 }
+
 
 // all seem fine on all modernish targets/compilers
 static inline double f64_ceil(double x)     { return ceil(x);  }
