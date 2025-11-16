@@ -166,6 +166,20 @@ static inline uint32_t f32_sign_bit(float a)
   return f32_to_bits(a) & f32_sign_bit_k;
 }
 
+// v * copysignf(1.f, s)
+static inline float f32_mul_by_sign(float v, float s)
+{
+  return f32_mulsign(v, f32_sign_bit(s));
+}
+
+// equivalent to: copysignf(1.0,a) == copysignf(1.0,b)
+// but lowers better. Also note that !f32_same_sign
+// should lower better yet.
+static inline bool f32_same_sign(float a, float b)
+{
+  return (int32_t)f32_xor_to_bits(a,b) >= 0;
+}
+
 // all set bits if x is negative (sign bit set), otherwise zero
 static inline uint32_t f32_sign_mask(float x)
 {
@@ -236,21 +250,21 @@ static inline float f32_rsqrt_cr(float x)
 static inline float f32_min(float a, float b)  { return fminf(a,b); }
 static inline float f32_max(float a, float b)  { return fmaxf(a,b); }
 
-// Intel min/max ops returns second source if either are NaN so the
-// previous defs are 3 op sequences and the following are 1 op:
+// Intel: min/max ops returns second source if either are NaN.
+// ARM:   
 
 // min/max : returns first if either are NaN
 static inline float f32_min1(float a, float b) { return !(a > b) ? a : b; }
 static inline float f32_max1(float a, float b) { return !(a < b) ? a : b; }
 
-// 2 ops on ARM & Intel. Returns x if both are NaN
-static inline float f32_clamp(float x, float lo, float hi)
+// min/max : returns second if either are NaN
+static inline float f64_min2(float a, float b) { return  (a < b) ? a : b; }
+static inline float f64_max2(float a, float b) { return  (a > b) ? a : b; }
+
+
+static inline float f32_clamp(float x, float min, float max)
 {
-#if defined(F32_INTEL)
-  return f32_min1(f32_max1(x,lo),hi);
-#else
-  return f32_min(f32_max(x,lo),hi);
-#endif  
+  return f32_max2(max,f32_min2(min,x));
 }
 
 
