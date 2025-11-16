@@ -205,6 +205,14 @@ static inline double f64_sign_select(double a, double b, double cond)
 #endif  
 }
 
+// returns 2^e.
+// happily wraps: {in,out}
+// { 1024,inf},{ 1025,  -0}, { 1026,-2^-1022}
+// {-1023,0},  {-1024,-inf}, {-1025,-2^ 1023}
+static inline double f64_ipow2(int e)
+{
+  return f64_from_bits((0x3ff+(uint64_t)e) << 52);
+}
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
