@@ -97,6 +97,7 @@ static const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 static const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
 static const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
 static const uint32_t f32_one_bits_k = UINT32_C(0x3f800000);
+static const uint32_t f32_exp_bias_k = UINT32_C(0x7f);
 
 
 
@@ -221,12 +222,29 @@ static inline float f32_sign_select(float a, float b, float cond)
 }
 
 // returns 2^e.
-// happily wraps: {in,out}
-// { 128,inf},{ 129,  -0}, { 130,-2^-126}
-// {-127,0},  {-128,-inf}, {-129,-2^ 127}
+// equivalent to scalbnf(1.0,e) for e on [-126,127]
+// otherwise happily wraps: {in,out}
+//   { 128,inf},{ 129,  -0}, { 130,-2^-126}
+//   {-127,0},  {-128,-inf}, {-129,-2^ 127}
 static inline float f32_ipow2(int e)
 {
-  return f32_from_bits((0x7f+(uint32_t)e) << 23);
+  return f32_from_bits((f32_exp_bias_k+(uint32_t)e) << 23);
+}
+
+// floor(log2(|x|)))  { as integer }
+// zero and denormals return -127
+static inline int f32_ilog2(float x)
+{
+  return (int)(((f32_to_bits(x) >> 23) & 0xff)-f32_exp_bias_k);
+}
+
+// ceil(log2(|x|))) { as integer }
+static inline int f32_ilog2_ceil(float x)
+{
+  uint32_t u = f32_to_bits(x);
+  uint32_t i = (u & f32_mag_bits_k) != 0;
+  
+  return (int)(((u >> 23) & 0xff)-f32_exp_bias_k+i);
 }
 
 // to cut some of the pain of math errno not being disabled
@@ -271,9 +289,11 @@ static inline float f32_min2(float a, float b) { return  (a < b) ? a : b; }
 static inline float f32_max2(float a, float b) { return  (a > b) ? a : b; }
 
 
+// clamps 'x' to [min,max] where 'x' where NaN min or max
+// drops that side of the test.
 static inline float f32_clamp(float x, float min, float max)
 {
-  return f32_max2(max,f32_min2(min,x));
+  return f32_max2(min,f32_min2(max,x));
 }
 
 

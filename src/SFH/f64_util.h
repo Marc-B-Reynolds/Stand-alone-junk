@@ -64,6 +64,7 @@ static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 static const uint64_t f64_exp_bits_k = UINT64_C(0x7FF0000000000000);
 static const uint64_t f64_mag_bits_k = UINT64_C(0x000fffffffffffff);
 static const uint64_t f64_one_bits_k = UINT64_C(0x3ff0000000000000);
+static const uint64_t f64_exp_bias_k = UINT64_C(0x3ff);
 
 
 // NOTES:
@@ -206,12 +207,29 @@ static inline double f64_sign_select(double a, double b, double cond)
 }
 
 // returns 2^e.
-// happily wraps: {in,out}
+// equivalent to scalbn(1.0,e) for e on [-1022,1023]
+// otherwise happily wraps: {in,out}
 // { 1024,inf},{ 1025,  -0}, { 1026,-2^-1022}
 // {-1023,0},  {-1024,-inf}, {-1025,-2^ 1023}
 static inline double f64_ipow2(int e)
 {
   return f64_from_bits((0x3ff+(uint64_t)e) << 52);
+}
+
+// floor(log2(|x|)))  { as integer }
+// zero and denormals return -1023
+static inline int f64_ilog2(double x)
+{
+  return (int)(((f64_to_bits(x) >> 52) & 0x7ff)-f64_exp_bias_k);
+}
+
+// ceil(log2(|x|))) { as integer }
+static inline int f64_ilog2_ceil(double x)
+{
+  uint64_t u = f64_to_bits(x);
+  uint64_t i = (u & f64_mag_bits_k) != 0;
+  
+  return (int)(((u >> 52) & 0x7ff)-f64_exp_bias_k+i);
 }
 
 // to cut some of the pain of math errno not being disabled
@@ -252,10 +270,11 @@ static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
 static inline double f64_min2(double a, double b) { return  (a < b) ? a : b; }
 static inline double f64_max2(double a, double b) { return  (a > b) ? a : b; }
 
-
+// clamps 'x' to [min,max] where 'x' where NaN min or max
+// drops that side of the test.
 static inline double f64_clamp(double x, double min, double max)
 {
-  return f64_max2(max,f64_min2(min,x));
+  return f64_max2(min,f64_min2(max,x));
 }
 
 
