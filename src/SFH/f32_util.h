@@ -16,7 +16,7 @@
 #define F32_INTEL
 
 // evil temp hack
-#if !defined(__X86INTRIN_H)
+#if 0//!defined(__X86INTRIN_H)
 #include <x86intrin.h>
 #endif
 
