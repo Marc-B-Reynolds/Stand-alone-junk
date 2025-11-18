@@ -181,6 +181,18 @@ static inline bool f32_same_sign(float a, float b)
   return (int32_t)f32_xor_to_bits(a,b) >= 0;
 }
 
+// assumes ordered
+static inline bool f32_both_negative(float a, float b)
+{
+  return (int32_t)(f32_to_bits(a) & f32_to_bits(b)) < 0;
+}
+
+// assumes ordered
+static inline bool f32_both_positive(float a, float b)
+{
+  return (int32_t)(f32_to_bits(a) | f32_to_bits(b)) >= 0;
+}
+
 // all set bits if x is negative (sign bit set), otherwise zero
 static inline uint32_t f32_sign_mask(float x)
 {

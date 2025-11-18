@@ -150,6 +150,18 @@ static inline bool f64_same_sign(double a, double b)
   return (int64_t)f64_xor_to_bits(a,b) >= 0;
 }
 
+// assumes ordered
+static inline bool f64_both_negative(double a, double b)
+{
+  return (int64_t)(f64_to_bits(a) & f64_to_bits(b)) < 0;
+}
+
+// assumes ordered
+static inline bool f64_both_positive(double a, double b)
+{
+  return (int64_t)(f64_to_bits(a) | f64_to_bits(b)) >= 0;
+}
+
 // returns true if all the explicit significand bits are zero
 // This includes: x = 2^k, zeroes, infinites.
 // denormals that are POT will return false
