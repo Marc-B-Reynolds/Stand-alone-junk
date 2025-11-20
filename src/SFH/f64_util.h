@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2025
 
@@ -55,6 +56,7 @@
 // ulp(1.0)
 static const double f64_ulp1         = 0x1.0p-52;
 static const double f64_min_normal   = 0x1.0p-1022;
+static const double f64_max_normal   = 0x1.fffffffffffffp+1023;
 static const double f64_min_denormal = 0x1.0p-1074;
 static const double f64_nan          = 0.0/0.0;
 static const double f64_inf          = 1.0/0.0;
@@ -607,6 +609,126 @@ static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
   double y  = (b-bp);
   p->h = x;
   p->l = y;
+}
+
+// this is the involution core for the 
+// f64_[i]map_{si,ui} pairs.
+//
+// It's very similar to signed magnitude to 2s
+// complement conversion but we want to
+// keep -0.
+// 
+// this is an involution:  f(f(x)) = x
+// (like -(-x) = x)
+static inline uint64_t f64_map_i(uint64_t i)
+{
+  uint64_t b = i & f64_sign_bit_k;
+  
+  if (b)
+    i ^= UINT64_C(~0);
+  i ^= b;
+  
+  return i;
+}
+
+// An order perserving & reversible map of
+// the binary64 input to a signed integer
+//
+//          -inf → 800fffffffffffff
+//   -max_normal → 8010000000000000
+//   -min_normal → ffefffffffffffff
+// -min_denormal → fffffffffffffffe
+//            -0 → ffffffffffffffff
+//            +0 → 0000000000000000
+//  min_denormal → 0000000000000001
+//    min_normal → 0010000000000000
+//    max_normal → 7fefffffffffffff
+//           inf → 7ff0000000000000
+
+static inline int64_t f64_map_si(double x)
+{
+  return (int64_t)f64_map_i(f64_to_bits(x));
+}
+
+// inverse of f64_map_si
+static inline double f64_imap_si(int64_t x)
+{
+  return f64_from_bits(f64_map_i((uint64_t)x));
+}
+
+// An order perserving & reversible map of
+// the binary32 input to a unsigned integer.
+// This pair is equivalent to the signed map
+// with simply the top bit flipped. Lower
+// complexity than the next pair. So equiv to:
+//   map_si(x) ^ top_bit
+//   imap_si(x ^ top_bit)
+// and reductions carried through
+
+static inline uint64_t f64_map_simple_ui(double x)
+{
+  uint64_t u = f64_to_bits(x);
+  
+  return (u | f64_sign_bit_k) ^ sgn_mask_u64(u);
+}
+
+// inverse of f64_map_simple_ui
+static inline double f64_imap_simple_ui(uint64_t u)
+{
+  u = (u & (f64_sign_bit_k-1)) ^ sgn_mask_u64(~u);
+
+  return f64_from_bits(u);
+}
+
+// An order perserving & reversible map of
+// the binary64 input to a unsigned integer
+//
+// Notice this if we want to be zero based:
+// human readablity, grouping all the NaNs,
+// etc. 
+//
+//          -inf → 0000000000000000
+//   -max_normal → 0000000000000001
+//   -min_normal → 7fe0000000000000
+// -min_denormal → 7fefffffffffffff
+//            -0 → 7ff0000000000000
+//            +0 → 7ff0000000000001
+//  min_denormal → 7ff0000000000002
+//    min_normal → 8000000000000001
+//    max_normal → ffe0000000000000
+//           inf → ffe0000000000001
+//                 All the NaN above here
+static inline uint64_t f64_map_ui(double x)
+{
+  return (uint64_t)f64_map_si(x) - UINT64_C(0x800fffffffffffff);
+}
+
+// inverse of f64_map_ui
+static inline double f64_imap_ui(uint64_t x)
+{
+  return f64_from_bits(f64_map_i(x + UINT64_C(0x800fffffffffffff)));
+}
+
+// find the floating-point number halfway (in terms of
+// representable numbers) between the inputs.
+// With the logical factorization:
+//    a = fa * 2^ea  (fa & fb on [1,2) )
+//    b = fb * 2^eb
+// then:
+//    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
+// when the exponents are close then this
+// behaves close to (a+b)/2
+
+static inline double f64_fp_bisect(double a, double b)
+{
+  // map (a,b) to unsigned integers (ua,ub)
+  // average without overflow (u) and map
+  // back to binary64. 
+  uint64_t ua = f64_map_simple_ui(a);
+  uint64_t ub = f64_map_simple_ui(b);
+  uint64_t u  = (ua & ub) + ((ua ^ ub) >> 1);
+
+  return f64_imap_simple_ui(u);
 }
 
 #endif

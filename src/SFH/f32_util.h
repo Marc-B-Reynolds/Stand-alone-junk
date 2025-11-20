@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2025
 
@@ -636,6 +637,125 @@ static inline f32_pair_t f32_fast2sum(float a, float b)
   float y  = (b-bp);
   return f32_pair(x,y);
 }
+
+// this is the involution core for the 
+// f32_[i]map_{si,ui} pairs.
+//
+// It's very similar to signed magnitude to 2s
+// complement conversion but we want to
+// keep -0.
+// 
+// this is an involution:  f(f(x)) = x
+// (like -(-x) = x)
+static inline uint32_t f32_map_i(uint32_t i)
+{
+  uint32_t b = i & f32_sign_bit_k;
+  
+  if (b)
+    i ^= 0xffffffff;
+  i ^= b;
+  
+  return i;
+}
+
+// An order perserving & reversible map of
+// the binary32 input to a signed integer
+//
+//          -inf → 807fffff -2139095041
+//   -max_normal → 80800000 -2139095040
+//   -min_normal → ff7fffff    -8388609
+// -min_denormal → fffffffe          -2
+//            -0 → ffffffff          -1
+//            +0 → 00000000           0
+//  min_denormal → 00000001           1
+//    min_normal → 00800000     8388608
+//    max_normal → 7f7fffff  2139095039
+//           inf → 7f800000  2139095040
+//
+static inline int32_t f32_map_si(float x)
+{
+  return (int32_t)f32_map_i(f32_to_bits(x));
+}
+
+// inverse of f32_map_si
+static inline float f32_imap_si(int32_t x)
+{
+  return f32_from_bits(f32_map_i((uint32_t)x));
+}
+
+// An order perserving & reversible map of
+// the binary32 input to a unsigned integer.
+// This pair is equivalent to the signed map
+// with simply the top bit flipped. Lower
+// complexity than the next pair. So equiv to:
+//   map_si(x) ^ top_bit
+//   imap_si(x ^ top_bit)
+// and reductions carried through
+
+static inline uint32_t f32_map_simple_ui(float x)
+{
+  uint32_t u = f32_to_bits(x);
+  
+  return (u | f32_sign_bit_k) ^ sgn_mask_u32(u);
+}
+
+// inverse of f32_map_simple_ui
+static inline float f32_imap_simple_ui(uint32_t u)
+{
+  u = (u & (f32_sign_bit_k-1)) ^ sgn_mask_u32(~u);
+
+  return f32_from_bits(u);
+}
+
+
+// An order perserving & reversible map of
+// the binary32 input to a unsigned integer
+//
+//          -inf → 00000000
+//   -max_normal → 00000001
+//   -min_normal → 7f000000
+// -min_denormal → 7f7fffff
+//            -0 → 7f800000
+//            +0 → 7f800001
+//  min_denormal → 7f800002
+//    min_normal → 80000001
+//    max_normal → ff000000
+//           inf → ff000001
+//           NaN →[ff000002,ffffffff]
+static inline uint32_t f32_map_ui(float x)
+{
+  return (uint32_t)f32_map_si(x) - 0x807fffff;
+}
+
+// inverse of f32_map_ui
+static inline float f32_imap_ui(uint32_t x)
+{
+  return f32_from_bits(f32_map_i((uint32_t)x + 0x807fffff));
+}
+
+
+// find the floating-point number halfway (in terms of
+// representable numbers) between the inputs.
+// With the logical factorization:
+//    a = fa * 2^ea  (fa & fb on [1,2) )
+//    b = fb * 2^eb
+// then:
+//    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
+// when the exponents are close then this
+// behaves close to (a+b)/2
+
+static inline float f32_fp_bisect(float a, float b)
+{
+  // map (a,b) to unsigned integers (ua,ub)
+  // average without overflow (u) and map
+  // back to binary64. 
+  uint32_t ua = f32_map_simple_ui(a);
+  uint32_t ub = f32_map_simple_ui(b);
+  uint32_t u  = (ua & ub) + ((ua ^ ub) >> 1);
+
+  return f32_imap_simple_ui(u);
+}
+
 
 #endif
 
