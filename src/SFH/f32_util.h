@@ -244,6 +244,12 @@ static inline float f32_ipow2(int e)
   return f32_from_bits((f32_exp_bias_k+(uint32_t)e) << 23);
 }
 
+// returns x 2^e (with caveat of f32_ipow2)
+static inline float f32_scalbn(float x, int e)
+{
+  return x * f32_ipow2(e);
+}
+
 // floor(log2(|x|)))  { as integer }
 // zero and denormals return -127
 static inline int f32_ilog2(float x)
@@ -302,8 +308,8 @@ static inline float f32_min2(float a, float b) { return  (a < b) ? a : b; }
 static inline float f32_max2(float a, float b) { return  (a > b) ? a : b; }
 
 
-// clamps 'x' to [min,max] where 'x' where NaN min or max
-// drops that side of the test.
+// clamps 'x' to [min,max]. If 'x' is NaN then it is the result.
+// if min and/or max is NaN then that side of the clamp is ignore.
 static inline float f32_clamp(float x, float min, float max)
 {
   return f32_max2(min,f32_min2(max,x));
@@ -638,101 +644,75 @@ static inline f32_pair_t f32_fast2sum(float a, float b)
   return f32_pair(x,y);
 }
 
-// this is the involution core for the 
-// f32_[i]map_{si,ui} pairs.
+
+// Table of f32_map_s32 & f32_map_u32 mappings.
 //
-// It's very similar to signed magnitude to 2s
-// complement conversion but we want to
-// keep -0.
-// 
-// this is an involution:  f(f(x)) = x
-// (like -(-x) = x)
-static inline uint32_t f32_map_i(uint32_t i)
+// The first maps a single precision bit representation to an
+// integer with signed ordering and the second to unsigned.
+// Both are bijections (no information is lost). The signed
+// conversion is an involution: f32_map_s32 maps to and
+// from float. Unsigned has a forward and inverse function.
+//
+// Note that changing between signed and unsigned ordering
+// for integers is simply flipping (XOR) the top bit (an
+// operation that performed with undefined behavior where 
+// that's a thing).
+//
+//   f(f(x)) = x
+//          name map_s32 ↔  IEEE  →fmap_u32     map_s32    fmap_u32   
+//          -inf 807fffff ff800000 007fffff -2139095041     8388607
+//   -max_normal 80800000 ff7fffff 00800000 -2139095040     8388608
+//   -min_normal ff7fffff 80800000 7f7fffff    -8388609  2139095039
+// -min_denormal fffffffe 80000001 7ffffffe          -2  2147483646
+//            -0 ffffffff 80000000 7fffffff          -1  2147483647
+//             0 00000000 00000000 80000000           0  2147483648
+//  min_denormal 00000001 00000001 80000001           1  2147483649
+//    min_normal 00800000 00800000 80800000     8388608  2155872256
+//    max_normal 7f7fffff 7f7fffff ff7fffff  2139095039  4286578687
+//           inf 7f800000 7f800000 ff800000  2139095040  4286578688
+//                                ←imap_u32
+
+// mapping to and from signed integer ordering
+static inline uint32_t f32_map_s32(uint32_t i)
 {
-  uint32_t b = i & f32_sign_bit_k;
-  
-  if (b)
-    i ^= 0xffffffff;
-  i ^= b;
-  
-  return i;
+  return i ^ (sgn_mask_u32(i) >> 1);
 }
 
-// An order perserving & reversible map of
-// the binary32 input to a signed integer
-//
-//          -inf → 807fffff -2139095041
-//   -max_normal → 80800000 -2139095040
-//   -min_normal → ff7fffff    -8388609
-// -min_denormal → fffffffe          -2
-//            -0 → ffffffff          -1
-//            +0 → 00000000           0
-//  min_denormal → 00000001           1
-//    min_normal → 00800000     8388608
-//    max_normal → 7f7fffff  2139095039
-//           inf → 7f800000  2139095040
-//
-static inline int32_t f32_map_si(float x)
+// mapping to and from unsigned integer ordering
+static inline uint32_t f32_fmap_u32(uint32_t u)
 {
-  return (int32_t)f32_map_i(f32_to_bits(x));
-}
-
-// inverse of f32_map_si
-static inline float f32_imap_si(int32_t x)
-{
-  return f32_from_bits(f32_map_i((uint32_t)x));
-}
-
-// An order perserving & reversible map of
-// the binary32 input to a unsigned integer.
-// This pair is equivalent to the signed map
-// with simply the top bit flipped. Lower
-// complexity than the next pair. So equiv to:
-//   map_si(x) ^ top_bit
-//   imap_si(x ^ top_bit)
-// and reductions carried through
-
-static inline uint32_t f32_map_simple_ui(float x)
-{
-  uint32_t u = f32_to_bits(x);
-  
+  // return f32_map_s32(u) ^ f32_sign_bit_k;
   return (u | f32_sign_bit_k) ^ sgn_mask_u32(u);
 }
 
-// inverse of f32_map_simple_ui
-static inline float f32_imap_simple_ui(uint32_t u)
+// mapping from unsigned integer ordering
+static inline uint32_t f32_imap_u32(uint32_t u)
 {
-  u = (u & (f32_sign_bit_k-1)) ^ sgn_mask_u32(~u);
-
-  return f32_from_bits(u);
+  //return f32_map_s32(u ^ f32_sign_bit_k);
+  return (u & (f32_sign_bit_k-1)) ^ sgn_mask_u32(~u);
 }
 
+// wrappers of f64_map_s32 with type conversion
+static inline int32_t f32_map_si(float x)
+{
+  return (int32_t)f32_map_s32(f32_to_bits(x));
+}
 
-// An order perserving & reversible map of
-// the binary32 input to a unsigned integer
-//
-//          -inf → 00000000
-//   -max_normal → 00000001
-//   -min_normal → 7f000000
-// -min_denormal → 7f7fffff
-//            -0 → 7f800000
-//            +0 → 7f800001
-//  min_denormal → 7f800002
-//    min_normal → 80000001
-//    max_normal → ff000000
-//           inf → ff000001
-//           NaN →[ff000002,ffffffff]
+static inline float f32_imap_si(int32_t x)
+{
+  return f32_from_bits(f32_map_s32((uint32_t)x));
+}
+
+// wrappers of f64_map_u32 with type conversion
 static inline uint32_t f32_map_ui(float x)
 {
-  return (uint32_t)f32_map_si(x) - 0x807fffff;
+  return f32_fmap_u32(f32_to_bits(x));
 }
 
-// inverse of f32_map_ui
-static inline float f32_imap_ui(uint32_t x)
+static inline float f32_imap_ui(uint32_t u)
 {
-  return f32_from_bits(f32_map_i((uint32_t)x + 0x807fffff));
+  return f32_from_bits(f32_imap_u32(u));
 }
-
 
 // find the floating-point number halfway (in terms of
 // representable numbers) between the inputs.
@@ -743,19 +723,20 @@ static inline float f32_imap_ui(uint32_t x)
 //    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
 // when the exponents are close then this
 // behaves close to (a+b)/2
+// any rounding happens in the (fa+fb) term.
 
-static inline float f32_fp_bisect(float a, float b)
+// rounds down (toward -∞)
+static inline float f32_fp_bisect_rd(float a, float b)
 {
   // map (a,b) to unsigned integers (ua,ub)
   // average without overflow (u) and map
   // back to binary64. 
-  uint32_t ua = f32_map_simple_ui(a);
-  uint32_t ub = f32_map_simple_ui(b);
+  uint32_t ua = f32_map_ui(a);
+  uint32_t ub = f32_map_ui(b);
   uint32_t u  = (ua & ub) + ((ua ^ ub) >> 1);
 
-  return f32_imap_simple_ui(u);
+  return f32_imap_ui(u);
 }
-
 
 #endif
 

@@ -230,6 +230,12 @@ static inline double f64_ipow2(int e)
   return f64_from_bits((0x3ff+(uint64_t)e) << 52);
 }
 
+// returns x 2^e (with caveat of f64_ipow2)
+static inline double f64_scalbn(double x, int e)
+{
+  return x * f64_ipow2(e);
+}
+
 // floor(log2(|x|)))  { as integer }
 // zero and denormals return -1023
 static inline int f64_ilog2(double x)
@@ -284,8 +290,8 @@ static inline double f64_max1(double a, double b) { return !(a < b) ? a : b; }
 static inline double f64_min2(double a, double b) { return  (a < b) ? a : b; }
 static inline double f64_max2(double a, double b) { return  (a > b) ? a : b; }
 
-// clamps 'x' to [min,max] where 'x' where NaN min or max
-// drops that side of the test.
+// clamps 'x' to [min,max]. If 'x' is NaN then it is the result.
+// if min and/or max is NaN then that side of the clamp is ignore.
 static inline double f64_clamp(double x, double min, double max)
 {
   return f64_max2(min,f64_min2(max,x));
@@ -611,103 +617,61 @@ static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
   p->l = y;
 }
 
-// this is the involution core for the 
-// f64_[i]map_{si,ui} pairs.
+// Table of f64_map_s64 & f64_map_u64 mappings
 //
-// It's very similar to signed magnitude to 2s
-// complement conversion but we want to
-// keep -0.
-// 
-// this is an involution:  f(f(x)) = x
-// (like -(-x) = x)
-static inline uint64_t f64_map_i(uint64_t i)
-{
-  uint64_t b = i & f64_sign_bit_k;
-  
-  if (b)
-    i ^= UINT64_C(~0);
-  i ^= b;
-  
-  return i;
-}
-
-// An order perserving & reversible map of
-// the binary64 input to a signed integer
+// The first maps a double precision bit representation to an
+// integer with signed ordering and the second to unsigned.
+// Both are bijections (no information is lost). The signed
+// conversion is an involution: f64_map_s64 maps to and
+// from float. Unsigned has a forward and inverse function.
 //
-//          -inf → 800fffffffffffff
-//   -max_normal → 8010000000000000
-//   -min_normal → ffefffffffffffff
-// -min_denormal → fffffffffffffffe
-//            -0 → ffffffffffffffff
-//            +0 → 0000000000000000
-//  min_denormal → 0000000000000001
-//    min_normal → 0010000000000000
-//    max_normal → 7fefffffffffffff
-//           inf → 7ff0000000000000
+// Note that changing between signed and unsigned ordering
+// for integers is simply flipping (XOR) the top bit (an
+// operation that performed with undefined behavior where 
+// that's a thing).
+//
+//          name   f64_map_s64   ↔   IEEE bits    →  f64_fmap_u64
+//          -inf 800fffffffffffff fff0000000000000 000fffffffffffff
+//   -max_normal 8010000000000000 ffefffffffffffff 0010000000000000
+//   -min_normal ffefffffffffffff 8010000000000000 7fefffffffffffff
+// -min_denormal fffffffffffffffe 8000000000000001 7ffffffffffffffe
+//            -0 ffffffffffffffff 8000000000000000 7fffffffffffffff
+//             0 0000000000000000 0000000000000000 8000000000000000
+//  min_denormal 0000000000000001 0000000000000001 8000000000000001
+//    min_normal 0010000000000000 0010000000000000 8010000000000000
+//    max_normal 7fefffffffffffff 7fefffffffffffff ffefffffffffffff
+//           inf 7ff0000000000000 7ff0000000000000 fff0000000000000
+//                                                ←  f64_imap_u64
 
-static inline int64_t f64_map_si(double x)
+// mapping to and from signed integer ordering
+static inline uint64_t f64_map_s64(uint64_t i)
 {
-  return (int64_t)f64_map_i(f64_to_bits(x));
+  return i ^ (sgn_mask_u64(i) >> 1);
 }
 
-// inverse of f64_map_si
-static inline double f64_imap_si(int64_t x)
+// mapping to unsigned integer ordering
+static inline uint64_t f64_fmap_u64(uint64_t u)
 {
-  return f64_from_bits(f64_map_i((uint64_t)x));
-}
-
-// An order perserving & reversible map of
-// the binary32 input to a unsigned integer.
-// This pair is equivalent to the signed map
-// with simply the top bit flipped. Lower
-// complexity than the next pair. So equiv to:
-//   map_si(x) ^ top_bit
-//   imap_si(x ^ top_bit)
-// and reductions carried through
-
-static inline uint64_t f64_map_simple_ui(double x)
-{
-  uint64_t u = f64_to_bits(x);
-  
+  //return f64_map_s64(u) ^ f64_sign_bit_k;
   return (u | f64_sign_bit_k) ^ sgn_mask_u64(u);
 }
 
-// inverse of f64_map_simple_ui
-static inline double f64_imap_simple_ui(uint64_t u)
+// mapping from unsigned integer ordering
+static inline uint64_t f64_imap_u64(uint64_t u)
 {
-  u = (u & (f64_sign_bit_k-1)) ^ sgn_mask_u64(~u);
-
-  return f64_from_bits(u);
+  //return f64_map_s64(u ^ f64_sign_bit_k);
+  return (u & (f64_sign_bit_k-1)) ^ sgn_mask_u64(~u);
 }
 
-// An order perserving & reversible map of
-// the binary64 input to a unsigned integer
-//
-// Notice this if we want to be zero based:
-// human readablity, grouping all the NaNs,
-// etc. 
-//
-//          -inf → 0000000000000000
-//   -max_normal → 0000000000000001
-//   -min_normal → 7fe0000000000000
-// -min_denormal → 7fefffffffffffff
-//            -0 → 7ff0000000000000
-//            +0 → 7ff0000000000001
-//  min_denormal → 7ff0000000000002
-//    min_normal → 8000000000000001
-//    max_normal → ffe0000000000000
-//           inf → ffe0000000000001
-//                 All the NaN above here
-static inline uint64_t f64_map_ui(double x)
-{
-  return (uint64_t)f64_map_si(x) - UINT64_C(0x800fffffffffffff);
-}
 
-// inverse of f64_map_ui
-static inline double f64_imap_ui(uint64_t x)
-{
-  return f64_from_bits(f64_map_i(x + UINT64_C(0x800fffffffffffff)));
-}
+// wrappers of f64_map_s64 with type conversion
+static inline int64_t f64_map_si(double x)   { return (int64_t)f64_map_s64(f64_to_bits(x));    }
+static inline double  f64_imap_si(int64_t x) { return f64_from_bits(f64_map_s64((uint64_t)x)); }
+
+// wrappers of f64_map_u64 with type conversion
+static inline uint64_t f64_map_ui(double x)    { return f64_fmap_u64(f64_to_bits(x));   }
+static inline double   f64_imap_ui(uint64_t u) { return f64_from_bits(f64_imap_u64(u)); }
+
 
 // find the floating-point number halfway (in terms of
 // representable numbers) between the inputs.
@@ -718,17 +682,19 @@ static inline double f64_imap_ui(uint64_t x)
 //    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
 // when the exponents are close then this
 // behaves close to (a+b)/2
+// any rounding happens in the (fa+fb) term.
 
-static inline double f64_fp_bisect(double a, double b)
+// rounds down (toward -∞)
+static inline double f64_fp_bisect_rd(double a, double b)
 {
   // map (a,b) to unsigned integers (ua,ub)
   // average without overflow (u) and map
   // back to binary64. 
-  uint64_t ua = f64_map_simple_ui(a);
-  uint64_t ub = f64_map_simple_ui(b);
+  uint64_t ua = f64_map_ui(a);
+  uint64_t ub = f64_map_ui(b);
   uint64_t u  = (ua & ub) + ((ua ^ ub) >> 1);
 
-  return f64_imap_simple_ui(u);
+  return f64_imap_ui(u);
 }
 
 #endif
