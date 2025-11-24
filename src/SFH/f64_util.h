@@ -238,18 +238,18 @@ static inline double f64_scalbn(double x, int e)
 
 // floor(log2(|x|)))  { as integer }
 // zero and denormals return -1023
-static inline int f64_ilog2(double x)
+static inline int32_t f64_ilog2(double x)
 {
-  return (int)(((f64_to_bits(x) >> 52) & 0x7ff)-f64_exp_bias_k);
+  return (int32_t)(((f64_to_bits(x) >> 52) & 0x7ff)-f64_exp_bias_k);
 }
 
 // ceil(log2(|x|))) { as integer }
-static inline int f64_ilog2_ceil(double x)
+static inline int32_t f64_ilog2_ceil(double x)
 {
   uint64_t u = f64_to_bits(x);
   uint64_t i = (u & f64_mag_bits_k) != 0;
   
-  return (int)(((u >> 52) & 0x7ff)-f64_exp_bias_k+i);
+  return (int32_t)(((u >> 52) & 0x7ff)-f64_exp_bias_k+i);
 }
 
 // to cut some of the pain of math errno not being disabled

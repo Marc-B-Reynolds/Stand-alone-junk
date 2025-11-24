@@ -252,18 +252,18 @@ static inline float f32_scalbn(float x, int e)
 
 // floor(log2(|x|)))  { as integer }
 // zero and denormals return -127
-static inline int f32_ilog2(float x)
+static inline int32_t f32_ilog2(float x)
 {
-  return (int)(((f32_to_bits(x) >> 23) & 0xff)-f32_exp_bias_k);
+  return (int32_t)(((f32_to_bits(x) >> 23) & 0xff)-f32_exp_bias_k);
 }
 
 // ceil(log2(|x|))) { as integer }
-static inline int f32_ilog2_ceil(float x)
+static inline int32_t f32_ilog2_ceil(float x)
 {
   uint32_t u = f32_to_bits(x);
   uint32_t i = (u & f32_mag_bits_k) != 0;
   
-  return (int)(((u >> 23) & 0xff)-f32_exp_bias_k+i);
+  return (int32_t)(((u >> 23) & 0xff)-f32_exp_bias_k+i);
 }
 
 // to cut some of the pain of math errno not being disabled
