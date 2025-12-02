@@ -64,6 +64,7 @@ static const double f64_inf          = 1.0/0.0;
 static const uint64_t f64_sign_bit_k = UINT64_C(1)<<63;
 
 static const uint64_t f64_exp_bits_k = UINT64_C(0x7FF0000000000000);
+static const uint64_t f64_nan_bits_k = UINT64_C(0x7FF8000000000000);
 static const uint64_t f64_mag_bits_k = UINT64_C(0x000fffffffffffff);
 static const uint64_t f64_one_bits_k = UINT64_C(0x3ff0000000000000);
 static const uint64_t f64_exp_bias_k = UINT64_C(0x3ff);
@@ -367,8 +368,8 @@ static inline double f64_mul_pi(double x)
 				
 
 // (a*b) exactly represented by unevaluated pair (h+l)
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow. 
+// ∙ |l| <= ulp(h)/2
+// ∙ provided a+b does not overflow. 
 static inline f64_pair_t f64_2mul(double a, double b)
 {
   double x = a*b;
@@ -384,21 +385,40 @@ static inline uint64_t f64_is_even(double a)
 }
 
 // next representable FP away from zero
-// * blindly walks past +/-inf to NaN
+// ∙ ±0 are considered distint
+// ∙ blindly walks past ±inf to NaN
 static inline double f64_succ(double a)
 {
   return f64_from_bits(f64_to_bits(a)+1);
 }
 
 // next representable FP toward zero
-// * blindly walks past +/-zero to NaN
+// (same range comments as f64_succ)
 static inline double f64_pred(double a)
 {
   return f64_from_bits(f64_to_bits(a)-1);
 }
 
+// next representable FP toward +inf
+// (same range comments as f64_succ)
+static inline double f64_next(double x)
+{
+  int64_t s = (int64_t)f64_to_bits(x);
+  int64_t a = (s >> 63)|1;
+  return f64_from_bits((uint32_t)(s+a));
+}
+
+// next representable FP toward -inf
+// (same range comments as f64_succ)
+static inline double f64_prev(double x)
+{
+  int64_t s = (int64_t)f64_to_bits(x);
+  int64_t a = (s >> 63)|1;
+  return f64_from_bits((uint32_t)(s-a));
+}
+
 // walks 'd' ULP away from zero
-// * blindly walks past +/-zero to NaN
+// (same range comments as f64_succ)
 static inline double f64_walk(double a, int64_t d)
 {
   return f64_from_bits(f64_to_bits(a)+(uint64_t)d);
@@ -408,7 +428,7 @@ static inline double f64_walk(double a, int64_t d)
 static const double f64_succ_pred_k = 0x1.0000000000001p-53;
 
 // next representable FP away from zero
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline double f64_nnz_succ(double a)
 {
   const double s = f64_succ_pred_k; 
@@ -416,7 +436,7 @@ static inline double f64_nnz_succ(double a)
 }
 
 // next representable FP toward zero
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline double f64_nnz_pred(double a)
 {
   const double s = -f64_succ_pred_k;
@@ -424,7 +444,7 @@ static inline double f64_nnz_pred(double a)
 }
 
 // next representable FP toward +inf
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline double f64_nnz_next(double a)
 {
   const double s = f64_succ_pred_k; 
@@ -432,7 +452,7 @@ static inline double f64_nnz_next(double a)
 }
 
 // next representable FP toward -inf
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline double f64_nnz_prev(double a)
 {
   const double s = -f64_succ_pred_k;
@@ -440,7 +460,7 @@ static inline double f64_nnz_prev(double a)
 }
 
 // ulp(a)
-// * |a| != flt_max
+// ∙ |a| != flt_max
 static inline double f64_ulp(double a)
 {
   double t = fabs(a);
@@ -448,8 +468,8 @@ static inline double f64_ulp(double a)
 }
 
 // ab+cd
-// * r within +/- 3/2 ulp
-// * r within +/-   1 ulp, if sign(ab) == sign(cd)
+// ∙ r within +/- 3/2 ulp
+// ∙ r within +/-   1 ulp, if sign(ab) == sign(cd)
 static inline double f64_mma(double a, double b, double c, double d)
 {
   double t = c*d;
@@ -586,9 +606,9 @@ static inline bool f64_gt_or_unordered(double a, double b)
 
 // move to f64_pair.h
 // (a+b) exactly represented by unevaluated pair (h+l)
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow
-// * fastmath breaks me
+// ∙ |l| <= ulp(h)/2
+// ∙ provided a+b does not overflow
+// ∙ fastmath breaks me
 static inline void f64_2sum(f64_pair_t* p, double a, double b)
 {
   FP64_REASSOCIATE_OFF();
@@ -603,10 +623,10 @@ static inline void f64_2sum(f64_pair_t* p, double a, double b)
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
-// * requires |a| >= |b|
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow
-// * fastmath breaks me
+// ∙ requires |a| >= |b|
+// ∙ |l| <= ulp(h)/2
+// ∙ provided a+b does not overflow
+// ∙ fastmath breaks me
 static inline void f64_fast2sum(f64_pair_t* p, double a, double b)
 {
   FP64_REASSOCIATE_OFF();
@@ -676,10 +696,10 @@ static inline double   f64_imap_ui(uint64_t u) { return f64_from_bits(f64_imap_u
 // find the floating-point number halfway (in terms of
 // representable numbers) between the inputs.
 // With the logical factorization:
-//    a = fa * 2^ea  (fa & fb on [1,2) )
-//    b = fb * 2^eb
+//    a = fa * 2^e     (fa & fb on [1,2) )
+//    b = fb * 2^(e+d)  
 // then:
-//    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
+//    fp_bisect(a,b) ≈ 2^(e-1)*(fa + fb 2^d)
 // when the exponents are close then this
 // behaves close to (a+b)/2
 // any rounding happens in the (fa+fb) term.
@@ -696,6 +716,37 @@ static inline double f64_fp_bisect_rd(double a, double b)
 
   return f64_imap_ui(u);
 }
+
+// IMPORTANT: NaN payload functions currently all assume
+// the quiet bit is the highest of the fractional part
+// and set when the NaN is quiet. (Intel and ARM follow this)
+
+// non-zero 'v' creates a qNaN with payload of the 
+// bottom 51 bits of v. (also passes through the sign
+// bit). If bottom 51 bits are zero then it's an infinity.
+// 51 because we're avoiding the bit that distinguishes
+// quiet and signalling NaNs
+static inline double f64_set_payload(uint64_t v)
+{
+  return f64_from_bits(v | f64_nan_bits_k);
+}
+
+// retrieves the payload. raw function. a more general
+// version should check if NaN and return zero if not.
+static inline uint64_t f64_get_payload(double v)
+{
+  return f64_to_bits(v) & (~f64_nan_bits_k);
+}
+
+
+#if 0
+static inline double f64_snan_payload(uint64_t v)
+{
+  return f64_from_bits(v | f64_exp_bits_k);
+}
+#endif
+
+
 
 #endif
 

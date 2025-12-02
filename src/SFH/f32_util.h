@@ -97,6 +97,7 @@ static const float f32_inf          = (1.f/0.f);
 static const uint32_t f32_sign_bit_k = UINT32_C(0x80000000);
 static const uint32_t f32_mag_bits_k = UINT32_C(0x007fffff);
 static const uint32_t f32_exp_bits_k = UINT32_C(0x7F800000);
+static const uint32_t f32_nan_bits_k = UINT32_C(0x7fc00000);
 static const uint32_t f32_one_bits_k = UINT32_C(0x3f800000);
 static const uint32_t f32_exp_bias_k = UINT32_C(0x7f);
 
@@ -420,28 +421,47 @@ static inline uint32_t f32_is_even(float a)
 }
 
 // next representable FP away from zero
-// * blindly walks past +/-inf to NaN
+// ∙ ±0 are considered distint
+// ∙ blindly walks past ±inf to NaN
 static inline float f32_succ(float a)
 {
   return f32_from_bits(f32_to_bits(a)+1);
 }
 
 // next representable FP toward zero
-// * blindly walks past +/-zero to NaN
+// (same range comments as f32_succ)
 static inline float f32_pred(float a)
 {
   return f32_from_bits(f32_to_bits(a)-1);
 }
 
+// next representable FP toward +inf
+// (same range comments as f32_succ)
+static inline float f32_next(float x)
+{
+  int32_t s = (int32_t)f32_to_bits(x);
+  int32_t a = (s >> 31)|1;
+  return f32_from_bits((uint32_t)(s+a));
+}
+
+// next representable FP toward -inf
+// (same range comments as f32_succ)
+static inline float f32_prev(float x)
+{
+  int32_t s = (int32_t)f32_to_bits(x);
+  int32_t a = (s >> 31)|1;
+  return f32_from_bits((uint32_t)(s-a));
+}
+
 // walks 'd' ULP away from zero
-// * blindly walks past +/-zero to NaN
+// (same range comments as f32_succ)
 static inline float f32_walk(float a, int32_t d)
 {
   return f32_from_bits(f32_to_bits(a)+(uint32_t)d);
 }
 
 // next representable FP away from zero
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline float f32_nnz_succ(float a)
 {
   const float s = f32_succ_pred_k;
@@ -449,7 +469,7 @@ static inline float f32_nnz_succ(float a)
 }
 
 // next representable FP toward zero
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline float f32_nnz_pred(float a)
 {
   const float s = -f32_succ_pred_k;
@@ -457,7 +477,7 @@ static inline float f32_nnz_pred(float a)
 }
 
 // next representable FP toward +inf
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline float f32_nnz_next(float a)
 {
   const float s = f32_succ_pred_k;
@@ -465,7 +485,7 @@ static inline float f32_nnz_next(float a)
 }
 
 // next representable FP toward -inf
-// * a is normal and not zero
+// ∙ a is normal and not zero
 static inline float f32_nnz_prev(float a)
 {
   const float s = -f32_succ_pred_k;
@@ -473,7 +493,7 @@ static inline float f32_nnz_prev(float a)
 }
 
 // ulp(a)
-// * |a| != flt_max
+// ∙ |a| != flt_max
 static inline float f32_ulp(float a)
 {
   float t = fabsf(a);
@@ -481,8 +501,8 @@ static inline float f32_ulp(float a)
 }
 
 // ab+cd
-// * r within +/- 3/2 ulp
-// * r within +/-   1 ulp, if sign(ab) == sign(cd)
+// ∙ r within +/- 3/2 ulp
+// ∙ r within +/-   1 ulp, if sign(ab) == sign(cd)
 static inline float f32_mma(float a, float b, float c, float d)
 {
   float t = c*d;
@@ -615,9 +635,9 @@ static inline bool f32_gt_or_unordered(float a, float b)
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow
-// * fastmath breaks me
+// ∙ |l| <= ulp(h)/2
+// ∙ provided a+b does not overflow
+// ∙ fastmath breaks me
 static inline f32_pair_t f32_2sum(float a, float b)
 {
   FP32_REASSOCIATE_OFF();
@@ -631,10 +651,10 @@ static inline f32_pair_t f32_2sum(float a, float b)
 }
 
 // (a+b) exactly represented by unevaluated pair (h+l)
-// * requires |a| >= |b|
-// * |l| <= ulp(h)/2
-// * provided a+b does not overflow
-// * fastmath breaks me
+// ∙ requires |a| >= |b|
+// ∙ |l| <= ulp(h)/2
+// ∙ provided a+b does not overflow
+// ∙ fastmath breaks me
 static inline f32_pair_t f32_fast2sum(float a, float b)
 {
   FP32_REASSOCIATE_OFF();
@@ -678,7 +698,7 @@ static inline uint32_t f32_map_s32(uint32_t i)
   return i ^ (sgn_mask_u32(i) >> 1);
 }
 
-// mapping to and from unsigned integer ordering
+// mapping to unsigned integer ordering
 static inline uint32_t f32_fmap_u32(uint32_t u)
 {
   // return f32_map_s32(u) ^ f32_sign_bit_k;
@@ -692,7 +712,7 @@ static inline uint32_t f32_imap_u32(uint32_t u)
   return (u & (f32_sign_bit_k-1)) ^ sgn_mask_u32(~u);
 }
 
-// wrappers of f64_map_s32 with type conversion
+// wrappers of f32_map_s32 with type conversion
 static inline int32_t f32_map_si(float x)
 {
   return (int32_t)f32_map_s32(f32_to_bits(x));
@@ -703,7 +723,7 @@ static inline float f32_imap_si(int32_t x)
   return f32_from_bits(f32_map_s32((uint32_t)x));
 }
 
-// wrappers of f64_map_u32 with type conversion
+// wrappers of f32_map_u32 with type conversion
 static inline uint32_t f32_map_ui(float x)
 {
   return f32_fmap_u32(f32_to_bits(x));
@@ -717,10 +737,10 @@ static inline float f32_imap_ui(uint32_t u)
 // find the floating-point number halfway (in terms of
 // representable numbers) between the inputs.
 // With the logical factorization:
-//    a = fa * 2^ea  (fa & fb on [1,2) )
-//    b = fb * 2^eb
+//    a = fa * 2^e     (fa & fb on [1,2) )
+//    b = fb * 2^(e+d)  
 // then:
-//    fp_bisect(a,b) ≈ 2^((ea+eb)/2)*((fa+fb)/2))
+//    fp_bisect(a,b) ≈ 2^(e-1)*(fa + fb 2^d)
 // when the exponents are close then this
 // behaves close to (a+b)/2
 // any rounding happens in the (fa+fb) term.
@@ -737,6 +757,24 @@ static inline float f32_fp_bisect_rd(float a, float b)
 
   return f32_imap_ui(u);
 }
+
+// non-zero 'v' creates a qNaN with payload of the 
+// bottom 22 bits of v. (also passes through the sign
+// bit). If bottom 22 bits are zero then it's an infinity.
+// 22 because we're avoiding the bit that distinguishes
+// quiet and signalling NaNs
+static inline float f32_set_payload(uint32_t v)
+{
+  return f32_from_bits(v | f32_nan_bits_k);
+}
+
+// retrieves the payload. raw function. a more general
+// version should check if NaN and return zero if not.
+static inline uint32_t f32_get_payload(float v)
+{
+  return f32_to_bits(v) & (~f32_nan_bits_k);
+}
+
 
 #endif
 
