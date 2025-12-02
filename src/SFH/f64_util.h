@@ -399,24 +399,6 @@ static inline double f64_pred(double a)
   return f64_from_bits(f64_to_bits(a)-1);
 }
 
-// next representable FP toward +inf
-// (same range comments as f64_succ)
-static inline double f64_next(double x)
-{
-  int64_t s = (int64_t)f64_to_bits(x);
-  int64_t a = (s >> 63)|1;
-  return f64_from_bits((uint32_t)(s+a));
-}
-
-// next representable FP toward -inf
-// (same range comments as f64_succ)
-static inline double f64_prev(double x)
-{
-  int64_t s = (int64_t)f64_to_bits(x);
-  int64_t a = (s >> 63)|1;
-  return f64_from_bits((uint32_t)(s-a));
-}
-
 // walks 'd' ULP away from zero
 // (same range comments as f64_succ)
 static inline double f64_walk(double a, int64_t d)
@@ -691,6 +673,20 @@ static inline double  f64_imap_si(int64_t x) { return f64_from_bits(f64_map_s64(
 // wrappers of f64_map_u64 with type conversion
 static inline uint64_t f64_map_ui(double x)    { return f64_fmap_u64(f64_to_bits(x));   }
 static inline double   f64_imap_ui(uint64_t u) { return f64_from_bits(f64_imap_u64(u)); }
+
+// next representable FP toward +inf
+// (same range comments as f64_succ)
+static inline double f64_next(double x)
+{
+  return f64_imap_si(f64_map_si(x)+1);
+}
+
+// next representable FP toward -inf
+// (same range comments as f64_succ)
+static inline double f64_prev(double x)
+{
+  return f64_imap_si(f64_map_si(x)-1);
+}
 
 
 // find the floating-point number halfway (in terms of

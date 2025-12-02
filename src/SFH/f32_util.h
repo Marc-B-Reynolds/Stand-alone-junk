@@ -435,24 +435,6 @@ static inline float f32_pred(float a)
   return f32_from_bits(f32_to_bits(a)-1);
 }
 
-// next representable FP toward +inf
-// (same range comments as f32_succ)
-static inline float f32_next(float x)
-{
-  int32_t s = (int32_t)f32_to_bits(x);
-  int32_t a = (s >> 31)|1;
-  return f32_from_bits((uint32_t)(s+a));
-}
-
-// next representable FP toward -inf
-// (same range comments as f32_succ)
-static inline float f32_prev(float x)
-{
-  int32_t s = (int32_t)f32_to_bits(x);
-  int32_t a = (s >> 31)|1;
-  return f32_from_bits((uint32_t)(s-a));
-}
-
 // walks 'd' ULP away from zero
 // (same range comments as f32_succ)
 static inline float f32_walk(float a, int32_t d)
@@ -732,6 +714,20 @@ static inline uint32_t f32_map_ui(float x)
 static inline float f32_imap_ui(uint32_t u)
 {
   return f32_from_bits(f32_imap_u32(u));
+}
+
+// next representable FP toward +inf
+// (same range comments as f32_succ)
+static inline float f32_next(float x)
+{
+  return f32_imap_si(f32_map_si(x)+1);
+}
+
+// next representable FP toward -inf
+// (same range comments as f32_succ)
+static inline float f32_prev(float x)
+{
+  return f32_imap_si(f32_map_si(x)-1);
 }
 
 // find the floating-point number halfway (in terms of
