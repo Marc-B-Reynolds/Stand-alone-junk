@@ -7,8 +7,13 @@
 #define SFH_MACRO_H    // marker define
 
 
+#define SFH_STRINGIFY_(x) #x
+#define SFH_STRINGIFY(x)  SFH_STRINGIFY_(x)
+
 //*******************************************************
 // common defines
+
+#define SFH_LENGTHOF(A) (sizeof(A)/sizeof(A[0]))
 
 
 // allow selecting the default number of rescans. See
