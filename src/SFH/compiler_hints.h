@@ -91,23 +91,25 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #endif
 
 #if defined(__GNUC__)
-#define hint_expect(expression) __builtin_expect(expression)
-#define hint_unreachable()      __builtin_unreachable()
+#define hint_unlikely(expression) __builtin_expect(expression,0)
+#define hint_expect(expression  ) __builtin_expect(expression,1)
+#define hint_unreachable()        __builtin_unreachable()
 #if defined(__clang__)
-#define hint_unpredictable(X)   __builtin_unpredictable(X)
+#define hint_unpredictable(X)     __builtin_unpredictable(X)
 #else
-#define hint_unpredictable(X)   __builtin_expect_with_probability(X,1,0.5)
+#define hint_unpredictable(X)     __builtin_expect_with_probability(X,1,0.5)
 #endif
 #elif defined(_MSC_VER)
-#define hint_expect(expression) (expression)
-#define hint_unpredictable(X)   (X)
-#define hint_unreachable()      __assume(0)
+#define hint_unlikely(expression) (expression)
+#define hint_expect(expression)   (expression)
+#define hint_unpredictable(X)     (X)
+#define hint_unreachable()        __assume(0)
 #else
-#define hint_expect(expression) (expression)
-#define hint_unpredictable(X)   (X)
+#define hint_expect(expression)   (expression)
+#define hint_unpredictable(X)     (X)
 #define hint_unreachable()
 #endif
-
+#endif
 
 #if defined(__GNUC__)
 #define hint_no_inline          __attribute__((__noinline__))
