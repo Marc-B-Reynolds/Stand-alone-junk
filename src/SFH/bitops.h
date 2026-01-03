@@ -492,7 +492,7 @@ static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x>>1
 
 // a set bit indicates that x has a bit run of 'n' or more from that
 // position from hi to lo.  equivalent to applying 'bit_run_clear_lo'
-// 'n' times.
+// 'n-1' times. The sequence of 's' values sum to n-1.
 // SEE: Hacker's Delight, "Find First String of 1-Bits of a Given Length"
 static inline uint64_t bit_run_mark_hi_ge_n_64(uint64_t x, uint32_t n)
 {
@@ -522,7 +522,7 @@ static inline uint32_t bit_run_mark_hi_ge_n_32(uint32_t x, uint32_t n)
   return x;
 }
 
-// same as above but for lo to hi bits (bit_run_clear_hi 'n' times)
+// same as above but for lo to hi bits (bit_run_clear_hi 'n-1' times)
 static inline uint64_t bit_run_mark_lo_ge_n_64(uint64_t x, uint32_t n)
 {
   uint32_t s;
@@ -550,6 +550,18 @@ static inline uint32_t bit_run_mark_lo_ge_n_32(uint32_t x, uint32_t n)
   return x;
 }
 
+// isolate all runs of length 1
+static inline uint64_t bit_run_len1_64(uint64_t x)
+{
+  //return bit_run_hi_bit_64(x) & bit_run_lo_bit_64(x);
+  return x & ~((x >> 1)|(x << 1));
+}
+
+static inline uint32_t bit_run_len1_32(uint32_t x)
+{
+  //return bit_run_hi_bit_32(x) & bit_run_lo_bit_32(x);
+  return x & ~((x >> 1)|(x << 1));
+}
 
 // isolate the lowest bit run
 static inline uint32_t bit_run_lo_32(uint32_t x)
