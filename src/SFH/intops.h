@@ -1,4 +1,5 @@
-// Marc B. Reynolds, 2016-2025
+// -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef INTOPS_H

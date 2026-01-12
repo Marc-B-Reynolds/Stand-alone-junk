@@ -1,4 +1,5 @@
-// Marc B. Reynolds, 2023-2025
+// -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2023-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // small collection of operations on (unpacked) 8/16 bit values

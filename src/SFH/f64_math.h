@@ -1,5 +1,6 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2015-2025
+// Marc B. Reynolds, 2015-2026
 
 #ifndef F64_LIBM
 #define F64_LIBM

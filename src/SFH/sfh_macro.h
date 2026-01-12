@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Marc B. Reynolds, 2001-2025
+// Marc B. Reynolds, 2001-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 //#pragma once

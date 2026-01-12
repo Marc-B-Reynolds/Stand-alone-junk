@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2013-2025
+// Marc B. Reynolds, 2013-2026
 // Public Domain under http://unlicense.org, see link for details.
 //
 // Documentation: http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html

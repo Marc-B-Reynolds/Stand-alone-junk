@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2010-2025
+// Marc B. Reynolds, 2010-2026
 // Public Domain under http://unlicense.org, see link for details.
 //
 // Sobol (low-discrepancy) sequence in 1-3D, stratified in 2-4D.

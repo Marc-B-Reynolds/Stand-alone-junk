@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Marc B. Reynolds, 2017-2025
+// Marc B. Reynolds, 2017-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // 1) Nearest lattice points for:

@@ -1,3 +1,7 @@
+// -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2016-2026
+// Public Domain under http://unlicense.org, see link for details.
+
 #ifndef COMPILER_HINTS_H
 #define COMPILER_HINTS_H
 

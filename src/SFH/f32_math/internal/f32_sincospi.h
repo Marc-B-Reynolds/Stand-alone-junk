@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2020-2025
+// Marc B. Reynolds, 2020-2026
 
 
 #ifndef F32_SINCOSPI_H

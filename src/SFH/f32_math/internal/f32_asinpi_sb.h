@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2022-2025
+// Marc B. Reynolds, 2022-2026
 
 #ifndef F32_ASINPI_SB_H
 #define F32_ASINPI_SB_H

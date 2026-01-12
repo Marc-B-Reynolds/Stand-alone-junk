@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2023-2025
+// Marc B. Reynolds, 2023-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef SWAR_H

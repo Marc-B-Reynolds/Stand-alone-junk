@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2022-2025
+// Marc B. Reynolds, 2022-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // versions designed for AVX2 (but might be compiled for others via

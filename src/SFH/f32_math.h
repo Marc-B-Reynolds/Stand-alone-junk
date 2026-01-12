@@ -1,5 +1,6 @@
-// Public Domain under http://unlicense.org, see link for details.
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2015-2025
+// Public Domain under http://unlicense.org, see link for details.
 
 // WIP: tons of stuff to be minorly cleaned up before a proper push
 

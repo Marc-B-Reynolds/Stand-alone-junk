@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Marc B. Reynolds, 2002-2025
+// Marc B. Reynolds, 2002-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // Terminal output oriented (progressive) report tables:

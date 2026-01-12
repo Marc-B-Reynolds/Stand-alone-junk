@@ -1,4 +1,6 @@
-// Marc B. Reynolds, 2015-2025
+// -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2015-2026
+// Public Domain under http://unlicense.org, see link for details.
 
 // evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low (c_n,... c_0)
 

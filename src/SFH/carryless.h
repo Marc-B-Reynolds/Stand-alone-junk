@@ -1,4 +1,5 @@
-// Marc B. Reynolds, 2017-2025
+// -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2017-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // put blog link here once I complete it

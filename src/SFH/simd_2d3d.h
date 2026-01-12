@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Marc B. Reynolds, 2022-2025
+// Marc B. Reynolds, 2022-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 // ssimd (2D/3D spatial SIMD)

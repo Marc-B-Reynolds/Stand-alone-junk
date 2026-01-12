@@ -1,5 +1,5 @@
 // Public Domain under http://unlicense.org, see link for details.
-// Marc B. Reynolds, 2015-2025
+// Marc B. Reynolds, 2015-2026
 
 // common approximation utility functions
 
