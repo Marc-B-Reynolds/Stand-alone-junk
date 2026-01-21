@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2017-2026
 // Public Domain under http://unlicense.org, see link for details.
 //
@@ -25,7 +26,7 @@ typedef struct {
 } swing_twist_t;
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // factor Q into swing then twist with respect to Z (Q = Qs Qt)
 // 
 // All the other variants just expand this. At least
@@ -114,7 +115,7 @@ static inline void quat_to_swing_twist_z_hq(swing_twist_t* d, quat_t* q)
   }
 }
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // twist about 'z' inverse transforms
 
 static inline void swing_twist_z_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)
@@ -146,7 +147,7 @@ static inline void swing_twist_z_to_quat_hq(quat_t* q, swing_twist_t* s)
 }
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // expand forward transforms for 'x' & 'y'.
 
 static inline void quat_to_swing_twist_x(swing_twist_t* d, quat_t* q)
@@ -178,7 +179,7 @@ static inline void quat_to_swing_twist_y_n(swing_twist_t* d, quat_t* q, uint32_t
 }  
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // expand inverse transforms for 'x' & 'y'.
 
 static inline void swing_twist_x_to_quat(quat_t* q, swing_twist_t* s)
@@ -206,7 +207,7 @@ static inline void swing_twist_y_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t
 }
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // forward "reverse order" transforms (Q = Qt Qs)
 
 static inline void quat_to_twist_swing_z(swing_twist_t* d, quat_t* q)
@@ -252,7 +253,7 @@ static inline void quat_to_twist_swing_y_n(swing_twist_t* d, quat_t* q, uint32_t
 }  
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // inverse "reverse order" transforms (Q = Qt Qs)
 
 static inline void twist_swing_z_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t sw)

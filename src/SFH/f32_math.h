@@ -25,7 +25,7 @@ extern float f32_rcbrt_fr(float x);
 extern float f32_cbrt(float x);
 extern float f32_cbrt_fr(float x);
 
-//*************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // solve quadratic equation ax^2+bx+c for real roots
 // complex roots will yield a standard NaN
 

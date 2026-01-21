@@ -128,7 +128,7 @@ typedef quatd_t vec3d_t;
 //   type pun to __m128 for any work-a-round direct to intrinsic
 //   calls. (SEE: vec2f_fmadd_sub)
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // type pun (bit pattern) float to int (fi) and int to float (if)
 
 static inline int32_t ssimd_bitcast_fi_32  (float   a) { return type_pun(a,int32_t); }
@@ -174,7 +174,7 @@ static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4
 #define ssimd_itypeof(x) typeof(ssimd_bitcast_fi(x))
 #define ssimd_ftypeof(x) typeof(ssimd_bitcast_if(x))
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // basic support functionality
 
 // "constructor" like functions
@@ -339,7 +339,7 @@ static inline quatd_t quatd_floor(quatd_t x) { return quatd(floor (x[0]),floor (
 #define quat_round_up(x) quat_floor((x)+0.5f)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // An special case implementations that have to punt to
 // direct intrinsic calls for some reason or another.
 
@@ -478,7 +478,7 @@ static inline double quatd_asum(quatd_t a) { return (ssimd_abs(a[0]) + ssimd_abs
 #define vec3_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; vec3_asum(_a);})
 #define quat_sad(a,b) ({typeof(a) _a=a,_b=b; _a-=_b; quat_asum(_a);})
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 //
 
@@ -501,7 +501,7 @@ static inline vec3d_t vec3d_blend(vec3d_t a, vec3d_t b, i64x4_t s) { return ssim
 #define ssimd_broadcast_intof(a,s) ((typeof(ssimd_bitcast_fi(a))){0}+s)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // end-point exact linear interpolation (LERP)
 // (1-t)a + tb = a-ta+tb = (tb-(ta-a))
 
@@ -533,7 +533,7 @@ static inline quatd_t quatd_lerp(quatd_t a, quatd_t b, double  t) { return quatd
 #define vec3_lerp(a,b,t) vec3_fwd(lerp,a,b,t)
 #define quat_lerp(a,b,t) quat_fwd(lerp,a,b,t)
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // weighted sum: a*sa + b*sb = fma(a,sa,b*sb)
 // vwsum: sb & sb are both vectors
 // wsum:  sb & sb are both scalars
@@ -567,7 +567,7 @@ static inline vec3d_t vec3d_wsum(vec3d_t a, vec3d_t b, double  sa, double  sb)  
 #define quat_wsum(a,b,sa,sb) quat_fwd(wsum, a,b,sa,sb)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 
 static const float   ssimd_ulp1_f32       = 0x1.0p-23f;
@@ -695,7 +695,7 @@ static inline quatd_t quatd_neg_scalar(quatd_t a)
 #endif
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // dot product & norm
 // dot(a,b) = a•b
 
@@ -794,7 +794,7 @@ static inline double  quatd_dist_sq(quatd_t a, quatd_t b) { a-=b; return quat_no
 #define quat_dist_sq(a,b) quat_fwd(dist_sq,a,b)
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 
 // a - 2(a•b)b
@@ -808,7 +808,7 @@ static inline vec3d_t vec3d_reflect(vec3d_t a, vec3d_t b) { return a - 2.0*vec3d
 #define vec2_reflect(a,b) vec2_fwd(reflect,a,b)
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // 2D vector specific & type also implements complex numbers
 
 // othogonal vector: (x,y) → (-y,x)
@@ -882,7 +882,7 @@ static inline vec2d_t vec2d_sq(vec2d_t a) { return vec2(ssimd_fma(a[0],a[0],-a[1
 #define vec2_sq(a) vec2_fwd(sq,a)
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 
 static inline vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)
@@ -963,7 +963,7 @@ static inline vec3d_t vec3d_ortho(vec3d_t v)
 
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 
 // norm of the bivector part
@@ -1299,7 +1299,7 @@ static inline quatd_t quatd_factor_twist(quatd_t q, vec3d_t a)
 
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // quat_map_{a}2{b} rotates bivector part a to b:  let t=sqrt(ba^*) q=tat^*
 //   this is for variable rename. implement WRT to one and expand other variants.
 //   (point to an example of doing this)
@@ -1313,7 +1313,7 @@ static inline quatd_t quatd_factor_twist(quatd_t q, vec3d_t a)
 #define quat_map_z2y(q) ({ quat_map_i(0,2,1); r[2] = -r[2]; r;})
 
 
-//**********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // some maps between unit quaterions and 3D unit ball
 // SEE:
 //   https://marc-b-reynolds.github.io/quaternions/2016/05/30/QuatHDAngleCayley.html
@@ -1452,6 +1452,3 @@ static inline quatd_t quatd_ihm(vec3d_t v)
 #else
 #error "requires extended C features"
 #endif
-
-//**********************************************************
-

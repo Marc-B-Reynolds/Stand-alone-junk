@@ -10,7 +10,7 @@
 #define SFH_STRINGIFY_(x) #x
 #define SFH_STRINGIFY(x)  SFH_STRINGIFY_(x)
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // common defines
 
 #define SFH_LENGTHOF(A) (sizeof(A)/sizeof(A[0]))
@@ -27,7 +27,7 @@
 #define SFH_PARENS ()
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // flattening variants
 
 // remove the parentheses around the "single" input parameter.
@@ -42,8 +42,7 @@
 #define SFH_SIMPLE_FLATTEN(x) SFH_SIMPLE_FLATTEN_ x
 #define SFH_SIMPLE_FLATTEN_(...) __VA_ARGS__
 
-//*******************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // rotate macro parameters left:
 //   ()          → nil
 //   (1)         → 1
@@ -100,8 +99,7 @@
 #define SFH_APPEND(X,...)      __VA_OPT__(__VA_ARGS__,)X
 #define SFH_PREPEND(X,...)     X __VA_OPT__(,__VA_ARGS__)
 
-//*******************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // Paul Fultz's rescan
 // https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
 //
@@ -220,7 +218,7 @@
 #define SFH_THROUGH_REP() SFH_THROUGH_
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // A non-rescan expansion (argcount based) limited up to 8 
 // varargs. Lighter weight preprocessing time than SFH_MAP.
 
@@ -270,7 +268,7 @@
 #define SFH_STHROUGH_(F,N,...) SFH_CAT2(SFH_STHROUGH,N)(F,__VA_ARGS__)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // argument count based concat (limited to 8 for one, nest for more)
 
 #define SFH_CAT0()
@@ -287,7 +285,7 @@
 #define SFH_CAT(...) SFH_PART_8(__VA_ARGS__,SFH_CAT8,SFH_CAT7,SFH_CAT6,SFH_CAT5,SFH_CAT4,SFH_CAT3,SFH_CAT2,SFH_CAT1,SFH_CAT0)(__VA_ARGS__)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // argcount base default parameters
 
 // map to a single macro or C call

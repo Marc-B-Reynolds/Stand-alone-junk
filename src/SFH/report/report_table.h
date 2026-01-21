@@ -236,8 +236,7 @@ extern report_table_style_def_t report_table_style_def_1990;
 extern report_table_style_def_t report_table_style_def_ascii;
 extern report_table_style_def_t report_table_style_def_markdown;
 
-//***********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // fill-in info that needs to be computed. called automatically from
 // 
 extern void report_table_init(report_table_t* table);
@@ -251,7 +250,7 @@ extern void report_table_end(FILE* file, report_table_t* table);
 extern void report_table_row_va(FILE* file, report_table_t* table, va_list args);
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // For building custom formatting of cell data
 
 // formats the current cell (in one shot)
@@ -265,7 +264,7 @@ extern int report_table_format_inc(report_tbuild_t* b, const char* fmt, ...);
 extern void report_table_format_done(report_tbuild_t* b);
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // expand macro that accepts [0,4] parameters (argcount method)
 //   #define BAR(...)  REPORT_TABLE_DEF_X(BAR __VA_OPT__(,__VA_ARGS__))
 //
@@ -289,7 +288,7 @@ extern void report_table_format_done(report_tbuild_t* b);
 #define REPORT_TABLE_DEF_ERROR(msg) 
 #endif
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // table define helper macros : integers using default formatting
 //
 
@@ -367,7 +366,7 @@ extern void report_table_format_done(report_tbuild_t* b);
 #define REPORT_TABLE_U64(...) REPORT_TABLE_DEF_X(REPORT_TABLE_U64 __VA_OPT__(,__VA_ARGS__))
 #define REPORT_TABLE_S64(...) REPORT_TABLE_DEF_X(REPORT_TABLE_S64 __VA_OPT__(,__VA_ARGS__))
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // table define helper macros : floating point
 
 // helper macro helper (if you follow me)
@@ -438,7 +437,7 @@ extern void report_table_format_done(report_tbuild_t* b);
 
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // helper macros : pointers (including strings)
 
 // standard string handler:
@@ -469,7 +468,7 @@ extern report_table_pformat_t report_table_str;
 extern report_table_pformat_t report_table_rgb_block;
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // full SGR codes
 
 // aside: why don't all compilers support `\e`?
@@ -490,7 +489,7 @@ extern report_table_pformat_t report_table_rgb_block;
 #define SGR_BOTH_RGB(FR,FG,FB, BR,BG,BB) "\033[38;2;" #FR ";" #FG ";" #FB ";48;2;" #BR ";" #BG ";" #BB "m"
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 #if defined(REPORT_TABLE_IMPLEMENTATION)
 
@@ -621,7 +620,7 @@ static int report_table_utf8_sgr_len(char* str)
 }
 
   
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 void report_table_init(report_table_t* table)
 {
@@ -671,8 +670,7 @@ void report_table_init(report_table_t* table)
 }
 
 
-//***********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // helper: performs any justification and does the output. doesn't perform
 // any truncation
 //   clen : character length
@@ -756,7 +754,7 @@ void report_table_format_done(report_tbuild_t* b)
   report_table_out(b,b->buffer,clen,b->bi);
 }
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // dispatch input to formatting function. 
 
 static void report_ttype_i64_d(report_tbuild_t* b, uint64_t v)
@@ -833,7 +831,7 @@ static void report_ttype_ill_d(report_tbuild_t* b, void* v)
 }
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 #if 0
 // meh: some old compact snippets.
@@ -873,8 +871,7 @@ static void report_ttype_ill_d(report_tbuild_t* b, void* v)
 }
 #endif
 
-//***********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // rename: UTF + SGR formating helper
 static void report_table_str_i(report_tbuild_t* b, char* buffer, int blen)
 {
@@ -907,7 +904,7 @@ static void report_table_str_i(report_tbuild_t* b, char* buffer, int blen)
   report_table_out(b,buffer,clen,clen);
 }
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 //
 
 // standard string parameter handler: UTF8 + SGR codes (but should use
@@ -935,7 +932,7 @@ void report_table_sgr_str(report_tbuild_t* b, void* data)
   report_table_str_i(b,b->buffer,len);
 }
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // directly dumping elements of an array is super limited (to be reasonable
 // in a table cell) but it generically covers small tuples.
 
@@ -1034,8 +1031,7 @@ report_table_aformat_t report_table_text_rgb_format =
   .fdata   = &report_table_text_rgb_format
 
 
-//***********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // outputs '.prec' spaces with foreground color RGB color data pointed: (3 bytes)
 // assuming 'plain' isn't set: here it prints #RRGGBB {hexadecimal}
 void report_table_rgb_block(report_tbuild_t* b, void* data)
@@ -1052,8 +1048,7 @@ void report_table_rgb_block(report_tbuild_t* b, void* data)
 }
 
 
-//***********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // hacky shorthand macros: should clean up at some point
 #define report_table_ln(file,table)  report_table_fprintf(file,table,table->eol)
 #define report_table_sep(file,table) report_table_fprintf(file,table,"%s",style->div)
@@ -1113,7 +1108,7 @@ void report_table_row(FILE* file, report_table_t* table, ...)
 }
 
 
-//***********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 // top of header, bottom of header and bottom of table divider lines
 void report_table_div(FILE* file, report_table_t* table, report_table_style_set_t* set)

@@ -771,6 +771,5 @@ static inline uint32_t f32_get_payload(float v)
   return f32_to_bits(v) & (~f32_nan_bits_k);
 }
 
-
 #endif
 

@@ -59,8 +59,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-//***************************************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // defines a compile time baking (or runtime configurable) method of searching
 // ∙ get   : fetches raw data      SEE: new_order_get (methods) 
 // ∙ order : data order transfomer SEE: new_order_order (methods)
@@ -100,7 +99,7 @@ static inline int64_t new_order_get(const new_order_t* const def, const void* co
 }
 
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // new_order_addr (methods): computes the address of the nth datum
 
 // primitive array or array of structures
@@ -122,7 +121,7 @@ static inline char* new_order_iaddr(const new_order_t* const def, const void* co
 }
 
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // new_order_get (methods): the kernels all operate on signed 64-bit integers (int64_t)
 // so these perform two logical operations:
 // ∙ load the item is as a signed integer of that width (again has 16/32/64)
@@ -141,7 +140,7 @@ static inline int64_t new_order_get_64(new_order_get_params) { int64_t t; memcpy
 
 #undef new_order_get_params
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // new_order_order (methods): the kernels all operate on signed 64-bit integers (int64_t) and are
 // loaded by 'new_order_get' as if that's actual type of data that's being operated on.
 // These routines handle mapping the actual type ordering to that of a int64_t.
@@ -164,7 +163,7 @@ static inline int64_t new_order_rev_order_ui(int64_t x) { return ~new_order_orde
 static inline int64_t new_order_rev_order_fp(int64_t x) { return ~new_order_order_fp(x); }  // not an involution
 
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // "convenience" macro (new_order_value) to manually convert a type to the canonicalized
 
 // helper to prepare an input value to fed to a kernel.
@@ -202,7 +201,7 @@ static inline int64_t new_order_value_f64(double x){ int64_t u; memcpy(&u, &x, 8
 #define new_order_value(D,V) ((D)->order(new_order_value_(V)))
 
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // "convenience" macros to fill the .order & .get fields
 //
 // IntelliSense bug current emits error code:
@@ -232,7 +231,7 @@ static inline int64_t new_order_value_f64(double x){ int64_t u; memcpy(&u, &x, 8
     default:  new_order_get_64)
 
 
-//***************************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // populate new_order macros:
 //
 // To get type specialization macro behavior the 'new_order_t' structure
@@ -276,5 +275,3 @@ static inline int64_t new_order_value_f64(double x){ int64_t u; memcpy(&u, &x, 8
   .soff  = offsetof(T,E)                  \
 }
 
-
-//***************************************************************************************

@@ -7,7 +7,8 @@
 
 // scalar uniform quantization (suq) helpers
 
-//**** helper functions:
+//────────────────────────────────────────────────────────────────────────────────────
+// helper functions:
 
 typedef struct { float h,l; } suq_scale_t;
 
@@ -23,7 +24,8 @@ static inline suq_scale_t suq_scale(uint32_t n)
   return (suq_scale_t){.h = rh, .l = rl};
 }
 
-//**** scalar uniform encoding funcs
+//────────────────────────────────────────────────────────────────────────────────────
+// scalar uniform encoding funcs
 
 static inline int32_t suq_scale_i32(float x, float s)
 {
@@ -66,7 +68,8 @@ static inline uint32_t suq_encode_r(float x , uint32_t n)
 }
 
 
-//**** scalar uniform decoding funcs
+//────────────────────────────────────────────────────────────────────────────────────
+// scalar uniform decoding funcs
 
 // center reconstruction
 static inline float suq_decode_c(uint32_t u, uint32_t n)
@@ -105,7 +108,8 @@ static inline float suq_decode_l_cr(uint32_t u, uint32_t n)
   return r;
 }
 
-//**** encode/decode pairs helpers: (assumes n is power-of-two)
+//────────────────────────────────────────────────────────────────────────────────────
+// encode/decode pairs helpers: (assumes n is power-of-two)
 
 // output point set excludes 0 & 1. point distance = 1/n {floor/center}
 //   x on [0,1)   -> [0,n-1]
@@ -186,4 +190,3 @@ static inline float snorm8_decode_cr(uint32_t u)
 }
 
 #endif
-

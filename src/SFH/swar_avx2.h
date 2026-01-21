@@ -1,10 +1,11 @@
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2023-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #ifndef SWAR_AVX2_H
 #define SWAR_AVX2_H
 
-//------------------------------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // the idea is to cover Intel some 256 bit integer ops (including scalar interactions)
 // so various AVX512 features should be added that simplify an otherwise AVX2
 // specific implementation. But anyway..just covering stuff that I need for other
@@ -352,7 +353,7 @@ static inline u256_t broadcast_lo_32x8 (u256_t x) { return SFH_CAT(AVX2_PREFIX, 
 static inline u256_t broadcast_lo_64x4 (u256_t x) { return SFH_CAT(AVX2_PREFIX, broadcastq_epi64)(cast_256_128(x)); }
 
 
-//------------------------------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // start of composed functions
 
 // return (scalar) true/false if all elements of a & b are equal
@@ -537,8 +538,7 @@ static inline u256_t unpacklo_128x2(u256_t a, u256_t b) { return permute_128x2(a
 static inline u256_t unpackhi_128x2(u256_t a, u256_t b) { return permute_128x2(a,b, (3<<4)|1); }
 
 
-//------------------------------------------------------------------------------
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 #if !defined(rorv_32x8)
 static inline u256_t rorv_32x8(u256_t x, u256_t n)
@@ -607,8 +607,7 @@ static inline u256_t bit_lowest_changed_32x8 (u256_t x) { return and_256(inc_32x
 static inline u256_t bit_lowest_changed_64x4 (u256_t x) { return and_256(inc_64x4 (x),negate_64x4 (x)); }
 
 
-//-------------------------------------------------------------------------------------------------------------
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 #define set_table_8x4(A,B,C,D) (int8_t)(A),(int8_t)(B),(int8_t)(C),(int8_t)(D)
 #define set_table_8x8(A,B,C,D,E,F,G,H) set_table_8x4(A,B,C,D),set_table_8x4(E,F,G,H)

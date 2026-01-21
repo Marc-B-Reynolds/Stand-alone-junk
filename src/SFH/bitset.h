@@ -7,7 +7,7 @@
 // super minimal (size & function) dense bitset. more bitvector than set
 // but whatever.
 
-// * needs defines for 64-bit popcount, leading & trailing zeros count
+// • needs defines for 64-bit popcount, leading & trailing zeros count
 //   (pop_64/clz_64/ctz_64) zero count are never fed an input of zero.
 
 static inline uint64_t bitset_ctz(uint64_t x) { return ctz_64(x); }
@@ -177,7 +177,7 @@ static inline uint64_t bitset_min_u64(uint64_t a, uint64_t b)
 }
 
 // returns the index 
-uint64_t bitset_lo_diff(const bitset_t * s0, const bitset_t * s1)
+uint64_t bitset_lo_diff(const bitset_t* s0, const bitset_t* s1)
 {
   uint64_t e = bitset_min_u64(s0->datasize, s1->datasize);
 
@@ -194,7 +194,7 @@ uint64_t bitset_lo_diff(const bitset_t * s0, const bitset_t * s1)
 }
 
 // returns `true` if the two set have no common elements
-static inline bool bitset_disjoint(const bitset_t * s0, const bitset_t * s1)
+static inline bool bitset_disjoint(const bitset_t* s0, const bitset_t* s1)
 {
   uint64_t e = bitset_min_u64(s0->datasize, s1->datasize);
   
@@ -206,7 +206,7 @@ static inline bool bitset_disjoint(const bitset_t * s0, const bitset_t * s1)
 }
 
 // returns `true` if the two set have at one or more common elements
-static inline bool bitset_intersects(const bitset_t * s0, const bitset_t * s1)
+static inline bool bitset_intersects(const bitset_t* s0, const bitset_t* s1)
 {
   return !bitset_disjoint(s0,s1);
 }

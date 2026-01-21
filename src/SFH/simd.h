@@ -237,7 +237,7 @@
 #define simd_fp_std_binary(NAME,X,Y) simd_fp_component_map(NAME ## f, NAME, X,Y[i])
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // David Mazières' modernized X macro (SIMD_MAP)
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 #define SIMD_PARENS ()
@@ -272,7 +272,7 @@
 #define SIMD_MAP_PEEL_AGAIN() SIMD_MAP_PEEL_HELPER
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // A non-rescan expansion (argcount based) limited to [1,6]
 // varargs. Lighter weight preprocessing time than SIMD_MAP
 
@@ -288,7 +288,7 @@
 #define SIMD_SMAP(F,...) SIMD_SMAP_(__VA_ARGS__,SIMD_SMAP6,SIMD_SMAP5,SIMD_SMAP4,SIMD_SMAP3,SIMD_SMAP2,SIMD_SMAP1)(F, __VA_ARGS__)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // argument count based concat (limited to 8 for one, nest for more)
 
 #define CAT0()
@@ -304,13 +304,12 @@
 #define CAT(...) CAT_(__VA_ARGS__,CAT8,CAT7,CAT6,CAT5,CAT4,CAT3,CAT2,CAT1,CAT0)(__VA_ARGS__)
 
 
-//*******************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // expands to: (A)+(B)+...+(N)
 #define SIMD_SUM(A,...) (A)__VA_OPT__(SIMD_MAP(+,__VA_ARGS__))
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // Make the type defs and base support
 //
 // if `ext_vector_type` is available use that instead (1) of `vector_size`
@@ -405,7 +404,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 
-//---------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // I keep wavering. stuff like could be expanded but do I
 // really want to? sizes are mostly fixed so why burden
 // compile times? 
@@ -452,7 +451,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // manually expanded "generic" type puns.
 // using a macro to expand it (which would happen
 // each time it's used) seems really sucky.
@@ -549,7 +548,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // floating/integer conversion
 
 #if defined(SIMD_ENABLE_512)
@@ -593,7 +592,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
     default: (void*)0)(_x);    \
   })
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // macros to get the converted type
 
 // for external use. this allows comma list of variables
@@ -624,7 +623,7 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
 #define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 // workers for macro expansions
 #define simd_is_const(a)  __builtin_constant_p(a)
@@ -729,7 +728,7 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 #define simd_splat_i(T,V) V-(T){0}
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // type widen/narrow
 
 // clean these with (with other similar)
@@ -887,7 +886,7 @@ static inline float    demote_f64 (double x)  { return (float) x; }
     default: (void*)0)(_x);   \
   })
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // base Intel intrinsic interop support
 // (actually nope...and probably shouldn't be in this file anyway)
 
@@ -917,7 +916,7 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 #endif
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // generic to specialized expansion macros (expand function or prototype)
 // the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
 
@@ -939,7 +938,7 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 #define SIMD_MAKE_4FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d);
 #endif
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // generic SIMD libm functionality
 
 // don't expect GCC to add and checking individually is a PITA
@@ -987,7 +986,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 #endif
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // mixed vector/scalar macro paramenter helpers
 
 // yields the first parameter that's a vector type (if there is one)
@@ -1054,7 +1053,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // min/max
 //
 
@@ -1112,9 +1111,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #define simd_clamp(x,lo,hi) simd_min(simd_max(x,lo),hi)
 
 
-
-
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // 
 
 // scalar FMA (generic binary32/binary64)
@@ -1215,7 +1212,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 // need to be explicit. (see simd_2d3d.h)
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 // compute: sa•A + sb•B  scalar (sa,sb), vector (A,B)
 // todo : add typechecking & use capture macro
@@ -1229,7 +1226,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // blend support:  (a & s) | (a & (~s))
 // can only be lowered into an actual blend if the
 // compiler can see `s` is a selection mask
