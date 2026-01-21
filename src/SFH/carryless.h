@@ -21,13 +21,13 @@
 // result as fixed point (cr works this way) which
 // gives a band Toeplitz where the width is limited
 // by the size of the base carryless product input.
-// Given a 64x64 input -> 128 bit output then the
+// Given a 64⨯64 input → 128 bit output then the
 // max width is 64. This is enough for a full
 // 32x32 Toeplitz.
 
 // NOTES:
-// * no real effort at portability
-// * Intel only ATM
+// • no real effort at portability. should minimize or nuke external dependencies
+// • Intel only ATM (half-assed NEON sorta in place)
 #ifndef CARRYLESS_H
 #define CARRYLESS_H
 
@@ -36,7 +36,7 @@
 #endif
 
 
-//-----------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // helper for building scalar functions:
 
 #if defined(BITOPS_INTEL)
@@ -45,7 +45,7 @@
 
 typedef __m128i cl_128_t;
 
-// wrap the actual carryless product hardware op: 64x64 -> 128
+// wrap the actual carryless product hardware op: 64⨯64 → 128
 // only handles inputs in lower 64-bit
 static inline cl_128_t cl_mul_base(cl_128_t a, cl_128_t b)
 {
@@ -53,36 +53,36 @@ static inline cl_128_t cl_mul_base(cl_128_t a, cl_128_t b)
 }
 
 // load 32/64 input into 128 bit register
-static inline cl_128_t cl_load_32(uint32_t a)
-{
-  return _mm_cvtsi32_si128((int32_t)a);
-}
+static inline cl_128_t cl_load_32(uint32_t a) { return _mm_cvtsi32_si128((int32_t)a); }
+static inline cl_128_t cl_load_64(uint64_t a) { return _mm_cvtsi64_si128((int64_t)a); }
 
-static inline cl_128_t cl_load_64(uint64_t a)
-{
-  return _mm_cvtsi64_si128((int64_t)a);
-}
+// extract
+static inline uint32_t cl_lo_32(cl_128_t x) { return (uint32_t)_mm_cvtsi128_si32(x);   }
+static inline uint32_t cl_hi_32(cl_128_t x) { return (uint32_t)_mm_extract_epi32(x,1); }
+static inline uint64_t cl_lo_64(cl_128_t x) { return (uint64_t)_mm_cvtsi128_si64(x);   } 
+static inline uint64_t cl_hi_64(cl_128_t x) { return (uint64_t)_mm_extract_epi64(x,1); }
 
 #elif defined(BITOPS_ARM)
 
-static_assert(0, "add ARM support");
+typedef __m128i cl_128_t;
 
-// this whole file probably needs to be reworked to not
-// be sucky on ARM. It was written assuming 64x64->128
-// operations. (or a bunch of conditional compile defs)
-
+// wrap the actual carryless product hardware op: 64⨯64 → 128
+// only handles inputs in lower 64-bit
 static inline cl_128_t cl_mul_base(cl_128_t a, cl_128_t b)
 {
+  return _mm_clmulepi64_si128(a,b, 0);
 }
 
 // load 32/64 input into 128 bit register
-static inline cl_128_t cl_load_32(uint32_t a)
-{
-}
+static inline cl_128_t cl_load_32(uint32_t a) { return _mm_cvtsi32_si128((int32_t)a); }
+static inline cl_128_t cl_load_64(uint64_t a) { return _mm_cvtsi64_si128((int64_t)a); }
 
-static inline cl_128_t cl_load_64(uint64_t a)
-{
-}
+// extract
+static inline uint32_t cl_lo_32(cl_128_t x) { return (uint32_t)_mm_cvtsi128_si32(x);   }
+static inline uint32_t cl_hi_32(cl_128_t x) { return (uint32_t)_mm_extract_epi32(x,1); }
+static inline uint64_t cl_lo_64(cl_128_t x) { return (uint64_t)_mm_cvtsi128_si64(x);   } 
+static inline uint64_t cl_hi_64(cl_128_t x) { return (uint64_t)_mm_extract_epi64(x,1); }
+
 
 #else
 // bitops.h should be handling this case
@@ -100,31 +100,10 @@ static inline cl_128_t cl_mul_full_32(uint32_t a, uint32_t b)
   return cl_mul_base(cl_load_32(a),cl_load_32(b));
 }
 
-// extract
-static inline uint32_t cl_lo_32(cl_128_t x)
-{
-  return (uint32_t)_mm_cvtsi128_si32(x);
-}
 
-static inline uint32_t cl_hi_32(cl_128_t x)
-{
-  return (uint32_t)_mm_extract_epi32(x,1);
-}
+//────────────────────────────────────────────────────────────────────────────────────
 
-static inline uint64_t cl_lo_64(cl_128_t x)
-{
-  return (uint64_t)_mm_cvtsi128_si64(x);
-}
-
-static inline uint64_t cl_hi_64(cl_128_t x)
-{
-  return (uint64_t)_mm_extract_epi64(x,1);
-}
-
-
-//-----------------------------------------------------------
-
-// standard notion of carryless products 32x32->32 and 64x64->64
+// standard notion of carryless products 32⨯32→32 and 64⨯64→64
 
 static inline uint32_t cl_mul_32(uint32_t a, uint32_t b)
 {
@@ -149,6 +128,7 @@ static inline uint64_t cl_mul_hi_64(uint64_t a, uint64_t b)
   return cl_hi_64(cl_mul_full_64(a,b));
 }
 
+// should be x∙x if no scatter hardware op
 static inline uint32_t cl_pow2_32(uint32_t x) { return bit_scatter_even_32(x); }
 static inline uint64_t cl_pow2_64(uint64_t x) { return bit_scatter_even_64(x); }
 
@@ -167,7 +147,7 @@ static inline uint64_t cl_derivative_64(uint64_t x)
   return (x & UINT64_C(0xaaaaaaaaaaaaaaaa)) >> 1;
 }
 
-//-----------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // right/reflect/reversed carryless product (cr_ prefix)
 
 static inline uint32_t cr_mul_32(uint32_t a, uint32_t b)
@@ -198,7 +178,7 @@ static inline uint64_t cr_pow2_64(uint64_t x)
 }
 
 
-//-----------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // circular carryless product (cc_ prefix)
 
 #if 1
@@ -231,8 +211,7 @@ static inline uint64_t cc_mul_64(uint64_t a, uint64_t b)
 }
 #endif
 
-//-----------------------------------------------------------
-
+//────────────────────────────────────────────────────────────────────────────────────
 // inverse of crc32c(x,0):
 //   crc32c_inv(crc32c(x,0)) == crc32c(crc32c_inv(x),0) == x
 //   note: crc32c(a,b) == crc32c(a,0)^crc32c(b,0)
@@ -243,8 +222,7 @@ static inline uint32_t crc32c_inv(uint32_t x)
 }
 
 
-//-----------------------------------------------------------
-
+//────────────────────────────────────────────────────────────────────────────────────
 // worker for different bit-widths
 // inverses return either 0 or 1<<(bits-1) if
 // the input is a divisor (not-invertiable)
@@ -544,8 +522,8 @@ uint64_t cl_mul_order_log2_64(uint64_t x)
 #if 1
 
 // assumes that at least one of these is true:
-// * v is odd
-// * p is less than 32
+// • v is odd
+// • p is less than 32
 uint32_t cl_pow_k_32(uint32_t v, uint32_t p)
 {
   // move the 32-bit inputs to the top 32-bits of
@@ -564,8 +542,8 @@ uint32_t cl_pow_k_32(uint32_t v, uint32_t p)
 }
 
 // assumes that at least one of these is true:
-// * v is odd
-// * p is less than 64
+// • v is odd
+// • p is less than 64
 uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
 {
   cl_128_t r = cl_load_64(UINT64_C(1));
@@ -584,8 +562,8 @@ uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
 #else
 
 // assumes that at least one of these is true:
-// * v is odd
-// * p is less than 32
+// • v is odd
+// • p is less than 32
 uint32_t cl_pow_k_32(uint32_t x, uint32_t p)
 {
   uint32_t r = 1;
@@ -601,8 +579,8 @@ uint32_t cl_pow_k_32(uint32_t x, uint32_t p)
 }
 
 // assumes that at least one of these is true:
-// * v is odd
-// * p is less than 64
+// • v is odd
+// • p is less than 64
 uint64_t cl_pow_k_64(uint64_t v, uint32_t p)
 {
   uint64_t r = 1;
@@ -805,7 +783,7 @@ static inline uint64_t cl_sum_64(uint64_t n)
 
 
 
-//-----------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // bit operation built on carryless ops
 
 // TODO: switch for software carryless impl (not really planning on doing that ATM)
