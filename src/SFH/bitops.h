@@ -117,8 +117,8 @@ static inline uint32_t rol_32(uint32_t x, uint32_t n) { return rot_32(x,n); }
 static inline uint64_t rol_64(uint64_t x, uint32_t n) { return rot_64(x,n); }
 
 // bit_set_even_N_T :
-// * all even (lower) bits of 2N groups are set, otherwise clear
-// * bit (index i) set when (i & (1 << (N-1)))
+// • all even (lower) bits of 2N groups are set, otherwise clear
+// • bit (index i) set when (i & (1 << (N-1)))
 static const uint64_t bit_set_even_1_64  = UINT64_C(0x5555555555555555); // |01|01|
 static const uint64_t bit_set_even_2_64  = UINT64_C(0x3333333333333333); // |0011|0011|
 static const uint64_t bit_set_even_4_64  = UINT64_C(0x0f0f0f0f0f0f0f0f); // |0000ffff|
@@ -259,7 +259,7 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 #define BIT_SWAP2_64(X,Y)   BIT_SWAP2_T(uint64_t,X,Y)
 
 // Given two registers (X,Y) swap the bits set in mask M
-// * Guy Steele's bit field swap between two registers.  "Hacker's Delight,
+// • Guy Steele's bit field swap between two registers.  "Hacker's Delight,
 //   Exchanging Corresponding Fields of Registers". Evil side effect macro.
 #define BIT_FIELD_SWAP2(T,X,Y,M)  { T t=(X^Y)&(M); X^=t; Y^=t; }
 #define BIT_FIELD_SWAP2_32(X,Y,M) BIT_FIELD_SWAP2(uint32_t, X,Y,M)
@@ -274,9 +274,9 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 // 2) can't discard hi bits, so: ((m<<s)>>s) ==m
 
 // if all bits are moved, (m|(m<<s) = ~0, then can used 'bit_permute_simple_step_{n}'
-// * Guy Steele's bit field swap. "Hacker's Delight, "Exchanging two
+// • Guy Steele's bit field swap. "Hacker's Delight, "Exchanging two
 //   fields of the same register"
-// * https://programming.sirrida.de/perm_fn.html#bit_permute_step
+// • https://programming.sirrida.de/perm_fn.html#bit_permute_step
 static inline uint64_t bit_permute_step_64(uint64_t x, uint64_t m, uint32_t s)
 {
   uint64_t t;
@@ -311,10 +311,10 @@ static inline uint32_t bit_permute_rot_step_32(uint32_t x, uint32_t m, uint32_t 
   return x;
 }
 
-// * "Hacker's Delight, "Exchanging two fields of the same register" (reduced).
+// • "Hacker's Delight, "Exchanging two fields of the same register" (reduced).
 //   First method described but since all bits are moving (m') is zero.
-// * SEE: 'bit_permute_step_{n}' above.
-// * https://programming.sirrida.de/perm_fn.html#bit_permute_step_simple
+// • SEE: 'bit_permute_step_{n}' above.
+// • https://programming.sirrida.de/perm_fn.html#bit_permute_step_simple
 #define BIT_PERMUTE(X,M,S)    (((X & M) << S) | ((X >> S) & M))
 
 static inline uint32_t bit_permute_step_simple_32(uint32_t x, uint32_t m, uint32_t s)
