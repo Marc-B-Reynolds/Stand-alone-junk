@@ -70,7 +70,7 @@ static inline uint32_t ave_ceil_u32(uint32_t a, uint32_t b) { return (a|b) - ((a
 static inline uint64_t ave_ceil_u64(uint64_t a, uint64_t b) { return (a|b) - ((a^b)>>1); }
 
 
-//-------------------------------------------------------------------------------
+//────────────────────────────────────────────────────────────────────────────────────
 // mod int ops assume inputs are in the ring [0,n) 
 
 // (x+1) % n
@@ -136,8 +136,7 @@ static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 
 
 
-//-------------------------------------------------------------------------------
-
+//────────────────────────────────────────────────────────────────────────────────────
 // multiplicative inverse: find i such that i*a = 1 (requires odd 'a')
 // SEE: https://marc-b-reynolds.github.io/math/2017/09/18/ModInverse.html
 
@@ -177,7 +176,7 @@ static inline pair_u64_t mod_inverse_x2_u64(uint64_t a, uint64_t b)
   return pair_u64(ic*b, ic*a);
 }
 
-// 128-bit result of 64-bit product (access via hi and lo elments)
+// 128-bit result of 64-bit product (access via hi and lo elements)
 static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
 {
   uint64_t hi,lo;
