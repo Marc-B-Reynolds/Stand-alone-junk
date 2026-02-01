@@ -28,8 +28,9 @@
 // NOTES:
 // • no real effort at portability. should minimize or nuke external dependencies
 // • Intel only ATM (half-assed NEON sorta in place)
-#ifndef CARRYLESS_H
-#define CARRYLESS_H
+
+#pragma once
+#define CARRYLESS_H   // needed as marker
 
 #ifndef BITOPS_H
 #include "bitops.h"
@@ -842,6 +843,5 @@ static inline uint64_t bit_suffix_sum_32(uint64_t a)
 
 #endif
 
-
 #undef CL_SWAP
-#endif
+
