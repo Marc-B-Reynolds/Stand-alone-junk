@@ -23,7 +23,7 @@
 // based versions perform 2 float→int and 1 int→float which
 // is a bit sad but we're exact.
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // D_2 lattice: (checkerboard, diagonal square, centered square)
 // • covering radius (R) is 1
 // • odd number of bits to quantize (2b+1 bits with b per component)
@@ -79,7 +79,7 @@ static inline i64x2_t vec2d_lattice_nearest_d2(vec2d_t v)
   return r;
 }
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // D_3 lattice: face-centered cubic (FCC)
 // • covering radius (R) is 1
 // • same as D_2 (just one more dimension)
@@ -124,7 +124,7 @@ static inline i64x4_t vec3d_lattice_nearest_d3(vec3d_t v)
   return r;
 }
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // A_3 lattice: body-centered cubic (BCC)
 // • covering radius (R) is sqrt(5)/4
 // • 3b+1 bits to quantize with b per component
@@ -170,7 +170,7 @@ static inline i64x4_t vec3d_lattice_nearest_a3(vec3d_t v, bool* s)
 }
 
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // 2D quantized to standard integer lattice (Z²),
 // b-bits per component for 2b bits total.
 // • covering radius (R) is 1/sqrt(2)
@@ -224,7 +224,7 @@ static inline vec2d_t vec2d_tiled_square_decode_z2(uint64_t u, uint32_t b)
   return vec2d(x,y);
 }
 
-//*******************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // 2D quantized to D_2
 // b-bits per component for 2b+1 bits total.
 // • covering radius (R) is 1
@@ -287,6 +287,3 @@ static inline vec2d_t vec2d_tiled_square_decode_d2(uint64_t u, uint32_t b)
 
   return vec2(x,y);
 }
-
-//*******************************************************
-// 
