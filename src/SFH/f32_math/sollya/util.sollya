@@ -320,12 +320,12 @@ procedure f64_build(f, basis, x0, x1)
 
 procedure f32_build_constrained(f, basis, x0, x1, req)
 {
-  return fn_build_constrained(f, basis, x0, x1, req, [|24...|], relative);
+  return fn_build_constrained(f, basis, x0, x1, req, [|SG...|], relative);
 };
 
 procedure f64_build_constrained(f, basis, x0, x1, req)
 {
-  return fn_build_constrained(f, basis, x0, x1, req, [|53...|], relative);
+  return fn_build_constrained(f, basis, x0, x1, req, [|D...|], relative);
 };
 
 procedure f32_build_hp_lead(f, basis, x0, x1)
