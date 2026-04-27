@@ -1,0 +1,45 @@
+/* -*- mode: c; coding: utf-8 -*- */
+
+// Repeating Cecil Hastings asin approximations from 1955 using Sollya.
+// minor modification so f(0) and f(1) are exact.
+//
+// postive 'x' approximation has form: π/2 + sqrt(1-x)P(x)
+// where P is forced to have a constant term of -π/2.
+// Full range then is sign(x) times that.
+
+// attempting to find approximations of asin(x)-π/2 (for abs error)
+// form is no good for x smaller than ulp(1) since it is absorbed
+
+// Output is a bit of a PITA...sorry
+
+F  = asin(x)-pi/2;
+R  = [2^-54;1-2^-54];          // as-if double tweaked range (fine for smaller formats)
+T  = floating;
+E  = absolute;
+tx = sqrt(1-x);
+
+B  = [|SG...|];                // single precision (float,binary32)
+k  = -single(pi/2)*tx;         //  (ditto)
+
+//B  = [|HP...|];                // binary16 format
+//k  = -halfprecision(pi/2)*tx;  //  (ditto)
+  
+b0 = [|tx*x|];
+P0 = fpminimax(F, b0, B, R, T, E, k);
+P0;
+print("norm = ", accurateinfnorm(F-P0, R, 23), "\n");
+
+b1 = [|tx*x,x^2*tx|];
+P1 = fpminimax(F, b1, B, R, T, E, k);
+P1;
+print("norm = ", accurateinfnorm(F-P1, R, 23), "\n");
+
+b2 = [|tx*x,tx*x^2,tx*x^3|];
+P2 = fpminimax(F, b2, B, R, T, E, k);
+P2;
+print("norm = ", accurateinfnorm(F-P2, R, 23), "\n");
+
+b3 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
+P3 = fpminimax(F, b3, B, R, T, E, k);
+P3;
+print("norm = ", accurateinfnorm(F-P3, R, 23), "\n");
