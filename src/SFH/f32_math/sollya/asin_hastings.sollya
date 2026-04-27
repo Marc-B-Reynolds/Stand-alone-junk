@@ -23,7 +23,11 @@ k  = -single(pi/2)*tx;         //  (ditto)
 
 //B  = [|HP...|];                // binary16 format
 //k  = -halfprecision(pi/2)*tx;  //  (ditto)
-  
+
+// For other 16-bit formats requires modifing 'k' to be
+// rounded to the number of precision bits and B to an
+// explict list of that number.
+
 b0 = [|tx*x|];
 P0 = fpminimax(F, b0, B, R, T, E, k);
 P0;
