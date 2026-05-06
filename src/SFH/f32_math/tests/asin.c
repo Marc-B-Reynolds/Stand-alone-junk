@@ -1,3 +1,5 @@
+// -*- coding: utf-8 -*-
+
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -139,6 +141,98 @@ float cephes_asinf(float x)
   return f32_mulsign(t,sx);
 }
 
+// https://mastodon.gamedev.place/@eniko/115813868508988177
+// max abs error ~= 1.140559e-02
+// uica: 33.00/33.00 (clang 21.1.0 / gcc 15.2)
+float eniko(float x)
+{
+  float c = 1.f - sqrtf(-fmaf(x,x,-1.f));
+  float a = f32_mul_by_sign(f32_pi*0.5,x);
+  float r = f32_lerp(x,a,c*c);
+  return r;
+}
+
+// max abs error ~= 4.261762e-03
+// uica: 22.11/21.00  (skylake predicted throughput)
+float gross_0(float x)
+{
+  // Hastings 1955 style except forcing the constant
+  // term of P so f(0) & f(1) are exact
+  // positive 'x':
+  //   π/2 + sqrt(1-x)P(x)
+  //   P(x) = c₀x - π/2
+  // and fold through by product with sign(x) to handle
+  // negative x inputs (and x's become |x|).
+
+  static const float c0 = 0.17539402770089185f;
+  
+  float k = f32_mul_by_sign(f32_pi/2.f,x);   // sign(x) * π/2
+  float a = fabsf(x);                        // |x|
+  float t = sqrtf(1.f-a);                    // sqrt(1-|x|)
+  float p = fmaf(x,c0,-k);                   // P(x)
+  return fmaf(t,p,k);
+}
+
+// max abs error ~= 4.024506e-04
+// uica: 22.11/21.00 
+float gross_1(float x)
+{
+  // like above but 2nd order P
+  //   P(x) = (c₁x + c₀)x - π/2
+
+  static const float c1 = -0.05344910528338329f;
+  static const float c0 =  0.20744683027439512f;
+  
+  float k = f32_mul_by_sign(f32_pi/2.f,x);
+  float a = fabsf(x);
+  float t = sqrtf(1.f-a);
+  float p = fmaf(x,fmaf(a,c1,c0),-k);
+
+  return fmaf(t,p,k);
+}
+
+
+// max abs error ~= 4.506111e-05
+// uica: 22.78/21.70
+float gross_2(float x)
+{
+  // like above but 3rd order P
+  //   P(x) = ((c₂x + c₁)x + c₀)x - π/2
+
+  static const float c2 =  0.021641525571976804f;
+  static const float c1 = -0.07798149543591731f;
+  static const float c0 =  0.21330134383396135f;
+  
+  float k = f32_mul_by_sign(f32_pi/2.f,x);
+  float a = fabsf(x);
+  float t = sqrtf(1.f-a);
+  float p = fmaf(x,fmaf(a,fmaf(a,c2,c1),c0),-k);
+
+  return fmaf(t,p,k);
+}
+
+
+// max abs error ~= 5.662441e-06
+// uica: 23.00/21.60
+float gross_3(float x)
+{
+  // like above but 4th order P
+  //   P(x) = ((((c₃ + c₂)x + x + c₁)x + c₀)x - π/2
+
+  static const float c3 = -0.010044210004718978f; 
+  static const float c2 =  0.03822427750032387f;
+  static const float c1 = -0.0860213463845701f;
+  static const float c0 =  0.2143665611826344f;
+  
+  float k = f32_mul_by_sign(f32_pi/2.f,x);
+  float a = fabsf(x);
+  float t = sqrtf(1.f-a);
+  float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,c3,c2),c1),c0),-k);
+
+  return fmaf(t,p,k);
+}
+
+
 // expand classic constructions
 float asin_x0_k3(float x) { return f32_asin_x0(x, &f32_asincos_k3); }
 float asin_x0_k4(float x) { return f32_asin_x0(x, &f32_asincos_k4); }
@@ -247,6 +341,7 @@ float cr_asinf(float x){
 
 func_entry_t func_table[] =
 {
+#if 0  
   ENTRY(libm),
   ENTRY(fdlibm_asinf),
   //ENTRY(cephes_asinf),
@@ -261,6 +356,12 @@ func_entry_t func_table[] =
   ENTRY(asin_x1_k4),
   ENTRY(asin_x1_k5),
   ENTRY(asin_x1_k6),
+#endif
+  ENTRY(eniko),
+  ENTRY(gross_0),
+  ENTRY(gross_1),
+  ENTRY(gross_2),
+  ENTRY(gross_3),
 };
 
 const char* func_name = "asin";
@@ -306,8 +407,11 @@ void test_spot(void)
 void test_all(void)
 {
   uint32_t x0 = f32_to_bits(0.0f);
-  uint32_t x1 = f32_to_bits(1.0f);
-  test_force(x0,x1);
+  uint32_t x1 = f32_to_bits(0x1.d12edp-12f);
+
+  test_identity_range(x0,x1);
+  test_force(x1+1, f32_to_bits(0.5f)-1);
+  test_spot();
 }
 
 void test_sanity(void)
