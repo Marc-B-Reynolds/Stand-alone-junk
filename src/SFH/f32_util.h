@@ -164,10 +164,18 @@ static inline float f32_mulsign(float v, uint32_t s)
   return f32_from_bits(f32_to_bits(v)^s);
 }
 
+// isolate sign bit of 'a'
 static inline uint32_t f32_sign_bit(float a)
 {
   return f32_to_bits(a) & f32_sign_bit_k;
 }
+
+// |a| as bit pattern
+static inline uint32_t f32_abs_bits(float a)
+{
+  return f32_to_bits(a) & (~f32_sign_bit_k);
+}
+
 
 // v * copysignf(1.f, s)
 static inline float f32_mul_by_sign(float v, float s)
