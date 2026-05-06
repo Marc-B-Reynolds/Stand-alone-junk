@@ -134,6 +134,11 @@ static inline uint64_t f64_sign_bit(double a)
   return f64_to_bits(a) & f64_sign_bit_k;
 }
 
+static inline uint64_t f64_abs_bits(float a)
+{
+  return f64_to_bits(a) & (~f64_sign_bit_k);
+}
+
 // v * copysign(1.0, s)
 static inline double f64_mul_by_sign(double v, double s)
 {
