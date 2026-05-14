@@ -886,35 +886,6 @@ static inline float    demote_f64 (double x)  { return (float) x; }
     default: (void*)0)(_x);   \
   })
 
-//────────────────────────────────────────────────────────────────────────────────────
-// base Intel intrinsic interop support
-// (actually nope...and probably shouldn't be in this file anyway)
-
-#if 0 // defined(__x86_64__)
-
-// actually would like to avoid this heavy-weight thing. temp hack to always include
-#include <x86intrin.h>
-
-static inline __m128  f32x4_to_intel(f32x4_t x) { return type_pun(x,__m128);  }
-static inline __m128i i32x4_to_intel(i32x4_t x) { return type_pun(x,__m128i); }
-static inline __m128d f64x2_to_intel(f64x2_t x) { return type_pun(x,__m128d); }
-static inline __m256  f32x8_to_intel(f32x8_t x) { return type_pun(x,__m256);  }
-static inline __m256i i32x8_to_intel(i32x8_t x) { return type_pun(x,__m256i); }
-static inline __m256d f64x4_to_intel(f64x4_t x) { return type_pun(x,__m256d); }
-
-static inline f32x4_t f32x4_from_intel(__m128  x) { return type_pun(x,f32x4_t); }
-static inline i32x4_t i32x4_from_intel(__m128i x) { return type_pun(x,i32x4_t); }
-static inline f64x2_t f64x2_from_intel(__m128d x) { return type_pun(x,f64x2_t); }
-static inline f32x8_t f32x8_from_intel(__m256  x) { return type_pun(x,f32x8_t); }
-static inline i32x8_t i32x8_from_intel(__m256i x) { return type_pun(x,i32x8_t); }
-static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); }
-
-#if defined(SIMD_ENABLE_512)
-
-
-#endif
-#endif
-
 
 //────────────────────────────────────────────────────────────────────────────────────
 // generic to specialized expansion macros (expand function or prototype)
@@ -937,6 +908,106 @@ static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); 
 #define SIMD_MAKE_3FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c);
 #define SIMD_MAKE_4FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d);
 #endif
+
+//────────────────────────────────────────────────────────────────────────────────────
+// 
+
+// a-b/a+b (even/odd lanes)
+//  intel: matches vaddsub for floating point.
+//  Opposite naming is because the order is
+//  considered to be as if an array. GCC clears
+//  out top two for the synthetic f32x2
+#define simd_sub_add(A,B) ({                  \
+  simd_param_2(A,B);                          \
+  for(size_t i=0; i<simd_dim(_a); i+=2) {     \
+    _a[i  ] -= _b[i];                         \
+    _a[i+1] += _b[i+1];                       \
+  }                                           \
+  _a;                                         \
+})
+
+// a+b/a-b (even/odd lanes)
+//   intel: clang add/sub/blend,
+//   intel: GCC   broadcast sign/xor/addsub
+#define simd_add_sub(A,B) simd_add_sub((A),-(B))
+
+
+#if !defined(__x86_64__) || !defined(__AVX2__)
+
+// fma(a,b,-c)/fmaf(a,b,c) (even/odd lanes)
+// GCC & clang aren't matching these with GCC going crazy
+#define simd_fmsubadd(A,B,C) ({                       \
+  simd_param_3(A,B,C);                                \
+  for(size_t i=0; i<simd_dim(_a); i+=2) {             \
+    _a[i  ] = simd_fma_s(_a[i  ], _b[i  ], -_c[i  ]); \
+    _a[i+1] = simd_fma_s(_a[i+1], _b[i+1],  _c[i+1]); \
+  }                                                   \
+  _a;                                                 \
+})
+
+#else
+
+// both GCC & clang zero out top two of each (sadface)
+// this is also "broken" for any input being a scalar (sadface)
+static inline f32x2_t fmsubadd_f32x2(f32x2_t a, f32x2_t b, f32x2_t c)
+{
+  f32x4_t _a = {a[0],a[1]};
+  f32x4_t _b = {b[0],b[1]};
+  f32x4_t _c = {c[0],c[1]};
+  f32x4_t _r = __builtin_ia32_vfmaddsubps(_a,_b,_c);
+
+  return (f32x2_t){_r[0],_r[1]};
+}
+
+#define simd_fmsubadd(A,B,C) ({             \
+  simd_param_3(A,B,C);                      \
+  _Generic((_a),                            \
+    f32x2_t: fmsubadd_f32x2,                \
+    f32x4_t: __builtin_ia32_vfmaddsubps,    \
+    f32x8_t: __builtin_ia32_vfmaddsubps256, \
+    f64x2_t: __builtin_ia32_vfmaddsubpd,    \
+    f64x4_t: __builtin_ia32_vfmaddsubpd256, \
+    default: (void*)0)(_a,_b,_c);           \
+})
+
+#endif
+
+
+//────────────────────────────────────────────────────────────────────────────────────
+// add adjacent even/odd pairs: bottom half is 'a' and top 'b'
+// floating point types only
+
+#if !defined(__x86_64__) || !defined(__AVX2__) || defined(__clang__)
+#define simd_hadd(A,B) ({                   \
+  simd_param_2(A,B);                        \
+  static_assert(simd_is_scalar_fp(_a[0]),   \
+    "floating-point only");                 \
+  typeof(_a) _r;                            \
+  size_t h = simd_dim(_a) >> 1;             \
+  for(size_t i=0,o=0; o<h; i+=2,o++) {      \
+    _r[o  ] = _a[i] + _a[i+1];              \
+    _r[o+h] = _b[i] + _b[i+1];              \
+  }                                         \
+  _r;                                       \
+})
+
+#else
+
+// intel GCC needs it's hand held ATM
+#define simd_hadd(A,B) ({                   \
+  simd_param_2(A,B);                        \
+  static_assert(simd_is_scalar_fp(_a[0]),   \
+    "floating-point only");                 \
+  _Generic((_a),                            \
+    f32x4_t: __builtin_ia32_haddps,         \
+    f32x8_t: __builtin_ia32_haddps256,      \
+    f64x2_t: __builtin_ia32_haddpd,         \
+    f64x4_t: __builtin_ia32_haddpd256,      \
+    default: (void*)0)(_a,_b);              \
+})
+
+#endif
+
 
 //────────────────────────────────────────────────────────────────────────────────────
 // generic SIMD libm functionality
@@ -1228,8 +1299,10 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 //────────────────────────────────────────────────────────────────────────────────────
 // blend support:  (a & s) | (a & (~s))
-// can only be lowered into an actual blend if the
-// compiler can see `s` is a selection mask
+// intel: can only be lowered into an actual blend
+// if the compiler can see `s` is a selection mask.
+// should have a sign selection version as well so
+// not the need sign bit smearing to match.
 
 #if defined(SIMD_USE_C23)
 #define simd_blend_i(A,B,S) ({    \
