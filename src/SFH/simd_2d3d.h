@@ -5,9 +5,6 @@
 // ssimd (2D/3D spatial SIMD)
 // Logically extends `simd.h` with some 2D & 3D types. Meaning that
 // it can be used either in isolation or with `simd.h` (expand a bit)
-// If `simd.h` isn't include then:
-// • There's no attempt compiler option inspection. (expand)
-// • note other stuff
 // The construction methodology (however) is opposite. A smaller set
 // of types and expected interactions between scalar/vector types
 // because they usually explict with specific operations. So a much higher
@@ -36,83 +33,21 @@
 // TODO: (tons)
 // • big functions being inlines is temp hack
 
-// temp hack
-//#pragma once
+#pragma once
 
 #if defined(__GNUC__)
 
 #define SFH_SIMD_2D3D_H
 
 #if !defined(SFH_SIMD_H)
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-
-// this should duplicate how attributes are choosen in simd.h (SIMD_MAKE_TYPE_EX)
-#if __has_attribute(ext_vector_type) && !defined(SIMD_USE_VECTOR_SIZE)
-#define SSIMD_TYPE_ATTR(B,N) __attribute__((ext_vector_type(N)))
-#else
-#define SSIMD_TYPE_ATTR(B,N) __attribute__((vector_size(B*N/8)))
-#endif
-
-// make the typedefs
-typedef float  f32x2_t SSIMD_TYPE_ATTR(32,2);
-typedef double f64x2_t SSIMD_TYPE_ATTR(64,2);
-typedef float  f32x4_t SSIMD_TYPE_ATTR(32,4);
-typedef double f64x4_t SSIMD_TYPE_ATTR(64,4);
-
-// for bit manipulation based functionality
-typedef int32_t  i32x2_t SSIMD_TYPE_ATTR(32,2);
-typedef int64_t  i64x2_t SSIMD_TYPE_ATTR(64,2);
-typedef int32_t  i32x4_t SSIMD_TYPE_ATTR(32,4);
-typedef int64_t  i64x4_t SSIMD_TYPE_ATTR(64,4);
-
-typedef uint32_t u32x2_t SSIMD_TYPE_ATTR(32,2);
-typedef uint64_t u64x2_t SSIMD_TYPE_ATTR(64,2);
-typedef uint32_t u32x4_t SSIMD_TYPE_ATTR(32,4);
-typedef uint64_t u64x4_t SSIMD_TYPE_ATTR(64,4);
-
-
-#ifndef type_pun
-#define type_pun(X,TYPE) ({			    \
- static_assert(sizeof(X) == sizeof(TYPE),"size mismatch"); \
-  typeof(X) __x = (X);                              \
-  TYPE __d;                                         \
-  memcpy(&__d, &__x, sizeof(TYPE));                 \
-  __d;                                              \
-})
-#endif
-
-
-#if defined(__x86_64__)
-#include <x86intrin.h>
-
-static inline __m128  f32x4_to_intel(f32x4_t x) { return type_pun(x,__m128);  }
-static inline __m128i i32x4_to_intel(i32x4_t x) { return type_pun(x,__m128i); }
-static inline __m128d f64x2_to_intel(f64x2_t x) { return type_pun(x,__m128d); }
-static inline __m256d f64x4_to_intel(f64x4_t x) { return type_pun(x,__m256d); }
-
-static inline f32x4_t f32x4_from_intel(__m128  x) { return type_pun(x,f32x4_t); }
-static inline i32x4_t i32x4_from_intel(__m128i x) { return type_pun(x,i32x4_t); }
-static inline f64x2_t f64x2_from_intel(__m128d x) { return type_pun(x,f64x2_t); }
-static inline f64x4_t f64x4_from_intel(__m256d x) { return type_pun(x,f64x4_t); }
-
-#endif
-
-
-
-#else
-
-// could put some forwarding to simd.h stuff here (esp if complexity
-// is about the same as any specialized versions in this file.
-
+#include "simd.h"
 #endif
 
 // 3D vector is stored 4 elements
 typedef f32x2_t vec2f_t;
 typedef f64x2_t vec2d_t;
+typedef f32x4_t vec4f_t;
+typedef f64x4_t vec4d_t;
 typedef f32x4_t quatf_t;
 typedef f64x4_t quatd_t;
 typedef quatf_t vec3f_t;
@@ -126,7 +61,7 @@ typedef quatd_t vec3d_t;
 // • On intel f32x2_t is synthesized (uses 128-bit registers).
 //   need to figure out a (zero overhead on expansion) way to
 //   type pun to __m128 for any work-a-round direct to intrinsic
-//   calls. (SEE: vec2f_fmadd_sub)
+//   calls. (SEE: vec2f_fmadd_sub) (actually __builtin_ funcs instead)
 
 //────────────────────────────────────────────────────────────────────────────────────
 // type pun (bit pattern) float to int (fi) and int to float (if)
@@ -187,6 +122,7 @@ static inline quatd_t quatd(double x, double y, double z, double w) { return (qu
 
 #define vec2(x,y)   ({_Generic(x, float:vec2f, default: vec2d)(x,y);   })
 #define vec3(x,y,z) ({_Generic(x, float:vec3f, default: vec3d)(x,y,z); })
+#define quat(x,...) ({_Generic(x, float:quatf, double:quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
 
 // set from bivector + scalar: Q = (b,s)
@@ -202,7 +138,6 @@ static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1]
 #define quatd_set(x,...)                                                \
 ({_Generic(x, quatd_t:quatd_bs, default: quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
-#define quat(x,...) ({_Generic(x, float:quatf, double:quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
 // expand generic expression which forward to a function and first parameter is a scalar
 // (no need to perform any parameter capturing)
@@ -340,9 +275,9 @@ static inline quatd_t quatd_floor(quatd_t x) { return quatd(floor (x[0]),floor (
 
 
 //────────────────────────────────────────────────────────────────────────────────────
-// An special case implementations that have to punt to
+// A special case implementations that have to punt to
 // direct intrinsic calls for some reason or another.
-
+// KILL ALL OF THIS
 
 #if defined(__x86_64__)
 
