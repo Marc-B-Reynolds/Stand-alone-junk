@@ -10,8 +10,8 @@
 //    lattices plus Z^2 and Z^3 with version for standard
 //    and tiled space.
 //    The routines accept the number of bits per direction
-//    'b' so 'b' must be a known constant to to compiler
-//    to not suck performance wise.
+//    'b' so 'b' must be a known constant to the compiler
+//    for it not suck performance wise.
 
 #pragma once
 
