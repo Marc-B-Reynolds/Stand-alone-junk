@@ -266,7 +266,7 @@ static inline double f64_sqrt(double a)
 #if defined(__NO_MATH_ERRNO__) || defined(_M_FP_FAST)
   return sqrt(a);
 #elif defined(F64_INTEL)
-  return _mm_cvtsd_f64(_mm_sqrt_sd(_mm_undefined_pd(),_mm_set_sd(a)));
+  return _mm_cvtsd_f64(_mm_sqrt_pd(_mm_set_sd(a)));
 #elif defined(F64_ARM)
   return __sqrt(a);
 #else
