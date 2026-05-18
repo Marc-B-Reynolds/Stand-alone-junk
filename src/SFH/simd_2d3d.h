@@ -31,6 +31,8 @@
 // •
 
 // TODO: (tons)
+// • experimental so not very coherent ATM
+// • redundency is on purpose but should be less copy-pasta (more simple macro defs to forward)
 // • big functions being inlines is temp hack
 
 #pragma once
@@ -40,7 +42,7 @@
 #define SFH_SIMD_2D3D_H
 
 #if !defined(SFH_SIMD_H)
-#include "simd.h"
+#include "SFH/simd.h"
 #endif
 
 // 3D vector is stored 4 elements
@@ -117,11 +119,14 @@ static inline vec2f_t vec2f(float  x, float  y)                     { return (ve
 static inline vec2d_t vec2d(double x, double y)                     { return (vec2d_t){x,y}; }
 static inline vec3f_t vec3f(float  x, float  y, float  z)           { return (vec3f_t){x,y,z,0}; }
 static inline vec3d_t vec3d(double x, double y, double z)           { return (vec3d_t){x,y,z,0}; }
+static inline vec4f_t vec4f(float  x, float  y, float  z, float  w) { return (vec4f_t){x,y,z,w}; }
+static inline vec4d_t vec4d(double x, double y, double z, double w) { return (vec4d_t){x,y,z,w}; }
 static inline quatf_t quatf(float  x, float  y, float  z, float  w) { return (quatf_t){x,y,z,w}; }
 static inline quatd_t quatd(double x, double y, double z, double w) { return (quatd_t){x,y,z,w}; }
 
 #define vec2(x,y)   ({_Generic(x, float:vec2f, default: vec2d)(x,y);   })
 #define vec3(x,y,z) ({_Generic(x, float:vec3f, default: vec3d)(x,y,z); })
+#define vec4(x,...) ({_Generic(x, float:vec4f, double:vec4d)(x __VA_OPT__(,__VA_ARGS__));})
 #define quat(x,...) ({_Generic(x, float:quatf, double:quatd)(x __VA_OPT__(,__VA_ARGS__));})
 
 
@@ -159,16 +164,20 @@ static inline vec2f_t vec2f_broadcast(float  v) { return vec2f(v,v); }
 static inline vec2d_t vec2d_broadcast(double v) { return vec2d(v,v); }
 static inline vec3f_t vec3f_broadcast(float  v) { return vec3f(v,v,v); }
 static inline vec3d_t vec3d_broadcast(double v) { return vec3d(v,v,v); }
+static inline quatf_t vec4f_broadcast(float  v) { return vec4f(v,v,v,v); }
+static inline quatd_t vec4d_broadcast(double v) { return vec4d(v,v,v,v); }
 static inline quatf_t quatf_broadcast(float  v) { return quatf(v,v,v,v); }
 static inline quatd_t quatd_broadcast(double v) { return quatd(v,v,v,v); }
 
 #define vec2_broadcast(x) ssimd_fwd_sfunc(vec2,broadcast,x)
 #define vec3_broadcast(x) ssimd_fwd_sfunc(vec3,broadcast,x)
+#define vec4_broadcast(x) ssimd_fwd_sfunc(vec4,broadcast,x)
 #define quat_broadcast(x) ssimd_fwd_sfunc(quat,broadcast,x)
 
 // single "register" shuffles
 #define vec2_shuffle(V,A,B)     __builtin_shufflevector(V,V,A,B)
 #define vec3_shuffle(V,A,B,C)   __builtin_shufflevector(V,V,A,B,C,3)
+#define vec4_shuffle(V,A,B,C,D) __builtin_shufflevector(V,V,A,B,C,D)
 #define quat_shuffle(Q,A,B,C,D) __builtin_shufflevector(Q,Q,A,B,C,D)
 
 // two "register" shuffles
@@ -273,128 +282,6 @@ static inline quatd_t quatd_floor(quatd_t x) { return quatd(floor (x[0]),floor (
 #define vec3_round_up(x) vec3_floor((x)+0.5f)
 #define quat_round_up(x) quat_floor((x)+0.5f)
 
-
-//────────────────────────────────────────────────────────────────────────────────────
-// A special case implementations that have to punt to
-// direct intrinsic calls for some reason or another.
-// KILL ALL OF THIS
-
-#if defined(__x86_64__)
-
-// Currently neither GCC/clang match intel FMAs with even/odd element
-// add/sub (or vice versa) additive part.
-// The intrisic used has the opposite name because of the notion of
-// element orderings are reversed.
-
-// can't think of a way to handle this one since f32x2 is
-// synthesized on intel as 128-bit. humm...
-// It should be one op but it'll be many. 
-static inline vec2f_t vec2f_fmadd_sub(vec2f_t a, vec2f_t b, vec2f_t c)
-{
-  return vec2f(fmaf(a[0],b[0], c[0]), fmaf(a[1],b[1],-c[1]));
-}
-
-static inline vec2d_t vec2d_fmadd_sub(vec2d_t a, vec2d_t b, vec2d_t c)
-{
-  __m128d ia = type_pun(a,__m128d);
-  __m128d ib = type_pun(b,__m128d);
-  __m128d ic = type_pun(c,__m128d);
-  return type_pun(_mm_fmsubadd_pd(ia,ib,ic), vec2d_t);
-}
-
-static inline quatf_t quatf_fmadd_sub(quatf_t a, quatf_t b, quatf_t c)
-{
-  __m128 ia = type_pun(a,__m128);
-  __m128 ib = type_pun(b,__m128);
-  __m128 ic = type_pun(c,__m128);
-  return type_pun(_mm_fmsubadd_ps(ia,ib,ic), f32x4_t);
-}
-
-static inline quatd_t quatd_fmadd_sub(quatd_t a, quatd_t b, quatd_t c)
-{
-  __m256d ia = type_pun(a,__m256d);
-  __m256d ib = type_pun(b,__m256d);
-  __m256d ic = type_pun(c,__m256d);
-  return type_pun(_mm256_fmsubadd_pd(ia,ib,ic), f64x4_t);
-}
-
-#else
-
-static inline vec2f_t vec2f_fmadd_sub(vec2f_t a, vec2f_t b, vec2f_t c)
-{
-  return vec2f(fmaf(a[0],b[0], c[0]), fmaf(a[1],b[1],-c[1]));
-}
-
-static inline vec2d_t vec2d_fmadd_sub(vec2d_t a, vec2d_t b, vec2d_t c)
-{
-  return vec2d(fma(a[0],b[0], c[0]), fma(a[1],b[1],-c[1]));
-}
-
-static inline quatf_t quatf_fmadd_sub(quatf_t a, quatf_t b, quatf_t c)
-{
-  return quatf(fmaf(a[0],b[0], c[0]),
-               fmaf(a[1],b[1],-c[1]),
-               fmaf(a[2],b[2], c[2]),
-               fmaf(a[3],b[3],-c[3]));
-}
-
-static inline quatd_t quatd_fmadd_sub(quatd_t a, quatd_t b, quatd_t c)
-{
-  return quatf(fma(a[0],b[0], c[0]),
-               fma(a[1],b[1],-c[1]),
-               fma(a[2],b[2], c[2]),
-               fma(a[3],b[3],-c[3]));
-}
-
-#endif
-
-static inline vec3f_t vec3f_fmadd_sub(vec3f_t a, vec3f_t b, vec3f_t c) { return quatf_fmadd_sub(a,b,c); }
-static inline vec3d_t vec3d_fmadd_sub(vec3d_t a, vec3d_t b, vec3d_t c) { return quatd_fmadd_sub(a,b,c); }
-
-#define vec2_fmadd_sub(a,b,c) vec2_fwd(fmadd_sub, a,b,c)
-#define vec3_fmadd_sub(a,b,c) vec3_fwd(fmadd_sub, a,b,c)
-#define quat_fmadd_sub(a,b,c) quat_fwd(fmadd_sub, a,b,c)
-
-
-// WARNING: no generic version because defined to direct match the intel ops (hence the name) and the ordering
-// of the sums are different. temp hack because it'll be a source of errors.
-
-#if defined(__clang__) || !defined(__x86_64__)
-static inline f32x4_t intel_hadd_f32x4(f32x4_t a, f32x4_t b) { return (f32x4_t){a[0]+a[1],a[2]+a[3],b[0]+b[1],b[2]+b[3]}; }
-static inline f64x4_t intel_hadd_f64x4(f64x4_t a, f64x4_t b) { return (f64x4_t){a[0]+a[1],b[0]+b[1],a[2]+a[3],b[2]+b[3]}; }
-static inline f32x4_t intel_hsub_f32x4(f32x4_t a, f32x4_t b) { return (f32x4_t){a[0]-a[1],a[2]-a[3],b[0]-b[1],b[2]-b[3]}; }
-static inline f64x4_t intel_hsub_f64x4(f64x4_t a, f64x4_t b) { return (f64x4_t){a[0]-a[1],b[0]-b[1],a[2]-a[3],b[2]-b[3]}; }
-#else
-
-static inline f32x4_t intel_hadd_f32x4(f32x4_t a, f32x4_t b)
-{
-  __m128 ia = type_pun(a,__m128);
-  __m128 ib = type_pun(b,__m128);
-  return type_pun(_mm_hadd_ps(ia,ib), f32x4_t);
-}
-
-static inline f64x4_t intel_hadd_f64x4(f64x4_t a, f64x4_t b)
-{
-  __m256d ia = type_pun(a,__m256d);
-  __m256d ib = type_pun(b,__m256d);
-  return type_pun(_mm256_hadd_pd(ia,ib), f64x4_t);
-}
-
-static inline f32x4_t intel_hsub_f32x4(f32x4_t a, f32x4_t b)
-{
-  __m128 ia = type_pun(a,__m128);
-  __m128 ib = type_pun(b,__m128);
-  return type_pun(_mm_hsub_ps(ia,ib), f32x4_t);
-}
-
-static inline f64x4_t intel_hsub_f64x4(f64x4_t a, f64x4_t b)
-{
-  __m256d ia = type_pun(a,__m256d);
-  __m256d ib = type_pun(b,__m256d);
-  return type_pun(_mm256_hsub_pd(ia,ib), f64x4_t);
-}
-
-#endif
 
 // sum the abs of the elements
 static inline float  vec2f_asum(vec2f_t a) { return ssimd_abs(a[0]) + ssimd_abs(a[1]); }
