@@ -619,9 +619,11 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 #endif
 
 
-// not quite. these are the inner expansion.
-#define simd_fxor(A,B) simd_bitcast_if(simd_bitcast_fi(A) ^ simd_bitcast_fi(B))
-#define simd_fand(A,B) simd_bitcast_if(simd_bitcast_fi(A) & simd_bitcast_fi(B))
+// integer types can use the operator
+// vector/scalar interop but doesn't allow one to already be an integer.
+//   should add bitcast wrappers that does nop if already target type??
+#define simd_fxor(A,B) ({ simd_param_2(A,B); simd_bitcast_if(simd_bitcast_fi(_a) ^ simd_bitcast_fi(_b));})
+#define simd_fand(A,B) ({ simd_param_2(A,B); simd_bitcast_if(simd_bitcast_fi(_a) & simd_bitcast_fi(_B));})
 
 //────────────────────────────────────────────────────────────────────────────────────
 
@@ -727,6 +729,9 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 // NOTE: subtracting zero is identity function for floating point
 #define simd_splat_i(T,V) V-(T){0}
 
+// single register shuffle (array ordering indices)
+//   simd_shuffle(v,3,2,1,0) : reverses elements of 4 wide
+#define simd_shuffle(V,...) __builtin_shufflevector(V,V,__VA_ARGS__)
 
 //────────────────────────────────────────────────────────────────────────────────────
 // type widen/narrow
@@ -910,14 +915,12 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 #endif
 
 //────────────────────────────────────────────────────────────────────────────────────
-// 
-
 // a-b/a+b (even/odd lanes)
 //  intel: matches vaddsub for floating point.
 //  Opposite naming is because the order is
 //  considered to be as if an array. GCC clears
 //  out top two for the synthetic f32x2
-#define simd_sub_add(A,B) ({                  \
+#define simd_subadd(A,B) ({                   \
   simd_param_2(A,B);                          \
   for(size_t i=0; i<simd_dim(_a); i+=2) {     \
     _a[i  ] -= _b[i];                         \
@@ -929,13 +932,13 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 // a+b/a-b (even/odd lanes)
 //   intel: clang add/sub/blend,
 //   intel: GCC   broadcast sign/xor/addsub
-#define simd_add_sub(A,B) simd_add_sub((A),-(B))
+#define simd_addsub(A,B) simd_subadd((A),-(B))
 
 
 #if !defined(__x86_64__) || !defined(__AVX2__)
 
 // fma(a,b,-c)/fmaf(a,b,c) (even/odd lanes)
-// GCC & clang aren't matching these with GCC going crazy
+//   intel: GCC & clang aren't matching these with GCC going crazy
 #define simd_fmsubadd(A,B,C) ({                       \
   simd_param_3(A,B,C);                                \
   for(size_t i=0; i<simd_dim(_a); i+=2) {             \
@@ -948,8 +951,7 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 #else
 
 // both GCC & clang zero out top two of each (sadface)
-// this is also "broken" for any input being a scalar (sadface)
-static inline f32x2_t fmsubadd_f32x2(f32x2_t a, f32x2_t b, f32x2_t c)
+static inline f32x2_t fmsubadd_f32x2_v(f32x2_t a, f32x2_t b, f32x2_t c)
 {
   f32x4_t _a = {a[0],a[1]};
   f32x4_t _b = {b[0],b[1]};
@@ -962,7 +964,7 @@ static inline f32x2_t fmsubadd_f32x2(f32x2_t a, f32x2_t b, f32x2_t c)
 #define simd_fmsubadd(A,B,C) ({             \
   simd_param_3(A,B,C);                      \
   _Generic((_a),                            \
-    f32x2_t: fmsubadd_f32x2,                \
+    f32x2_t: fmsubadd_f32x2_v,              \
     f32x4_t: __builtin_ia32_vfmaddsubps,    \
     f32x8_t: __builtin_ia32_vfmaddsubps256, \
     f64x2_t: __builtin_ia32_vfmaddsubpd,    \
@@ -971,6 +973,9 @@ static inline f32x2_t fmsubadd_f32x2(f32x2_t a, f32x2_t b, f32x2_t c)
 })
 
 #endif
+
+// RN(ab+c)/RN(ab-c) (even/odd lanes)
+#define simd_fmaddsub(A,B,C) simd_fmsubadd(A,B,-(C))
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -993,7 +998,7 @@ static inline f32x2_t fmsubadd_f32x2(f32x2_t a, f32x2_t b, f32x2_t c)
 
 #else
 
-// intel GCC needs it's hand held ATM
+// intel GCC needs it's hand held ATM to match the opcodes
 #define simd_hadd(A,B) ({                   \
   simd_param_2(A,B);                        \
   static_assert(simd_is_scalar_fp(_a[0]),   \
@@ -1219,7 +1224,13 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 
 
-// SIMD FMA : R_i = RN(A_i•B_i + C_i)
+// R_i = RN(A_i•B_i + C_i) with any scalars broadcast
+// NOTE: if an input is a negated expression then surround the expression
+// in parentheses:
+//   simd_fma(a,b,-c*d)   // don't do this
+//   simd_fma(a,b,-(c*d)) // do this (or pull out into temp)
+// have seen compilers negate 'c' (load/xor) instead of using
+// the appropriate fma (a fused sub)
 #define simd_fma(A,B,C) ({     \
   simd_param_3(A,B,C);         \
   simd_fma_i(_a,_b,_c);        \
