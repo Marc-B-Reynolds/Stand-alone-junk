@@ -733,6 +733,9 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 //   simd_shuffle(v,3,2,1,0) : reverses elements of 4 wide
 #define simd_shuffle(V,...) __builtin_shufflevector(V,V,__VA_ARGS__)
 
+// 
+#define simd_barrier(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+
 //────────────────────────────────────────────────────────────────────────────────────
 // type widen/narrow
 
@@ -914,6 +917,7 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 #define SIMD_MAKE_4FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d);
 #endif
 
+
 //────────────────────────────────────────────────────────────────────────────────────
 // a-b/a+b (even/odd lanes)
 //  intel: matches vaddsub for floating point.
@@ -933,6 +937,11 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 //   intel: clang add/sub/blend,
 //   intel: GCC   broadcast sign/xor/addsub
 #define simd_addsub(A,B) simd_subadd((A),-(B))
+
+
+// only specializing floating point types
+//SIMD_MAP_PEEL(SIMD_MAKE_BFUN, subadd, SIMD_FP_X)
+//SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X)
 
 
 #if !defined(__x86_64__) || !defined(__AVX2__)
