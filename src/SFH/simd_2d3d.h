@@ -706,29 +706,38 @@ static inline vec2d_t vec2d_sq(vec2d_t a) { return vec2(ssimd_fma(a[0],a[0],-a[1
 
 //────────────────────────────────────────────────────────────────────────────────────
 //
+// • provided: a.w * b.w is finite then fourth component of result is zero
 
 static inline vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)
 {
-  // the fourth component is zero for any mixture of
-  // quatf_t and vec3f_t types.
-  vec3f_t a1 = vec3_shuffle(a, 2,0,1);     // (az,ax,ay)
-  vec3f_t b1 = vec3_shuffle(b, 1,2,0);     // (by,bz,bx)
-  vec3f_t r0 = a1*b1;                      // (az by,ax bz,ay bx)
-  vec3f_t a0 = vec3_shuffle(a, 1,2,0);     // (ay,az,ax)
-  vec3f_t b0 = vec3_shuffle(b, 2,0,1);     // (bz,bx,by)
-  
-  return vec3_fma(a0,b0,-r0);
+  vec3f_t ra = vec3_shuffle(a,1,2,0);   // [Ay,Az,Ax,Aw]
+  vec3f_t rb = vec3_shuffle(b,1,2,0);   // [By,Bz,Bx,Bw] 
+  vec3f_t r  = a*rb - ra*b;             // [AxBy-AyBx, AyBz-AzBy, AzBx-AxBz, AwBw-AwBw]
+  return vec3_shuffle(r,1,2,0);
 }
 
 static inline vec3d_t vec3d_cross(vec3d_t a, vec3d_t b)
 {
-  vec3d_t a1 = vec3_shuffle(a, 2,0,1);
-  vec3d_t b1 = vec3_shuffle(b, 1,2,0);
-  vec3d_t r0 = a1*b1;
-  vec3d_t a0 = vec3_shuffle(a, 1,2,0);
-  vec3d_t b0 = vec3_shuffle(b, 2,0,1);
-  
-  return vec3_fma(a0,b0,-r0);
+  vec3d_t ra = vec3_shuffle(a,1,2,0);
+  vec3d_t rb = vec3_shuffle(b,1,2,0);
+  vec3d_t r  = a*rb - ra*b;
+  return vec3_shuffle(r,1,2,0);
+}
+
+static inline vec3f_t vec3f_cross_fma(vec3f_t a, vec3f_t b)
+{
+  vec3f_t ra = vec3_shuffle(a,1,2,0);
+  vec3f_t rb = vec3_shuffle(b,1,2,0);
+  vec3f_t r  = simd_fma(a,rb, -(ra*b));  // paren for better matching fused mul sub
+  return vec3_shuffle(r,1,2,0);
+}
+
+static inline vec3d_t vec3d_cross_fma(vec3d_t a, vec3d_t b)
+{
+  vec3d_t ra = vec3_shuffle(a,1,2,0);
+  vec3d_t rb = vec3_shuffle(b,1,2,0);
+  vec3d_t r  = simd_fma(a,rb, -(ra*b));
+  return vec3_shuffle(r,1,2,0);
 }
 
 #define vec3_cross(a,b) vec3_fwd(cross,a,b)
@@ -961,98 +970,136 @@ static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
 #define quat_rot(q,v) quat_fwd(rot,q,v)
 
 
+//────────────────────────────────────────────────────────────────────────────────────
+// quaternion products
 
-#if !defined(__clang__)
+// unfused quaternion product
 
-// scalar implementation: see notes below
-// not happy because not bit identical. could be made so
-// but that means the alternate is "really" fixed.
+#if 1
+// By Alexander Monakov (but made uglier by me)
+// https://mastodon.gamedev.place/@amonakov/116339867934761348
+// • bookkeeping: six shuffles, an amortizable const load & XOR
+//   which is significantly better than any other method I'm
+//   aware of in Intel land.
+
+// self note: 16.00/17.00 gcc/clang
 static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
 {
-  float x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1];  
-  float y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0];
-  float z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3];
-  float w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2];
+  quatf_t s = { -0.0, -0.0, 0.0, 0.0 };
+  quatf_t t = simd_fxor(s, quat_shuffle(b,2,3,0,1));
+  return simd_subadd(a[3]*b - a[1]*t, quat_shuffle(a[2]*t - a[0]*b, 3,2,1,0));
+}
+
+static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
+{
+  quatd_t s = { -0.0, -0.0, 0.0, 0.0 };
+  quatd_t t = simd_fxor(s, quat_shuffle(b,2,3,0,1));
+  return simd_subadd(a[3]*b - a[1]*t, quat_shuffle(a[2]*t - a[0]*b, 3,2,1,0));
+}
+
+#else
+
+// bit exact with Monakov's versions above
+// self note: 18.00/22.22 gcc/clang
+static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
+{
+  float x = (a[3]*b[0]+a[1]*b[2]) - (a[2]*b[1]-a[0]*b[3]);
+  float y = (a[3]*b[1]+a[1]*b[3]) + (a[2]*b[0]-a[0]*b[2]);
+  float z = (a[3]*b[2]-a[1]*b[0]) + (a[2]*b[3]+a[0]*b[1]);
+  float w = (a[3]*b[3]-a[1]*b[1]) - (a[2]*b[2]+a[0]*b[0]);
 
   return quatf(x,y,z,w);
 }
 
 static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
 {
-  double x = a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1];  
-  double y = a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0];
-  double z = a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3];
-  double w = a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2];
+  double x = (a[3]*b[0]+a[1]*b[2]) - (a[2]*b[1]-a[0]*b[3]);
+  double y = (a[3]*b[1]+a[1]*b[3]) + (a[2]*b[0]-a[0]*b[2]);
+  double z = (a[3]*b[2]-a[1]*b[0]) + (a[2]*b[3]+a[0]*b[1]);
+  double w = (a[3]*b[3]-a[1]*b[1]) - (a[2]*b[2]+a[0]*b[0]);
 
   return quatd(x,y,z,w);
 }
 
-#else
+#endif
 
-// implementing directly like the expansion:
-//   (A+aw)(B+bw) = (AxB + bw A + aw B) + aw bw - dot(A,B)
-//                = (AxB + bw A + aw B) -(dot(A,B) - aw bw)
-// doesn't (or I'm failing) lower well.
-// 
-//                r
-//        r0             r1
-//    t0      t1     t2       tn
-//   ax bw + aw bx + ay bz - az by
-//   az bx + ay bw + aw by - ax bz
-//   ax by + az bw + aw bz - ay bx
-// -(az bz + ax bx + ay by - aw bw)
-//
-// uiCA throughput prediction (skylake)
-//   clang 17.5 / gcc 29.00 {this}
-//   clang 18.0 / gcc 21.50 {scalar version above}
-//
-// structured to break dep-chains instead of minimizing
-// rounding error (nested FMAs)
-static inline quatf_t quatf_mul(quatf_t a, quatf_t b)
+
+// fused versions of the product. This is more for reducing port
+// usage than decreasing the rounding error. The downside is
+// that the dependency chain is one longer so it "can" have slower
+// throughput (generally expected to be faster).
+
+#if 1
+
+// self note: 17.00/15.00 gcc/clang
+static inline quatf_t quatf_mul_fma(quatf_t a, quatf_t b)
 {
-  // use of typeof(a) is to be able to copy-paste between
-  // the two bit-width versions (pre C23 auto)
+  quatf_t s  = { -0.0, -0.0, 0.0, 0.0 };
+  quatf_t t  = simd_fxor(s, quat_shuffle(b,2,3,0,1)); 
 
-  typeof(a) a0 = quat_shuffle(a, 0,2,0,2);     // [ax   ,az   ,ax   ,az   ] {t0}
-  typeof(a) b0 = quat_shuffle(b, 3,0,1,2);     // [   bw,   bx,   by,   bz] {t0}
-  typeof(a) a1 = quat_shuffle(a, 3,1,2,0);     // [aw   ,ay   ,az   ,ax   ] {t1}
-  typeof(a) b1 = quat_shuffle(b, 0,3,3,0);     // [   bx,   bw,   bw,   bx] {t1}
-  typeof(a) r0 = quat_fma(a0,b0,a1*b1);        //                           {r0}
-    
-  typeof(a) a2 = quat_shuffle(a, 1,3,3,1);     // [ay   ,aw   ,aw   ,ay   ] {t2}
-  typeof(a) b2 = quat_shuffle(b, 2,1,2,1);     // [   bz,   by,   bz,   by] {t2}
-  typeof(a) an = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ] {tn}
-  typeof(a) bn = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw] {tn}
-  typeof(a) r1 = quat_fma(a2,b2,-an*bn);       //                           {t2 - tn}
+  // both GCC and clang need the parens on the product
+  // to pattern match a fuse multiply subtraction
+  quatf_t r0 = simd_fma(a[3],b, -(a[1]*t));
+  quatf_t r1 = simd_fma(a[2],t, -(a[0]*b));
 
-  typeof(a) r  = r0 + r1;                      //                           {r}
+#if defined(__clang__)  
+  // clang tries to optimize the shuffles and ends
+  // up almost doubling the number of them. Make
+  // it forget the "story so far" to correct.
+  // This problem goes away if the subadd below
+  // uses a direct 4 wide version. Strange & correct
+  simd_barrier(r1,t);
+#endif
 
-  return quat_neg_scalar(r);
+  return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
 }
 
-static inline quatd_t quatd_mul(quatd_t a, quatd_t b)
+static inline quatd_t quatd_mul_fma(quatd_t a, quatd_t b)
 {
-  typeof(a) a0 = quat_shuffle(a, 0,2,0,2);     // [ax   ,az   ,ax   ,az   ] {t0}
-  typeof(a) b0 = quat_shuffle(b, 3,0,1,2);     // [   bw,   bx,   by,   bz] {t0}
-  typeof(a) a1 = quat_shuffle(a, 3,1,2,0);     // [aw   ,ay   ,az   ,ax   ] {t1}
-  typeof(a) b1 = quat_shuffle(b, 0,3,3,0);     // [   bx,   bw,   bw,   bx] {t1}
-  typeof(a) r0 = quat_fma(a0,b0,a1*b1);        //                           {r0}
-    
-  typeof(a) a2 = quat_shuffle(a, 1,3,3,1);     // [ay   ,aw   ,aw   ,ay   ] {t2}
-  typeof(a) b2 = quat_shuffle(b, 2,1,2,1);     // [   bz,   by,   bz,   by] {t2}
+  quatd_t s  = { -0.0, -0.0, 0.0, 0.0 };
+  quatd_t t  = simd_fxor(s, quat_shuffle(b,2,3,0,1)); 
+  quatd_t r0 = simd_fma(a[3],b, -(a[1]*t));
+  quatd_t r1 = simd_fma(a[2],t, -(a[0]*b));
 
-  typeof(a) an = quat_shuffle(a, 2,0,1,3);     // [az   ,ax   ,ay   ,aw   ] {tn}
-  typeof(a) bn = quat_shuffle(b, 1,2,0,3);     // [   by,   bz,   bx,   bw] {tn}
-  typeof(a) r1 = quat_fma(a2,b2,-an*bn);       //                           {t2 - tn}
+#if defined(__clang__)  
+  simd_barrier(r1,t);
+#endif  
 
-  typeof(a) r  = r0 + r1;
+  return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
+}
 
-  return quat_neg_scalar(r);
+#else
+
+// alternates are bit exact with versions above
+
+// self note: 22.56/17.92 gcc/clang
+static inline quatf_t quatf_mul_fma(quatf_t a, quatf_t b)
+{
+  float x = fmaf(a[3],b[0], a[1]*b[2]) - fmaf(a[2],b[1],-a[0]*b[3]);
+  float y = fmaf(a[3],b[1], a[1]*b[3]) + fmaf(a[2],b[0],-a[0]*b[2]);
+  float z = fmaf(a[3],b[2],-a[1]*b[0]) + fmaf(a[2],b[3], a[0]*b[1]);
+  float w = fmaf(a[3],b[3],-a[1]*b[1]) - fmaf(a[2],b[2], a[0]*b[0]);
+
+  return quatf(x,y,z,w);
+}
+
+static inline quatd_t quatd_mul_fma(quatd_t a, quatd_t b)
+{
+  float x = fma(a[3],b[0], a[1]*b[2]) - fma(a[2],b[1],-a[0]*b[3]);
+  float y = fma(a[3],b[1], a[1]*b[3]) + fma(a[2],b[0],-a[0]*b[2]);
+  float z = fma(a[3],b[2],-a[1]*b[0]) + fma(a[2],b[3], a[0]*b[1]);
+  float w = fma(a[3],b[3],-a[1]*b[1]) - fma(a[2],b[2], a[0]*b[0]);
+
+  return quatd(x,y,z,w);
 }
 
 #endif
 
-#define quat_mul(a,b) quat_fwd(mul,a,b)
+
+#define quat_mul(a,b)     quat_fwd(mul,a,b)
+#define quat_mul_fma(a,b) quat_fwd(mul_fma,a,b)
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 
 // unit quaterions Q and Ql where Q=QlQr: solve for Qr
