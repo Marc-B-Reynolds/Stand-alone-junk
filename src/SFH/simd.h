@@ -733,8 +733,24 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 //   simd_shuffle(v,3,2,1,0) : reverses elements of 4 wide
 #define simd_shuffle(V,...) __builtin_shufflevector(V,V,__VA_ARGS__)
 
-// 
-#define simd_barrier(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+// snake charm the compiler: forget how the V1,V2 chain was computed. This is
+// for when a compiler is dropping the ball attempting to optimize across a
+// series of computations and generates worse code as a result.
+// Every usage of simd_barrier should be noted for it's raison d'etre
+// _v : both are vectors, _s: both are scalars
+#define simd_barrier_v(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+#define simd_barrier_s(V1,V2) do { asm ("" : "+r" (V1), "+r"(V2)); } while (0)
+
+// the hiccups that simd_barrier attempts to address are compiler (including
+// version) + target uArch specific. this is a first pass hack.
+#if defined(__clang__)
+#define simd_barrier_v_clang simd_barrier_v
+#define simd_barrier_v_gcc(A,B) 
+#else
+#define simd_barrier_v_gcc  simd_barrier_v
+#define simd_barrier_v_clang(A,B) 
+#endif
+
 
 //────────────────────────────────────────────────────────────────────────────────────
 // type widen/narrow
@@ -1197,7 +1213,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 
 //────────────────────────────────────────────────────────────────────────────────────
-// 
+// fused products
 
 // scalar FMA (generic binary32/binary64)
 #define simd_fma_s(A,B,C)            \
@@ -1248,13 +1264,23 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 // all parameters must be vectors version
 #if (__has_builtin(__builtin_elementwise_fma))
+
 #define simd_fma_v(a,b,c) ({           \
   simd_assert_same_type3(a,b,c);       \
   simd_assert_vec(a);                  \
   typeof(a) _a=a,_b=b,_c=c;            \
   __builtin_elementwise_fma(_a,_b,_c); \
 })
+
+#define simd_fms_v(a,b,c) ({           \
+  simd_assert_same_type3(a,b,c);       \
+  simd_assert_vec(a);                  \
+  typeof(a) _a=a,_b=b,_c=c;            \
+  __builtin_elementwise_fma(_a,_b,-_c); \
+})
+
 #else
+
 #define simd_fma_v(a,b,c) ({     \
   simd_assert_same_type3(a,b,c); \
   simd_assert_vec(a);            \
@@ -1264,6 +1290,17 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   }                             \
   _a;                           \
 })
+
+#define simd_fms_v(a,b,c) ({     \
+  simd_assert_same_type3(a,b,c); \
+  simd_assert_vec(a);            \
+  typeof(a) _a=a,_b=b,_c=c;      \
+  for(size_t i=0; i<simd_dim_v(_a); i++) {  \
+    _a[i] = simd_fma_s(_a[i],_b[i],-_c[i]);  \
+  }                             \
+  _a;                           \
+})
+
 #endif
 
 // SIMD LERP: R_i = A_i(1-T_i) + B_i•T_i
@@ -1354,7 +1391,8 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 // • within ±3/2 ulp
 // • within ±1   ulp, if sign(ab) = sign(cd)
 // • currently requires all parameter be same vector type
-//   so any scalars need to be broadcasted if needed 
+//   so any scalars need to be broadcasted if needed
+// • need barrier like simd_mms?
 #define simd_mma(A,B,C,D)         \
 ({                                \
   typeof(A) _c = C;               \
@@ -1367,19 +1405,26 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 // • within ±3/2 ulp
 // • within ±1   ulp, if sign(ab) != sign(cd)
 // • currently requires all parameter be same vector type
-//   so any scalars need to be broadcasted if needed 
+//   so any scalars need to be broadcasted if needed
+// • barrier is for clang on Intel which ends put emitting
+//   a negate (load sign bit/XOR) instead of a fused sub.
+//   shouldn't (tm) break any other uArch optimizations.
 #define simd_mms(A,B,C,D)         \
 ({                                \
   typeof(A) _c = C;               \
   typeof(A) _d = D;               \
   typeof(A)  t = _c*_d;           \
-  simd_fma_v(A,B,-t) - simd_fma_v(_c,_d,-t); \
+  simd_barrier_v(t,_c);           \
+  simd_fms_v(A,B,t) - simd_fms_v(_c,_d,t); \
 })
 
 
 #if defined(SIMD_SPECIALIZE)
-SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mma, SIMD_FP_X) 
-SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X) 
+// with barriers these are barfing on clang with:
+// "couldn't allocate output register for constraint 'x'",
+// but manual expansion isn't ??? Need to examine.
+//SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mma, SIMD_FP_X) 
+//SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X) 
 #endif
 
 
