@@ -18,6 +18,8 @@
 // • make real note
 
 // NOTE:
+// • _fma functions are more reducing execution unit utilization and
+//   not really about error reductions.
 // • Since both 3D vectors and quaternions are 4 element vectors
 //   (C compatible types) the routines can't distinguish between them
 //   which (sadly) requires programmer care. (expand)
@@ -113,6 +115,8 @@ static inline f64x4_t ssimd_bitcast_if_64x4(i64x4_t a) { return type_pun(a,f64x4
 
 //────────────────────────────────────────────────────────────────────────────────────
 // basic support functionality
+// • the multiple ways to set/construct a type is mostly to prevent huge macro expansions
+//   for each type. 
 
 // "constructor" like functions
 static inline vec2f_t vec2f(float  x, float  y)                     { return (vec2f_t){x,y}; }
@@ -124,25 +128,30 @@ static inline vec4d_t vec4d(double x, double y, double z, double w) { return (ve
 static inline quatf_t quatf(float  x, float  y, float  z, float  w) { return (quatf_t){x,y,z,w}; }
 static inline quatd_t quatd(double x, double y, double z, double w) { return (quatd_t){x,y,z,w}; }
 
-#define vec2(x,y)   ({_Generic(x, float:vec2f, default: vec2d)(x,y);   })
-#define vec3(x,y,z) ({_Generic(x, float:vec3f, default: vec3d)(x,y,z); })
-#define vec4(x,...) ({_Generic(x, float:vec4f, double:vec4d)(x __VA_OPT__(,__VA_ARGS__));})
-#define quat(x,...) ({_Generic(x, float:quatf, double:quatd)(x __VA_OPT__(,__VA_ARGS__));})
-
-
 // set from bivector + scalar: Q = (b,s)
 static inline quatf_t quatf_bs(vec3f_t b, float  s) { return (quatf_t){b[0],b[1],b[2],s}; }
 static inline quatd_t quatd_bs(vec3d_t b, double s) { return (quatd_t){b[0],b[1],b[2],s}; }
 
 #define quat_bs(b,s) quat_fwd(bs,b,s)
 
-// nerdy accept either way of setting
-#define quatf_set(x,...) \
-({_Generic(x, quatf_t:quatf_bs, default: quatf)(x __VA_OPT__(,__VA_ARGS__));})
+#define vec2(x,y)     ({_Generic(x, float:vec2f, double: vec2d)(x,y);   })
+#define vec3(x,y,z)   ({_Generic(x, float:vec3f, double: vec3d)(x,y,z); })
+#define vec4(x,y,z,w) ({_Generic(x, float:vec4f, double: vec4d)(x,y,z,w); })
 
-#define quatd_set(x,...)                                                \
-({_Generic(x, quatd_t:quatd_bs, default: quatd)(x __VA_OPT__(,__VA_ARGS__));})
+// accepts: (x,y,z,w) & (bivector,w)
+#define quat(x,...) ({_Generic(x, float:quatf, double:quatd, vec3f_t:quatf_bs, vec3d_t:quatd_bs)(x __VA_OPT__(,__VA_ARGS__));})
 
+// accepts: explict contructor like and (v) (for promote/demote to other bit width format). mostly for visual formatting.
+#define vec2f_set(x,...) ({_Generic(x, float: vec2f, vec3d_t: vec2d_demote) (x __VA_OPT__(,__VA_ARGS__)); })
+#define vec2d_set(x,...) ({_Generic(x, double:vec2d, vec3f_t: vec2f_promote)(x __VA_OPT__(,__VA_ARGS__)); })
+#define vec3f_set(x,...) ({_Generic(x, float: vec3f, vec3d_t: vec3d_demote) (x __VA_OPT__(,__VA_ARGS__)); })
+#define vec3d_set(x,...) ({_Generic(x, double:vec3d, vec3f_t: vec3f_promote)(x __VA_OPT__(,__VA_ARGS__)); })
+#define vec4f_set(x,...) ({_Generic(x, float: vec4f, vec3d_t: vec4d_demote) (x __VA_OPT__(,__VA_ARGS__)); })
+#define vec4d_set(x,...) ({_Generic(x, double:vec4d, vec3f_t: vec4f_promote)(x __VA_OPT__(,__VA_ARGS__)); })
+
+// accepts: (x,y,z,w), (bivector,w) & (q) (for promote/demote to other bit width format)
+#define quatf_set(x,...) ({_Generic(x, float: quatf, vec3f_t:quatf_bs, quatd_t:quatd_demote)(x __VA_OPT__(,__VA_ARGS__));})
+#define quatd_set(x,...) ({_Generic(x, double:quatd, vec3d_t:quatd_bs, quatf_t:quatf_promote) (x __VA_OPT__(,__VA_ARGS__));})
 
 // expand generic expression which forward to a function and first parameter is a scalar
 // (no need to perform any parameter capturing)
@@ -706,7 +715,8 @@ static inline vec2d_t vec2d_sq(vec2d_t a) { return vec2(ssimd_fma(a[0],a[0],-a[1
 
 //────────────────────────────────────────────────────────────────────────────────────
 //
-// • provided: a.w * b.w is finite then fourth component of result is zero
+// • provided: a.w * b.w is finite then fourth component of the result is zero for non-fused
+//   and _hq variants. For _fma then it's RN(a.w*b.w - RN(a.w*b.w)) (the error of the product)
 
 static inline vec3f_t vec3f_cross(vec3f_t a, vec3f_t b)
 {
@@ -740,6 +750,27 @@ static inline vec3d_t vec3d_cross_fma(vec3d_t a, vec3d_t b)
   return vec3_shuffle(r,1,2,0);
 }
 
+// _hq variant use Kahan's ab-cd (see simd_mms)
+// clang dropping ball on 'mms' (uses an additonal load and xor..correct)
+
+static inline vec3f_t vec3f_cross_hq(vec3f_t a, vec3f_t b)
+{
+  vec3f_t ra = vec3_shuffle(a,1,2,0);
+  vec3f_t rb = vec3_shuffle(b,1,2,0);
+  vec3f_t r  = simd_mms(a,rb,ra,b);
+  return vec3_shuffle(r,1,2,0);
+}
+
+static inline vec3d_t vec3d_cross_hq(vec3d_t a, vec3d_t b)
+{
+  vec3d_t ra = vec3_shuffle(a,1,2,0);
+  vec3d_t rb = vec3_shuffle(b,1,2,0);
+  vec3d_t r  = simd_mms(a,rb,ra,b);
+  return vec3_shuffle(r,1,2,0);
+}
+
+
+
 #define vec3_cross(a,b) vec3_fwd(cross,a,b)
 
 // ensure the fourth component is zero
@@ -764,6 +795,8 @@ static inline vec3d_t vec3d_triple_product(vec3d_t a, vec3d_t b, vec3d_t c)
 
 #define vec3_triple_product(a,b,c) vec3_fwd(triple_product,a,b,c)
 
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 // return a unit vector orthogonal to unit vector 'v'
 // (expand comments)
@@ -790,8 +823,6 @@ static inline vec3d_t vec3d_ortho(vec3d_t v)
 }
 
 #define vec3_ortho(a) vec3_fwd(ortho,a,b)
-
-
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -1042,14 +1073,12 @@ static inline quatf_t quatf_mul_fma(quatf_t a, quatf_t b)
   quatf_t r0 = simd_fma(a[3],b, -(a[1]*t));
   quatf_t r1 = simd_fma(a[2],t, -(a[0]*b));
 
-#if defined(__clang__)  
   // clang tries to optimize the shuffles and ends
   // up almost doubling the number of them. Make
   // it forget the "story so far" to correct.
   // This problem goes away if the subadd below
   // uses a direct 4 wide version. Strange & correct
-  simd_barrier(r1,t);
-#endif
+  simd_barrier_v_clang(r1,t);
 
   return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
 }
@@ -1061,9 +1090,7 @@ static inline quatd_t quatd_mul_fma(quatd_t a, quatd_t b)
   quatd_t r0 = simd_fma(a[3],b, -(a[1]*t));
   quatd_t r1 = simd_fma(a[2],t, -(a[0]*b));
 
-#if defined(__clang__)  
-  simd_barrier(r1,t);
-#endif  
+  simd_barrier_v_clang(r1,t);
 
   return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
 }
@@ -1201,7 +1228,7 @@ static inline vec3f_t quatf_fha(quatf_t q)
 
 static inline vec3d_t quatd_fha(quatd_t q)
 {
-  double d = 1.f + q[3];
+  double d = 1.0 + q[3];
   double s = ssimd_rsqrt(d+d);
 
   q *= s; q[3] = 0;
@@ -1215,22 +1242,23 @@ static inline quatf_t quatf_iha(vec3f_t v)
   float d = vec3_norm(v);
   float s = ssimd_sqrt(1.f-d);
 
-  return quat_sb_rs(v, s+s, 1.0f-(d+d));
+  return quat_sb_rs(v, s+s, 1.f-(d+d));
 }
 
 static inline quatd_t quatd_iha(vec3d_t v)
 {
   double d = vec3_norm(v);
-  double s = ssimd_sqrt(1.f-d);
+  double s = ssimd_sqrt(1.0-d);
 
-  return quat_sb_rs(v, s+s, 1.0f-(d+d));
+  return quat_sb_rs(v, s+s, 1.0-(d+d));
 }
 
 #define quat_fha(a) quat_fwd(fha,a)
 #define quat_iha(a) quat_fwd(iha,a)
 
 
-// forward Cayley: |Q|=1, Q.1 >= 0
+// forward Cayley: (Q-1)(Q+1)^-1
+// |Q|=1, Q.1 >= 0
 static inline vec3f_t quatf_fct(quatf_t q)
 {
   q *= 1.f/(1.f+q[3]); q[3] = 0;
@@ -1254,15 +1282,15 @@ static inline quatf_t quatf_ict(vec3f_t v)
 
 static inline quatd_t quatd_ict(vec3d_t v)
 {
-  double s = 2.f/(1.f+vec3_norm(v));
-  return quat_sb_rs(v, s, s-1.f);
+  double s = 2.0/(1.0+vec3_norm(v));
+  return quat_sb_rs(v, s, s-1.0);
 }
 
 #define quat_fct(a) quat_fwd(fct,a)
 #define quat_ict(a) quat_fwd(ict,a)
 
 
-// harmonic mean:  (q-1)(q+1)^-1
+// harmonic mean: (sqrt(Q)-1)(sqrt(Q)+1)^-1
 static inline vec3f_t quatf_fhm(quatf_t q)
 {
   static const float K = 0x1.3504f4p1f;    // sqrt(2)+1
