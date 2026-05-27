@@ -530,8 +530,6 @@ static inline quatd_t quatd_neg_scalar(quatd_t a)
 // dot product & norm
 // dot(a,b) = a•b
 
-// GCC is struggling with both versions of some of these (oh bother) w various options. look closer later
-
 static inline float  vec2f_dot(vec2f_t a, vec2f_t b) { a *= b; return a[0]+a[1]; }
 static inline double vec2d_dot(vec2d_t a, vec2d_t b) { a *= b; return a[0]+a[1]; }
 static inline float  vec3f_dot(vec3f_t a, vec3f_t b) { a *= b; return a[0]+a[1]+a[2]; }
@@ -757,7 +755,7 @@ static inline vec3f_t vec3f_cross_hq(vec3f_t a, vec3f_t b)
 {
   vec3f_t ra = vec3_shuffle(a,1,2,0);
   vec3f_t rb = vec3_shuffle(b,1,2,0);
-  vec3f_t r  = simd_mms(a,rb,ra,b);
+  vec3f_t r  = simd_mms_v(a,rb,ra,b);
   return vec3_shuffle(r,1,2,0);
 }
 
@@ -765,7 +763,7 @@ static inline vec3d_t vec3d_cross_hq(vec3d_t a, vec3d_t b)
 {
   vec3d_t ra = vec3_shuffle(a,1,2,0);
   vec3d_t rb = vec3_shuffle(b,1,2,0);
-  vec3d_t r  = simd_mms(a,rb,ra,b);
+  vec3d_t r  = simd_mms_v(a,rb,ra,b);
   return vec3_shuffle(r,1,2,0);
 }
 
@@ -1078,7 +1076,7 @@ static inline quatf_t quatf_mul_fma(quatf_t a, quatf_t b)
   // it forget the "story so far" to correct.
   // This problem goes away if the subadd below
   // uses a direct 4 wide version. Strange & correct
-  simd_barrier_v_clang(r1,t);
+  simd_barrier_ix_clang(r1,t);
 
   return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
 }
@@ -1090,7 +1088,7 @@ static inline quatd_t quatd_mul_fma(quatd_t a, quatd_t b)
   quatd_t r0 = simd_fma(a[3],b, -(a[1]*t));
   quatd_t r1 = simd_fma(a[2],t, -(a[0]*b));
 
-  simd_barrier_v_clang(r1,t);
+  simd_barrier_ix_clang(r1,t);
 
   return simd_subadd(r0, simd_shuffle(r1,3,2,1,0));
 }
