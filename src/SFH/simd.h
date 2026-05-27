@@ -242,11 +242,17 @@
 // https://www.scs.stanford.edu/~dm/blog/va-opt.html
 #define SIMD_PARENS ()
 
-#define SIMD_EXPAND(...)  SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(__VA_ARGS__))))
-#define SIMD_EXPAND4(...) SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(SIMD_EXPAND3(__VA_ARGS__))))
-#define SIMD_EXPAND3(...) SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(SIMD_EXPAND2(__VA_ARGS__))))
-#define SIMD_EXPAND2(...) SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(SIMD_EXPAND1(__VA_ARGS__))))
-#define SIMD_EXPAND1(...) __VA_ARGS__
+// Paul Fultz's rescan
+// https://github.com/pfultz2/Cloak/wiki/Is-the-C-preprocessor-Turing-complete%3F
+// reworked to 2^n expansion.
+#define SIMD_EXPAND_P5(...)  SIMD_EXPAND_P4(SIMD_EXPAND_P4(__VA_ARGS__))
+#define SIMD_EXPAND_P4(...)  SIMD_EXPAND_P3(SIMD_EXPAND_P3(__VA_ARGS__))
+#define SIMD_EXPAND_P3(...)  SIMD_EXPAND_P2(SIMD_EXPAND_P2(__VA_ARGS__))
+#define SIMD_EXPAND_P2(...)  SIMD_EXPAND_P1(SIMD_EXPAND_P1(__VA_ARGS__))
+#define SIMD_EXPAND_P1(...) __VA_ARGS__
+
+// 64 should be more than enough
+#define SIMD_EXPAND SIMD_EXPAND_P5
 
 // map `macro` across all listed varargs (...)
 // SIMD_MAP(F,0,1,2,...,N) -> F(0) F(1) F(2) .. F(N)
@@ -737,18 +743,33 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 // for when a compiler is dropping the ball attempting to optimize across a
 // series of computations and generates worse code as a result.
 // Every usage of simd_barrier should be noted for it's raison d'etre
-// _v : both are vectors, _s: both are scalars
-#define simd_barrier_v(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+// scalar version
 #define simd_barrier_s(V1,V2) do { asm ("" : "+r" (V1), "+r"(V2)); } while (0)
 
-// the hiccups that simd_barrier attempts to address are compiler (including
-// version) + target uArch specific. this is a first pass hack.
+// vector version (not meanfully working w/o exact match of type = physical register)
+// currect version of clang will error out if the type is synthetic of
+// smaller type in larger (like f32x2 working in f32x4 on Intel) with
+// "error: couldn't allocate output register for constraint 'x'"
+// and likewise for GCC for multiple registers needed. Tried a couple
+// of work-arounds:
+//    simd_barrier_v(V1,V2) simd_barrier_s((V1)[0],(V2)[0])
+// and looping _s over all logical elements...both are junk.
+#define simd_barrier_v(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+
+// yet another temp hack for when we know typeof(V1) maps to a physical register
+#define simd_barrier_x(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+
+#if defined(__x86_64__)
 #if defined(__clang__)
-#define simd_barrier_v_clang simd_barrier_v
-#define simd_barrier_v_gcc(A,B) 
+#define simd_barrier_ix_clang simd_barrier_x
+#define simd_barrier_ix_gcc(A,B) 
 #else
-#define simd_barrier_v_gcc  simd_barrier_v
-#define simd_barrier_v_clang(A,B) 
+#define simd_barrier_ix_gcc  simd_barrier_x
+#define simd_barrier_ix_clang(A,B) 
+#endif
+#else
+#define simd_barrier_ix_clang(A,B) 
+#define simd_barrier_ix_gcc(A,B) 
 #endif
 
 
@@ -1094,6 +1115,8 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 #define simd_first_vt2(A,B)     __builtin_choose_expr(simd_is_vec_type(A),A,B)
 #define simd_first_vt3(A,B,C)   simd_first_vt2(simd_first_vt2(A,B),C)
 #define simd_first_vt4(A,B,C,D) simd_first_vt3(A,B,simd_first_vt2(C,D))
+//#define simd_first_vt4(A,B,C,D) simd_first_vt2(simd_first_vt2(A,B),simd_first_vt2(C,D))
+
 
 
 // simd_param_{n} helper:
@@ -1136,12 +1159,12 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
   simd_capture_i(_c,C);
 
 #define simd_param_4(A,B,C,D)     \
-  typeof(simd_first_vt3(A,B,C,D)) \
+  typeof(simd_first_vt4(A,B,C,D)) \
     _type = {0};                  \
   simd_capture_i(_a,A);           \
   simd_capture_i(_b,B);           \
   simd_capture_i(_c,C);           \
-  simd_capture_i(_d,D);           \
+  simd_capture_i(_d,D);
 
 
 // internal helper: given floating-point vector X return same size integer with all bits set
@@ -1344,6 +1367,9 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 // compute: sa•A + sb•B  scalar (sa,sb), vector (A,B)
 // todo : add typechecking & use capture macro
+// NOTE: this is a partially fused implementation.
+//   fma(sa,a,sb*b)       (this)
+//   sa*a + sb*b          (unfused)
 #define smind_wsum(a,b,sa,sb) ({      \
   typeof(a) _a  = a;                  \
   typeof(a) _b  = b;                  \
@@ -1392,14 +1418,14 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 // • within ±1   ulp, if sign(ab) = sign(cd)
 // • currently requires all parameter be same vector type
 //   so any scalars need to be broadcasted if needed
-// • need barrier like simd_mms?
-#define simd_mma(A,B,C,D)         \
+#define simd_mma_v(A,B,C,D)       \
 ({                                \
   typeof(A) _c = C;               \
   typeof(A) _d = D;               \
   typeof(A)  t = _c*_d;           \
   simd_fma_v(A,B,t) + simd_fma_v(_c,_d,-t); \
 })
+
 
 // ab-cd
 // • within ±3/2 ulp
@@ -1409,7 +1435,12 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 // • barrier is for clang on Intel which ends put emitting
 //   a negate (load sign bit/XOR) instead of a fused sub.
 //   shouldn't (tm) break any other uArch optimizations.
-#define simd_mms(A,B,C,D)         \
+//   EXCEPT A MATCHING PROBLEM CAUSE COMPILE ERRORS IF
+//   THE VECTOR TYPE ISN'T A PHYSICAL REGISTER. need to
+//   think of a way that doesn't suck to work around.
+
+#if 0
+#define simd_mms_v(A,B,C,D)       \
 ({                                \
   typeof(A) _c = C;               \
   typeof(A) _d = D;               \
@@ -1417,7 +1448,16 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   simd_barrier_v(t,_c);           \
   simd_fms_v(A,B,t) - simd_fms_v(_c,_d,t); \
 })
-
+#else
+// nuked til I think of a better way to handle
+#define simd_mms_v(A,B,C,D)       \
+({                                \
+  typeof(A) _c = C;               \
+  typeof(A) _d = D;               \
+  typeof(A)  t = _c*_d;           \
+  simd_fms_v(A,B,t) - simd_fms_v(_c,_d,t); \
+})
+#endif
 
 #if defined(SIMD_SPECIALIZE)
 // with barriers these are barfing on clang with:
@@ -1428,10 +1468,36 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 
 
+//────────────────────────────────────────────────────────────────────────────────────
+// polynomial evaluation
+
+// GCC for some reason isn't unrolling when written as
+// an expression statement. 
+#if defined(__clang__) || !defined(__GNUC__)
+#define simd_horner_unroll 
+#elif defined(__GNUC__)
+#define simd_horner_unroll _Pragma("GCC unroll 16")
+#endif
+
 // compute the n^th order polynomial with coefficients
 // C (from highest to lowest order. e.g. C[N-1] is the
 // constant term). X must be a vector type.
-#define simd_horner_i(X,N,C)                          \
+
+#define simd_horner_si(X,N,C)                         \
+({                                                    \
+  typeof(X) _x = (X);                                 \
+  simd_assert_same_type(_x,C[0]);                     \
+                                                      \
+  typeof(_x) _r = C[0];                               \
+                                                      \
+  simd_horner_unroll                                  \
+  for (int i=1; i<(N); i++)                           \
+    _r = simd_fma_s(_r,_x,C[i]);                      \
+                                                      \
+  _r;                                                 \
+})
+
+#define simd_horner_vi(X,N,C)                         \
 ({                                                    \
   typeof(X) _x = (X);                                 \
   simd_assert_vec(_x);                                \
@@ -1439,13 +1505,16 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
                                                       \
   typeof(_x) _r = simd_splat_i(typeof(_x), C[0]);     \
                                                       \
+  simd_horner_unroll                                  \
   for (int i=1; i<(N); i++)                           \
     _r = simd_fma_v(_r,_x,simd_splat_i(typeof(_x),C[i])); \
                                                       \
   _r;                                                 \
 })
 
-#define simd_horner(X,C) simd_horner_i(X,sizeof(C)/sizeof(C[0]),C)
+
+#define simd_horner_s(X,C) simd_horner_si(X,sizeof(C)/sizeof(C[0]),C)
+#define simd_horner_v(X,C) simd_horner_vi(X,sizeof(C)/sizeof(C[0]),C)
 
 // clean-up compiler option mods
 #pragma GCC diagnostic pop
