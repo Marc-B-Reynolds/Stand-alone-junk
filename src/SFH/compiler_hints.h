@@ -43,13 +43,13 @@
 #endif
 static inline uint32_t hint_no_const_fold_32(uint32_t v)
 {
-  asm ("" : "+r" (v));
+  __asm__ ("" : "+r" (v));
   return v;  
 }
 
 static inline uint64_t hint_no_const_fold_64(uint64_t v)
 {
-  asm ("" : "+r" (v));
+  __asm__ ("" : "+r" (v));
   return v;  
 }
 #pragma GCC diagnostic pop

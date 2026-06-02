@@ -402,7 +402,7 @@ static inline u256_t ucmpgt_64x4(u256_t a, u256_t b)
 #endif
 static inline u256_t hint_no_const_fold_256(u256_t v)
 {
-  asm volatile ("" : "+x" (v));
+  __asm__ volatile ("" : "+x" (v));
   return v;  
 }
 #pragma GCC diagnostic pop

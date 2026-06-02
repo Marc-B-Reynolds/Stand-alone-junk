@@ -3,26 +3,33 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 // ssimd (2D/3D spatial SIMD)
-// Logically extends `simd.h` with some 2D & 3D types. Meaning that
-// it can be used either in isolation or with `simd.h` (expand a bit)
+// Logically extends `simd.h` with some 2D & 3D types.
 // The construction methodology (however) is opposite. A smaller set
 // of types and expected interactions between scalar/vector types
 // because they usually explict with specific operations. So a much higher
 // rate of specialization and explict implementations. The reasoning
 // is much lighter weight macros expansions for faster compile times.
 // A side-effect is logical functionality duplication between the
-// two with local versions being more restrictive. 
+// two with this file's versions being more restrictive. 
 //
 // Usage: include this header (+simd.h):
-// • `SIMD_IMPLEMENTATION`
+// • `SIMD_IMPLEMENTATION` defined prior in exactly one source file
 // • make real note
 
-// NOTE:
+// NOTES:
 // • _fma functions are more reducing execution unit utilization and
-//   not really about error reductions.
-// • Since both 3D vectors and quaternions are 4 element vectors
+//   not really about error reductions. These can increase latency
+//   if they introduce longer dependency chains and likewise decrease
+//   if they become shorter. Recall FMA is a default assumption so I
+//   "should" have some reason for making a special case version.
+//   Example: computing ab-cd as fma(a,b,-c*d) isn't zero when ab==cd
+//   which can be problematic. These things "should" be noted in place
+//   but everything is just goofying/tinkering stage ATM.
+// • _hq functions use extended precision, type promotion, etc.
+//   to reduce errors.
+// • Since both 3D vectors and 4D vector & quaternions are 4 elements
 //   (C compatible types) the routines can't distinguish between them
-//   which (sadly) requires programmer care. (expand)
+//   which (sadly) requires programmer care.
 // • GCC specific:
 //   • attempts to eliminate shuffles which can back-fire and blow-up
 //     the code. Does it stem from making a "greedy" choice which
@@ -428,15 +435,8 @@ static inline double ssimd_sgn_f64(double x) { return copysign (1.0,x); }
 #define ssimd_bias_min_normal(x) ((x)+ssimd_min_normal(x))
 
 // broadcast(sign_bit(s))  (clean these up)
-static inline i32x2_t vec2f_broadcast_signbit(float s)
-{
-  return (i32x2_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_sign_bit_f32);
-}
-
-static inline i64x2_t vec2d_broadcast_signbit(double s)
-{
-  return (i64x2_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_sign_bit_f64);
-}
+static inline i32x2_t vec2f_broadcast_signbit(float s)  { return (i32x2_t){0} + (ssimd_bitcast_fi_32(s) & ssimd_sign_bit_f32); }
+static inline i64x2_t vec2d_broadcast_signbit(double s) { return (i64x2_t){0} + (ssimd_bitcast_fi_64(s) & ssimd_sign_bit_f64); }
 
 static inline i32x4_t quatf_broadcast_signbit(float s)
 {
@@ -456,8 +456,6 @@ static inline i64x4_t vec3d_broadcast_signbit(double s) { return quatd_broadcast
 #define vec2_broadcast_signbit(x) ssimd_fwd_sfunc(vec2,broadcast_signbit,x)
 #define vec3_broadcast_signbit(x) ssimd_fwd_sfunc(vec3,broadcast_signbit,x)
 #define quat_broadcast_signbit(x) ssimd_fwd_sfunc(quat,broadcast_signbit,x)
-
-
 
 // these compute a * sgn(s).  much ado about nothing impedance matching:
 //  computes: a ^ broadcast(sign_bit(s))
@@ -674,8 +672,8 @@ static inline double vec2d_cross(vec2d_t a, vec2d_t b) { return ssimd_fma(a[0],b
 //             = (a•b, a×b)
 // 
 // This computes conj(a)*b = b*conj(a)
-static inline vec2f_t vec2f_cmul(vec2f_t a, vec2f_t b) { return vec2(vec2_dot(a,b), vec2_cross(a,b)); }
-static inline vec2d_t vec2d_cmul(vec2d_t a, vec2d_t b) { return vec2(vec2_dot(a,b), vec2_cross(a,b)); }
+static inline vec2f_t vec2f_cmul(vec2f_t a, vec2f_t b) { return vec2f(vec2f_dot(a,b), vec2f_cross(a,b)); }
+static inline vec2d_t vec2d_cmul(vec2d_t a, vec2d_t b) { return vec2d(vec2d_dot(a,b), vec2d_cross(a,b)); }
 
 #define vec2_cmul(a,b) vec2_fwd(cmul,a,b)
 
@@ -767,9 +765,9 @@ static inline vec3d_t vec3d_cross_hq(vec3d_t a, vec3d_t b)
   return vec3_shuffle(r,1,2,0);
 }
 
-
-
-#define vec3_cross(a,b) vec3_fwd(cross,a,b)
+#define vec3_cross(a,b)     vec3_fwd(cross,    a,b)
+#define vec3_cross_fma(a,b) vec3_fwd(cross_fma,a,b)
+#define vec3_cross_hq(a,b)  vec3_fwd(cross_hq, a,b)
 
 // ensure the fourth component is zero
 // move to a more logical spot in the file
@@ -893,7 +891,7 @@ static inline quatf_t quatf_usqrt(quatf_t q)
 
 static inline quatd_t quatd_usqrt(quatd_t q)
 {
-  double d = 1.f+q[3];
+  double d = 1.0+q[3];
   double s = ssimd_rsqrt(d+d);
 
   return quat_sb_rs(q,s,d*s);
@@ -988,15 +986,16 @@ static inline vec3f_t quatf_rot(quatf_t q, vec3f_t v)
 #endif
 }
 
-static inline vec3d_t quatd_rot(quatd_t q, vec3d_t v)
-{
-  // revisit as per above
-  vec3d_t t = vec3_cross(q+q,v);
-  v += q[3]*t + vec3_cross(q,t);
-  return v;
-}
+// TODO: add fusing to: v += {term} 
+static inline vec3d_t quatd_rot    (quatd_t q, vec3d_t v) { vec3d_t t = vec3d_cross(q+q,v);     v += q[3]*t + vec3d_cross(q,t);     return v; }
+static inline vec3f_t quatf_rot_fma(quatf_t q, vec3f_t v) { vec3f_t t = vec3f_cross_fma(q+q,v); v += q[3]*t + vec3f_cross_fma(q,t); return v; }
+static inline vec3d_t quatd_rot_fma(quatd_t q, vec3d_t v) { vec3d_t t = vec3d_cross_fma(q+q,v); v += q[3]*t + vec3d_cross_fma(q,t); return v; }
+static inline vec3f_t quatf_rot_hq (quatf_t q, vec3f_t v) { vec3f_t t = vec3f_cross_hq(q+q,v);  v += q[3]*t + vec3f_cross_hq(q,t);  return v; }
+static inline vec3d_t quatd_rot_hq (quatd_t q, vec3d_t v) { vec3d_t t = vec3d_cross_hq(q+q,v);  v += q[3]*t + vec3d_cross_hq(q,t);  return v; }
 
-#define quat_rot(q,v) quat_fwd(rot,q,v)
+#define quat_rot(q,v)     quat_fwd(rot,    q,v)
+#define quat_rot_fma(q,v) quat_fwd(rot_fma,q,v)
+#define quat_rot_hq(q,v)  quat_fwd(rot_hq, q,v)
 
 
 //────────────────────────────────────────────────────────────────────────────────────

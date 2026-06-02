@@ -143,7 +143,7 @@
 #if !defined(__NO_TRAPPING_MATH__) && (__GNUC__ >= 12)
 #if !defined(SIMD_NO_NAG)
 // do you have some signal handler for floating point? Didn't think so.
-#warning "setting `-no-trapping-math` for you. (stern eyes)"
+#warning "setting `-fno-trapping-math` for you. (stern eyes)"
 #endif
 #pragma GCC optimize ("no-trapping-math")
 #endif
@@ -743,8 +743,8 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 // for when a compiler is dropping the ball attempting to optimize across a
 // series of computations and generates worse code as a result.
 // Every usage of simd_barrier should be noted for it's raison d'etre
-// scalar version
-#define simd_barrier_s(V1,V2) do { asm ("" : "+r" (V1), "+r"(V2)); } while (0)
+//   scalar version
+#define simd_barrier_s(V1,V2) do { __asm__ ("" : "+r" (V1), "+r"(V2)); } while (0)
 
 // vector version (not meanfully working w/o exact match of type = physical register)
 // currect version of clang will error out if the type is synthetic of
@@ -754,23 +754,79 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 // of work-arounds:
 //    simd_barrier_v(V1,V2) simd_barrier_s((V1)[0],(V2)[0])
 // and looping _s over all logical elements...both are junk.
-#define simd_barrier_v(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
-
-// yet another temp hack for when we know typeof(V1) maps to a physical register
-#define simd_barrier_x(V1,V2) do { asm ("" : "+x" (V1), "+x"(V2)); } while (0)
+#define simd_barrier_v(V1,V2) do { __asm__ ("" : "+x" (V1), "+x"(V2)); } while (0)
 
 #if defined(__x86_64__)
 #if defined(__clang__)
-#define simd_barrier_ix_clang simd_barrier_x
+#define simd_barrier_ix_clang simd_barrier_v
 #define simd_barrier_ix_gcc(A,B) 
 #else
-#define simd_barrier_ix_gcc  simd_barrier_x
+#define simd_barrier_ix_gcc  simd_barrier_v
 #define simd_barrier_ix_clang(A,B) 
 #endif
 #else
 #define simd_barrier_ix_clang(A,B) 
 #define simd_barrier_ix_gcc(A,B) 
 #endif
+
+
+//────────────────────────────────────────────────────────────────────────────────────
+// mixed vector/scalar macro paramenter helpers
+
+// yields the first parameter that's a vector type (if there is one)
+#define simd_first_vt2(A,B)     __builtin_choose_expr(simd_is_vec_type(A),A,B)
+#define simd_first_vt3(A,B,C)   simd_first_vt2(simd_first_vt2(A,B),C)
+#define simd_first_vt4(A,B,C,D) simd_first_vt3(A,B,simd_first_vt2(C,D))
+//#define simd_first_vt4(A,B,C,D) simd_first_vt2(simd_first_vt2(A,B),simd_first_vt2(C,D))
+
+
+
+// simd_param_{n} helper:
+// • `name` is the variable name of the captured 
+// • `orig` is the macro parameter
+// uses helper `simd_splat_i` which logically passes
+// through a vector type and broadcasts a scalar
+// and `_type` is defined instead the expression statement
+#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
+
+
+// all parameters must be a vector type (T) or
+// a scalar of the element type of T. All scalars
+// are broadcast to type T (if there are any)
+//
+// • determine the vector type T (two methods):
+//   `simd_first_vt{n}`: walks the parameters and yields
+//   the first vector type (or final if none)
+// • `simd_capture_i` uses typeof(_type) to pass through
+//   vector parameters, broadcast any scalars, and 
+//   capture macro input (prevent side-effects)
+// • {_a,_b,...} are the original values with any
+//   scalars broadcast to T. (fixed naming scheme)
+//
+// TODO:
+// • add type checking asserts. 
+
+// NOTE: using = {0} instead of {} for older compilers
+#define simd_param_2(A,B)      \
+  typeof(simd_first_vt2(A,B))  \
+    _type = {0};               \
+  simd_capture_i(_a,A);        \
+  simd_capture_i(_b,B);
+
+#define simd_param_3(A,B,C)    \
+  typeof(simd_first_vt3(A,B,C))\
+    _type = {0};               \
+  simd_capture_i(_a,A);        \
+  simd_capture_i(_b,B);        \
+  simd_capture_i(_c,C);
+
+#define simd_param_4(A,B,C,D)     \
+  typeof(simd_first_vt4(A,B,C,D)) \
+    _type = {0};                  \
+  simd_capture_i(_a,A);           \
+  simd_capture_i(_b,B);           \
+  simd_capture_i(_c,C);           \
+  simd_capture_i(_d,D);
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -935,23 +991,48 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 //────────────────────────────────────────────────────────────────────────────────────
 // generic to specialized expansion macros (expand function or prototype)
 // the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
+//   simd_foo → foo_f32x4
+// questionable call. maybe make configurable? either way: clean this up
 
-// clean these up..this is silly
-#if   defined(SIMD_INLINE_SPECIALIZE)
-#define SIMD_MAKE_UFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
-#define SIMD_MAKE_BFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
-#define SIMD_MAKE_3FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
-#define SIMD_MAKE_4FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d) { return CAT(simd_,name)(a,b,c,d); }
-#elif defined(SIMD_IMPLEMENTATION)
+#if 1
+#define SIMD_MAKE_NAME(name,T) CAT(name,_,T)
+#else
+// opposite naming convention (simd_foo → f32x4_foo).
+#define SIMD_MAKE_NAME(name,T) CAT(T,_,name)
+#endif
+
+#define SIMD_MAKE_UFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a)
+#define SIMD_MAKE_BFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b)
+#define SIMD_MAKE_3FUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c)
+#define SIMD_MAKE_4FUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c,CAT(T,_t) d)
+
+#if defined(SIMD_SPECIALIZE_EXTERN)
+#if defined(SIMD_IMPLEMENTATION)
+// specialize version as non-inline functions (mostly for dev aid: eyeballing asm generation as leaf functions)
 #define SIMD_MAKE_UFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a)                                      { return CAT(simd_,name)(a);       }
 #define SIMD_MAKE_BFUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b)                         { return CAT(simd_,name)(a,b);     }
 #define SIMD_MAKE_3FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c)             { return CAT(simd_,name)(a,b,c);   }
 #define SIMD_MAKE_4FUN(name,T) CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c,CAT(T,_t) d) { return CAT(simd_,name)(a,b,c,d); }
 #else
+// extern defs if actually doing it this way
 #define SIMD_MAKE_UFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a);
 #define SIMD_MAKE_BFUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b);
 #define SIMD_MAKE_3FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c);
 #define SIMD_MAKE_4FUN(name,T) extern CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d);
+#endif
+#else
+// static inline expansions (expected case)
+#if 0
+#define SIMD_MAKE_UFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a) { return CAT(simd_,name)(a); }
+#define SIMD_MAKE_BFUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b) { return CAT(simd_,name)(a,b); }
+#define SIMD_MAKE_3FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c) { return CAT(simd_,name)(a,b,c); }
+#define SIMD_MAKE_4FUN(name,T) static inline CAT(T,_t) CAT(name,_,T)(CAT(T,_t) a, CAT(T,_t) b, CAT(T,_t) c, CAT(T,_t) d) { return CAT(simd_,name)(a,b,c,d); }
+#else
+#define SIMD_MAKE_UFUN(name,T) static inline SIMD_MAKE_UFUN_(name,T) { return CAT(simd_,name)(a); }
+#define SIMD_MAKE_BFUN(name,T) static inline SIMD_MAKE_BFUN_(name,T) { return CAT(simd_,name)(a,b); }
+#define SIMD_MAKE_3FUN(name,T) static inline SIMD_MAKE_3FUN_(name,T) { return CAT(simd_,name)(a,b,c); }
+#define SIMD_MAKE_4FUN(name,T) static inline SIMD_MAKE_4FUN_(name,T) { return CAT(simd_,name)(a,b,c,d); }
+#endif
 #endif
 
 
@@ -975,10 +1056,9 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 //   intel: GCC   broadcast sign/xor/addsub
 #define simd_addsub(A,B) simd_subadd((A),-(B))
 
-
 // only specializing floating point types
-//SIMD_MAP_PEEL(SIMD_MAKE_BFUN, subadd, SIMD_FP_X)
-//SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, subadd, SIMD_FP_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X)
 
 
 #if !defined(__x86_64__) || !defined(__AVX2__)
@@ -1081,7 +1161,6 @@ static inline f32x2_t fmsubadd_f32x2_v(f32x2_t a, f32x2_t b, f32x2_t c)
 #define simd_sqrt(x)  simd_fp_std_unary(sqrt,x)
 
 
-#if defined(SIMD_SPECIALIZE)
 // expand specialized: (example: floor_f32x4)
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, floor, SIMD_FP_X) 
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, ceil,  SIMD_FP_X) 
@@ -1089,7 +1168,6 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, trunc, SIMD_FP_X)
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, round, SIMD_FP_X) 
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 //SIMD_MAP_PEEL(SIMD_MAKE_UFUN, fabs,  SIMD_FP_X) 
-#endif
 
 // GCC only. break into integer and fp, explict and mask for fp
 #if !defined(simd_abs)
@@ -1102,69 +1180,9 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, sqrt,  SIMD_FP_X)
 #define simd_abs(A)   simd_component_map(simd_abs_s,A)
 #endif
 
-#if defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_FP_X) 
 SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X) 
-#endif
 
-
-//────────────────────────────────────────────────────────────────────────────────────
-// mixed vector/scalar macro paramenter helpers
-
-// yields the first parameter that's a vector type (if there is one)
-#define simd_first_vt2(A,B)     __builtin_choose_expr(simd_is_vec_type(A),A,B)
-#define simd_first_vt3(A,B,C)   simd_first_vt2(simd_first_vt2(A,B),C)
-#define simd_first_vt4(A,B,C,D) simd_first_vt3(A,B,simd_first_vt2(C,D))
-//#define simd_first_vt4(A,B,C,D) simd_first_vt2(simd_first_vt2(A,B),simd_first_vt2(C,D))
-
-
-
-// simd_param_{n} helper:
-// • `name` is the variable name of the captured 
-// • `orig` is the macro parameter
-// uses helper `simd_splat_i` which logically passes
-// through a vector type and broadcasts a scalar
-// and `_type` is defined instead the expression statement
-#define simd_capture_i(name,orig)  typeof(_type) name = simd_splat_i(typeof(_type),orig);
-
-
-// all parameters must be a vector type (T) or
-// a scalar of the element type of T. All scalars
-// are broadcast to type T (if there are any)
-//
-// • determine the vector type T (two methods):
-//   `simd_first_vt{n}`: walks the parameters and yields
-//   the first vector type (or final if none)
-// • `simd_capture_i` uses typeof(_type) to pass through
-//   vector parameters, broadcast any scalars, and 
-//   capture macro input (prevent side-effects)
-// • {_a,_b,...} are the original values with any
-//   scalars broadcast to T. (fixed naming scheme)
-//
-// TODO:
-// • add type checking asserts. 
-
-// NOTE: using = {0} instead of {} for older compilers
-#define simd_param_2(A,B)      \
-  typeof(simd_first_vt2(A,B))  \
-    _type = {0};               \
-  simd_capture_i(_a,A);        \
-  simd_capture_i(_b,B);
-
-#define simd_param_3(A,B,C)    \
-  typeof(simd_first_vt3(A,B,C))\
-    _type = {0};               \
-  simd_capture_i(_a,A);        \
-  simd_capture_i(_b,B);        \
-  simd_capture_i(_c,C);
-
-#define simd_param_4(A,B,C,D)     \
-  typeof(simd_first_vt4(A,B,C,D)) \
-    _type = {0};                  \
-  simd_capture_i(_a,A);           \
-  simd_capture_i(_b,B);           \
-  simd_capture_i(_c,C);           \
-  simd_capture_i(_d,D);
 
 
 // internal helper: given floating-point vector X return same size integer with all bits set
@@ -1200,12 +1218,10 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 #define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i))
 #define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i))
 
-#if defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
-#endif
 
 #if 0//defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEEL(SIMD_MAKE_3FUN, min, SIMD_UI_X)
@@ -1224,10 +1240,8 @@ SIMD_MAP_PEEL(SIMD_MAKE_3FUN, max, SIMD_FP_X);
 #define simd_fmin(a,b) simd_fp_std_binary(fmin,a,b)
 #define simd_fmax(a,b) simd_fp_std_binary(fmax,a,b)
 
-#if defined(SIMD_SPECIALIZE)
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
-#endif
 #endif
 
 // temp hack as-is
@@ -1459,14 +1473,6 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 })
 #endif
 
-#if defined(SIMD_SPECIALIZE)
-// with barriers these are barfing on clang with:
-// "couldn't allocate output register for constraint 'x'",
-// but manual expansion isn't ??? Need to examine.
-//SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mma, SIMD_FP_X) 
-//SIMD_MAP_PEEL(SIMD_MAKE_4FUN, mms, SIMD_FP_X) 
-#endif
-
 
 //────────────────────────────────────────────────────────────────────────────────────
 // polynomial evaluation
@@ -1476,13 +1482,15 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #if defined(__clang__) || !defined(__GNUC__)
 #define simd_horner_unroll 
 #elif defined(__GNUC__)
-#define simd_horner_unroll _Pragma("GCC unroll 16")
+// ad-hoc "big" number. (SRLY: 16 terms is big)
+#define simd_horner_unroll _Pragma("GCC unroll 16") 
 #endif
 
 // compute the n^th order polynomial with coefficients
 // C (from highest to lowest order. e.g. C[N-1] is the
-// constant term). X must be a vector type.
+// constant term).
 
+// scalar 'X'
 #define simd_horner_si(X,N,C)                         \
 ({                                                    \
   typeof(X) _x = (X);                                 \
@@ -1497,6 +1505,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   _r;                                                 \
 })
 
+// vector 'X'
 #define simd_horner_vi(X,N,C)                         \
 ({                                                    \
   typeof(X) _x = (X);                                 \
@@ -1511,7 +1520,6 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
                                                       \
   _r;                                                 \
 })
-
 
 #define simd_horner_s(X,C) simd_horner_si(X,sizeof(C)/sizeof(C[0]),C)
 #define simd_horner_v(X,C) simd_horner_vi(X,sizeof(C)/sizeof(C[0]),C)
