@@ -2,7 +2,7 @@
 // Marc B. Reynolds, 2001-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-//#pragma once
+#pragma once
 
 #define SFH_MACRO_H    // marker define
 
@@ -58,6 +58,23 @@
 //   (1,...) → 1
 #define SFH_TAKE(...)    SFH_TAKE_(__VA_ARGS__)
 #define SFH_TAKE_(N,...) N
+
+
+//────────────────────────────────────────────────────────────────────────────────────
+// argument count based concat (limited to 8 for one, nest for more)
+
+#define SFH_CAT0()
+#define SFH_CAT1(A) A
+#define SFH_CAT2(A,B) A##B
+#define SFH_CAT3(A,B,C) A##B##C
+#define SFH_CAT4(A,B,C,D) A##B##C##D
+#define SFH_CAT5(A,B,C,D,E) A##B##C##D##E
+#define SFH_CAT6(A,B,C,D,E,F) A##B##C##D##E##F
+#define SFH_CAT7(A,B,C,D,E,F,G) A##B##C##D##E##F##G
+#define SFH_CAT8(A,B,C,D,E,F,G,H) A##B##C##D##E##F##G##H
+
+#define SFH_CAT_(_0,_1,_2,_3,_4,_5,_6,_7,M,...) M
+#define SFH_CAT(...) SFH_PART_8(__VA_ARGS__,SFH_CAT8,SFH_CAT7,SFH_CAT6,SFH_CAT5,SFH_CAT4,SFH_CAT3,SFH_CAT2,SFH_CAT1,SFH_CAT0)(__VA_ARGS__)
 
 
 // require at least as long as the specified length
@@ -225,6 +242,7 @@
 // SFH_SMAP(F,...)
 //   SFH_MAP but limited to max list of 8
 
+#define SFH_SMAP0(F)
 #define SFH_SMAP1(F,A)               F(A)
 #define SFH_SMAP2(F,A,B)             F(A) F(B)
 #define SFH_SMAP3(F,A,B,C)           F(A) F(B) F(C)
@@ -235,11 +253,12 @@
 #define SFH_SMAP8(F,A,B,C,D,E,G,H,I) F(A) F(B) F(C) F(D) F(E) F(G) F(H) F(I)
 
 #define SFH_SMAP(F,...)    SFH_SMAP_(F, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
-#define SFH_SMAP_(F,N,...) SFH_CAT2(SFH_SMAP,N)(F,__VA_ARGS__)
+#define SFH_SMAP_(F,N,...) SFH_CAT2(SFH_SMAP,N)(F __VA_OPT__(,__VA_ARGS__))
 
 // SFH_SMAP_PEEL(F,X,...)
 //   SFH_MAP_PEEL but limited to max list of 8
 
+#define SFH_SMAP_PEEL0(F,X)
 #define SFH_SMAP_PEEL1(F,X,A)               F(X,A)
 #define SFH_SMAP_PEEL2(F,X,A,B)             F(X,A) F(X,B)
 #define SFH_SMAP_PEEL3(F,X,A,B,C)           F(X,A) F(X,B) F(X,C)
@@ -250,11 +269,12 @@
 #define SFH_SMAP_PEEL8(F,X,A,B,C,D,E,G,H,I) F(X,A) F(X,B) F(X,C) F(X,D) F(X,E) F(X,G) F(X,H) F(X,I)
 
 #define SFH_SMAP_PEEL(F,X,...)    SFH_SMAP_PEEL_(F,X, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
-#define SFH_SMAP_PEEL_(F,X,N,...) SFH_CAT2(SFH_SMAP_PEEL,N)(F,SFH_SIMPLE_FLATTEN(X),__VA_ARGS__)
+#define SFH_SMAP_PEEL_(F,X,N,...) SFH_CAT2(SFH_SMAP_PEEL,N)(F __VA_OPT__,SFH_SIMPLE_FLATTEN(X),__VA_ARGS__))
 
 
 // SFH_STHROUGH(F,X,...)
 //   SFH_THROUGH but limited to max list of 8
+#define SFH_STHROUGH0(P)
 #define SFH_STHROUGH1(P,A)               A P 
 #define SFH_STHROUGH2(P,A,B)             A P  B P 
 #define SFH_STHROUGH3(P,A,B,C)           A P  B P  C P 
@@ -265,24 +285,31 @@
 #define SFH_STHROUGH8(P,A,B,C,D,E,F,G,H) A P  B P  C P  D P  E P  F P  G P  H P 
 
 #define SFH_STHROUGH(F,...)    SFH_STHROUGH_(F, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
-#define SFH_STHROUGH_(F,N,...) SFH_CAT2(SFH_STHROUGH,N)(F,__VA_ARGS__)
+#define SFH_STHROUGH_(F,N,...) SFH_CAT2(SFH_STHROUGH,N)(F __VA_OPT__(,__VA_ARGS__))
 
+
+// SFH_SMAP_LIST(F,...)
+//   SFH_MAP_LIST but limited to max list of 8
+#define SFH_SMAP_LIST_0(F)
+#define SFH_SMAP_LIST_1(F,A)               F(A)
+#define SFH_SMAP_LIST_2(F,A,B)             F(A), F(B)
+#define SFH_SMAP_LIST_3(F,A,B,C)           F(A), F(B), F(C)
+#define SFH_SMAP_LIST_4(F,A,B,C,D)         F(A), F(B), F(C), F(D)
+#define SFH_SMAP_LIST_5(F,A,B,C,D,E)       F(A), F(B), F(C), F(D), F(E)
+#define SFH_SMAP_LIST_6(F,A,B,C,D,E,G)     F(A), F(B), F(C), F(D), F(E), F(G)
+#define SFH_SMAP_LIST_7(F,A,B,C,D,E,G,H)   F(A), F(B), F(C), F(D), F(E), F(G), F(H)
+#define SFH_SMAP_LIST_8(F,A,B,C,D,E,G,H,I) F(A), F(B), F(C), F(D), F(E), F(G), F(H), F(I)
+
+#define SFH_SMAP_LIST(F,...)    SFH_SMAP_LIST_(F, SFH_ARGCOUNT_8(__VA_ARGS__), __VA_ARGS__)
+#define SFH_SMAP_LIST_(F,N,...) SFH_CAT2(SFH_SMAP_LIST_,N)(F __VA_OPT__(,__VA_ARGS__))
 
 //────────────────────────────────────────────────────────────────────────────────────
-// argument count based concat (limited to 8 for one, nest for more)
+// "function" overloading via a single _Generic. Extends Simon Tatham's example (1)
+// for 2-ary functions to n-ary. (expand)
+// 1) https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/c11-generic/
+//    SEE: type_tuple_switch(x, y)
 
-#define SFH_CAT0()
-#define SFH_CAT1(A) A
-#define SFH_CAT2(A,B) A##B
-#define SFH_CAT3(A,B,C) A##B##C
-#define SFH_CAT4(A,B,C,D) A##B##C##D
-#define SFH_CAT5(A,B,C,D,E) A##B##C##D##E
-#define SFH_CAT6(A,B,C,D,E,F) A##B##C##D##E##F
-#define SFH_CAT7(A,B,C,D,E,F,G) A##B##C##D##E##F##G
-#define SFH_CAT8(A,B,C,D,E,F,G,H) A##B##C##D##E##F##G##H
-
-#define SFH_CAT_(_0,_1,_2,_3,_4,_5,_6,_7,M,...) M
-#define SFH_CAT(...) SFH_PART_8(__VA_ARGS__,SFH_CAT8,SFH_CAT7,SFH_CAT6,SFH_CAT5,SFH_CAT4,SFH_CAT3,SFH_CAT2,SFH_CAT1,SFH_CAT0)(__VA_ARGS__)
+#define SFH_GENERIC_SIG(...) (void(*)(SFH_SMAP_LIST(typeof,__VA_ARGS__)))NULL
 
 
 //────────────────────────────────────────────────────────────────────────────────────
