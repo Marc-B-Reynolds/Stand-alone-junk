@@ -2,7 +2,8 @@
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef COMPILER_HINTS_H
+#pragma once
+
 #define COMPILER_HINTS_H
 
 // compiler hints: must assume that the hint will be ignored
@@ -113,7 +114,6 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_unpredictable(X)     (X)
 #define hint_unreachable()
 #endif
-#endif
 
 #if defined(__GNUC__)
 #define hint_no_inline          __attribute__((__noinline__))
@@ -127,9 +127,4 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_no_inline
 #define hint_pure_fun
 #define hint_const_func
-#endif
-
-
-
-
 #endif
