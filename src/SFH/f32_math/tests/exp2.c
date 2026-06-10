@@ -188,7 +188,7 @@ float cr_func(float x) { return cr_exp2f(x); }
 
 // f(x) = 0 for x < -0x1.2bfffep+7 (c315fffe)
 // f(x) denormal until -126 (c2fc0000)
-// f(x) finite   until  128 (43000002)
+// f(x) finite   until  128 (43000000)
 void scan_limits(void)
 {
   uint32_t ix = f32_to_bits(-150.f);
@@ -218,7 +218,7 @@ void scan_limits(void)
     r = cr_func(x);
   } while(r < f32_inf);
 
-  printf("f(x) finite until %f (%08x)\n", x,ix+1);
+  printf("f(x) finite until %f (%08x)\n", x,ix-1);
 }
 
 
