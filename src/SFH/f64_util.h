@@ -797,14 +797,5 @@ static inline uint64_t f64_get_payload(double v)
 }
 
 
-#if 0
-static inline double f64_snan_payload(uint64_t v)
-{
-  return f64_from_bits(v | f64_exp_bits_k);
-}
-#endif
-
-
-
 #endif
 
