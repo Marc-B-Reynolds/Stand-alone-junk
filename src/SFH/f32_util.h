@@ -57,6 +57,22 @@
 #define FP32_STRICT_FUNC()
 #endif
 
+#ifdef __GNUC__
+#define f32_expect_true(expr)  (__builtin_expect(!!(expr), 1))
+#define f32_expect_false(expr) (__builtin_expect(!!(expr), 0))
+#else
+#define f32_expect_true(expr)  (expr)
+#define f32_expect_false(expr) (expr)
+#endif
+
+#ifdef __GNUC__
+#define f32_no_inline          __attribute__((__noinline__))
+#elif  _MSC_VER
+#define f32_no_inline          __declspec(noinline)
+#else
+#define f32_no_inline
+#endif
+
 
 // just say no.
 #if (defined(__FAST_MATH__)  || (defined(__FINITE_MATH_ONLY__) && (__FINITE_MATH_ONLY__)) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
@@ -260,7 +276,8 @@ static inline float f32_scalbn(float x, int e)
 }
 
 // floor(log2(|x|)))  { as integer }
-// zero and denormals return -127
+// ∙ zero and denormals return -127
+// ∙ inf and NaNs return 128
 static inline int32_t f32_ilog2(float x)
 {
   return (int32_t)(((f32_to_bits(x) >> 23) & 0xff)-f32_exp_bias_k);
@@ -274,6 +291,45 @@ static inline int32_t f32_ilog2_ceil(float x)
   
   return (int32_t)(((u >> 23) & 0xff)-f32_exp_bias_k+i);
 }
+
+#if defined(F32_UTIL_IMPLEMENTATION)
+// slow-path: zeroes, infs, denormals & NaNs
+extern f32_no_inline int32_t f32_ilogb_slow(uint32_t u, int32_t b)
+{
+  u <<= 9;                              // discard sign & exp
+
+  // is denormal or zero?
+  if (!b) {
+    if (u == 0)
+      return (int32_t)0x80000000;
+
+    // denormal
+    return -0x7f-(int32_t)(clz_32(u));
+  }
+
+  // inf or NaN
+  return u ? (int32_t)0x80000000 : 0x7fffffff;
+}
+#else
+extern int32_t f32_ilogb_slow(uint32_t u, int32_t b);
+#endif
+
+// equivalent to stdc "ilogbf" but explicitly fast/slow-path structured
+// ∙ f32_ilog2 is limit range variant
+static inline int32_t f32_ilogb(float x)
+{
+  uint32_t u = f32_to_bits(x);
+  int32_t  b = (u >> 23) & 0xff;
+
+  // if biased exponent is not 0x00 nor 0xff
+  // i.e. finite but not zero nor denormal
+  if (b != 0x00 && b != 0xff)
+    return b - 0x7f;
+
+  // handle: zeroes, denormals, inf & NaNs
+  return f32_ilogb_slow(u,b);
+}
+
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless

@@ -44,6 +44,24 @@
 #define FP64_ASSOC_BARRIER(X)
 #endif
 
+
+#ifdef __GNUC__
+#define f64_expect_true(expr)  (__builtin_expect(!!(expr), 1))
+#define f64_expect_false(expr) (__builtin_expect(!!(expr), 0))
+#else
+#define f64_expect_true(expr)  (expr)
+#define f64_expect_false(expr) (expr)
+#endif
+
+#ifdef __GNUC__
+#define f64_no_inline          __attribute__((__noinline__))
+#elif  _MSC_VER
+#define f64_no_inline          __declspec(noinline)
+#else
+#define f64_no_inline
+#endif
+
+
 // just say no
 #if !(defined(__FAST_MATH__) || defined(__FINITE_MATH_ONLY__) || defined(__ASSOCIATIVE_MATH__) || defined(_M_FP_FAST))
 #define FP64_LOL_NO
@@ -243,7 +261,8 @@ static inline double f64_scalbn(double x, int e)
 }
 
 // floor(log2(|x|)))  { as integer }
-// zero and denormals return -1023
+// ∙ zero and denormals return -1023
+// ∙ inf and NaNs return 1024
 static inline int32_t f64_ilog2(double x)
 {
   return (int32_t)(((f64_to_bits(x) >> 52) & 0x7ff)-f64_exp_bias_k);
@@ -257,6 +276,44 @@ static inline int32_t f64_ilog2_ceil(double x)
   
   return (int32_t)(((u >> 52) & 0x7ff)-f64_exp_bias_k+i);
 }
+
+#if defined(F64_UTIL_IMPLEMENTATION)
+// slow-path: zeroes, infs, denormals & NaNs
+static f64_no_inline int32_t f64_ilogb_slow(uint64_t u, int64_t b)
+{
+  u <<= 12;                             // discard sign & exp
+
+  // is denormal or zero?
+  if (!b) {
+    if (u == 0)
+      return (int32_t)0x80000000;
+
+    // denormal
+    return -0x3ff-(int32_t)(clz_64(u));
+  }
+
+  return u ? (int32_t)0x80000000 : 0x7fffffff;
+}
+#else
+extern int32_t f64_ilogb_slow(uint64_t u, int64_t b);
+#endif
+
+// equivalent to stdc "ilogb" but explicitly fast/slow-path structured
+// ∙ f64_ilog2 is limit range variant
+static inline int32_t f64_ilogb(double x)
+{
+  uint64_t u = f64_to_bits(x);
+  int64_t  b = (u >> 52) & 0x7ff;
+
+  // if biased exponent is not 0x00 nor 0xff
+  // i.e. finite but not zero nor denormal
+  if (b != 0x000 && b != 0x7ff)
+    return (int32_t)(b - 0x3ff);
+
+  // handle: zero, denormals, inf & NaNs
+  return f64_ilogb_slow(u,b);
+}
+
 
 // to cut some of the pain of math errno not being disabled
 // (-fno-math-errno). But you really should do that. Unless
