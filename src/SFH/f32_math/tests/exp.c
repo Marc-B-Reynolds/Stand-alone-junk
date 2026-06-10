@@ -130,7 +130,6 @@ float cr_expf(float x){
 
 //********************************************************
 
-
 func_entry_t func_table[] =
 {
   ENTRY(libm),
@@ -145,88 +144,66 @@ float cr_func(float x) { return cr_expf(x); }
 //********************************************************
 
 
-// f(x) is normal on [-0x1.5d58ap+6,0x1.62e43p+6] (c2aeac50,42b17218)
-// f(x) = 0 for x <= -0x1.9fe368p+6 (c2cff1b4)
+// f(x) = 0 for x < -0x1.9fe368p+6 (c2cff1b4)
+// f(x) denormal until -87.336540 (c2aeac4f)
+// f(x) finite until 125.000000 (42fa0000)
 void scan_limits(void)
 {
-  uint32_t ix = 0;
-  float    r;
+  uint32_t ix = f32_to_bits(-150.f);
+  float    r,x;
 
-  printf("f(inf) = %a %08x\n", cr_func(f32_inf), f32_to_bits(f32_inf));
-  
-  // look for largest normal result
-  ix = f32_to_bits(0x1.0p6f);
-
+  // check zero range 
   do {
-    float x = f32_from_bits(ix++);
+    x = f32_from_bits(ix--);
+    r = cr_func(x);
+  } while(r == 0.f);
+
+  printf("f(x) = 0 for x < %a (%08x)\n", x,ix+1);
+
+  // check denormal range
+  do {
+    x = f32_from_bits(ix--);
+    r = cr_func(x);
+  } while(r < f32_min_normal);
+
+  printf("f(x) denormal until %f (%08x)\n", x,ix+1);
+
+  ix = f32_to_bits(125.f);
+
+  // find last finite
+  do {
+    x = f32_from_bits(ix++);
     r = cr_func(x);
   } while(r < f32_inf);
-  
-  uint32_t normal_hi = ix-1;
 
-  // look for last normal result
-  ix = f32_to_bits(-0x1.0p6f);
-  
-  do {
-    float x = f32_from_bits(ix++);
-    r = cr_func(x);
-  } while(r >= f32_min_normal);
-
-  uint32_t normal_lo = ix-1;
-
-  printf("f(x) is normal on [%a,%a] (%08x,%08x)\n",
-	 f32_from_bits(normal_lo),
-	 f32_from_bits(normal_hi),
-	 normal_lo,normal_hi);
-
-  do {
-    float x = f32_from_bits(++ix);
-    r = cr_func(x);
-  } while(r > 0);
-
-  ix--;
-
-  printf("f(x) = 0 for x <= %a (%08x)\n", f32_from_bits(ix),ix);
-
-  ix = normal_hi+1;
-
-  printf("f(x) = %a for x = %a (%08x)\n",
-	 cr_func(f32_from_bits(ix)),
-	 f32_from_bits(ix),
-	 ix);
+  printf("f(x) finite until %f (%08x)\n", x,ix-1);
 }
-
-// EVERYTHING BELOW HERE NEEDS CHANGING! Need to put on
-// thinking cap and haven't done that yet.
 
 void test_spot(void)
 {
 }
 
+void test_sanity(void)
+{
+}
+
 void test_all(void)
 {
+  // junk
   uint32_t x0 = 0xc2cff1b4;
-  uint32_t x1 = 0xff800000;  // -infinity
+  uint32_t x1 = 0xc2aeac4f;
 
-  // validate all exp(x) = 0
-  test_const_range(x0,x1,0);
+  test_force(x0,x1);
 
-  // validate all exp(x) = infinity
-  x0 = 0x42b17219;
-  x1 = 0x7f800000; // +infinity
-  test_const_range(x0,x1,f32_inf);
+  x0  = 0xc2aeac5f;
+  x1  = 0x80000000;
+  test_force(x0,x1);
 
-  // add everything else. temp hack version
-  // doint all together.
-  x0 = 0x42b17218;
-  x1 = 0xc2aeac50;
+  x0  = 0x00000000;
+  x1  = 0x42fa0000;
   test_force(x0,x1);
 }
 
-void test_sanity(void)
-{
-  //test_sanity_odd();
-}
 
 
 int main(int argc, char** argv)
