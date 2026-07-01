@@ -268,6 +268,7 @@ void test_1pot(float x)
   test_force(x0,x1);
 }
 
+
 // test a full power-of-two interval starting from x. (need not start on a boundary)
 // [x,2x) & (-2x,-x]
 void test_1pot_pn(float x)
@@ -407,8 +408,9 @@ int test_run(int argc, char** argv)
   while (argc > sid) {
     if (argv[sid][0] == '-') {
       switch(argv[sid][1]) {
-      case 's' : all = false; break;
-      case 't' : lol = true;  break;
+      case 's' : all    = false; break;
+      case 't' : lol    = true;  break;
+      case 'q' : sanity = false; break;
 	
       default  :
 	fprintf(stderr, "error: unknown option %c\n", argv[sid][1]);
@@ -438,7 +440,7 @@ int test_run(int argc, char** argv)
     //test_sanity_nan();
 #if !defined(NO_TEST_SPECIALS)    
     test_specials();
-#endif    
+#endif
     test_sanity();
   }
   
