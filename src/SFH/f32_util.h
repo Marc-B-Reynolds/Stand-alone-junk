@@ -275,6 +275,19 @@ static inline float f32_scalbn(float x, int e)
   return x * f32_ipow2(e);
 }
 
+// return |x| with the exponent set to zero
+// • result is on [1,2)
+// • zero & inf maps to 1
+// • max denormal to 2-ulp(2)
+static inline float f32_zero_exponent(float x)
+{
+  const uint32_t m = f32_mag_bits_k;
+  
+  uint32_t u = f32_to_bits(x);
+  float    r = f32_from_bits(f32_one_bits_k|(u & m));
+  return r;
+}
+
 // floor(log2(|x|)))  { as integer }
 // ∙ zero and denormals return -127
 // ∙ inf and NaNs return 128
