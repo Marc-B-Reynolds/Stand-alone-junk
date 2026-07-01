@@ -137,6 +137,7 @@ static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 // 2^64 mod k
 static inline uint64_t mod_k_base_u64(uint64_t k)
 {
+#if !defined(__GNUC__)
   static const uint64_t N = UINT64_C(1) << 63;
   
   if (k <= N) {
@@ -145,13 +146,16 @@ static inline uint64_t mod_k_base_u64(uint64_t k)
     return r < k ? r : r-k;
   }
   
-  return -k;  
+  return -k;
+#else
+   return (uint64_t)(((unsigned __int128)1 << 64) % k);
+#endif  
 }
 
 // 2^32 mod k
 static inline uint32_t mod_k_base_u32(uint32_t k)
 {
-#if 1
+#if 0
   static const uint32_t N = UINT32_C(1) << 31;
   
   if (k <= N) {
