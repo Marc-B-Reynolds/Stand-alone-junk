@@ -10,7 +10,8 @@
 // attempting to find approximations of asin(x)-π/2 (for abs error)
 // form is no good for x smaller than ulp(1) since it is absorbed
 
-// Output is a bit of a PITA...sorry
+// Output is a bit of a PITA...sorry. Sollya is not great at
+// examining/manipulating non-mononomial terms. 
 
 F  = asin(x)-pi/2;
 R  = [2^-54;1-2^-54];          // as-if double tweaked range (fine for smaller formats)
@@ -33,6 +34,7 @@ P0 = fpminimax(F, b0, B, R, T, E, k);
 P0;
 print("norm = ", accurateinfnorm(F-P0, R, 23), "\n");
 
+/*
 b1 = [|tx*x,x^2*tx|];
 P1 = fpminimax(F, b1, B, R, T, E, k);
 P1;
@@ -47,3 +49,10 @@ b3 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
 P3 = fpminimax(F, b3, B, R, T, E, k);
 P3;
 print("norm = ", accurateinfnorm(F-P3, R, 23), "\n");
+*/
+
+//
+b0 = [|tx,tx*x|];
+P0 = fpminimax(F, b0, B, R, T, E);
+P0;
+print("norm = ", accurateinfnorm(F-P0, R, 23), "\n");
