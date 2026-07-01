@@ -260,6 +260,19 @@ static inline double f64_scalbn(double x, int e)
   return x * f64_ipow2(e);
 }
 
+// return |x| with the exponent set to zero
+// • result is on [1,2)
+// • zero & inf maps to 1
+// • max denormal to 2-ulp(2)
+static inline double f64_zero_exponent(double x)
+{
+  const uint64_t m = f64_mag_bits_k;
+  
+  uint64_t u = f64_to_bits(x);
+  double   r = f64_from_bits(f64_one_bits_k|(u & m));
+  return r;
+}
+
 // floor(log2(|x|)))  { as integer }
 // ∙ zero and denormals return -1023
 // ∙ inf and NaNs return 1024
