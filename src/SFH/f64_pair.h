@@ -40,12 +40,19 @@
 // of attempting to modifiy them in source. it'd be nice if compilers provided the
 // features needed to go this route but...
 #if defined(__clang__)
-#pragma STDC FP_CONTRACT OFF
+// can't count on the following being disabled w hostile options:
+// contraction, respecting inf & respecting NaNs
+#pragma float_control(precise,on)
 #pragma clang fp reassociate(off)
-//#pragma clang fp fast(off)     // whimper
+#pragma clang fp contract(off)         // can be ignored :(
+#pragma clang fp exceptions(ignore)
+
+#if (__clang_major__ >= 18)
+#pragma clang fp reciprocal(off)
+#endif
 #elif defined(__GNUC__)
-#pragma GCC optimize ("fp-contract=off")
 #pragma GCC optimize ("no-fast-math")
+#pragma GCC optimize ("fp-contract=off")
 #pragma GCC optimize ("no-math-errno")
 #pragma GCC optimize ("no-trapping-math")
 #else
