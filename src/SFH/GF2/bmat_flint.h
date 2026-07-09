@@ -6,3 +6,4 @@
 #include <flint/fmpz_mod_poly.h>
 #include <flint/fmpz_mod_mat.h>
 #include <flint/nmod_mat.h>
+#include <flint/nmod_poly.h>

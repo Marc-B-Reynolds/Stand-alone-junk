@@ -7,7 +7,7 @@
 #include <string.h>
 
 #ifndef  PRNG_SMALL_H
-#include "prng_small.h" // temp hack
+#include "SFH/prng_small.h" // temp hack
 #endif
 
 // NOTES:

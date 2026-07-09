@@ -10,15 +10,15 @@
 
 // temp hack 4 godbolt
 #if !defined(BITOPS_H)
-#include "bitops.h"
-#include "carryless.h"
-#include "bitops_small.h"
-#include "swar.h"
-#include "compiler_hints.h"
+#include "SFH/bitops.h"
+#include "SFH/carryless.h"
+#include "SFH/bitops_small.h"
+#include "SFH/swar.h"
+#include "SFH/compiler_hints.h"
 #endif
 
 #if defined(BITOPS_INTEL) && !defined(SWAR_AVX2_H)
-#include "swar_avx2.h"
+#include "SFH/swar_avx2.h"
 #endif
 
 // for (endian independent) constant defs

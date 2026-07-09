@@ -4,10 +4,10 @@
 
 # if CC is the default (not environment varible nor supplied to make, then default
 ifeq ($(origin CC),default)
-  CC = clang-15
+  CC = clang
 endif
 
-IDIRS  = -I../.. -I..
+IDIRS  = -I../.. -I../../.. -I..
 CFLAGS = -g3 -O3 -flto ${IDIRS} -march=native -Wall -Wextra -Wconversion -Wpedantic -Wno-unused-function
 LDLIBS = 
 ODIR    := obj
