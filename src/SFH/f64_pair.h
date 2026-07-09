@@ -55,9 +55,14 @@
 #pragma GCC optimize ("fp-contract=off")
 #pragma GCC optimize ("no-math-errno")
 #pragma GCC optimize ("no-trapping-math")
+#elif defined(_MSC_VER)
+#pragma float_control(precise, on)
+#pragma float_control(except, off)
+#pragma fp_contract(off)
 #else
-//#warning "this is sad"
+static_assert(0, "unknown compiler: fill in the blanks");
 #endif
+
 
 #if defined(__GNUC__)
   #define fe_noinline    __attribute__((noinline))
