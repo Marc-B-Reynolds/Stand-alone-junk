@@ -282,7 +282,7 @@ extern void report_table_format_done(report_tbuild_t* b);
 #define REPORT_TABLE_DEF_X_(_0,_1,_2,_3,M,...) M
 #define REPORT_TABLE_DEF_X(F,...) REPORT_TABLE_DEF_X_(__VA_OPT__(__VA_ARGS__,) F##_4,F##_3,F##_2,F##_1,F##_0)(__VA_ARGS__)
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #define REPORT_TABLE_DEF_ERROR(msg) _Pragma("GCC error \"" msg  "\"")
 #else
 #define REPORT_TABLE_DEF_ERROR(msg) 

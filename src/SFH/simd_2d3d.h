@@ -46,7 +46,7 @@
 
 #pragma once
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 
 #define SFH_SIMD_2D3D_H
 

@@ -3,7 +3,7 @@
 
 # if CC is the default (not environment varible nor supplied to make, then default
 ifeq ($(origin CC),default)
-  CC = clang-15
+  CC = clang
 endif
 
 LDLIBS = -lm -lm4ri
@@ -14,7 +14,7 @@ DFLAGS = -DBMAT_DEBUG
 SRC     := bmat_basics.c bmat_block.c bmat_set.c bmat_mul.c bmat_print.c bmat_gauss.c bmat_transpose.c bmat_random.c bmat_ref.c bmat_toeplitz.c bmat_func.c bmat_charpoly.c bmat_m4ri.c bmat_flint.c bmat_pow.c
 HEADERS := ${wildcard *.h}
 
-IDIRS   := -I..
+IDIRS   := -I.. -I../..
 ODIR    := obj
 R_OBJ   := ${addprefix ${ODIR}/, ${SRC:.c=.u}}
 D_OBJ   := ${addprefix ${ODIR}/, ${SRC:.c=.o}}

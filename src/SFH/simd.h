@@ -93,7 +93,7 @@
 // marker define
 #define SFH_SIMD_H
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 
 #include <stdint.h>
 #include <string.h>

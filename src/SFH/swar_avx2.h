@@ -395,7 +395,7 @@ static inline u256_t ucmpgt_64x4(u256_t a, u256_t b)
 // propogation.
 //   other_value = op(no_const_fold_256(v))
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"

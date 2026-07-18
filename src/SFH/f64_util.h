@@ -45,7 +45,7 @@
 #endif
 
 
-#ifdef __GNUC__
+#if definded(__GNUC__) || defined(__clang__)
 #define f64_expect_true(expr)  (__builtin_expect(!!(expr), 1))
 #define f64_expect_false(expr) (__builtin_expect(!!(expr), 0))
 #else
@@ -53,7 +53,7 @@
 #define f64_expect_false(expr) (expr)
 #endif
 
-#ifdef __GNUC__
+#if definded(__GNUC__) || defined(__clang__)
 #define f64_no_inline          __attribute__((__noinline__))
 #elif  _MSC_VER
 #define f64_no_inline          __declspec(noinline)

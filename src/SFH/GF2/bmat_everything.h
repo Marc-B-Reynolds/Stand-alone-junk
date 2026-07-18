@@ -7,7 +7,7 @@
 
 // Done on purpose in some places..including everything will
 // make it pop-up.
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #if defined(__clang__)
 #else
 #pragma GCC diagnostic ignored "-Wrestrict"

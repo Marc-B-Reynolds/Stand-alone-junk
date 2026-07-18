@@ -24,7 +24,7 @@
 //     do something with 'v' here
 //
 // TODO: change to Alexander Monakov's chained suggestion
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #define hint_result_barrier(X) __asm__ __volatile__("" : "+r"(X) : "r"(X));
 //                             __asm__ __volatile__("" : "+r"(X) : );
 #else
@@ -37,7 +37,7 @@
 // propogation.
 //   other_value = op(no_const_fold_n(v))
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
@@ -63,7 +63,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 
 // hint_rw_barrier() : compiler read/write barrier
 
-#if   defined(__GNUC__)
+#if   defined(__GNUC__) || defined(__clang__)
 #define hint_rw_barrier()       __asm__ __volatile__("": : :"memory")
 #elif defined(_MSC_VER)
 #define hint_rw_barrier()       _ReadWriteBarrier()  // deprecated
@@ -95,7 +95,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_assume(exp) do { if (!(exp)) __builtin_unreachable(); } while (0)
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #define hint_unlikely(exp)        __builtin_expect(!!(exp),0)
 #define hint_expect(exp  )        __builtin_expect(!!(exp),1)
 #define hint_unreachable()        __builtin_unreachable()
@@ -115,7 +115,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_unreachable()
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #define hint_no_inline          __attribute__((__noinline__))
 #define hint_pure_func          __attribute__((__pure__))
 #define hint_const_func         __attribute__((__const__))
