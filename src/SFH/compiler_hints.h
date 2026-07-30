@@ -5,6 +5,8 @@
 #pragma once
 #define COMPILER_HINTS_H
 
+#include <stdint.h>
+
 // compiler hints: must assume that the hint will be ignored
 
 // hint_result_barrier
@@ -128,7 +130,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_pointer_aligned(P,B)
 #endif
 
-
+// branch probability related
 #if defined(__GNUC__) || defined(__clang__)
 #define hint_unlikely(exp)        __builtin_expect(!!(exp),0)
 #define hint_expect(exp)          __builtin_expect(!!(exp),1)
@@ -148,6 +150,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 
 #define hint_likely hint_expect
 
+// function attributes
 #if defined(__GNUC__) || defined(__clang__)
 #define hint_flatten            __attribute__((__flatten__))
 #define hint_no_inline          __attribute__((__noinline__))
@@ -166,6 +169,97 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #endif
 
 
+//────────────────────────────────────────────────────────────────────────────────────
+// a sad attempt to convince the compiler to be branch-free (generate cmov/csel)
+// 
+
+#if defined(__GNUC__) || defined(__clang__)
+#if __has_builtin(__builtin_unpredictable)
+#define hint_select_is_generic
+#define hint_select(C,A,B) ({__builtin_unpredictable(C) ? A : B;})
+#else
+// currently only this or `hint_select_is_generic`
+#define hint_select_is_int_vs_fp
+
+// using the wrong constraints forces some register moves
+#define hint_select_int(C,A,B) ({ int _hsc=C; typeof(A) _hsa=A,_hsb=B,_r; asm("" : "+r"(_hsc), "+r"(_hsa), "+r"(_hsb)); _r = _hsc ? _hsa : _hsb; _r;})
+#define hint_select_fp(C,A,B)  ({ int _hsc=C; typeof(A) _hsa=A,_hsb=B,_r; asm("" : "+x"(_hsc), "+x"(_hsa), "+x"(_hsb)); _r = _hsc ? _hsa : _hsb; _r;})
+
+#define hint_select(C,A,B) __builtin_choose_expr(__builtin_classify_type(A) == 1, hint_select_int(C,A,B), hint_select_fp(C,A,B))
+#endif
+#else
+// haven't really looked at MSVC.
+#define hint_select_is_generic
+#define hint_select(C,A,B) _Generic(C,default: C ? A:B)
+#endif
+
+// the large number of macros is an attempt to minimize expansions when a refined type is specified.
+// currently clang/MSVC map everything to hint_select & GCC only maps to hint_select_int or hint_select_fp.
+// So mostly useless ATM but in-place if type specific versions happen in the future.
+#if defined(hint_select_is_generic) || defined(hint_select_is_int_vs_fp)
+#if defined(hint_select_is_generic)
+#define hint_select_int hint_select
+#define hint_select_fp  hint_select
+#endif
+#define hint_select_u32 hint_select_int
+#define hint_select_u64 hint_select_int
+#define hint_select_s32 hint_select_int
+#define hint_select_s64 hint_select_int
+#define hint_select_f32 hint_select_fp
+#define hint_select_f64 hint_select_fp
+#else
+#if (!defined(hint_select_u32) || !defined(hint_select_u64) ||
+     !defined(hint_select_s32) || !defined(hint_select_s64) ||
+     !defined(hint_select_f32) || !defined(hint_select_f64) )
+#error "hint_select_<type> macros need defining"
+
+#endif
+#endif
+
+     
+#if defined(hint_select_i)
+// inlines need work with _Generic
+static inline uint32_t hint_select_u32(int c, uint32_t a, uint32_t b) { return hint_select_i(u32x1_t,C,A,B); }
+static inline uint64_t hint_select_u64(int c, uint64_t a, uint64_t b) { return hint_select_i(u64x1_t,C,A,B); }
+static inline int64_t  hint_select_i32(int c, uint32_t a, uint32_t b) { return hint_select_i(i32x1_t,C,A,B); }
+static inline int64_t  hint_select_i64(int c, uint64_t a, uint64_t b) { return hint_select_i(i64x1_t,C,A,B); }
+static inline float    hint_select_f32(int c, float    a, float    b) { return hint_select_i(f32x1_t,C,A,B); }
+static inline double   hint_select_f64(int c, double   a, double   b) { return hint_select_i(f64x1_t,C,A,B); }
+#undef hint_select_t
+#endif
+     
+#ifndef hint_select
+#define hint_select(C,A,B) ({ \
+  _Generic((A),               \
+   uint32_t: hint_select_u32, \
+   uint32_t: hint_select_u64, \
+   uint32_t: hint_select_s32, \
+   uint32_t: hint_select_s64, \
+   uint32_t: hint_select_f32, \
+   uint32_t: hint_select_f64) \
+   (C,A,B);                   \
+  })
+#endif     
+     
+     
+//────────────────────────────────────────────────────────────────────────────────────
+// conditional swap
+
+#define HINT_CSWAP(C,X,Y,S) do { int _swapc = C; typeof(X) _swapx = X, _swapy = Y; X=S(_swapc,_swapy,_swapx); Y=S(_swapc,_swapx,_swapy); } while(0)
+
+#define hint_cswap(C,X,Y)     HINT_CSWAP(C,X,Y,hint_select)
+#define hint_cswap_int(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_int)
+#define hint_cswap_fp(C,X,Y)  HINT_CSWAP(C,X,Y,hint_select_fp)
+#define hint_cswap_u32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_u32)
+#define hint_cswap_u64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_u64)
+#define hint_cswap_s32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_s32)
+#define hint_cswap_s64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_s64)
+#define hint_cswap_f32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_f32)
+#define hint_cswap_f64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_f64)
+
+
+
+//────────────────────────────────────────────────────────────────────────────────────
 // temp hack placement in this file (thus not called hint_something)
 // register: 'void f(void)' to be called at initialization time
 // unless SFH_NO_AUTOINIT is defined in which case it simply 
@@ -178,6 +272,9 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 //   // stuff to do at init time
 // }
 //
+// IMPORTANT: The name 'f' (including any mangling) has to be unique
+// in MSVC. Otherwise will produce a link error.
+
 #if !defined(SFH_NO_AUTOINIT)
 #ifdef __cplusplus
   #define register_init_time_function(f)                         \
@@ -198,6 +295,7 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
  #endif
 #elif defined(__GNUC__)
 // don't need __clang__ since clang-cl will have _MSC_VER defined
+// and clang defines __GNUC__ everywhere else AFAIK
   #define register_init_time_function(f)              \
     static void f(void) __attribute__((constructor)); \
     static void f(void)
