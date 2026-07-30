@@ -4,11 +4,11 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef   QUAT_H
-#define   QUAT_H
+#pragma once
+#define QUAT_H
 
-#ifndef   VEC3_H
-#include "vec3.h"  
+#ifndef VEC3_H
+#include "SFH/vec3.h"  
 #endif
 
 #ifndef QUAT_ATAN2
@@ -364,5 +364,3 @@ static inline void quat_map_z2y(quat_t* q, quat_t* a) { quat_set(q, AX, AZ,-AY, 
 #undef BY
 #undef BZ
 #undef BW
-  
-#endif

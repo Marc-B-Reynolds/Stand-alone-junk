@@ -2,7 +2,7 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
-#ifndef F32_QUANT_H
+#pragma once
 #define F32_QUANT_H
 
 // scalar uniform quantization (suq) helpers
@@ -189,4 +189,3 @@ static inline float snorm8_decode_cr(uint32_t u)
   return r;
 }
 
-#endif

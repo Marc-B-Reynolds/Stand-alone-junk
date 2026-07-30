@@ -4,11 +4,11 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef   VEC2_H
-#define   VEC2_H
+#pragma once
+#define VEC2_H
 
 #ifndef   F32_UTIL_H
-#include "f32_util.h"
+#include "SFH/f32_util.h"
 #endif
   
 typedef union {
@@ -101,5 +101,3 @@ static inline void vec2_usqrt(vec2_t* d, vec2_t* a)
 #undef AY
 #undef BX
 #undef BY
-  
-#endif

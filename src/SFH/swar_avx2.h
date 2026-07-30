@@ -2,7 +2,7 @@
 // Marc B. Reynolds, 2023-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef SWAR_AVX2_H
+#pragma once
 #define SWAR_AVX2_H
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -1208,8 +1208,5 @@ u256_t sort_32x8(u256_t x)
   
   return x;
 }
-
-#endif
-
 
 #endif

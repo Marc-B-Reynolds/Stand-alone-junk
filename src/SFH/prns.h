@@ -6,7 +6,7 @@
 // Short description:
 // * 
 
-#ifndef PRNS_H
+#pragma once
 #define PRNS_H
 
 // macro configurations to define (if desired) prior to including
@@ -21,7 +21,6 @@
 //
 // PRNS_WEYL:
 // PRNS_WEYL_D:
-
 
 typedef struct { uint64_t i;  } prns_t;
 typedef struct { uint64_t i,k;} prns_down_t;
@@ -258,5 +257,3 @@ static inline uint64_t prns_down_prev(prns_down_t* gen)
   gen->i = i - PRNS_WEYL_D;
   return r;
 }
-
-#endif

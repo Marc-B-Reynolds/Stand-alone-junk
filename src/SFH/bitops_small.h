@@ -4,7 +4,7 @@
 
 // small collection of operations on (unpacked) 8/16 bit values
 
-#ifndef BITOPS_SMALL_H
+#pragma once
 #define BITOPS_SMALL_H
 
 #define BIT_PERMUTE_T(T,X,M,S)  ((T)((X & M) << S) | ((X >> S) & M))
@@ -45,8 +45,5 @@ static inline uint16_t bit_reverse_16(uint16_t x)
   x = BIT_PERMUTE_T(uint16_t, x, 0x5555, 1);
   return x;
 }
-
-#endif
-
 
 #endif

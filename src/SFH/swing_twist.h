@@ -17,7 +17,7 @@
 // https://marc-b-reynolds.github.io/quaternions/2017/05/12/HopfCoordConvert.html
 // https://marc-b-reynolds.github.io/quaternions/2022/01/31/QuatAxisFactor.html
 
-#ifndef SWING_TWIST_H
+#pragma once
 #define SWING_TWIST_H
 
 typedef struct {
@@ -296,5 +296,3 @@ static inline void twist_swing_y_to_quat_n(quat_t* q, swing_twist_t* s, uint32_t
   twist_swing_z_to_quat_n(q,s,sw);
   quat_map_z2y(q,q);
 }
-
-#endif

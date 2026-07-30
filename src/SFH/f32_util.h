@@ -2,24 +2,19 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2026
 
-#ifndef F32_UTIL_H
+#pragma once
 #define F32_UTIL_H
 
 #include <stdbool.h>
 
 #ifndef   INTOPS_H
-#include "intops.h"
+#include "SFH/intops.h"
 #endif
 
 #define F32_PRAGMA(X) _Pragma(X)
 
 #if defined(__x86_64__) || defined(__x86_64) || defined(_M_X64) || defined(_M_AMD64)
 #define F32_INTEL
-
-// evil temp hack
-#if 0//!defined(__X86INTRIN_H)
-#include <x86intrin.h>
-#endif
 
 #elif defined(__ARM_ARCH)
 #define F32_ARM
@@ -847,6 +842,4 @@ static inline uint32_t f32_get_payload(float v)
 {
   return f32_to_bits(v) & (~f32_nan_bits_k);
 }
-
-#endif
 

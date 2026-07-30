@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2018-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef SF_WALK_H
+#pragma once
 #define SF_WALK_H
 
 // Spherical Fibonacci point set for testing
@@ -96,5 +96,3 @@ static inline vec3_t sf_walk_next(sf_walk_t* w)
 
   return v;
 }
-
-#endif

@@ -6,7 +6,7 @@
 
 // WARNING: hacked..revalidate. also clean-up (odd/even pairing?)
 
-#ifndef F64_HORNER2
+#pragma once
 #define F64_HORNER2
 
 // second order versions (layout compat with standard)
@@ -122,7 +122,4 @@ static inline double f64_horner2_10(const double x, const double c[static 11])
 
   return fma(x,o,e);
 }
- 
-
-#endif
 

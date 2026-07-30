@@ -4,17 +4,16 @@
 
 // WIP: tons of stuff to be minorly cleaned up before a proper push
 
-#ifndef F32_MATH
+#pragma once
 #define F32_MATH
 
 #ifndef   BITOPS_H
-#include "bitops.h"
+#include "SFH/bitops.h"
 #endif
 
 #ifndef   F32_UTIL_H
-#include "f32_util.h"
+#include "SFH/f32_util.h"
 #endif
-
 
 extern float f32_rsqrt_hq(float x);
 extern float f32_rsqrt_cr(float x);
@@ -110,7 +109,4 @@ static inline f32_pair_t f32_quadratic_hq(float A, float B, float C)
   
   return r;
 }
-
-
-#endif
 

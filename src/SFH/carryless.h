@@ -33,7 +33,7 @@
 #define CARRYLESS_H   // needed as marker
 
 #ifndef BITOPS_H
-#include "bitops.h"
+#include "SFH/bitops.h"
 #endif
 
 
@@ -478,7 +478,7 @@ cl_gcd_64_t cl_extended_gcd_64(uint64_t a, uint64_t b)
 
 // temp hack: kill log2_{u32,u64} useage
 #ifndef __INTOPS_H__
-#include "intops.h"
+#include "SFH/intops.h"
 #endif
 
 // multiplicative order (period) of 'x'

@@ -1,7 +1,7 @@
 // Marc B. Reynolds, 2023-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef SWAR_H
+#pragma once
 #define SWAR_H
 
 // some SWAR (SIMD Within A Register) rountines that I'm deeming to be
@@ -182,5 +182,3 @@ static inline uint64_t bit_gather_lsb_16x4(uint64_t x)
   return (((x & m) * 0x0002040810204081) >> 49) & 0xff;
 #endif  
 }
-
-#endif

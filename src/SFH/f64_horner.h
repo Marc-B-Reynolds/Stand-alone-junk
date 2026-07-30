@@ -4,7 +4,7 @@
 
 // evalulate n^th degree polynomial in Horner's form. Coefficient arrays are from high to low.
 
-#ifndef F64_HORNER
+#pragma once
 #define F64_HORNER
 
 static inline double f64_horner_1(double x, const double C[static 2])
@@ -26,6 +26,4 @@ static inline double f64_horner_12(double x, const double C[static 13]) { return
 static inline double f64_horner_13(double x, const double C[static 14]) { return fma(x,f64_horner_12(x,C),C[13]); }
 static inline double f64_horner_14(double x, const double C[static 15]) { return fma(x,f64_horner_13(x,C),C[14]); }
 static inline double f64_horner_15(double x, const double C[static 16]) { return fma(x,f64_horner_14(x,C),C[15]); }
-
-#endif
 

@@ -20,3 +20,6 @@ src/TestAndSearch/WeylBitByBit.c
 src/SFH/plotly.h
 src/SFH/rng_xform.h
 src/SFH/f32_math/tests/exp2
+src/SFH/intops/Makefile
+*.d
+src/SFH/intops/binomial

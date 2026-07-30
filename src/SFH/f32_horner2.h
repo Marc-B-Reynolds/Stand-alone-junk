@@ -6,7 +6,7 @@
 
 // WARNING: hacked..revalidate. also clean-up (odd/even pairing?)
 
-#ifndef F32_HORNER2
+#pragma once
 #define F32_HORNER2
 
 // second order versions (layout compat with standard)
@@ -123,7 +123,4 @@ static inline float f32_horner2_10(const float x, const float c[static 11])
 
   return fmaf(x,o,e);
 }
- 
-
-#endif
 

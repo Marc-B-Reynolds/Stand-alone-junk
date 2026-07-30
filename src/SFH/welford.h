@@ -1,9 +1,12 @@
 // Marc B. Reynolds, 2018-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef WELFORD_H
+#pragma once
 #define WELFORD_H
 
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
 
 // Welford's method for streaming mean/variance/stdev
 typedef struct { double n,m,s; } seq_stats_t;
@@ -33,12 +36,10 @@ static inline double seq_stats_stddev(seq_stats_t* d)   { return sqrt(seq_stats_
 
 static inline void seq_stats_print(seq_stats_t* d)
 {
-  printf("mean=%f,variance=%f,std-dev=%f, count=%u\n",
+  printf("mean=%f,variance=%f,std-dev=%f, count=%lu\n",
 	 d->m,
 	 seq_stats_variance(d),
 	 seq_stats_stddev(d),
-	 (uint32_t)d->n
+	 (uint64_t)d->n
 	 );
 }
-
-#endif

@@ -6,7 +6,7 @@
 //
 // Documentation: http://marc-b-reynolds.github.io/shf/2016/04/18/sobol.html
 
-#ifndef SOBOL_H
+#pragma once
 #define SOBOL_H
 
 // standard sequences: allow for progressive sampling (number of
@@ -466,6 +466,4 @@ SOBOL_EXTERN void  sobol_uniform_s2(sobol_2d_t* s, float* p);
 SOBOL_EXTERN void  sobol_uniform_hs2(sobol_2d_t* s, float* p);
 
 #endif
-#endif
-
 #endif

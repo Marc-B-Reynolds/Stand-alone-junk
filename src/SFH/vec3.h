@@ -4,10 +4,10 @@
 // This is utter junk example code for some posts.
 // quick cut/paste/mod so errors are likely
 
-#ifndef   VEC3_H
-#define   VEC3_H
+#pragma once
+#define VEC3_H
 
-#include "f32_util.h"
+#include "SFH/f32_util.h"
   
 typedef union {
   struct{ float x, y, z; };

@@ -5,13 +5,13 @@
 // WIP: loaded with unconverted constants from f32_util. probably everything
 // is even more broken.
 
-#ifndef F64_UTIL_H
+#pragma once
 #define F64_UTIL_H
 
 #include <stdbool.h>
 
 #ifndef   INTOPS_H
-#include "intops.h"
+#include "SFH/intops.h"
 #endif
 
 #define F64_PRAGMA(X) _Pragma(X)
@@ -808,7 +808,4 @@ static inline uint64_t f64_get_payload(double v)
 {
   return f64_to_bits(v) & (~f64_nan_bits_k);
 }
-
-
-#endif
 
