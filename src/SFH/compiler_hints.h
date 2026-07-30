@@ -3,7 +3,6 @@
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
-
 #define COMPILER_HINTS_H
 
 // compiler hints: must assume that the hint will be ignored
@@ -25,11 +24,20 @@
 //
 // TODO: change to Alexander Monakov's chained suggestion
 #if defined(__GNUC__) || defined(__clang__)
-#define hint_result_barrier(X) __asm__ __volatile__("" : "+r"(X) : "r"(X));
-//                             __asm__ __volatile__("" : "+r"(X) : );
+#define hint_result_barrier(X) do { __asm__ __volatile__("" : "+r"(X) : "r"(X)); } while(0)
 #else
 #define hint_result_barrier(X)
 #endif
+
+
+#ifndef __has_builtin
+#define __has_builtin(X) 0
+#endif
+
+#ifndef __has_c_attribute
+#define __has_c_attribute(x) 0
+#endif
+
 
 // attempted to hint to the complier not to promote a computation
 // with 'v' into a constant load. use with care and only at point
@@ -64,67 +72,138 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 // hint_rw_barrier() : compiler read/write barrier
 
 #if   defined(__GNUC__) || defined(__clang__)
-#define hint_rw_barrier()       __asm__ __volatile__("": : :"memory")
+#define hint_rw_barrier()  do { __asm__ __volatile__("": : :"memory"); } while(0)
 #elif defined(_MSC_VER)
-#define hint_rw_barrier()       _ReadWriteBarrier()  // deprecated
+#define hint_rw_barrier()  _ReadWriteBarrier()  // deprecated
 #else
 #include <stdatomic.h>
-#define hint_rw_barrier()       atomic_signal_fence(memory_order_acq_rel)
+#define hint_rw_barrier()  atomic_signal_fence(memory_order_acq_rel)
 #endif
 
 #define hint_pragma(X) _Pragma(#X)
 
 #if defined(__clang__)
 #define hint_unroll(X) hint_pragma(clang loop unroll_count(X))
+#define hint_no_unroll hint_pragma(clang loop unroll(disable))
 #elif defined(__GNUC__)
 #define hint_unroll(X) hint_pragma(GCC unroll X)
+#define hint_no_unroll hint_pragma(GCC unroll 0)
 #else
 #define hint_unroll(X)
-#endif
-
-// because clang loses it's mind about loop unrolling
-#if defined(__clang__)
-#define hint_no_unroll _Pragma("clang loop unroll(disable)")
-#else 
 #define hint_no_unroll
-#endif 
-
-#if defined(__clang__)
-#define hint_assume(exp) __builtin_assume(exp)
-#else
-#define hint_assume(exp) do { if (!(exp)) __builtin_unreachable(); } while (0)
 #endif
+
+#define hint_empty_statement  do {/* empty compound statement */ } while (0)
+
+
+// void hint_unreachable() : tell compiler it can't reach this statement.
+// If it can then it's UB
+#if   (__has_builtin(__builtin_unreachable))
+#define hint_unreachable()        __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define hint_unreachable()        __assume(0)
+#else
+#define hint_unreachable()        hint_empty_statement
+#endif
+
+// void hint_assume(exp) : tell compiler to assume `exp` is always true.
+// if `exp` is ever false UB can be introduced.
+#if   (__has_builtin(__builtin_assume))
+#define hint_assume(exp)          __builtin_assume(exp)
+#elif defined(_MSC_VER)
+#define hint_assume(exp)          __assume(exp)
+#elif (__has_builtin(__builtin_unreachable))
+#define hint_assume(exp)           do { if (!(exp)) __builtin_unreachable(); } while (0)
+#else
+#define hint_assume(exp)           hint_empty_statement
+#endif
+
+
+// hint_pointer_aligned(P,B) : pointer P is B byte aligned
+#if   (__has_builtin(__builtin_assume_aligned))
+#define hint_pointer_aligned(P,B) do { P = __builtin_assume_aligned(P,B); } while(0)
+#elif (__has_builtin(__builtin_unreachable))
+#define hint_pointer_aligned(P,B) do { if ((size_t)P & ((B)-1)) { __builtin_unreachable(); }; } while(0)
+#else
+#define hint_pointer_aligned(P,B)
+#endif
+
 
 #if defined(__GNUC__) || defined(__clang__)
 #define hint_unlikely(exp)        __builtin_expect(!!(exp),0)
-#define hint_expect(exp  )        __builtin_expect(!!(exp),1)
-#define hint_unreachable()        __builtin_unreachable()
+#define hint_expect(exp)          __builtin_expect(!!(exp),1)
 #if defined(__clang__)
-#define hint_unpredictable(X)     __builtin_unpredictable(X)
+#define hint_unpredictable(exp)   __builtin_unpredictable(exp)
 #else
-#define hint_unpredictable(X)     __builtin_expect_with_probability(X,1,0.5)
+#define hint_unpredictable(exp)   __builtin_expect_with_probability(exp,1,0.5)
 #endif
 #elif defined(_MSC_VER)
 #define hint_unlikely(exp)        (exp)
 #define hint_expect(exp)          (exp)
-#define hint_unpredictable(X)     (X)
-#define hint_unreachable()        __assume(0)
+#define hint_unpredictable(exp)   (X)
 #else
 #define hint_expect(exp)          (exp)
-#define hint_unpredictable(X)     (X)
-#define hint_unreachable()
+#define hint_unpredictable(exp)   (X)
 #endif
 
+#define hint_likely hint_expect
+
 #if defined(__GNUC__) || defined(__clang__)
+#define hint_flatten            __attribute__((__flatten__))
 #define hint_no_inline          __attribute__((__noinline__))
 #define hint_pure_func          __attribute__((__pure__))
 #define hint_const_func         __attribute__((__const__))
 #elif defined(_MSC_VER)
 #define hint_no_inline          __declspec(noinline)
+#define hint_flatten
 #define hint_pure_func               
 #define hint_const_func
 #else
+#define hint_flatten
 #define hint_no_inline
 #define hint_pure_fun
 #define hint_const_func
+#endif
+
+
+// temp hack placement in this file (thus not called hint_something)
+// register: 'void f(void)' to be called at initialization time
+// unless SFH_NO_AUTOINIT is defined in which case it simply 
+// expands to 'void f(void)' (not static which auto version is)
+// so it can be called here or elsewhere. Having name 'f' allows
+// more than one per file in addition to manual. 
+//
+// register_init_time_function(f)
+// {
+//   // stuff to do at init time
+// }
+//
+#if !defined(SFH_NO_AUTOINIT)
+#ifdef __cplusplus
+  #define register_init_time_function(f)                         \
+    static void f(void);                                         \
+    struct f##_t_ { f##_t_(void) { f(); } }; static f##_t_ f##_; \
+    static void f(void)
+#elif defined(_MSC_VER)
+#pragma section(".CRT$XCU",read)
+  #define register_init_time_msvc(f,p)                       \
+    static void f(void);                                     \
+    __declspec(allocate(".CRT$XCU")) void (*f##_)(void) = f; \
+    __pragma(comment(linker,"/include:" p #f "_"))           \
+    static void f(void)
+ #ifdef _WIN64
+    #define register_init_time_function(f) register_init_time_msvc(f,"")
+ #else
+    #define register_init_time_function(f) register_init_time_msvc(f,"_")
+ #endif
+#elif defined(__GNUC__)
+// don't need __clang__ since clang-cl will have _MSC_VER defined
+  #define register_init_time_function(f)              \
+    static void f(void) __attribute__((constructor)); \
+    static void f(void)
+#else
+#define register_init_time_function(f) "error: register_init_time_function"
+#endif
+#else
+#define register_init_time_function(f)  void f(void)
 #endif
