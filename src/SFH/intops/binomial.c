@@ -1,4 +1,4 @@
-﻿// -*- coding: utf-8 -*-
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2002-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -6,15 +6,22 @@
 #include <assert.h>
 
 //────────────────────────────────────────────────────────────────────────────────────
-// implements a single function: 
-//   uint64_t binomial_u64(uint64_t n, uint64_t k)
-//
-// which computes the binomial coefficient (without overflow) for n on [0,67].
-// This limitation is because 67 is the largest 'n' for which all 'k' values
-// can fit in a uint64_t.
+// Binomial Coefficients
 // 
-//   log2(binomial(67,67/2)) = ~63.6358
-//   log2(binomial(68,68/2)) = ~64.6252
+// • uint64_t binomial_u64(uint64_t n, uint64_t k)
+//   computes the binomial coefficient (without overflow) for n on [0,67].
+//   This limitation is because 67 is the largest 'n' for which all 'k' values
+//   can fit in a uint64_t.
+//     log2(binomial(67,67/2)) = ~63.6358
+//     log2(binomial(68,68/2)) = ~64.6252
+//
+// • void binomial_init(void)
+//   initialize data table (if selected) nop otherwise. By default this should
+//   happen automatically at init time (see below).
+//
+// • int64_t binomial_i64(int64_t n, int64_t k)
+//   wrapper than extends to negative n inputs. |n| ≤ 66
+//     log2(binomial(66,66/2)) = ~62.6466
 //
 // The default implementation is table based which is init time initialized. If at
 // compile time the "magic" for making that happen isn't found then a warning will
@@ -22,13 +29,14 @@
 // calling `binomial_u64`.
 // 
 // Internally there are three versions:
-// • binomial_ref:   minimal code size version for internal testing only
+// • binomial_ref:   minimal code size version for internal testing only.
 // • binomial_table: very small amount of computation to map into an 8.25K table (default)
 // • binomial_small: hybrid: textbook for cases that can't overflow and table
 //   lookup for inputs that would overflow. Actually there's a commented out
 //   overflow path that's basically an optimized version of `binomial_ref`.
 //   This is purely for entertainment purposes. This version is used if
-//   `SFH_BINOMIAL_SMALL` is defined. This is very sad though. I wouldn't do it.
+//   `SFH_BINOMIAL_SMALL` is defined. This is very sad though. But it is small:
+//    data table entries = 52 vs. 1056 for table driven.
 // 
 //────────────────────────────────────────────────────────────────────────────────────
 
@@ -37,7 +45,9 @@
 #define __has_include(X) 0
 #endif
 
-#define BINOMIAL_TEST
+
+// largest 64-bit isn't a binomial coefficient
+static const uint64_t binomial_error = UINT64_C(0xFFFFFFFFFFFFFFFF);
 
 // if using `binomial_table` then none of the hints matter very much.
 // there's one branch free select hint that almost certainly compiles
@@ -73,16 +83,19 @@
 #endif
 
 
-// need a couple of support functions is using small or doing mini testing
+// need a couple of support functions if using small or doing internal testing
 #if defined(SFH_BINOMIAL_SMALL) || defined(BINOMIAL_TEST)
 
 #if !defined(_MSC_VER)
 // GCC/clang can match to single opcode
 static inline uint32_t binomial_ctz(uint64_t x) { return (x!=0) ? (uint32_t)__builtin_ctzl(x) : 64; }
+static inline uint32_t binomial_clz(uint64_t x) { return (x!=0) ? (uint32_t)__builtin_clzl(x) : 64; }
 #else
 //#include <intrin.h>
 #pragma intrinsic(_tzcnt_u64)
+#pragma intrinsic(_lzcnt_u64)
 static inline uint32_t binomial_ctz(uint64_t x) { return (uint32_t)_tzcnt_u64(x);  }
+static inline uint32_t binomial_clz(uint64_t x) { return (uint32_t)_lzcnt_u64(x);  }
 #endif
 #endif
 
@@ -95,8 +108,8 @@ static inline uint32_t binomial_ctz(uint64_t x) { return (uint32_t)_tzcnt_u64(x)
 // binomial table:
 // uses symmettry and easy from 'n' to reduce size.
 // Sum[Max[Floor[n/2]-1,0], {n,0,67}] = 1056 (8.25K)
-//   (sum bounds for clairity. some zero terms here)
-static uint64_t binomial_data[1056];
+//   (sum bounds for clairity. some zero terms)
+static uint64_t binomial_data[1056] = {0};
 
 uint64_t binomial_table(uint64_t n, uint64_t k)
 {
@@ -129,12 +142,13 @@ uint64_t binomial_table(uint64_t n, uint64_t k)
 #ifndef  register_init_time_function
 #define  register_init_time_function(f) void f(void)
 #warning "WARNING: 'binomial_init' not registered to run at init time. user must manually call"
+#define NEEDS_USER_INIT
 #endif
 
 
 // initialization time function that builds
 // the binomial data table. Pascal's rule
-register_init_time_function(binomial_init)
+register_init_time_function(binomial_init_)
 {
   uint64_t c0,c1;
   uint64_t id  = 0;
@@ -163,10 +177,36 @@ register_init_time_function(binomial_init)
 #endif
 
 
+void binomial_init(void)
+{
+#if defined(BINOMIAL_USER_INIT)  
+  if (binomial_data[0] != 6)
+    binomial_init_();
+#endif
+}
+
+
 //────────────────────────────────────────────────────────────────────────────────────
 // data reduced version. don't use. for entertainment purposes only.
+// • non-overflow cases are textbook implementation (commented out) with
+//   the divide replaced by multiply.
+// • overflow cases have commented out "optimized" version of reference
+//   but uses a table look-up.
+// • total data size: 16+36 8 byte entries tables (416 bytes total)
 
 #if defined(SFH_BINOMIAL_SMALL) || defined(BINOMIAL_TEST)
+
+static inline uint64_t binomial_mulhi(uint64_t x, uint64_t y)
+{
+#if defined(_MSC_VER)
+  return __umulh(x, y);
+#else
+  __uint128_t xl = x, yl = y;
+  __uint128_t rl = xl * yl;
+  return (uint64_t)(rl >> 64);
+#endif
+}
+
 uint64_t binomial_small(uint64_t n, uint64_t k)
 {  
   if ((k <= n) && (n <= 67)) {  
@@ -180,16 +220,44 @@ uint64_t binomial_small(uint64_t n, uint64_t k)
     if (n < 63 || k+n < 91) {
       uint64_t r = n-k+1;
       uint64_t t = r;
-      
+
       for (uint64_t i=2; i<=k; i++) {
         t++;
         r *= t;
+#if 0
+        // what we're doing below
         r  = r/i;
+#else
+        // "magic" constants for divide by 'i'. first entry is junk padding (16 entries)
+        static const uint64_t m[] = {
+          1,                  0x5555555555555556, 0x999999999999999a, 0x2492492492492493,
+          0xc71c71c71c71c71d, 0x745d1745d1745d18, 0x3b13b13b13b13b14, 0x1111111111111112,
+          0xe1e1e1e1e1e1e1e2, 0xaf286bca1af286bd, 0x8618618618618619, 0x642c8590b21642c9,
+          0x47ae147ae147ae15, 0x2f684bda12f684be, 0x1a7b9611a7b9611b, 0x0842108421084211
+        };
+
+        // doing the "divide by multiply" the hard way so all are handled the same way
+        uint32_t s = binomial_ctz(i);              // shift to make 'i' odd
+        uint64_t o = i >> s;                       // 'i' reduced to odd
+        uint64_t l = o >> 1;                       //   index to magic data
+        uint32_t a = 64 - binomial_clz(l);         // compute the shift for the "divide by multiply"
+        uint64_t q = binomial_mulhi(r,m[l]);       // high 64-bit result of product by magic
+        uint64_t t = (((r-q)>>1)+q) >> a;          // complete the division by odd
+
+        // if we divided by '1' then the result is garbage so use 'r' instead of 't'
+        // and complete the divide by 'i' 
+        r = hint_select_u64(o==1,r,t) >> s;
+#endif
       }
       return r;
     }
     
 #if 0
+    // overflow case: This is basically the reference version with a
+    // built-in GCD. Didn't bother removing the division (as above)
+    // since moving from a 17 table entry to 36 entry one & directly
+    // grabbing the result: no brainer.
+    
     // mod inverse of odd integers on [1,33]. since the divisions are
     // exact we can multiply by the mod inverse instead of divide.
     // floor(67/2) = 33 : 17 entries
@@ -203,12 +271,6 @@ uint64_t binomial_small(uint64_t n, uint64_t k)
                                    0x34f72c234f72c235, 0xef7bdef7bdef7bdf,
                                    0xf83e0f83e0f83e1};
     
-    // compute the slow way but not 3 integer divides per iterration slow.
-    // this is only here to show how much work it is: call it 33 worst case
-    // iterations for top loop and then the GCD at 6 & change: 198 with
-    // 33 blazing fast integer divides?  It's a lot better than 99 divs
-    // but the other option is two table lookups. Okay the divisions could
-    // removed using a table (didn't figure out the size. seems pointless)
     uint64_t r = 1;
     
     // same as above but divide through by the GCD first
@@ -275,6 +337,35 @@ uint64_t binomial_small(uint64_t n, uint64_t k)
 #endif
 
 
+//────────────────────────────────────────────────────────────────────────────────────
+
+// direct to table based if running internal test
+#ifdef  BINOMIAL_TEST
+#define binomial_u64 binomial_table
+#endif
+
+// extend to signed 'n'. requires |n| <= 66 for no overflow
+int64_t binomial_i64(int64_t n, int64_t k)
+{
+  if (k >= 0) {
+    if (n >= 0) {
+      if (n <= 66)
+        return (int64_t)binomial_u64((uint64_t)n,(uint64_t)k);
+      else
+        return (int64_t)binomial_error;
+    }
+
+    // transform to standard
+    uint64_t r = binomial_u64((uint64_t)(k-n-1),(uint64_t)k);
+    uint64_t s = -(k & 1);
+    
+    return (int64_t)((r^s)-s);
+  }
+
+  return 0;
+}
+
+
 
 #if defined(BINOMIAL_TEST)
 
@@ -319,7 +410,7 @@ uint64_t binomial_ref(uint64_t n, uint64_t k)
 
 int main(void)
 {
-  printf("binomial test\n");
+  printf("test: binomial_u64 variants\n");
 
   if (binomial_data[0] != 6) {
     printf("  WARNING: autoinit didn't happen. initalizing.\n");
@@ -333,21 +424,47 @@ int main(void)
     uint64_t e = n;
     
     for(uint64_t k=0; k<=e; k++) {
-      // checking three implementations agree on all
-      // valid inputs seems sufficient.
+      // checking three implementations for agreement on all valid inputs seems sufficient.
       uint64_t r0 = binomial_ref(n,k);
       uint64_t r1 = binomial_small(n,k);
       uint64_t r2 = binomial_table(n,k);
 
       if ((r0 == r1) && (r0 == r2)) continue;
 
-      if (r0 != r1) { serrors++; printf("  s %2u : (%2" PRIu64 ", %2" PRIu64 ") = %3" PRIu64 " : % " PRIu64 " % " PRIu64 "\n", serrors,n,k,n+k,r0,r1);}
-      if (r0 != r2) { terrors++; printf("  t %2u : (%2" PRIu64 ", %2" PRIu64 ") = %3" PRIu64 " : % " PRIu64 " % " PRIu64 "\n", terrors,n,k,n+k,r0,r1);}
+      if (r0 != r1) { serrors++; printf("  s %2u : (%2" PRIu64 ", %2" PRIu64 ") = %3" PRIu64 " : %" PRIu64 " %" PRIu64 "\n", serrors,n,k,n+k,r0,r1);}
+      if (r0 != r2) { terrors++; printf("  t %2u : (%2" PRIu64 ", %2" PRIu64 ") = %3" PRIu64 " : %" PRIu64 " %" PRIu64 "\n", terrors,n,k,n+k,r0,r1);}
     }
   }
 
   if (serrors) printf("  small errors: %u\n", serrors);
-  if (terrors) printf("  table errors: %u\n", terrors);
+
+  if (!terrors) {
+    printf("  done\ntest: binomial_i64\n");
+    uint32_t nerrors = 0;
+
+    // run some positive results
+    for(uint32_t n=1; n<=66; n++) {
+      int64_t r0 = (int64_t)binomial_table(3+(uint64_t)n,(uint64_t)(n-1));
+      int64_t r1 = binomial_i64(-((int64_t)n), 4);
+      if (r0 == r1) continue;
+      printf("  fail: (-%u,%2u) = %3i : got %3i\n",n,n-1,(int32_t)r0,(int32_t)r1);
+      if (++nerrors > 33) { printf("  (bailing)"); break; }
+    }
+
+    nerrors = 0;
+    
+    // run some negative results
+    for(uint32_t n=1; n<=66; n++) {
+      int64_t r0 = -(int64_t)binomial_table(2+(uint64_t)n,(uint64_t)(n-1));
+      int64_t r1 = binomial_i64(-((int64_t)n), 3);
+      if (r0 == r1) continue;
+      printf("  fail: (-%u,%2u) = %3i : got %3i\n",n,n-1,(int32_t)r0,(int32_t)r1);
+      if (++nerrors > 33) { printf("  (bailing)"); break; }
+    }
+  }
+  else
+    printf("  table errors: %u (other routines testing skipped)\n", terrors);
+
   printf("  done\n");
 
   return 0;
