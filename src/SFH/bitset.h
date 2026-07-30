@@ -240,6 +240,9 @@ static inline uint64_t bitset_lowest_set(const bitset_t* set)
   return bitset_none;
 }
 
+// TODO: should have bitset_lowest_set_from for lazy skip-ahead
+// and a callback func that walks all set 
+
 // returns the number of set bits in the set (the cardinality)
 static inline uint64_t bitset_count(const bitset_t* set)
 {
