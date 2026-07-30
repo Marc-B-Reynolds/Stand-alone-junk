@@ -487,6 +487,19 @@ static inline uint32_t bit_run_hi_bit_32(uint32_t x) { return x & (x^(x>>1)); }
 static inline uint64_t bit_run_lo_bit_64(uint64_t x) { return x & (x^(x<<1)); }
 static inline uint32_t bit_run_lo_bit_32(uint32_t x) { return x & (x^(x<<1)); }
 
+// isolate all runs of length 1 (i.e. longer are zeroed)
+static inline uint64_t bit_run_isolate_32(uint32_t x)
+{
+  // this reduces: compiler can do it
+  return bit_run_hi_bit_32(x) & bit_run_lo_bit_32(x);
+}
+
+static inline uint64_t bit_run_isolate_64(uint64_t x)
+{
+  return bit_run_hi_bit_64(x) & bit_run_lo_bit_64(x);
+}
+
+
 // number of bit runs
 static inline uint32_t bit_run_count_32(uint32_t x) { return pop_32(x & (x^(x>>1))); }
 static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x>>1))); }
@@ -495,11 +508,12 @@ static inline uint32_t bit_run_count_64(uint64_t x) { return pop_64(x & (x^(x>>1
 // position from hi to lo.  equivalent to applying 'bit_run_clear_lo'
 // 'n-1' times. The sequence of 's' values sum to n-1.
 // SEE: Hacker's Delight, "Find First String of 1-Bits of a Given Length"
-static inline uint64_t bit_run_mark_hi_ge_n_64(uint64_t x, uint32_t n)
+static inline uint64_t bit_run_mark_hi_ge_64(uint64_t x, uint32_t n)
 {
   uint32_t s;
 
   // steps are trivial for compiler to drop for known constant 'n'
+  // (the 's' & 'n' computations disappear)
   s = n >> 1; x = x & (x << s); n = n - s;
   s = n >> 1; x = x & (x << s); n = n - s;
   s = n >> 1; x = x & (x << s); n = n - s;
@@ -510,7 +524,7 @@ static inline uint64_t bit_run_mark_hi_ge_n_64(uint64_t x, uint32_t n)
   return x;
 }
 
-static inline uint32_t bit_run_mark_hi_ge_n_32(uint32_t x, uint32_t n)
+static inline uint32_t bit_run_mark_hi_ge_32(uint32_t x, uint32_t n)
 {
   uint32_t s;
 
@@ -524,7 +538,7 @@ static inline uint32_t bit_run_mark_hi_ge_n_32(uint32_t x, uint32_t n)
 }
 
 // same as above but for lo to hi bits (bit_run_clear_hi 'n-1' times)
-static inline uint64_t bit_run_mark_lo_ge_n_64(uint64_t x, uint32_t n)
+static inline uint64_t bit_run_mark_lo_ge_64(uint64_t x, uint32_t n)
 {
   uint32_t s;
 
@@ -538,7 +552,7 @@ static inline uint64_t bit_run_mark_lo_ge_n_64(uint64_t x, uint32_t n)
   return x;
 }
 
-static inline uint32_t bit_run_mark_lo_ge_n_32(uint32_t x, uint32_t n)
+static inline uint32_t bit_run_mark_lo_ge_32(uint32_t x, uint32_t n)
 {
   uint32_t s;
 
@@ -550,6 +564,9 @@ static inline uint32_t bit_run_mark_lo_ge_n_32(uint32_t x, uint32_t n)
 
   return x;
 }
+
+
+
 
 // isolate all runs of length 1
 static inline uint64_t bit_run_len1_64(uint64_t x)
