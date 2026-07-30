@@ -335,10 +335,10 @@ static inline uint32_t bit_scatter_even_32(uint32_t x)
 #if BITOPS_HAS_SCATTER_GATHER
   return bit_scatter_32(x, bit_set_even_1_32);
 #else  
-  x = bit_permute_step(x, 0x0000aaaa, 15);
-  x = bit_permute_step(x, 0x0000cccc, 14);
-  x = bit_permute_step(x, 0x0000f0f0, 12);
-  x = bit_permute_step(x, 0x0000ff00,  8);
+  x = bit_permute_step_32(x, 0x0000aaaa, 15);
+  x = bit_permute_step_32(x, 0x0000cccc, 14);
+  x = bit_permute_step_32(x, 0x0000f0f0, 12);
+  x = bit_permute_step_32(x, 0x0000ff00,  8);
 
   return x;
 #endif  
