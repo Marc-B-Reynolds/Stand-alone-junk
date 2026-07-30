@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2021-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -5,13 +6,11 @@
 #define PRNG_SMALL_H
 
 // small feature pseudorandom number generator
-// * 
-// * single sequence combined generator formed from a LCG
+// ∙ single sequence combined generator formed from a LCG
 //   and a XGB (a state update from xorshiro family) with
 //   a period of 2^64(2^64-1)
-// * no parameterization support for multiple generators.
+// ∙ no parameterization support for multiple generators.
 //   instead the XGB portion can be fast forwarded by 2^64
-
 
 // helper functions:
 #if !defined(_MSC_VER)
@@ -21,24 +20,11 @@ static inline uint64_t prng_rot(uint64_t x, uint32_t n) { n &= 0x3f; return (x<<
 static inline uint64_t prng_rot(uint64_t x, uint32_t n) { return (uint64_t)_rotl64(x,n); }
 #endif
 
-// complete this
-#if defined(__ARM_ARCH) && defined(__ARM_FEATURE_CRC32)
-#include <arm_acle.h>  // problem for SIMDe. rethink just need crc def
-static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return __crc32cd(k,x); }
-#else
-#if !defined(_MSC_VER)
-#include <x86intrin.h>  // problem for SIMDe. rethink just need crc def
-#else
-#include <intrin.h>
-#endif
-
-static inline uint64_t prng_crc32c_64(uint64_t x, uint32_t k) { return _mm_crc32_u64(k,x); }
-#endif
 
 static inline uint64_t prng_mix_64(uint64_t x)
 {
-  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
-  x = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+  x = (x ^ (x >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+  x = (x ^ (x >> 27)) * UINT64_C(0x94d049bb133111eb);
   x = (x ^ (x >> 31));
   return x;
 }
