@@ -2,13 +2,13 @@
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
-#ifndef INTOPS_H
+#pragma once
 #define INTOPS_H
 
 //  name_(u|s)?(d+)
 
 #ifndef   BITOPS_H
-#include "bitops.h"
+#include "SFH/bitops.h"
 #endif
 
 
@@ -196,16 +196,16 @@ static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
 static inline uint64_t mul_u64_hi(uint64_t a, uint64_t b) { return mul_hilo_64(a,b).hi; }
 
 
-typedef struct {uint64_t r; int64_t x,y; } gcd_u64_t;
-typedef struct {uint32_t r; int32_t x,y; } gcd_u32_t;
+typedef struct {uint64_t r; int64_t x,y; } gcd_ext_u64_t;
+typedef struct {uint32_t r; int32_t x,y; } gcd_ext_u32_t;
 
 #if !defined(INTOPS_IMPLEMENTATION)
 
 extern uint32_t gcd_nz_u32(uint32_t u, uint32_t v);
 extern uint64_t gcd_nz_u64(uint64_t u, uint64_t v);
 
-extern gcd_u64_t gcd_extended_u64(uint64_t u, uint64_t v);
-extern gcd_u32_t gcd_extended_u32(uint32_t u, uint32_t v);
+extern gcd_ext_u64_t gcd_extended_u64(uint64_t u, uint64_t v);
+extern gcd_ext_u32_t gcd_extended_u32(uint32_t u, uint32_t v);
 
 extern const uint8_t mod_inverse_table_8[];
 
@@ -252,6 +252,15 @@ const uint8_t mod_inverse_table_8[] =
 #define INTOPS_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
 
 // GCD when neither input is zero
+//
+// the probability that n integers are coprime
+// is 1/Zeta[n] (assuming inf integer).
+// So for 2 then p=1/Zeta[2] = 6/pi^2. 32 & 64
+// bits are big enough that this is close.
+// But before we start the loop we eliminate
+// all common multiples of 2 nuking it from
+// the list of all primes. The contribution
+// of 2 to p is 
 uint32_t gcd_nz_u32(uint32_t u, uint32_t v)
 {
   uint32_t s = ctz_32(u|v);
@@ -282,7 +291,7 @@ uint64_t gcd_nz_u64(uint64_t u, uint64_t v)
   return u<<s;
 }
 
-gcd_u32_t gcd_extended_u32(uint32_t u, uint32_t v)
+gcd_ext_u32_t gcd_extended_u32(uint32_t u, uint32_t v)
 {
   int32_t  x0 = 0, y0 = 1;
   int32_t  x1 = 1, y1 = 0;
@@ -301,10 +310,10 @@ gcd_u32_t gcd_extended_u32(uint32_t u, uint32_t v)
     a2 = a0 - q*a1;
   }
 
-  return (gcd_u32_t){.r=a1, .x=x1, .y=y1};
+  return (gcd_ext_u32_t){.r=a1, .x=x1, .y=y1};
 }
 
-gcd_u64_t gcd_extended_u64(uint64_t u, uint64_t v)
+gcd_ext_u64_t gcd_extended_u64(uint64_t u, uint64_t v)
 {
   int64_t  x0 = 0, y0 = 1;
   int64_t  x1 = 1, y1 = 0;
@@ -323,7 +332,7 @@ gcd_u64_t gcd_extended_u64(uint64_t u, uint64_t v)
     a2 = a0 - q*a1;
   }
 
-  return (gcd_u64_t){.r=a1, .x=x1, .y=y1};
+  return (gcd_ext_u64_t){.r=a1, .x=x1, .y=y1};
 }
 
 #endif
@@ -386,5 +395,3 @@ static inline pair_u64_t mod_inverse_x2_u64(uint64_t a, uint64_t b)
 }
 
 #undef INTOPS_SWAP
-
-#endif
