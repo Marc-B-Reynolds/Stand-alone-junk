@@ -25,9 +25,9 @@ typedef struct { uint32_t i, d0,d1,d2; float r; } sobol_fixed_4d_t;
 
 #if !defined(_MSC_VER)
 #if  defined(SOBOL_BIAS)
-#define SOBOL_TO_F32(X) ((X)*0x1p-32f)
+#define SOBOL_TO_F32(X) ((float)(X)*0x1p-32f)
 #else
-#define SOBOL_TO_F32(X) ((X>>8)*0x1p-24f)
+#define SOBOL_TO_F32(X) ((float)(X>>8)*0x1p-24f)
 #endif
 #define SOBOL_TO_F64    (0x1p-32f)
 #else
@@ -205,19 +205,19 @@ static inline void sobol_3d_init(sobol_3d_t* s, uint32_t hash0, uint32_t hash1, 
 static inline void sobol_fixed_2d_init(sobol_fixed_2d_t* s, uint32_t len, uint32_t hash)
 {
   sobol_1d_init((sobol_1d_t*)s, hash);
-  s->r = 1.f/len;
+  s->r = 1.f/(float)len;
 }
 
 static inline void sobol_fixed_3d_init(sobol_fixed_3d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1)
 {
   sobol_2d_init((sobol_2d_t*)s, hash0, hash1);
-  s->r = 1.f/len;
+  s->r = 1.f/(float)len;
 }
 
 static inline void sobol_fixed_4d_init(sobol_fixed_4d_t* s, uint32_t len, uint32_t hash0, uint32_t hash1, uint32_t hash2)
 {
   sobol_3d_init((sobol_3d_t*)s, hash0, hash1, hash2);
-  s->r = 1.f/len;
+  s->r = 1.f/(float)len;
 }
 
 
@@ -276,7 +276,7 @@ static inline void sobol_3d_next_f32(sobol_3d_t* s, float* d)
 
 static inline double sobol_1d_next_f64(sobol_1d_t* s)
 {
-  double r = s->d0 * SOBOL_TO_F64;
+  double r = (double)s->d0 * SOBOL_TO_F64;
 
   sobol_1d_update(s);
 
@@ -285,17 +285,17 @@ static inline double sobol_1d_next_f64(sobol_1d_t* s)
 
 static inline void sobol_2d_next_f64(sobol_2d_t* s, double* d)
 {
-  d[0] = s->d0 * SOBOL_TO_F64;
-  d[1] = s->d1 * SOBOL_TO_F64;
+  d[0] = (double)s->d0 * SOBOL_TO_F64;
+  d[1] = (double)s->d1 * SOBOL_TO_F64;
 
   sobol_2d_update(s);
 }
 
 static inline void sobol_3d_next_f64(sobol_3d_t* s, double* d)
 {
-  d[0] = s->d0 * SOBOL_TO_F64;
-  d[1] = s->d1 * SOBOL_TO_F64;
-  d[2] = s->d2 * SOBOL_TO_F64;
+  d[0] = (double)s->d0 * SOBOL_TO_F64;
+  d[1] = (double)s->d1 * SOBOL_TO_F64;
+  d[2] = (double)s->d2 * SOBOL_TO_F64;
 
   sobol_3d_update(s);
 }
@@ -307,7 +307,7 @@ static inline void sobol_fixed_2d_next_f32(sobol_fixed_2d_t* s, float* d)
   uint32_t i = s->i;
 
   d[0] = SOBOL_TO_F32(s->d0);
-  d[1] = (s->r * i);
+  d[1] = (s->r * (float)i);
 
   sobol_1d_update((sobol_1d_t*)s);
 }
@@ -318,7 +318,7 @@ static inline void sobol_fixed_3d_next_f32(sobol_fixed_3d_t* s, float* d)
 
   d[0] = SOBOL_TO_F32(s->d0);
   d[1] = SOBOL_TO_F32(s->d1);
-  d[2] = (s->r * i);
+  d[2] = (s->r * (float)i);
 
   sobol_2d_update((sobol_2d_t*)s);
 }
@@ -330,7 +330,7 @@ static inline void sobol_fixed_4d_next_f32(sobol_fixed_4d_t* s, float* d)
   d[0] = SOBOL_TO_F32(s->d0);
   d[1] = SOBOL_TO_F32(s->d1);
   d[2] = SOBOL_TO_F32(s->d2);
-  d[3] = (s->r * i);
+  d[3] = (s->r * (float)i);
 
   sobol_3d_update((sobol_3d_t*)s);
 }
@@ -339,8 +339,8 @@ static inline void sobol_fixed_2d_next_f64(sobol_fixed_2d_t* s, double* d)
 {
   uint32_t i = s->i;
 
-  d[0] = s->d0 * SOBOL_TO_F64;
-  d[1] = s->r  * i;
+  d[0] = (double)s->d0 * SOBOL_TO_F64;
+  d[1] = s->r  * (double)i;
 
   sobol_1d_update((sobol_1d_t*)s);
 }
@@ -349,9 +349,9 @@ static inline void sobol_fixed_3d_next_f64(sobol_fixed_3d_t* s, double* d)
 {
   uint32_t i = s->i;
 
-  d[0] = s->d0 * SOBOL_TO_F64;
-  d[1] = s->d1 * SOBOL_TO_F64;
-  d[2] = s->r  * i;
+  d[0] = (double)s->d0 * SOBOL_TO_F64;
+  d[1] = (double)s->d1 * SOBOL_TO_F64;
+  d[2] = s->r  * (double)i;
 
   sobol_2d_update((sobol_2d_t*)s);
 }
@@ -360,10 +360,10 @@ static inline void sobol_fixed_4d_next_f64(sobol_fixed_4d_t* s, double* d)
 {
   uint32_t i = s->i;
 
-  d[0] = s->d0 * SOBOL_TO_F64;
-  d[1] = s->d1 * SOBOL_TO_F64;
-  d[2] = s->d2 * SOBOL_TO_F64;
-  d[3] = s->r  * i;
+  d[0] = (double)s->d0 * SOBOL_TO_F64;
+  d[1] = (double)s->d1 * SOBOL_TO_F64;
+  d[2] = (double)s->d2 * SOBOL_TO_F64;
+  d[3] = s->r  * (double)i;
 
   sobol_3d_update((sobol_3d_t*)s);
 }
