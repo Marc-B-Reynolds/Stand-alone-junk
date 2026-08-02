@@ -9,28 +9,26 @@
 
 // compiler hints: must assume that the hint will be ignored
 
-// hint_result_barrier
-// This is a hacky attempt at a lightweight code motion barrier:
-// 1) It shouldn't work but it seems to (on current versions of GCC & clang)
-// 2) I haven't seen it "break" other optimizations but it increases the
-//    register pressure by one between computed 'v' and usage so it
-//    can increase uop count which is generally a loss. 
-// 3) If it ends up doing nothing..then no big deal.
-//
-// Roughly attempting to compute some primative value 'v' (using a hardware op
-// with longish latency) which will be used later in the total computation.
-//
-//     v = some_computation();
-//         do other work here { wanting to hide the latency of 'v' }
-//     do something with 'v' here
-//
-// TODO: change to Alexander Monakov's chained suggestion
-#if defined(__GNUC__) || defined(__clang__)
-#define hint_result_barrier(X) do { __asm__ __volatile__("" : "+r"(X) : "r"(X)); } while(0)
-#else
-#define hint_result_barrier(X)
-#endif
 
+#define hint_empty_statement  do { /* empty compound statement */ } while (0)
+
+#if defined(__GNUC__) || defined(__clang__)
+#define hint_sequence_int(A,B) do asm ("" : "+r" (A), "+r"(B)); while (0)
+#define hint_sequence_fp(A,B)  do asm ("" : "+x" (A), "+x"(B)); while (0)
+
+// force both A and B to be alive in registers at this point
+#define hint_sequence(A,B) __builtin_choose_expr(__builtin_classify_type(A) == 1, hint_sequence_int(A,B), hint_sequence_fp(C,A,B))
+
+// attempt at: `foo = hint_barrier(foo);` being a barrier on the preceeding computation of foo
+// look like forces a register move in GCC
+//#define hint_barrier_fp(X)  ({ typeof(X) __hbv = (X); asm volatile ("" : "+x" (__hbv)); __hbv; })
+//#define hint_barrier_int(X) ({ typeof(X) __hbv = (X); asm volatile ("" : "+r" (__hbv)); __hbv; })
+//#define hint_barrier(A) __builtin_choose_expr(__builtin_classify_type(A) == 1, hint_barrier_int(A), hint_barrier_fp(A))
+
+#else
+#define hint_sequence(A,B) hint_empty_statement
+#define hint_barrier(A)    A
+#endif
 
 #ifndef __has_builtin
 #define __has_builtin(X) 0
@@ -94,8 +92,6 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #define hint_unroll(X)
 #define hint_no_unroll
 #endif
-
-#define hint_empty_statement  do {/* empty compound statement */ } while (0)
 
 
 // void hint_unreachable() : tell compiler it can't reach this statement.
