@@ -18,20 +18,19 @@
 
 #if     defined(__ARM_ARCH)
 #include <arm_acle.h>
-#define BITOPS_ARM
-#define BITOPS_SHIFT_SATURATES
 
 // indicate hardware support
+#define BITOPS_ARM
 #define BITOPS_HAS_BIT_REVERSE 1
 #define BITOPS_HAS_BYTE_SWAP   1
 #define BITOPS_HAS_SCATTER_GATHER 0
 
 // sloppy. no.
 #elif  !defined(_MSC_VER)
-#include <x86intrin.h>
+#include <x86intrin.h>  // no: (hard to unwind ATM though)
 #define BITOPS_INTEL
 #else
-#include <intrin.h>
+#include <intrin.h>     // also no
 #define BITOPS_INTEL
 #endif
 
@@ -57,6 +56,31 @@ typedef union {
   uint64_t u64[2];
 } pair_u64_t;
 
+typedef union {
+  struct {int32_t a,b;   };
+  struct {int32_t hi,lo; }; 
+  struct {int32_t q,r;   };
+  int32_t i32[2];
+} pair_i32_t;
+
+typedef union {
+  struct {int64_t a,b;   };
+  struct {int64_t hi,lo; }; 
+  struct {int64_t q,r;   };
+  int64_t i64[2];
+} pair_i64_t;
+
+// yes. this is evil except for undordered and very special cases of ordered 
+static inline pair_u32_t pair_u32(uint32_t a, uint32_t b) { return (pair_u32_t){.a=a, .b=b }; }
+static inline pair_u64_t pair_u64(uint64_t a, uint64_t b) { return (pair_u64_t){.a=a, .b=b }; }
+static inline pair_i32_t pair_i32(int32_t  a, int32_t  b) { return (pair_i32_t){.a=a, .b=b }; }
+static inline pair_i64_t pair_i64(int64_t  a, int64_t  b) { return (pair_i64_t){.a=a, .b=b }; }
+
+// widen/narrow (suffix for source type)
+static inline pair_u64_t pair_promote_u32(pair_u32_t p) { return pair_u64((uint64_t)p.a, (uint64_t)p.b); }
+static inline pair_u32_t pair_demote_u64 (pair_u64_t p) { return pair_u32((uint32_t)p.a, (uint32_t)p.b); }
+static inline pair_i64_t pair_promote_i32(pair_i32_t p) { return pair_i64((int64_t )p.a, (int64_t) p.b); }
+static inline pair_i32_t pair_demote_i64 (pair_i64_t p) { return pair_i32((int32_t )p.a, (int32_t) p.b); }
 
 // arithmetic/logical (asr/lsr) shifts for signed input by (n & (bitwidth-1))
 static inline int32_t  asr_s32(int32_t  x, uint32_t n) { return x >> (n & 0x1f); }
@@ -64,23 +88,11 @@ static inline int64_t  asr_s64(int64_t  x, uint32_t n) { return x >> (n & 0x3f);
 static inline uint32_t lsr_u32(uint32_t x, uint32_t n) { return x >> (n & 0x1f); }
 static inline uint64_t lsr_u64(uint64_t x, uint32_t n) { return x >> (n & 0x3f); }
 
-static inline int32_t  asr_sat_s32(int32_t  x, uint32_t n) { return x >> ((n<31) ? n : 31); }
-static inline int64_t  asr_sat_s64(int64_t  x, uint32_t n) { return x >> ((n<63) ? n : 63); }
-
-static inline uint32_t lsr_sat_u32(uint32_t x, uint32_t n) { return (n < 32) ? (x >> n) : 0; }
-static inline uint64_t lsr_sat_u64(uint64_t x, uint32_t n) { return (n < 64) ? (x >> n) : 0; }
-
-
 // just type matching
 static inline uint32_t asr_u32(uint32_t x, uint32_t n) { return (uint32_t)asr_s32((int32_t )x, n); }
 static inline uint64_t asr_u64(uint64_t x, uint32_t n) { return (uint64_t)asr_s64((int64_t )x, n); }
 static inline int32_t  lsr_s32(int32_t x,  uint32_t n) { return (int32_t) lsr_u32((uint32_t)x, n); }
 static inline int64_t  lsr_s64(int64_t x,  uint32_t n) { return (int64_t) lsr_u64((uint64_t)x, n); }
-
-
-#if defined(BITOPS_SHIFT_SATURATES)
-#else
-#endif
 
 
 #if !defined(_MSC_VER)
@@ -251,7 +263,7 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 
 #endif
 
-// typeof is nice. VC though
+// typeof is nice. VC though (TODO: It does now so correct)
 #define BIT_SWAP2_T(T,X,Y)  { T t = (X); X=(T)(Y); Y=(T)(t); }
 #define BIT_SWAP2_8(X,Y)    BIT_SWAP2_T(uint8_t, X,Y)
 #define BIT_SWAP2_16(X,Y)   BIT_SWAP2_T(uint16_t,X,Y)
@@ -820,6 +832,7 @@ static inline uint64_t pop_prev_64(uint64_t x)
 }
 
 // inverses of right and left xorshifts. trivally expand for constant n
+// (this really should be in carryless.h)
 static inline uint32_t rxorshift_inv_32(uint32_t x, uint32_t n)
 {
   while(n < 32) { x ^= x >> n; n += n; } return x;
