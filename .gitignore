@@ -24,3 +24,4 @@ src/SFH/intops/Makefile
 *.d
 src/SFH/intops/binomial
 /src/Posts
+*.o
