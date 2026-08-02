@@ -16,16 +16,18 @@
 // 1) allowing SIMDe to be used instead of native
 // 2) allowing
 
+#ifndef __has_builtin
+#define __has_builtin(X) 0
+#endif
+
+#ifndef __has_c_attribute
+#define __has_c_attribute(x) 0
+#endif
+
+// yeah..this is dumb and very wrong.
 #if     defined(__ARM_ARCH)
 #include <arm_acle.h>
-
-// indicate hardware support
 #define BITOPS_ARM
-#define BITOPS_HAS_BIT_REVERSE 1
-#define BITOPS_HAS_BYTE_SWAP   1
-#define BITOPS_HAS_SCATTER_GATHER 0
-
-// sloppy. no.
 #elif  !defined(_MSC_VER)
 #include <x86intrin.h>  // no: (hard to unwind ATM though)
 #define BITOPS_INTEL
@@ -37,8 +39,14 @@
 // indicate hardware support
 #ifdef  BITOPS_INTEL
 #define BITOPS_HAS_SCATTER_GATHER 1
-#define BITOPS_HAS_BIT_REVERSE 0
-#define BITOPS_HAS_BYTE_SWAP   1
+#define BITOPS_HAS_BIT_REVERSE    0
+#define BITOPS_HAS_BYTE_SWAP      1
+#elif   defined(BITOPS_ARM)
+#define BITOPS_HAS_SCATTER_GATHER 0
+#define BITOPS_HAS_BIT_REVERSE    1
+#define BITOPS_HAS_BYTE_SWAP      1
+#else
+#error "lots of stuff to fill-in"
 #endif
 
 // NOTE: there are additional bitops in carryless.h
@@ -82,17 +90,21 @@ static inline pair_u32_t pair_demote_u64 (pair_u64_t p) { return pair_u32((uint3
 static inline pair_i64_t pair_promote_i32(pair_i32_t p) { return pair_i64((int64_t )p.a, (int64_t) p.b); }
 static inline pair_i32_t pair_demote_i64 (pair_i64_t p) { return pair_i32((int32_t )p.a, (int32_t) p.b); }
 
-// arithmetic/logical (asr/lsr) shifts for signed input by (n & (bitwidth-1))
-static inline int32_t  asr_s32(int32_t  x, uint32_t n) { return x >> (n & 0x1f); }
-static inline int64_t  asr_s64(int64_t  x, uint32_t n) { return x >> (n & 0x3f); }
+// masked shift wrappers for compiler UB related decisions
+static inline int32_t  asr_i32(int32_t  x, uint32_t n) { return x >> (n & 0x1f); }
+static inline int64_t  asr_i64(int64_t  x, uint32_t n) { return x >> (n & 0x3f); }
 static inline uint32_t lsr_u32(uint32_t x, uint32_t n) { return x >> (n & 0x1f); }
 static inline uint64_t lsr_u64(uint64_t x, uint32_t n) { return x >> (n & 0x3f); }
+static inline uint32_t shl_u32(uint32_t x, uint32_t n) { return x << (n & 0x1f); }
+static inline uint64_t shl_u64(uint64_t x, uint32_t n) { return x << (n & 0x3f); }
 
 // just type matching
-static inline uint32_t asr_u32(uint32_t x, uint32_t n) { return (uint32_t)asr_s32((int32_t )x, n); }
-static inline uint64_t asr_u64(uint64_t x, uint32_t n) { return (uint64_t)asr_s64((int64_t )x, n); }
-static inline int32_t  lsr_s32(int32_t x,  uint32_t n) { return (int32_t) lsr_u32((uint32_t)x, n); }
-static inline int64_t  lsr_s64(int64_t x,  uint32_t n) { return (int64_t) lsr_u64((uint64_t)x, n); }
+static inline uint32_t asr_u32(uint32_t x, uint32_t n) { return (uint32_t)asr_i32((int32_t )x, n); }
+static inline uint64_t asr_u64(uint64_t x, uint32_t n) { return (uint64_t)asr_i64((int64_t )x, n); }
+static inline int32_t  lsr_i32(int32_t x,  uint32_t n) { return (int32_t) lsr_u32((uint32_t)x, n); }
+static inline int64_t  lsr_i64(int64_t x,  uint32_t n) { return (int64_t) lsr_u64((uint64_t)x, n); }
+static inline int32_t  shl_i32(int32_t x,  uint32_t n) { return (int32_t) shl_u32((uint32_t)x, n); }
+static inline int64_t  shl_i64(int64_t x,  uint32_t n) { return (int64_t) shl_u64((uint64_t)x, n); }
 
 
 #if !defined(_MSC_VER)
@@ -104,9 +116,14 @@ static inline uint32_t byteswap_32(uint32_t x) { return _byteswap_ulong(x);   }
 static inline uint64_t byteswap_64(uint64_t x) { return _byteswap_uint64(x);  }
 #endif
 
-#if defined(__clang__)
+
+#if (__has_builtin(__builtin_bitreverse32))
 static inline uint32_t bit_reverse_32(uint32_t x) { return __builtin_bitreverse32(x); }
 static inline uint64_t bit_reverse_64(uint64_t x) { return __builtin_bitreverse64(x); }
+#elif defined(__ARM_ARCH)
+// as-of GCC 16.1 can't match the software version below
+static inline uint32_t bit_reverse_32(uint32_t x) { return __rbit(x);   }
+static inline uint64_t bit_reverse_64(uint64_t x) { return __rbitll(x); }
 #else
 #define BITOPS_DEFINE_BIT_REVERSE
 #endif
@@ -235,7 +252,7 @@ static inline uint32_t bit_parity_32(uint32_t v)
 
 #endif
 
-
+// even/odd parity = zero/all_ones
 static inline uint32_t bit_parity_mask_32(uint32_t x) { return -bit_parity_32(x); }
 static inline uint64_t bit_parity_mask_64(uint64_t x) { return -bit_parity_64(x); }
 
@@ -263,25 +280,16 @@ static inline uint32_t bit_permute_sg_step_32(uint32_t x, uint32_t m0, uint32_t 
 
 #endif
 
-// typeof is nice. VC though (TODO: It does now so correct)
-#define BIT_SWAP2_T(T,X,Y)  { T t = (X); X=(T)(Y); Y=(T)(t); }
-#define BIT_SWAP2_8(X,Y)    BIT_SWAP2_T(uint8_t, X,Y)
-#define BIT_SWAP2_16(X,Y)   BIT_SWAP2_T(uint16_t,X,Y)
-#define BIT_SWAP2_32(X,Y)   BIT_SWAP2_T(uint32_t,X,Y)
-#define BIT_SWAP2_64(X,Y)   BIT_SWAP2_T(uint64_t,X,Y)
-
 // Given two registers (X,Y) swap the bits set in mask M
 // • Guy Steele's bit field swap between two registers.  "Hacker's Delight,
-//   Exchanging Corresponding Fields of Registers". Evil side effect macro.
-#define BIT_FIELD_SWAP2(T,X,Y,M)  { T t=(X^Y)&(M); X^=t; Y^=t; }
-#define BIT_FIELD_SWAP2_32(X,Y,M) BIT_FIELD_SWAP2(uint32_t, X,Y,M)
-#define BIT_FIELD_SWAP2_64(X,Y,M) BIT_FIELD_SWAP2(uint64_t, X,Y,M)
+//   Exchanging Corresponding Fields of Registers".
+#define BIT_FIELD_SWAP2(T,X,Y,M)  do { typeof(X) _t=(X^Y)&(M); X^=__t; Y^=__t; } while(0)
 
 // swaps one or more pairs of (same length) fields:
 //   m = bit mask of right most field(s)
 //   s = left shift distance to match left pair
 
-// to perform the descriped op requires:
+// to perform the described op requires:
 // 1) fields can't overlap, so:  (m & (m<<s))==0
 // 2) can't discard hi bits, so: ((m<<s)>>s) ==m
 
@@ -420,6 +428,8 @@ static inline uint32_t bit_pos_swap_32(uint32_t x, uint32_t p0, uint32_t p1)
 {
   p0 &= 0x1f;
   p1 &= 0x1f;
+
+  // the pair of bits are either the same (t=0) or opposites (t=1):
   uint32_t t = ((x>>p0) ^ (x>>p1)) & 1;
   x ^= (t<<p0);
   x ^= (t<<p1);
