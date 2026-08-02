@@ -1,8 +1,11 @@
-// -*- coding: utf-8 -*-
+﻿// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
+
+#include <string.h>
+#include <stdbool.h>
 
 // super minimal (size & function) dense bitset. more bitvector than set
 // but whatever.

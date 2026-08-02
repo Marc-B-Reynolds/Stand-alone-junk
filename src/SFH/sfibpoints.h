@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2018-2026
+﻿// Marc B. Reynolds, 2018-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
@@ -66,7 +66,11 @@ static inline void sf_walk_init(sf_walk_t* w, uint32_t n)
 // return the next point in the set
 static inline vec3_t sf_walk_next(sf_walk_t* w)
 {
+#if !defined(_MSC_VER)
   static const double M = 2.0*SF_WALK_TX;
+#else
+  const double M = 2.0 * SF_WALK_TX;
+#endif
   
   double x0=w->x0, y0=w->y0;
   double x1=w->x1, y1=w->y1;

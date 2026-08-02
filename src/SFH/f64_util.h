@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+﻿// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2026
 
@@ -45,7 +45,7 @@
 #endif
 
 
-#if definded(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define f64_expect_true(expr)  (__builtin_expect(!!(expr), 1))
 #define f64_expect_false(expr) (__builtin_expect(!!(expr), 0))
 #else
@@ -53,7 +53,7 @@
 #define f64_expect_false(expr) (expr)
 #endif
 
-#if definded(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define f64_no_inline          __attribute__((__noinline__))
 #elif  _MSC_VER
 #define f64_no_inline          __declspec(noinline)

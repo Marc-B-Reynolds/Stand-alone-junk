@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2016-2026
+﻿// Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 //
 // This is utter junk example code for some posts.
@@ -100,5 +100,3 @@ static inline void vec3_ortho_basis(vec3_t* v, vec3_t* xp, vec3_t* yp)
 #undef BX
 #undef BY
 #undef BZ
-  
-#endif

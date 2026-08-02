@@ -1,4 +1,4 @@
-// Marc B. Reynolds, 2018-2026
+﻿// Marc B. Reynolds, 2018-2026
 // Public Domain under http://unlicense.org, see link for details.
 
 #pragma once
@@ -30,10 +30,13 @@ static inline void seq_stats_add(seq_stats_t* d, float v)
   d->s = fma(dm, x-d->m, s);
 }
 
-static inline double seq_stats_mean(seq_stats_t* d)     { return d->m; }
-static inline double seq_stats_variance(seq_stats_t* d) { return d->s/(d->n-1.0); }
-static inline double seq_stats_stddev(seq_stats_t* d)   { return sqrt(seq_stats_variance(d)); }
+static inline uint64_t seq_stats_samples(seq_stats_t* d)  { return (uint64_t)(d->n); }
+static inline double   seq_stats_mean(seq_stats_t* d)     { return d->m; }
+static inline double   seq_stats_variance(seq_stats_t* d) { return d->s/(d->n-1.0); }
+static inline double   seq_stats_stddev(seq_stats_t* d)   { return sqrt(seq_stats_variance(d)); }
 
+#if !defined(_MSC_VER)
+// temp hack
 static inline void seq_stats_print(seq_stats_t* d)
 {
   printf("mean=%f,variance=%f,std-dev=%f, count=%lu\n",
@@ -43,3 +46,4 @@ static inline void seq_stats_print(seq_stats_t* d)
 	 (uint64_t)d->n
 	 );
 }
+#endif

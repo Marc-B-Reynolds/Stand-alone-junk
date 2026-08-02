@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+﻿// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -17,10 +17,6 @@
 #include <intrin.h>
 #endif
 
-
-// yes. this is evil except for undordered and very special cases of ordered 
-static inline pair_u32_t pair_u32(uint32_t a, uint32_t b) { return (pair_u32_t){.a=a, .b=b }; }
-static inline pair_u64_t pair_u64(uint64_t a, uint64_t b) { return (pair_u64_t){.a=a, .b=b }; }
 
 static inline uint32_t shr_u32(uint32_t x, uint32_t n) { return (uint32_t)(((int32_t)x) >> n); }
 static inline uint64_t shr_u64(uint64_t x, uint32_t n) { return (uint64_t)(((int64_t)x) >> n); }
