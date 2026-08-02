@@ -7,6 +7,8 @@
 #pragma once
 #define BITOPS_SMALL_H
 
+#include "SFH/bitops.h"
+
 #define BIT_PERMUTE_T(T,X,M,S)  ((T)((X & M) << S) | ((X >> S) & M))
 #define BIT_PERMUTE_8(X,M,S)    BIT_PERMUTE_T(uint8_t,  X,M,S)
 #define BIT_PERMUTE_16(X,M,S)   BIT_PERMUTE_T(uint16_t, X,M,S)
