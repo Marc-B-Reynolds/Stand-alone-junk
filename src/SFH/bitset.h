@@ -88,6 +88,8 @@ static inline bitset_t* bitset_init_fixed(uint64_t n, void* mem)
 
 #if !defined(BITSET_NO_MALLOC)
 
+#include <stdlib.h>
+
 static inline bitset_t* bitset_create_fixed(uint64_t n)
 {
   void* mem = (bitset_t*)malloc(bitset_memsize(n));
