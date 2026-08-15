@@ -1,4 +1,4 @@
-﻿// -*- coding: utf-8 -*-
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -48,10 +48,10 @@ static inline uint32_t min_u32(uint32_t x, uint32_t y) { return (x<y) ? x : y; }
 static inline uint32_t max_u32(uint32_t x, uint32_t y) { return (x>y) ? x : y; }
 static inline uint64_t min_u64(uint64_t x, uint64_t y) { return (x<y) ? x : y; }
 static inline uint64_t max_u64(uint64_t x, uint64_t y) { return (x>y) ? x : y; }
-static inline int32_t  min_s32( int32_t x,  int32_t y) { return (x<y) ? x : y; }
-static inline int32_t  max_s32( int32_t x,  int32_t y) { return (x>y) ? x : y; }
-static inline int64_t  min_s64( int64_t x,  int64_t y) { return (x<y) ? x : y; }
-static inline int64_t  max_s64( int64_t x,  int64_t y) { return (x>y) ? x : y; }
+static inline int32_t  min_i32( int32_t x,  int32_t y) { return (x<y) ? x : y; }
+static inline int32_t  max_i32( int32_t x,  int32_t y) { return (x>y) ? x : y; }
+static inline int64_t  min_i64( int64_t x,  int64_t y) { return (x<y) ? x : y; }
+static inline int64_t  max_i64( int64_t x,  int64_t y) { return (x>y) ? x : y; }
 
 // floor and ceiling log_2(x)
 static inline uint32_t log2_u32(uint32_t x)       { return (31 - clz_32(x));   }
@@ -375,6 +375,32 @@ static inline uint64_t mod_inverse_u64(uint64_t a)
   return x;
 }
 
+// return info to check for divisibility by odd 'd'
+static inline pair_u32_t divisibility_init_u32(uint32_t d)
+{
+  return (pair_u32_t){.q=mod_inverse_u32(d), .r=UINT32_MAX/d};
+}
+
+static inline pair_u64_t divisibility_init_u64(uint64_t d)
+{
+  return (pair_u64_t){.q=mod_inverse_u64(d), .r=UINT64_MAX/d};
+}
+
+static inline int divisibility_test_u32(const pair_u32_t data, uint32_t x)
+{
+  uint32_t t = data.q * x;  // this is x/d if the below test passes
+  
+  return t <= data.r;
+}
+
+static inline int divisibility_test_u64(const pair_u64_t data, uint64_t x)
+{
+  uint64_t t = data.q * x; // this is x/d if the below test passes
+  
+  return t <= data.r;
+}
+
+
 // two for one trick: mod inverse of a & b (pair order as input)
 static inline pair_u32_t mod_inverse_x2_u32(uint32_t a, uint32_t b)
 {
@@ -389,5 +415,6 @@ static inline pair_u64_t mod_inverse_x2_u64(uint64_t a, uint64_t b)
   uint64_t ic = mod_inverse_u64(c);
   return pair_u64(ic*b, ic*a);
 }
+
 
 #undef INTOPS_SWAP
