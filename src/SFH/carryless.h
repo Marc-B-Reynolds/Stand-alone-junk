@@ -151,6 +151,9 @@ static inline uint64_t cl_derivative_64(uint64_t x)
 //────────────────────────────────────────────────────────────────────────────────────
 // right/reflect/reversed carryless product (cr_ prefix)
 
+// NOTE: since cr_mul(a,b) = brev(cl_mul(brev(a),brev(b)) it can be implemented
+// that way with hardware brev (bit_reverse_xx). And so on for other ops.
+
 static inline uint32_t cr_mul_32(uint32_t a, uint32_t b)
 {
   return cl_mul_hi_32(a, ((uint64_t)b)<<1);
