@@ -195,7 +195,7 @@ static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__builtin_popcountl
 static inline uint32_t clz_32(uint32_t x) { return (uint32_t)__lzcnt(x);    }
 static inline uint32_t ctz_32(uint32_t x) { return (uint32_t)_tzcnt_u32(x); }
 static inline uint32_t clz_64(uint64_t x) { return (uint32_t)__lzcnt64(x);  }
-static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)_tzcnt_u64(x); }
+static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)__tzcnt64(x);  }
 static inline uint32_t pop_32(uint32_t x) { return (uint32_t)__popcnt(x);   }
 static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 #endif
@@ -350,6 +350,8 @@ static inline uint64_t bit_permute_step_simple_64(uint64_t x, uint64_t m, uint32
 #define  BIT_GROUP_SWAP(X,L,T) BIT_PERMUTE(X,bit_set_even_ ## L ## _ ## T,L)
 
 
+// scatter (unpack) lower 16 bits to even bit positions
+//   8-bit example: xxxxabcd → .a.b.c.d  (x = discarded, .=zero)
 static inline uint32_t bit_scatter_even_32(uint32_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
@@ -364,6 +366,8 @@ static inline uint32_t bit_scatter_even_32(uint32_t x)
 #endif  
 }
 
+// gather (pack) even bit positions into lower 16 bits
+//   8-bit example: .a.b.c.d → 0000abcd (. = ignored)
 static inline uint32_t bit_gather_even_32(uint32_t x)
 {
 #if BITOPS_HAS_SCATTER_GATHER
@@ -408,6 +412,7 @@ static inline uint64_t bit_scatter_even_64(uint64_t x)
 #endif  
 }
 
+// bit_swap_{n}: n = group size
 static inline uint32_t bit_swap_1_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 1,32); }
 static inline uint32_t bit_swap_2_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 2,32); }
 static inline uint32_t bit_swap_4_32 (uint32_t x) { return BIT_GROUP_SWAP(x, 4,32); }
