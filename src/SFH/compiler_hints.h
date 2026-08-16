@@ -50,29 +50,37 @@
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
 #endif
-static inline uint32_t hint_no_const_fold_32(uint32_t v)
-{
-  __asm__ ("" : "+r" (v));
-  return v;  
-}
 
-static inline uint64_t hint_no_const_fold_64(uint64_t v)
-{
-  __asm__ ("" : "+r" (v));
-  return v;  
-}
-#pragma GCC diagnostic pop
+// force expression 'v' to be register at this point, forget information about 'v' but
+// removable if 'v' isn't accessed. Should be renamed.
+#define hint_alive_int(V) ({ typeof(V) _v = (V); asm ("" : "+r" (_v)); _v; })
+#define hint_alive_fp(V)  ({ typeof(V) _v = (V); asm ("" : "+x" (_v)); _v; })
+#define hint_alive(V) __builtin_choose_expr(__builtin_classify_type(V) == 1,  hint_alive_int(V), hint_alive_fp(V))
+
+// as above but w/o forgetting range info
+#define hint_weak_alive_int(V) ({ typeof(V) _v = (V); asm ("" : : "r" (_v)); _v; })
+#define hint_weak_alive_fp(V)  ({ typeof(V) _v = (V); asm ("" : : "x" (_v)); _v; })
+#define hint_weak_alive(V) __builtin_choose_expr(__builtin_classify_type(V) == 1,  hint_weak_alive_int(V), hint_weak_alive_fp(V))
+
+#if defined(__clang__)
+#define hint_alive_clang    hint_alive
+#define hint_alive_gcc(V)   ({(V)})
 #else
-static inline uint32_t hint_no_const_fold_32(uint32_t v) { return v; }
-static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
+#define hint_alive_gcc      hint_alive
+#define hint_alive_clang(V) ({(V)})
 #endif
 
+#pragma GCC diagnostic pop
+#else
+#define hint_alive(V)      (V)
+#define hint_weak_alive(V) (V)
+#endif
 
 
 // hint_rw_barrier() : compiler read/write barrier
 
 #if   defined(__GNUC__) || defined(__clang__)
-#define hint_rw_barrier()  do { __asm__ __volatile__("": : :"memory"); } while(0)
+#define hint_rw_barrier()  do { asm __volatile__("": : :"memory"); } while(0)
 #elif defined(_MSC_VER)
 #define hint_rw_barrier()  _ReadWriteBarrier()  // deprecated
 #else
@@ -199,13 +207,13 @@ static inline uint64_t hint_no_const_fold_64(uint64_t v) { return v; }
 #endif
 #define hint_select_u32 hint_select_int
 #define hint_select_u64 hint_select_int
-#define hint_select_s32 hint_select_int
-#define hint_select_s64 hint_select_int
+#define hint_select_i32 hint_select_int
+#define hint_select_i64 hint_select_int
 #define hint_select_f32 hint_select_fp
 #define hint_select_f64 hint_select_fp
 #else
 #if (!defined(hint_select_u32) || !defined(hint_select_u64) ||
-     !defined(hint_select_s32) || !defined(hint_select_s64) ||
+     !defined(hint_select_i32) || !defined(hint_select_i64) ||
      !defined(hint_select_f32) || !defined(hint_select_f64) )
 #error "hint_select_<type> macros need defining"
 
@@ -229,8 +237,8 @@ static inline double   hint_select_f64(int c, double   a, double   b) { return h
   _Generic((A),               \
    uint32_t: hint_select_u32, \
    uint32_t: hint_select_u64, \
-   uint32_t: hint_select_s32, \
-   uint32_t: hint_select_s64, \
+   uint32_t: hint_select_i32, \
+   uint32_t: hint_select_i64, \
    uint32_t: hint_select_f32, \
    uint32_t: hint_select_f64) \
    (C,A,B);                   \
@@ -248,8 +256,8 @@ static inline double   hint_select_f64(int c, double   a, double   b) { return h
 #define hint_cswap_fp(C,X,Y)  HINT_CSWAP(C,X,Y,hint_select_fp)
 #define hint_cswap_u32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_u32)
 #define hint_cswap_u64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_u64)
-#define hint_cswap_s32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_s32)
-#define hint_cswap_s64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_s64)
+#define hint_cswap_i32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_i32)
+#define hint_cswap_i64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_i64)
 #define hint_cswap_f32(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_f32)
 #define hint_cswap_f64(C,X,Y) HINT_CSWAP(C,X,Y,hint_select_f64)
 
