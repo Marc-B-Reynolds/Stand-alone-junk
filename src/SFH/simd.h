@@ -358,7 +358,7 @@
 
 // define (bit-width,num-elemnts) for register sizes of (64,128,256)
 // (and optionally 512)
-#if !defined(SIMD_ENABLE_512)
+#if defined(SIMD_ENABLE_512)
 //                 | 64  |  128  |  256  | 512  |
 #define SIMD_S8_X  ( 8,8),( 8,16),( 8,32),( 8,64)
 #define SIMD_S16_X (16,4),(16, 8),(16,16),(16,32)
