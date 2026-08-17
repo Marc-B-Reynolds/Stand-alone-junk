@@ -35,15 +35,15 @@
 // remove the parentheses around the "single" input parameter.
 // produces an error if it isn't.
 //
-//   SFH_SIMPLE_FLATTEN()      → nil
-//   SFH_SIMPLE_FLATTEN(())    → nil
-//   SFH_SIMPLE_FLATTEN((a))   → a
-//   SFH_SIMPLE_FLATTEN((a,b)) → a,b
+//   SFH_FLATTEN()      → nil
+//   SFH_FLATTEN(())    → nil
+//   SFH_FLATTEN((a))   → a
+//   SFH_FLATTEN((a,b)) → a,b
 //
-//   SFH_SIMPLE_FLATTEN(a)     → SFH_SIMPLE_FLATTEN_ a  { illegal }
+//   SFH_FLATTEN(a)     → SFH_FLATTEN_ a  { illegal }
 
-#define SFH_SIMPLE_FLATTEN(...) __VA_OPT__(SFH_SIMPLE_FLATTEN_ __VA_ARGS__)
-#define SFH_SIMPLE_FLATTEN_(...) __VA_ARGS__
+#define SFH_FLATTEN(...) __VA_OPT__(SFH_FLATTEN_ __VA_ARGS__)
+#define SFH_FLATTEN_(...) __VA_ARGS__
 
 //────────────────────────────────────────────────────────────────────────────────────
 // rotate macro parameters left:
@@ -76,6 +76,17 @@
 #define SFH_APPEND_(X,...)    __VA_OPT__(__VA_ARGS__,) X
 #define SFH_PREPEND_(X,...) X __VA_OPT__(,__VA_ARGS__)
 
+
+// nil       → nil
+// 1         → 1
+// 1,2       → 1,(2)
+// 1,2,3,... → 1,(2,3...)
+#define SFH_GROUP_REST(...)    __VA_OPT__(SFH_GROUP_REST_(__VA_ARGS__))
+#define SFH_GROUP_REST_(A,...) A __VA_OPT__(,(__VA_ARGS__))
+
+// zero if no parameters and one otherwise
+#define SFH_HAS_ARG_(_1,_E,...) _E
+#define SFH_HAS_ARG(...) SFH_HAS_ARG_(__VA_OPT__(SFH_TAKE_(__VA_ARGS__),) 1,0)
 
 
 //════════════════════════════════════════════════════════════════════════════════════
@@ -191,7 +202,7 @@
 #define SFH_MAP_PEEL_REP() SFH_MAP_PEEL_
 
 #define SFH_MAP_PEEL_(F,P,E, ...)                           \
-  F(SFH_SIMPLE_FLATTEN(P),E)                                \
+  F(SFH_FLATTEN(P),E)                                \
   __VA_OPT__(SFH_MAP_PEEL_REP SFH_PARENS (F,P,__VA_ARGS__))
 
 
@@ -223,10 +234,25 @@
 #define SFH_REVERSE_(x, ...) __VA_OPT__(SFH_REVERSE_REP SFH_PARENS (__VA_ARGS__),) x 
 
 
+// walk pairs from two lists and apply: F(P,a,b) stopping when the shorter is exhausted.
+//   SFH_WALK_PAIR(F,P,(0,1,2,3),(a,b)) → F(P,0,a) F(P,1,b)
+#define SFH_WALK_PAIR_(F,P,A,B)      SFH_WALK_PAIR_G(F,P, SFH_TAKE(SFH_FLATTEN(A)),  SFH_TAKE(SFH_FLATTEN(B)))  \
+                                     SFH_WALK_PAIR_N(F,P,(SFH_DROP(SFH_FLATTEN(A))),(SFH_DROP(SFH_FLATTEN(B))))
+#define SFH_WALK_PAIR_G(F,P,A,B)     F (P,A,B)
+#define SFH_WALK_PAIR_N(F,P,A,B)     SFH_CAT(SFH_WALK_PAIR_,SFH_HAS_ARG(SFH_FLATTEN(A)),SFH_HAS_ARG(SFH_FLATTEN(B))) (F,P,A,B)
+#define SFH_WALK_PAIR_11(F,P,A,B)    SFH_WALK_PAIR_REP SFH_PARENS (F,P,A,B)
+#define SFH_WALK_PAIR_00(...)
+#define SFH_WALK_PAIR_01(...)
+#define SFH_WALK_PAIR_10(...)
+#define SFH_WALK_PAIR_REP()          SFH_WALK_PAIR_
+#define SFH_WALK_PAIR(F,P,A,B)       SFH_EXPAND_P4(SFH_WALK_PAIR_(F,P,A,B))    // capped at 16 atm. correct to all choosing
+
+
 //════════════════════════════════════════════════════════════════════════════════════
 // argument count based macros. The pro of being limited and wordyier is that
 // they require the preprocessor to perform a very small fixed number of expansions
-// steps per macro invocation. The common structure here takes 7.
+// steps per macro invocation. Same "reasoning" for explict common configurations
+// instead moving through a more generic.
 
 // for argcount based selection expansions
 #define SFH_ARG_COUNT_MAX 8
@@ -260,79 +286,79 @@
 
 // SEE: SFH_MAP(F,...)
 #define SFH_SMAP_0(F)
-#define SFH_SMAP_1(F,A)               F(A)
-#define SFH_SMAP_2(F,A,B)             F(A) F(B)
-#define SFH_SMAP_3(F,A,B,C)           F(A) F(B) F(C)
-#define SFH_SMAP_4(F,A,B,C,D)         F(A) F(B) F(C) F(D)
-#define SFH_SMAP_5(F,A,B,C,D,E)       F(A) F(B) F(C) F(D) F(E)
-#define SFH_SMAP_6(F,A,B,C,D,E,G)     F(A) F(B) F(C) F(D) F(E) F(G)
-#define SFH_SMAP_7(F,A,B,C,D,E,G,H)   F(A) F(B) F(C) F(D) F(E) F(G) F(H)
-#define SFH_SMAP_8(F,A,B,C,D,E,G,H,I) F(A) F(B) F(C) F(D) F(E) F(G) F(H) F(I)
+#define SFH_SMAP_1(F,_0)                      F(_0)
+#define SFH_SMAP_2(F,_0,_1)                   F(_0) F(_1)
+#define SFH_SMAP_3(F,_0,_1,_2)                F(_0) F(_1) F(_2)
+#define SFH_SMAP_4(F,_0,_1,_2,_3)             F(_0) F(_1) F(_2) F(_3)
+#define SFH_SMAP_5(F,_0,_1,_2,_3,_4)          F(_0) F(_1) F(_2) F(_3) F(_4)
+#define SFH_SMAP_6(F,_0,_1,_2,_3,_4,_5)       F(_0) F(_1) F(_2) F(_3) F(_4) F(_5)
+#define SFH_SMAP_7(F,_0,_1,_2,_3,_4,_5,_6)    F(_0) F(_1) F(_2) F(_3) F(_4) F(_5) F(_6)
+#define SFH_SMAP_8(F,_0,_1,_2,_3,_4,_5,_6,_7) F(_0) F(_1) F(_2) F(_3) F(_4) F(_5) F(_6) F(_7)
 
 #define SFH_SMAP(F,...)    __VA_OPT__(SFH_SMAP_(F, SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
 #define SFH_SMAP_(F,N,...) SFH_CAT2(SFH_SMAP_,N)(F,__VA_ARGS__)
 
 // SEE: SFH_MAP_LIST(F,...)
-#define SFH_SMAP_LIST_1(F,A)               F(A)
-#define SFH_SMAP_LIST_2(F,A,B)             F(A), F(B)
-#define SFH_SMAP_LIST_3(F,A,B,C)           F(A), F(B), F(C)
-#define SFH_SMAP_LIST_4(F,A,B,C,D)         F(A), F(B), F(C), F(D)
-#define SFH_SMAP_LIST_5(F,A,B,C,D,E)       F(A), F(B), F(C), F(D), F(E)
-#define SFH_SMAP_LIST_6(F,A,B,C,D,E,G)     F(A), F(B), F(C), F(D), F(E), F(G)
-#define SFH_SMAP_LIST_7(F,A,B,C,D,E,G,H)   F(A), F(B), F(C), F(D), F(E), F(G), F(H)
-#define SFH_SMAP_LIST_8(F,A,B,C,D,E,G,H,I) F(A), F(B), F(C), F(D), F(E), F(G), F(H), F(I)
+#define SFH_SMAP_LIST_1(F,_0)                      F(_0)
+#define SFH_SMAP_LIST_2(F,_0,_1)                   F(_0),F(_1)
+#define SFH_SMAP_LIST_3(F,_0,_1,_2)                F(_0),F(_1),F(_2)
+#define SFH_SMAP_LIST_4(F,_0,_1,_2,_3)             F(_0),F(_1),F(_2),F(_3)
+#define SFH_SMAP_LIST_5(F,_0,_1,_2,_3,_4)          F(_0),F(_1),F(_2),F(_3),F(_4)
+#define SFH_SMAP_LIST_6(F,_0,_1,_2,_3,_4,_5)       F(_0),F(_1),F(_2),F(_3),F(_4),F(_5)
+#define SFH_SMAP_LIST_7(F,_0,_1,_2,_3,_4,_5,_6)    F(_0),F(_1),F(_2),F(_3),F(_4),F(_5),F(_6)
+#define SFH_SMAP_LIST_8(F,_0,_1,_2,_3,_4,_5,_6,_7) F(_0),F(_1),F(_2),F(_3),F(_4),F(_5),F(_6),F(_7)
 
 #define SFH_SMAP_LIST(F,...)    __VA_OPT__(SFH_SMAP_LIST_(F, SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
 #define SFH_SMAP_LIST_(F,N,...) SFH_CAT2(SFH_SMAP_LIST_,N)(F,__VA_ARGS__)
 
 // SEE: SFH_MAP_PEEL
-#define SFH_SMAP_PEEL_1(F,X,A)               F(X,A)
-#define SFH_SMAP_PEEL_2(F,X,A,B)             F(X,A) F(X,B)
-#define SFH_SMAP_PEEL_3(F,X,A,B,C)           F(X,A) F(X,B) F(X,C)
-#define SFH_SMAP_PEEL_4(F,X,A,B,C,D)         F(X,A) F(X,B) F(X,C) F(X,D)
-#define SFH_SMAP_PEEL_5(F,X,A,B,C,D,E)       F(X,A) F(X,B) F(X,C) F(X,D) F(X,E)
-#define SFH_SMAP_PEEL_6(F,X,A,B,C,D,E,G)     F(X,A) F(X,B) F(X,C) F(X,D) F(X,E) F(X,G)
-#define SFH_SMAP_PEEL_7(F,X,A,B,C,D,E,G,H)   F(X,A) F(X,B) F(X,C) F(X,D) F(X,E) F(X,G) F(X,H)
-#define SFH_SMAP_PEEL_8(F,X,A,B,C,D,E,G,H,I) F(X,A) F(X,B) F(X,C) F(X,D) F(X,E) F(X,G) F(X,H) F(X,I)
+#define SFH_SMAP_PEEL_1(F,X,_0)                      F(X,_0)
+#define SFH_SMAP_PEEL_2(F,X,_0,_1)                   F(X,_0) F(X,_1)
+#define SFH_SMAP_PEEL_3(F,X,_0,_1,_2)                F(X,_0) F(X,_1) F(X,_2)
+#define SFH_SMAP_PEEL_4(F,X,_0,_1,_2,_3)             F(X,_0) F(X,_1) F(X,_2) F(X,_3)
+#define SFH_SMAP_PEEL_5(F,X,_0,_1,_2,_3,_4)          F(X,_0) F(X,_1) F(X,_2) F(X,_3) F(X,_4)
+#define SFH_SMAP_PEEL_6(F,X,_0,_1,_2,_3,_4,_5)       F(X,_0) F(X,_1) F(X,_2) F(X,_3) F(X,_4) F(X,_5)
+#define SFH_SMAP_PEEL_7(F,X,_0,_1,_2,_3,_4,_5,_6)    F(X,_0) F(X,_1) F(X,_2) F(X,_3) F(X,_4) F(X,_5) F(X,_6)
+#define SFH_SMAP_PEEL_8(F,X,_0,_1,_2,_3,_4,_5,_6,_7) F(X,_0) F(X,_1) F(X,_2) F(X,_3) F(X,_4) F(X,_5) F(X,_6) F(X,_7)
 
 #define SFH_SMAP_PEEL(F,X,...)    __VA_OPT__(SFH_SMAP_PEEL_(F,X, SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
-#define SFH_SMAP_PEEL_(F,X,N,...) SFH_CAT2(SFH_SMAP_PEEL_,N)(F,SFH_SIMPLE_FLATTEN(X),__VA_ARGS__)
+#define SFH_SMAP_PEEL_(F,X,N,...) SFH_CAT2(SFH_SMAP_PEEL_,N)(F,SFH_FLATTEN(X),__VA_ARGS__)
 
 // SEE: SFH_THROUGH
-#define SFH_STHROUGH_1(P,A)               A P 
-#define SFH_STHROUGH_2(P,A,B)             A P  B P 
-#define SFH_STHROUGH_3(P,A,B,C)           A P  B P  C P 
-#define SFH_STHROUGH_4(P,A,B,C,D)         A P  B P  C P  D P 
-#define SFH_STHROUGH_5(P,A,B,C,D,E)       A P  B P  C P  D P  E P 
-#define SFH_STHROUGH_6(P,A,B,C,D,E,F)     A P  B P  C P  D P  E P  F P 
-#define SFH_STHROUGH_7(P,A,B,C,D,E,F,G)   A P  B P  C P  D P  E P  F P  G P 
-#define SFH_STHROUGH_8(P,A,B,C,D,E,F,G,H) A P  B P  C P  D P  E P  F P  G P  H P 
+#define SFH_STHROUGH_1(P,_0)                      _0 P 
+#define SFH_STHROUGH_2(P,_0,_1)                   _0 P _1 P 
+#define SFH_STHROUGH_3(P,_0,_1,_2)                _0 P _1 P _2 P 
+#define SFH_STHROUGH_4(P,_0,_1,_2,_3)             _0 P _1 P _2 P _3 P 
+#define SFH_STHROUGH_5(P,_0,_1,_2,_3,_4)          _0 P _1 P _2 P _3 P _4 P 
+#define SFH_STHROUGH_6(P,_0,_1,_2,_3,_4,_5)       _0 P _1 P _2 P _3 P _4 P _5 P 
+#define SFH_STHROUGH_7(P,_0,_1,_2,_3,_4,_5,_6)    _0 P _1 P _2 P _3 P _4 P _5 P _6 P 
+#define SFH_STHROUGH_8(P,_0,_1,_2,_3,_4,_5,_6,_7) _0 P _1 P _2 P _3 P _4 P _5 P _6 P _7 P 
 
 #define SFH_STHROUGH(F,...)    __VA_OPT__(SFH_STHROUGH_(F, SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
 #define SFH_STHROUGH_(F,N,...) SFH_CAT2(SFH_STHROUGH_,N)(F,__VA_ARGS__)
 
 // SEE: SFH_THROUGH_LIST
-#define SFH_STHROUGH_LIST_1(P,A)               A P 
-#define SFH_STHROUGH_LIST_2(P,A,B)             A P,  B P 
-#define SFH_STHROUGH_LIST_3(P,A,B,C)           A P,  B P,  C P 
-#define SFH_STHROUGH_LIST_4(P,A,B,C,D)         A P,  B P,  C P,  D P 
-#define SFH_STHROUGH_LIST_5(P,A,B,C,D,E)       A P,  B P,  C P,  D P,  E P 
-#define SFH_STHROUGH_LIST_6(P,A,B,C,D,E,F)     A P,  B P,  C P,  D P,  E P,  F P 
-#define SFH_STHROUGH_LIST_7(P,A,B,C,D,E,F,G)   A P,  B P,  C P,  D P,  E P,  F P,  G P 
-#define SFH_STHROUGH_LIST_8(P,A,B,C,D,E,F,G,H) A P,  B P,  C P,  D P,  E P,  F P,  G P,  H P 
+#define SFH_STHROUGH_LIST_1(P,_0)                      _0 P 
+#define SFH_STHROUGH_LIST_2(P,_0,_1)                   _0 P,_1 P 
+#define SFH_STHROUGH_LIST_3(P,_0,_1,_2)                _0 P,_1 P,_2 P 
+#define SFH_STHROUGH_LIST_4(P,_0,_1,_2,_3)             _0 P,_1 P,_2 P,_3 P 
+#define SFH_STHROUGH_LIST_5(P,_0,_1,_2,_3,_4)          _0 P,_1 P,_2 P,_3 P,_4 P 
+#define SFH_STHROUGH_LIST_6(P,_0,_1,_2,_3,_4,_5)       _0 P,_1 P,_2 P,_3 P,_4 P,_5 P 
+#define SFH_STHROUGH_LIST_7(P,_0,_1,_2,_3,_4,_5,_6)    _0 P,_1 P,_2 P,_3 P,_4 P,_5 P,_6 P 
+#define SFH_STHROUGH_LIST_8(P,_0,_1,_2,_3,_4,_5,_6,_7) _0 P,_1 P,_2 P,_3 P,_4 P,_5 P,_6 P,_7 P 
 
 #define SFH_STHROUGH_LIST(F,...)    __VA_OPT__(SFH_STHROUGH_LIST_(F, SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
 #define SFH_STHROUGH_LIST_(F,N,...) SFH_CAT2(SFH_STHROUGH_LIST_,N)(F,__VA_ARGS__)
 
 // returns the list with the last element removed
-#define SFH_SMOST_1(A)
-#define SFH_SMOST_2(A,B)             A
-#define SFH_SMOST_3(A,B,C)           A,B
-#define SFH_SMOST_4(A,B,C,D)         A,B,C
-#define SFH_SMOST_5(A,B,C,D,E)       A,B,C,D
-#define SFH_SMOST_6(A,B,C,D,E,F)     A,B,C,D,E
-#define SFH_SMOST_7(A,B,C,D,E,F,G)   A,B,C,D,E,F
-#define SFH_SMOST_8(A,B,C,D,E,F,G,H) A,B,C,D,E,F,G
+#define SFH_SMOST_1(_0)
+#define SFH_SMOST_2(_0,_1)                   _0
+#define SFH_SMOST_3(_0,_1,_2)                _0,_1
+#define SFH_SMOST_4(_0,_1,_2,_3)             _0,_1,_2
+#define SFH_SMOST_5(_0,_1,_2,_3,_4)          _0,_1,_2,_3
+#define SFH_SMOST_6(_0,_1,_2,_3,_4,_5)       _0,_1,_2,_3,_4
+#define SFH_SMOST_7(_0,_1,_2,_3,_4,_5,_6)    _0,_1,_2,_3,_4,_5
+#define SFH_SMOST_8(_0,_1,_2,_3,_4,_5,_6,_7) _0,_1,_2,_3,_4,_5,_6
 
 #define SFH_SMOST(...) __VA_OPT__(SFH_SMOST_(SFH_ARGCOUNT(__VA_ARGS__), __VA_ARGS__))
 #define SFH_SMOST_(N,...) SFH_CAT2(SFH_SMOST_,N)(__VA_ARGS__)
