@@ -35,7 +35,7 @@ void bmat_reduce_ut_8(bmat_param_8(M))
     //    with the first (if this row then NOP is performed)
     // * hint : GCC will introduce a branch to avoid
     //          the delta-swap without it.
-    shift = hint_no_const_fold_32((shift != 64) ? shift - 9*i : 0);
+    shift = hint_alive_gcc((shift != 64) ? shift - 9*i : 0);
 
     // perform the row swap (NOP if none)
     m = bit_permute_step_64(m, rmask, shift);
