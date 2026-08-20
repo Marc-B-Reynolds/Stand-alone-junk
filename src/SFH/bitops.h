@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+﻿// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -195,7 +195,7 @@ static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__builtin_popcountl
 static inline uint32_t clz_32(uint32_t x) { return (uint32_t)__lzcnt(x);    }
 static inline uint32_t ctz_32(uint32_t x) { return (uint32_t)_tzcnt_u32(x); }
 static inline uint32_t clz_64(uint64_t x) { return (uint32_t)__lzcnt64(x);  }
-static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)__tzcnt64(x);  }
+static inline uint32_t ctz_64(uint64_t x) { return (uint32_t)_tzcnt_u64(x);  }
 static inline uint32_t pop_32(uint32_t x) { return (uint32_t)__popcnt(x);   }
 static inline uint32_t pop_64(uint64_t x) { return (uint32_t)__popcnt64(x); }
 #endif
