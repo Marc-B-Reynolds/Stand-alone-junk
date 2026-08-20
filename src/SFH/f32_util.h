@@ -143,6 +143,7 @@ static const float f32_half_pi = 0.5f*0x1.921fb6p1f;
 
 // extended precision additive constants as unevaluate pairs:
 // K + x = fma(H,L,x)
+// recall:  x+K = (x+L)+H  (additive instead of mult is generally more useful)
 static const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
 
 
@@ -454,7 +455,7 @@ static inline float f32_up_mul(f32_pair_t const p, float x)
   return fmaf(x, p.h, x*p.l);
 }
 
-// compute a*b+c
+// compute a*b+c where 'a' is unevaluated pair
 static inline float f32_up_madd(f32_pair_t const a, float b, float c)
 {
   return fmaf(a.h, b, fmaf(a.l, b, c));
