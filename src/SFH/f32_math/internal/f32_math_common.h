@@ -7,15 +7,15 @@
 #define F32_MATH_COMMON_H
 
 #ifndef   F32_HORNER2
-#include "f32_util.h"
-#include "f32_horner.h"
-#include "f32_horner2.h"
+#include "SFH/f32_util.h"
+#include "SFH/f32_horner.h"
+#include "SFH/f32_horner2.h"
 #endif
 
 #ifndef   F64_HORNER2
-#include "f64_util.h"
-#include "f64_horner.h"
-#include "f64_horner2.h"
+#include "SFH/f64_util.h"
+#include "SFH/f64_horner.h"
+#include "SFH/f64_horner2.h"
 #endif
 
 // given a function 'f' defined for postive 'x': extend to it
