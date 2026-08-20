@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -36,33 +37,103 @@
 
 //**********************************************************************
 
+// |         func|max ULP|        CR|        FR|  2 ULP|> 2 ULP|       CR%|      FR%|  2 ULP%|         abs|
+// |         ---:|   ---:|      ---:|      ---:|   ---:|   ---:|      ---:|     ---:|    ---:|        ---:|
+// |         libm|      2|1689096635| 448701781|1296625|      0| 78.963141|20.976243|0.060616|5.960464e-08|
+// |   f32_atanpi|      2|2099117328|  39939254|  38459|      0| 98.131092| 1.867110|0.001798|2.980232e-08|
+// |f32_atanpi_fr|      1|2132579049|   6515992|      0|      0| 99.695386| 0.304614|0.000000|2.980232e-08|
+
+
 float libm(float x) { return atanf(x)/((float)M_PI); }
 
-// ~abs error = 5.1212798687413758189430440754315797172397760782352e-10
-// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
-static inline float f32_atanpi_k5(float x)
-{
-  static const float C[] = {-0x1.ef7d88p-7f, 0x1.021244p-5f, -0x1.6fe8a6p-5f, 0x1.04970ep-4f, -0x1.b297f6p-4f, 0x1.45f306p-2f};
 
-  return x*f32_horner_5(x*x,C);
+// atanpi(x) + a : x on [-tan(π/8),tan(π/8)]
+static inline float f32_atanpi_k4(float x, float a)
+{
+  // atanpi(x) + a ≈ (x³ P(x²) + x)(1/π) + a
+  static const float C[] = {-0x1.55544cp-2f, 0x1.9922fp-3f, -0x1.1c267p-3f, 0x1.4982b4p-4f};
+  static const float ipi = 0x1.45f306p-2f;  // 1/π
+
+  float x2 = x*x;
+  float r;
+  
+  r = C[3];
+  r = fmaf(r,  x2, C[2]);
+  r = fmaf(r,  x2, C[1]);
+  r = fmaf(r,  x2, C[0]);
+  r = fmaf(r*x,x2, x);
+  r = fmaf(r, ipi, a);
+  //r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
+  
+  return r;
 }
 
-// ~abs error = 4.9263542241893983185779047860738136910630860052195e-10
-// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
-static inline float f32_atanpi_k6(float x)
+// atan(x)/π : max error = 2 ulp
+static inline float f32_atanpi(float x)
 {
-  static const float C[] = {-0x1.f32c66p-9f, -0x1.9231cap-7f, 0x1.f71ff4p-6f, -0x1.6f1486p-5f, 0x1.04911ep-4f, -0x1.b297dap-4f, 0x1.45f306p-2f};
+  uint32_t sx = f32_sign_bit(x);
+  float    a  = 0.f;
+  
+  x = fabsf(x);
 
-  return x*f32_horner_6(x*x,C);
+  // x > tan(3π/8)
+  if (x > 2.414213657379150390625f) {
+    a = 0.5f;
+    x = -(1.f/x);
+  }
+  // x > tan(π/8)
+  else if (x > 0.4142135623730950f) {
+    a = 0.25f;
+    x = (x-1.f)/(x+1.f);
+  }
+  
+  return f32_mulsign(f32_atanpi_k4(x,a),sx);
 }
 
-// ~abs error = 4.2991777133872431385088667344082391605521615226017e-10
-// ~rel error = 4.0342060334366541373065201359636637670275822628503e-8
-static inline float f32_atanpi_k7(float x)
-{
-  static const float C[] = {0x1.b45ec6p-3f, -0x1.824036p-3f, 0x1.9d41cp-5f, 0x1.4b53ecp-6f, -0x1.67ce22p-5f, 0x1.046cbcp-4f, -0x1.b2976p-4f, 0x1.45f306p-2f};
 
-  return x*f32_horner_7(x*x,C);
+// for binary32 but internal computation in binary64
+static inline float f32_atanpi_k4_fr(double x, double a)
+{
+  // atanpi(x) + a ≈ (x³ P(x²) + x)(1/π) + a
+  static const double C[] = {-0x1.555453812e9b7p-2, 0x1.9924bc804e959p-3,
+                             -0x1.1c3701132244fp-3, 0x1.49e167123486cp-4};
+
+  static const double ipi = 0x1.45f306dc9c883p-2;  // 1/π
+
+  double x2 = x*x;
+  double r;
+  
+  r = C[3];
+  r = fma(r,  x2, C[2]);
+  r = fma(r,  x2, C[1]);
+  r = fma(r,  x2, C[0]);
+  r = fma(r*x,x2, x);
+  r = fma(ipi, r, a);
+  
+  return (float)r;
+}
+
+// atan(x)/π  (faithfully rounded)
+static inline float f32_atanpi_fr(float X)
+{
+  uint32_t sx = f32_sign_bit(X);
+  double   x  = (double)fabsf(X);
+  double   a  = 0.f;
+  
+  // x > tan(3π/8)
+  if (x > 2.414213657379150390625f) {
+    a = 0.5;
+    x = -(1.0/x);
+  }
+  // x > tan(π/8)
+  else if (x > 0.4142135623730950f) {
+    a = 0.25;
+    x = (x-1.0)/(x+1.0);
+  }
+
+  x = f32_atanpi_k4_fr(x,a);
+  
+  return f32_mulsign((float)x,sx);
 }
 
 
@@ -142,8 +213,8 @@ float cr_atanpif(float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
-  ENTRY(f32_atanpi_k6),
-  ENTRY(f32_atanpi_k7),
+  ENTRY(f32_atanpi),
+  ENTRY(f32_atanpi_fr),
 };
 
 const char* func_name = "atanpi";
@@ -195,11 +266,13 @@ void test_all(void)
 {
   uint32_t x0 = 0;
   uint32_t x1 = 0x332332e8;
-  
+
+#if 1
   test_linear_range_dp_up(x0, x1, f64_mul_k_pi_i);
 
   x0 = x1+1; x1=f32_to_bits(1.f/64.f);
   test_force(x0,x1);
+#endif  
 
   // break-down the interior a bit. probably overkill WRT breakdown
   test_1pot(1.f/64.f);
@@ -207,7 +280,7 @@ void test_all(void)
   test_1pot(1.f/16.f);
   test_1pot(1.f/ 8.f);
   test_1pot(1.f/ 4.f);
-#if 0  
+#if 1
   test_1pot(1.f/ 2.f);
   test_1pot(1.f);
   test_1pot(2.f);
