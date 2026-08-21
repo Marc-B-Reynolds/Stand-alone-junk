@@ -1,4 +1,4 @@
-﻿// -*- coding: utf-8 -*-
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2016-2026
 
@@ -8,7 +8,10 @@
 #pragma once
 #define F64_UTIL_H
 
+#include <math.h>
+#include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef   INTOPS_H
 #include "SFH/intops.h"
