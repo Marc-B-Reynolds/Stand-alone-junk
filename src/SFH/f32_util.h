@@ -5,7 +5,10 @@
 #pragma once
 #define F32_UTIL_H
 
+#include <math.h>
+#include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef   INTOPS_H
 #include "SFH/intops.h"
