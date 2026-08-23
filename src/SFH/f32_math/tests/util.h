@@ -14,6 +14,7 @@ typedef struct {
   uint32_t type;
 } func_entry_t;
 
+#if 0
 typedef struct {
   uint32_t x0;
   uint32_t x1;
@@ -25,6 +26,7 @@ typedef struct {
   func_range_entry_t* table;
   uint32_t            num;
 } func_range_table_t;
+#endif
 
 #define LENGTHOF(X) (sizeof(X)/sizeof(X[0]))
 #define STRINGIFY(S)  STRINGIFY_(S)
