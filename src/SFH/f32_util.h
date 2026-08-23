@@ -231,6 +231,11 @@ static inline uint64_t f32_sign_mask_u64(float x)
   return (uint64_t)(((int64_t)((int32_t)ix))>>31);
 }
 
+static inline float f32_mask_select1(uint32_t m, float x)
+{
+  return f32_from_bits(m & f32_to_bits(x));
+}
+
 // returns 'c' if 'cond' is less than zero. otherwise zero
 static inline float f32_sign_select1(float c, float cond)
 {

@@ -155,7 +155,7 @@ static inline uint64_t f64_sign_bit(double a)
   return f64_to_bits(a) & f64_sign_bit_k;
 }
 
-static inline uint64_t f64_abs_bits(float a)
+static inline uint64_t f64_abs_bits(double a)
 {
   return f64_to_bits(a) & (~f64_sign_bit_k);
 }
@@ -170,6 +170,12 @@ static inline uint64_t f64_sign_mask(double x)
 {
   return sgn_mask_u64(f64_to_bits(x));
 }
+
+static inline double f64_mask_select1(uint64_t m, double x)
+{
+  return f64_from_bits(m & f64_to_bits(x));
+}
+
 
 // equivalent to: copysign(1.0,a) == copysign(1.0,b)
 // but lowers better. Also note that !f32_same_sign
