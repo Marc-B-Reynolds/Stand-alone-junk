@@ -279,8 +279,8 @@ static inline float f32_atan_k(float x)
   r = C[3];
   r = fmaf(r,  x2, C[2]);
   r = fmaf(r,  x2, C[1]);
-  r = fmaf(r,  x2, C[0]);  // P(x²)
-  r = fmaf(r*x,x2, x);     // x P(x²) x² + x
+  r = fmaf(r,  x2, C[0]);
+  r = fmaf(r*x,x2, x);
   
   return r;
 }
