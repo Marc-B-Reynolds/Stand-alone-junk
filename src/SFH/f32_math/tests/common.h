@@ -57,22 +57,6 @@ void error_dump(void)
   error_dump_i(func_error);
 }
 
-// mostly usless ATM. need to add flags to func
-const f32_pair_t test_vector_odd_data[] ={
-  {.x= 0.f,     .y= 0.f},
-  {.x=-0.f,     .y=-0.f},
-//{.x= f32_inf, .y= f32_inf},
-//{.x=-f32_inf, .y=-f32_inf}
-};
-
-const f32_pair_t test_vector_even_data[] ={
-  {.x= 0.f,     .y= 0.f},
-  {.x=-0.f,     .y= 0.f},
-//{.x= f32_inf, .y= f32_inf},
-//{.x=-f32_inf, .y= f32_inf}
-};
-
-
 
 static inline void test_error_add(func_error_t* error, float e, float a)
 {
@@ -107,6 +91,7 @@ static inline void test_error_add_ds(func_error_t* error, float e, float a)
   error->ulp[ulp]++;
 }
 
+// check and explict range (both inclusive)
 void test_force(uint32_t x0, uint32_t x1)
 {
   if (x1 < x0) { uint32_t t = x0; x0=x1; x1=t; }
@@ -116,8 +101,10 @@ void test_force(uint32_t x0, uint32_t x1)
   
   printf("\nchecking: %s on [%08x,%08x] [%e,%e]\n", func_name, x0,x1,f0,f1);
 
+  // error tracking for this range
   func_error_t error[LENGTHOF(func_table)] = {{0}};
-  
+
+  // perform the checks
   for(uint32_t ix=x0; ix<=x1; ix++) {
     float x  = f32_from_bits(ix);
     float cr = cr_func(x);
@@ -127,7 +114,8 @@ void test_force(uint32_t x0, uint32_t x1)
       test_error_add(error+fi, cr,r);
     }
   }
-  
+
+  // dump this range's info and add to totals
   error_to_totals(error);
   error_dump_i(error);
 }
@@ -297,7 +285,6 @@ void test_sanity_nan(void)
   }
 }
 
-
 void test_vector(const f32_pair_t* data, uint32_t n)
 {
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
@@ -349,8 +336,6 @@ static inline void test_specials(void)
 //   expects {and note about range once reworked}
 void test_sanity_odd(void)
 {
-  test_vector(test_vector_odd_data, LENGTHOF(test_vector_odd_data));
-
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -371,8 +356,6 @@ void test_sanity_odd(void)
 //   expects {and note about range once reworked}
 void test_sanity_even(void)
 {
-  test_vector(test_vector_even_data, LENGTHOF(test_vector_even_data));
-  
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     
     for(float x=0.f; x <= 1.f; x += (1.f/1024.f)) {
@@ -438,7 +421,7 @@ int test_run(int argc, char** argv)
   if (sanity) {
     printf("\nrunning: minimal sanity check\n");
     //test_sanity_nan();
-#if !defined(NO_TEST_SPECIALS)    
+#if 1//!defined(NO_TEST_SPECIALS)    
     test_specials();
 #endif
     test_sanity();
