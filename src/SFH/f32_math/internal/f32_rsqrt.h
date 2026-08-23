@@ -1,8 +1,8 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
-#ifndef F32_RSQRT_H
-#define F32_RSQRT_H
+#pragma once
 
 // The "best" simple way to compute 1/sqrt(x) is sqrt(1/x) which is
 // faithfully rounded (f32_rsqrt in f32_util.h).
@@ -11,11 +11,11 @@
 //   faithfully:  13.008940% (2182538)
 //
 // SEE:
-// * https://gist.github.com/Marc-B-Reynolds/9fb24a7a4ee915e6e973bf9f4d08c404
-// * "Fast Compensated Algorithms for the Reciprocal Square Root,
+// ∙ https://gist.github.com/Marc-B-Reynolds/9fb24a7a4ee915e6e973bf9f4d08c404
+// ∙ "Fast Compensated Algorithms for the Reciprocal Square Root,
 //   the Reciprocal Hypotenuse, and Givens Rotations", Carlos F. Borges, 2021
 //   https://arxiv.org/abs/2103.08694
-// * "High-level algorithms for correctly-rounded reciprocal square roots",
+// ∙ "High-level algorithms for correctly-rounded reciprocal square roots",
 //   Borges, Jeannerod & Muller, 2022
 //   https://hal.inria.fr/hal-03728088
 
@@ -74,5 +74,3 @@ static inline float f32_rsqrt_cb(float x)
 
   return x;
 }
-
-#endif

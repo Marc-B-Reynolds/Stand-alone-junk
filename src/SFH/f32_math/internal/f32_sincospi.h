@@ -1,9 +1,8 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2020-2026
 
-
-#ifndef F32_SINCOSPI_H
-#define F32_SINCOSPI_H
+#pragma once
 
 // http://marc-b-reynolds.github.io/math/2020/03/11/SinCosPi.html
 // original post version with reworked expression. one less constant
@@ -25,7 +24,8 @@ static inline float f32_sinpi_o6(float a)
   return r;
 }
 
-//************* sinpi relative error
+//────────────────────────────────────────────────────────────────────────────────────
+// sinpi relative error
 
 static inline float f32_sinpi_k5(float x)
 {
@@ -95,7 +95,8 @@ static inline float f32_sinpi_d6(float v)
 }
 
 
-//************* sinpi absolute error
+//────────────────────────────────────────────────────────────────────────────────────
+// sinpi absolute error
 
 static inline float f32_sinpi_a5(float x)
 {
@@ -125,7 +126,8 @@ static inline float f32_sinpi_a6(float x)
   return r;
 }
 
-//************* cospi
+//────────────────────────────────────────────────────────────────────────────────────
+// cospi
 
 // kernel codomain on [sqrt(2)/2, 1] and optimizing for abs outperforms wrt
 // relative error as well.
@@ -163,5 +165,3 @@ static inline float f32_cospi_d5(float x)
   // using second order doesn't change error
   return (float)f64_horner2_4(s,C);
 }
-
-#endif

@@ -1,8 +1,8 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
-#ifndef F32_ACOSPI_SB_H
-#define F32_ACOSPI_SB_H
+#pragma once
 
 // fast branchfree acospi using non-standard approximation method
 // based on being able to compute a square root in parallel with
@@ -10,13 +10,13 @@
 // accuracy at the top end.
 //
 // SEE:
-// * (put post link here)
+// ∙ (put post link here)
 //
 // core approximation on [0,1] using expressions:
 //    acospi(x) ~= sqrt(1-x) P(x), x >= 0
 //               = 1 - acospi(-x), x <  0
 //
-// * defines sets of polynomial approximations P(x)
+// ∙ defines sets of polynomial approximations P(x)
 //     f32_acospi_sb_kr{n} = n^th degree where P(0) ~= 1/2  {abs error}
 //     f32_acospi_sb_ke{n} = n^th degree where P(0)  = 1/2  {abs error}
 //     f32_acospi_sb_re{n} = n^th degree where P(0)  = 1/2  {rel error}
@@ -24,17 +24,17 @@
 //   degree of freedom and the P(0)=1/2 is exact for inputs
 //   at (and near) zero. This make a huge difference on total
 //   counts (which can be misleading is not mentally noted)
-// * defines functions for expanding the P(x) into usable
+// ∙ defines functions for expanding the P(x) into usable
 //   functions:
 //     f32_acospi_sb_xp   = expand an approximation for positive inputs
 //     f32_acospi_sb_xf   = expand an approximation for full range
 //     f32_acopis_bs_xf_l =   alternate full range (see below)
-// * also promote-to-double flavors of some of the previous
+// ∙ also promote-to-double flavors of some of the previous
 
 // NOTES:
 //   hybrid (stdfunc/bitops) only reduction. see f32_reduce_odd
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // f(0) relaxed spitball polynomials: P(x)
 // not forcing result of f(0) to 1/2 gives an additional degree of
 // freedom and produces slightly more accurate result.
@@ -87,7 +87,7 @@ static inline float f32_acospi_sb_kr6(float x)
 }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // f(0) exact spitball polynomials: P(x)  { minimized for abs error }
 
 static inline float f32_acospi_sb_ke1(float x)
@@ -128,7 +128,7 @@ static inline float f32_acospi_sb_ke5(float x)
 }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // f(0) exact spitball polynomials: P(x) { minimized for relative error }
 
 static inline float f32_acospi_sb_re4(float x)
@@ -153,7 +153,7 @@ static inline float f32_acospi_sb_re6(float x)
 }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // binary64 kernels (for binary32 results) both are exact at f(0)
 
 #ifndef   F64_HORNER2
@@ -194,8 +194,7 @@ static inline double f32_acospi_dp_8(double x)
   return f64_horner2_8(x,C);
 }
 
-//**********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 // given f = P(x) expand approximation restricted to positive input.
 // return NaN for negative inputs.
@@ -313,6 +312,3 @@ static inline float f32_acospi_d_xf(double (*P)(double), float v)
   return (float)fma(f64_xor(t,sx), p, c);
 }
 
-
-
-#endif

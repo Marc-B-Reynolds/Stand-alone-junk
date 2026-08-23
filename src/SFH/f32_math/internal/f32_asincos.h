@@ -1,16 +1,16 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
-#ifndef F32_ASINCOS_H
-#define F32_ASINCOS_H
+#pragma once
 
-//**************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // classic polynomial approximations of asin(x) on [-1/2, 1/2]
 // if P(x) is one of the following then:
-// asin(x) ~= x + x^3 P(x^2)
+// asin(x) ~= x + x³ P(x²)
 
 // NOTES:
-// * only uses hybrid method of sign range reduction (SEE: f32_odd_reduce)
+// ∙ only uses hybrid method of sign range reduction (SEE: f32_odd_reduce)
 
 // too short to meet faithfully rounded (can hit 2 ulp)
 static inline float f32_asincos_k3(float x2)
@@ -70,7 +70,8 @@ static inline float f32_asincos_k6(float x2)
   return f32_horner_6(x2,C);
 }
 
-//**************************************************************
+
+//────────────────────────────────────────────────────────────────────────────────────
 // asin expansions
 
 // SEE: f32_asin_x1. stripped of double promotion. can hit
@@ -86,14 +87,14 @@ static inline float f32_asin_x0(float x, float (*P)(float))
     return fmaf(r,x,x);
   }
 
-  // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-x) )
+  // |x| > 0.5 : asin(x) = π/2 - 2 asin( 0.5*sqrt(1-x) )
   float sx = f32_xor(x,a);
   float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
   float t  = -2.f*f32_sqrt(t2); 
   float r  = t2*P(t2);
   
   r = fmaf(r,t,t);
-  r = f32_add_half_pi(r);               // FMA: r + pi/2
+  r = f32_add_half_pi(r);               // FMA: r + π/2
 
   return f32_xor((float)r,sx);
 }
@@ -101,12 +102,12 @@ static inline float f32_asin_x0(float x, float (*P)(float))
 
 // classic core for asin:
 // P is an approximation of asin on x on [-1/2,1/2] where:
-//   asin(x) = x + x^3 P(x^2)
+//   asin(x) = x + x³ P(x²)
 //           = fma(x, (x*x)*P(x*x), x)
 //
-// * broken into two sets of ranges: |x| < 1/2, |x| > 1/2
+// ∙ broken into two sets of ranges: |x| < 1/2, |x| > 1/2
 //   using P for both.
-// * |x| > 1/2 has a sadface of the square root not having enough
+// ∙ |x| > 1/2 has a sadface of the square root not having enough
 //   precision to meet target. punt to doubles.
 static inline float f32_asin_x1(float x, float (*P)(float))
 {
@@ -119,7 +120,7 @@ static inline float f32_asin_x1(float x, float (*P)(float))
     return fmaf(r,x,x);
   }
 
-  // |x| > 0.5 : asin(x) = pi/2 - 2 asin( 0.5*sqrt(1-|x|) )
+  // |x| > 0.5 : asin(x) = π/2 - 2 asin( 0.5*sqrt(1-|x|) )
   float  sx = f32_xor(x,a);
   float  t2 = 0.5f * (1.f-a);           // exact: Sterbenz lemma
   double d2 = (double)t2;
@@ -132,21 +133,21 @@ static inline float f32_asin_x1(float x, float (*P)(float))
   return f32_xor((float)r,sx);
 }
 
-//**************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // acos expansions
 
 // classic core for acos:
 // P is an approximation of asin on x on [-1/2,1/2] where:
-//   asin(x) = x + x^3 P(x^2)
+//   asin(x) = x + x³ P(x²)
 //           = fma(x, (x*x)*P(x*x), x)
 //
-// * broken into three intervals: |x| < 1/2, x > 1/2, x < -1/2
+// ∙ broken into three intervals: |x| < 1/2, x > 1/2, x < -1/2
 //   using P for all three via identities
 static inline float f32_acos_x1(float x, float (*P)(float))
 {
   float a = fabsf(x);
 
-  // |x| < 0.5 : acos(x) = pi/2 - asin(x)
+  // |x| < 0.5 : acos(x) = π/2 - asin(x)
   if (a <= 0.5f) {
     float x2 = x*x;
     float k  = P(x2);
@@ -159,7 +160,7 @@ static inline float f32_acos_x1(float x, float (*P)(float))
   float t2 = 0.5f*(1.f-a);
   float p  = f32_asincos_k5(t2);
 
-  // x < -0.5 : acos(x) = pi - 2 asin( sqrt((1+x)/2 )
+  // x < -0.5 : acos(x) = π - 2 asin( sqrt((1+x)/2 )
   if (x < 0.f) {
     float t = f32_sqrt(t2);
     float r = fmaf(t,t2*p,t);
@@ -192,7 +193,7 @@ static inline float f32_acos_x2(float x, float (*P)(float))
 {
   float a = fabsf(x);
 
-  // |x| < 0.5 : acos(x) = pi/2 - asin(x)
+  // |x| < 0.5 : acos(x) = π/2 - asin(x)
   if (a <= 0.5f) {
     float x2 = x*x;
     float k  = P(x2);
@@ -200,8 +201,8 @@ static inline float f32_acos_x2(float x, float (*P)(float))
     return f32_add_half_pi(-r);       // FMA addition
   }
 
-  // x < -0.5 : acos(x) = pi - 2 asin( sqrt((1+x)/2 )
-  // x >  0.5 : acos(x) =      2 asin( sqrt((1-x)/2 )
+  // x < -0.5 : acos(x) = π - 2 asin( sqrt((1+x)/2 )
+  // x >  0.5 : acos(x) =     2 asin( sqrt((1-x)/2 )
 
   uint32_t sx = f32_xor_to_bits(x,a);
 
@@ -227,4 +228,3 @@ static inline float f32_acos_x2(float x, float (*P)(float))
   return f32_mulsign((float)r, sx);
 }
 
-#endif

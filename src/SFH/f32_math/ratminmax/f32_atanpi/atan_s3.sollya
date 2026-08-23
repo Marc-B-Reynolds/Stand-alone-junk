@@ -1,0 +1,10 @@
+Numerator = [|
+-0xd.459ab8p-44,
+-0x3.97c714p-4,
+-0x3.2d77ep-4,
+-0x7.a811dp-8|];
+Denominator = [|
+0xa.c7554p-4,
+0x1p+0,
+0x6.6a9d1p-4,
+0x9.576e8p-8|];

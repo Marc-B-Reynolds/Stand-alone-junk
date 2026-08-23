@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
@@ -15,7 +16,7 @@
 // direct form but a good expression is alluding me. An example is
 // that RN(acospi(x)) = 1/2 on [-0x1.921fb4p-24, 0x1.921fb4p-25]
 // so the asinpi approximation on this range will be zero instead
-// of ~x/pi. But spitballing and abs error (shrug)!
+// of ~x/π. But spitballing and abs error (shrug)!
 
 // given f = P(x) expand approximation restricted to positive input.
 // return NaN for negative inputs.

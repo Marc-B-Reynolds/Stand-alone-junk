@@ -1,17 +1,16 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2026
 
 // classic style asinpi/cospi approximations
 
-#ifndef F32_ASINCOSPI_H
-#define F32_ASINCOSPI_H
+#pragma once
 
 
-
-//**************************************************************
-// polynomial P approximations of asin(x)/pi on [-1/2, 1/2]
+//────────────────────────────────────────────────────────────────────────────────────
+// polynomial P approximations of asin(x)/π on [-1/2, 1/2]
 // if P(x) is one of the following then:
-// asinpi(x) ~= x/pi + x^3 P(x^2)
+// asinpi(x) ~= x/π + x³ P(x²)
 
 static inline float f32_asinpi_k5(float x)
 {
@@ -44,7 +43,7 @@ static inline float f32_asinpi_k8(float x)
 }
 
 
-//**************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // asinpi expansions
 
 // branchs on the two ranges. stays in binary32
@@ -147,7 +146,7 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
   t = f64_xor(t, sx);
   c = f64_xor(c, sx);
   
-  // |x| <= 0.5 : asinpi(x) = a/pi + a^3 P(a^2), a = |x|
+  // |x| <= 0.5 : asinpi(x) = a/π + a³ P(a²), a = |x|
   // |x| >  0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/2 )
   r  = (double)P((float)t2);
   r = fma(t2, r, f64_mul_k_pi_i.h);
@@ -157,7 +156,7 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
 }
 
 
-//**************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // acospi expansions:
 //   |x| <  0.5 : acospi(x) = 1/2 -   asinpi(x)
 //    x  < -0.5 : acospi(x) =   1 - 2 asinpi( sqrt((1+x)/2 )
@@ -198,4 +197,3 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
   return f32_xor((float)r, sx);
 }
 
-#endif
