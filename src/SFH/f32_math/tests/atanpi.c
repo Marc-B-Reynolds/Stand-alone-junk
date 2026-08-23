@@ -52,24 +52,25 @@ static inline float f32_atanpi_k4(float x, float a)
 {
   // atanpi(x) + a ≈ (x³ P(x²) + x)(1/π) + a
   static const float C[] = {-0x1.55544cp-2f, 0x1.9922fp-3f, -0x1.1c267p-3f, 0x1.4982b4p-4f};
-  static const float ipi = 0x1.45f306p-2f;  // 1/π
+  //static const float ipi = 0x1.45f306p-2f;  // 1/π
 
   float x2 = x*x;
   float r;
-  
+
+  // 116 inputs are at 2 ulp
   r = C[3];
   r = fmaf(r,  x2, C[2]);
   r = fmaf(r,  x2, C[1]);
   r = fmaf(r,  x2, C[0]);
   r = fmaf(r*x,x2, x);
-  r = fmaf(r, ipi, a);
-  //r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
-  
+  r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
+
   return r;
 }
 
+#if 0
 // atan(x)/π : max error = 2 ulp
-static inline float f32_atanpi(float x)
+static inline float f32_atanpi_(float x)
 {
   uint32_t sx = f32_sign_bit(x);
   float    a  = 0.f;
@@ -84,21 +85,87 @@ static inline float f32_atanpi(float x)
   // x > tan(π/8)
   else if (x > 0.4142135623730950f) {
     a = 0.25f;
-    x = (x-1.f)/(x+1.f);
+    x = (float)(((double)x-1.0)/((double)x+1.0));
   }
   
   return f32_mulsign(f32_atanpi_k4(x,a),sx);
 }
+#else
+// atan(x)/π : max error = 2 ulp
+static inline float f32_atanpi_(float x)
+{
+  uint32_t sx = f32_sign_bit(x);
+  float    a  = 0.f;
+  
+  x = fabsf(x);
+
+  // x > tan(3π/8)
+  if (x > 2.414213657379150390625f) {
+    a = 0.5f;
+    x = -(1.f/x);
+  }
+  // x > tan(π/8)
+  else if (x > 0.4142135623730950f) {
+    a = 0.25f;
+    x = (float)(((double)x-1.0)/((double)x+1.0));
+    //x = (x-1.f)/(x+1.f);
+  }
+
+  // atanpi(x) + a ≈ (x³ P(x²) + x)(1/π) + a
+  static const float C[] = {-0x1.55544cp-2f, 0x1.9922fp-3f, -0x1.1c267p-3f, 0x1.4982b4p-4f};
+
+  float x2 = x*x;
+  float r;
+
+#if   0
+  r = C[3];
+  r = fmaf(r,  x2, C[2]);
+  r = fmaf(r,  x2, C[1]);
+  r = fmaf(r,  x2, C[0]);
+
+  // 241353 inputs at 2 ulp
+  static const float ipi = 0x1.45f306p-2f;  // 1/π
+  r = fmaf(r*x,x2, x);
+  r = fmaf(r, ipi, a);
+#elif 1
+  r = C[3];
+  r = fmaf(r,  x2, C[2]);
+  r = fmaf(r,  x2, C[1]);
+  r = fmaf(r,  x2, C[0]);
+
+  
+  // 116 inputs are at 2 ulp
+  r = fmaf(r*x,x2, x);
+  r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
+#else
+
+  // (1/π)(x(x² r + 1))   + a
+  // (x/π)(x² r + 1)      + a
+  // (xh + xl)(x² r + 1)  + a
+  float xh = x*f32_mul_k_pi_i.h;
+  float xl = fma(x,f32_mul_k_pi_i.h, /*x*f32_mul_k_pi_i.l*/-xh);
+
+  //float tl = fma(xl*r,x2,xl);
+  //float th = fma(xh*r,x2,xh+tl);
+
+  f32_pair_t xx = 
+
+  
+  r = fmaf(r*xh,x2, xh+a);
+#endif  
+
+  return f32_mulsign(r,sx);
+}
+#endif
+
 
 
 // for binary32 but internal computation in binary64
-static inline float f32_atanpi_k4_fr(double x, double a)
+static inline float f32_atanpi_fr(double x, double a)
 {
   // atanpi(x) + a ≈ (x³ P(x²) + x)(1/π) + a
   static const double C[] = {-0x1.555453812e9b7p-2, 0x1.9924bc804e959p-3,
                              -0x1.1c3701132244fp-3, 0x1.49e167123486cp-4};
-
-  static const double ipi = 0x1.45f306dc9c883p-2;  // 1/π
 
   double x2 = x*x;
   double r;
@@ -108,13 +175,19 @@ static inline float f32_atanpi_k4_fr(double x, double a)
   r = fma(r,  x2, C[1]);
   r = fma(r,  x2, C[0]);
   r = fma(r*x,x2, x);
-  r = fma(ipi, r, a);
+
+#if 1
+  static const double ipi = 0x1.45f306dc9c883p-2;  // 1/π
+  r = fma(ipi, r, a);                              // r/π + a
+#else
+  r = f64_up_madd(f64_mul_k_pi_i, r,a);            // r/π + a
+#endif  
   
   return (float)r;
 }
 
 // atan(x)/π  (faithfully rounded)
-static inline float f32_atanpi_fr(float X)
+static inline float f32_atanpi(float X)
 {
   uint32_t sx = f32_sign_bit(X);
   double   x  = (double)fabsf(X);
@@ -131,10 +204,12 @@ static inline float f32_atanpi_fr(float X)
     x = (x-1.0)/(x+1.0);
   }
 
-  x = f32_atanpi_k4_fr(x,a);
+  x = f32_atanpi_fr(x,a);
   
   return f32_mulsign((float)x,sx);
 }
+
+
 
 
 //**********************************************************************
@@ -212,9 +287,9 @@ float cr_atanpif(float x){
 
 func_entry_t func_table[] =
 {
-  ENTRY(libm),
+//ENTRY(libm),
   ENTRY(f32_atanpi),
-  ENTRY(f32_atanpi_fr),
+  ENTRY(f32_atanpi_),
 };
 
 const char* func_name = "atanpi";
@@ -264,25 +339,30 @@ void test_spot(void)
 
 void test_all(void)
 {
+
+  // temp hack
+#if 0
   uint32_t x0 = 0;
   uint32_t x1 = 0x332332e8;
-
-#if 1
+  
   test_linear_range_dp_up(x0, x1, f64_mul_k_pi_i);
 
   x0 = x1+1; x1=f32_to_bits(1.f/64.f);
   test_force(x0,x1);
-#endif  
-
-  // break-down the interior a bit. probably overkill WRT breakdown
+  
   test_1pot(1.f/64.f);
   test_1pot(1.f/32.f);
   test_1pot(1.f/16.f);
+#endif  
   test_1pot(1.f/ 8.f);
-  test_1pot(1.f/ 4.f);
-#if 1
-  test_1pot(1.f/ 2.f);
-  test_1pot(1.f);
+
+  // break up regions into range reduction related ones
+  test_force(0x3e800000, 0x3ed413c0);
+  test_force(0x3ed413c1, 0x401a8270);
+  test_force(0x401a8271, 0x407fffff);
+
+  test_1pot(4.f);
+#if 0
   test_1pot(2.f);
   test_1pot(4.f);
   test_1pot(8.f);
@@ -307,6 +387,8 @@ int main(int argc, char** argv)
 {
   //scan_constant();
   //scan_linear();
+
+  printf("%x\n", f32_to_bits(0.4142135623730950f));
   
   return test_run(argc, argv);
 }
