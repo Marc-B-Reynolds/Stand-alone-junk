@@ -419,8 +419,3 @@ static inline float f32_cbrt_d2(float x)
 
   return f32_cbrt_newton_fast(x,y);
 }
-
-
-
-#endif
-
