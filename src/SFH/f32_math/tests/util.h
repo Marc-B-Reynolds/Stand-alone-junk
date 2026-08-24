@@ -14,6 +14,23 @@ typedef struct {
   uint32_t type;
 } func_entry_t;
 
+
+typedef struct {
+  float (*f)(float);
+  char*    name;
+  char*    notes;
+  uint32_t flags;
+  uint32_t type;
+  float    x0,x1;
+} kernel_entry_t;
+
+typedef struct {
+  float (*f)(float);
+  float x0,x1;
+} kernel_range_t;
+
+
+
 #if 0
 typedef struct {
   uint32_t x0;
@@ -32,6 +49,7 @@ typedef struct {
 #define STRINGIFY(S)  STRINGIFY_(S)
 #define STRINGIFY_(S) #S
 #define ENTRY(X) { .f=&X, .name=STRINGIFY(X) }
+#define KERNEL(X,X0,X1) { .f=&X, .name=STRINGIFY(X), .x0=X0, .x1=X1 }
 
 
 #endif
