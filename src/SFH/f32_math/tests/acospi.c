@@ -112,20 +112,9 @@ float f32_acospi_c6(float x) { return f32_acospi_x1(&f32_asinpi_k6, x); }
 // and license info at top of file.
 
 // oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include "core_math_expand.h"
 
 #include <stdint.h>
-//#include <errno.h>
 #include <fenv.h>
 
 typedef union {float f; uint32_t u;} b32u32_u;

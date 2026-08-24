@@ -53,19 +53,7 @@ float libm(float x) { return atanf(x); }
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
-// oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-
+#include "core_math_expand.h"
 #include <fenv.h>
 
 typedef union {float f; uint32_t u;} b32u32_u;
@@ -215,7 +203,7 @@ static inline float f32_atan_dk(double x, double a)
   static const double C[] = {-0x1.55554928193eep-2, 0x1.9991961ac575p-3,
                              -0x1.23b522de969c6p-3, 0x1.b1ec3088526bcp-4,
                              -0x1.f1ed8c3145b3p-5};
-  static const double L[] = {-0x1.555554c604107p-2,-0x1.72c8d62f5affp-59};  
+  //static const double L[] = {-0x1.555554c604107p-2,-0x1.72c8d62f5affp-59};  
 
   double x2 = x*x;
   double r;

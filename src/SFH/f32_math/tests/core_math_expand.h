@@ -1,5 +1,3 @@
-// WIP
-
 // for including a core-math function and suppressing the warnings. only
 // handles GCC & clang like compilers ATM
 // SEE: https://core-math.gitlabpages.inria.fr
@@ -20,9 +18,9 @@
 #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
 #pragma GCC diagnostic ignored "-Wfloat-conversion"
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#include STRINGIFY(CORE_MATH_FUNC)                                        
-#pragma GCC diagnostic pop
+//#include STRINGIFY(CORE_MATH_FUNC)                                        
+//#pragma GCC diagnostic pop
 
 #else
-#include STRINGIFY(CORE_MATH_FUNC)                                        
+//#include STRINGIFY(CORE_MATH_FUNC)                                        
 #endif

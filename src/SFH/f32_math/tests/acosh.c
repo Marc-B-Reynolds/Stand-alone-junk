@@ -45,18 +45,7 @@ float libm(float x) { return acoshf(x); }
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
-// oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include "core_math_expand.h"
 
 /* Argument reduction for log: for 0 <= i < 256, we multiply the range
    [1+i/256,1+(i+1)/256] by T[i] to get a centered interval around 1.

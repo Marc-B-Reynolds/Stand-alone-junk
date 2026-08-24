@@ -377,27 +377,56 @@ float f32_acos_hq(float x) { return f32_acos_x2(x, &f32_asincos_k5); }
 float f32_acos(float x)    { return f32_acos_x2(x, &f32_asincos_k4); }
 
 
+#if 1
+double f32_atan_ue_dk(double x2)
+{
+  static const double N[] = {-0xb.65d3cb953908p-48,-0x3.975debc74bb1p-4,
+                             -0x3.2db6edaee4d64p-4,-0x7.aaf3b0c3bf22p-8};
+  static const double D[] = { 0xa.c619c60a22078p-4, 0x6.6badb3354c53p-4,
+                              0x9.5b472df81dfdp-8};
+  double n = N[3];
+  double d = D[2];
+
+  n = fma(n, x2, N[2]);
+  n = fma(n, x2, N[1]);
+  n = fma(n, x2, N[0]);
+
+  d = fma(d, x2, D[1]);
+  d = fma(d, x2, 1.0); 
+  d = fma(d, x2, D[0]);
+
+  // (float)fma(x,(n/d),x)   // this would complete
+  return (n/d);
+}
+
+float acos_bf(float a)
+{
+  double   x  = (double)fabsf(a);
+  double   d  = (1.0+x);
+  double   n  = (1.0-x)*d;
+  double   r  = f32_atan_ue_dk(d/(n*n));
+  double   t  = sqrt(n)/d;
+  double   y  = fma(t,r,t);
+
+  // temp hack
+  if (a >= 0)
+    return (float)(2.0*y);
+
+  return (float)(f64_pi-2.0*y);
+}
+#endif
+
+
+
+
 //**********************************************************************
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
-// oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include "core_math_expand.h"
 
 #include <fenv.h>
 
-#include <fenv.h>
-//#include <errno.h>
 
 typedef union {float f; unsigned u;} b32u32_u;
 
@@ -495,7 +524,7 @@ func_entry_t func_table[] =
   //ENTRY(sleef_acosf),
   //ENTRY(f32_acos_),
   //ENTRY(f32_acos),
-  
+#if 0
   ENTRY(f32_acos_x1_3),
   ENTRY(f32_acos_x2_3),
   ENTRY(f32_acos_x3_3),
@@ -511,6 +540,9 @@ func_entry_t func_table[] =
   ENTRY(f32_acos_x1_6),
   ENTRY(f32_acos_x2_6),
   ENTRY(f32_acos_x3_6),
+#else
+  ENTRY(acos_bf),
+#endif  
 };
 
 const char* func_name = "acos";

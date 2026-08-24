@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -31,10 +32,11 @@
 #include <string.h>
 #include <assert.h>
 
+#define TEST_HAS_KERNEL
 #include "internal/f32_math_common.h"
 #include "util.h"
 
-//**********************************************************************
+//───────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return asinf(x)/((float)M_PI); }
 
@@ -80,23 +82,43 @@ float f32_asinpi_c8(float x) { return REDUCE(&f32_asinpi_k8, x); }
 #undef REDUCE
 
 
+double f32_atanpi_ue_dk(double x2)
+{
+  static const double N[] = {0xc.21f873a99eep-8,-0x1.5ba1886c85f3p-8,-0x9.24fd56d356cp-8,-0x1.a1599469c291cp-8 };
+  static const double D[] = {0xb.19cd4548071dp-4,0x6.23ec81fac27b8p-4,0x8.5a5211bbc10b8p-8};
 
-//**********************************************************************
+  double n = N[3];
+  double d = D[2];
+
+  n = fma(n, x2, N[2]);
+  n = fma(n, x2, N[1]);
+  n = fma(n, x2, N[0]);
+
+  d = fma(d, x2, D[1]);
+  d = fma(d, x2, 1.f);
+  d = fma(d, x2, D[0]);
+
+  // fma(x, (n/d), 0.25*x) 
+  return n/d;
+}
+
+// about 2x latency of libm asin. no good.
+float f32_asinpi_bf(float a)
+{
+  double x = (double)a;
+  double t = x/(1.0+sqrt((1.0-x)*(1.0+x)));
+  double r = f32_atanpi_ue_dk(t*t);
+  double y = 2.0*fma(t,r,0.25*t);
+
+  return (float)y;
+}
+
+//───────────────────────────────────────────────────────────────────────────────────
+//───────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
-// oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include "core_math_expand.h"
 
 #include <fenv.h>
 
@@ -176,8 +198,7 @@ float cr_asinpif(float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
-
+//───────────────────────────────────────────────────────────────────────────────────
 
 func_entry_t func_table[] =
 {
@@ -192,10 +213,10 @@ func_entry_t func_table[] =
   ENTRY(f32_asinpi_a5),
 #endif  
 
-#if 0  
-  ENTRY(f32_asinpi_r1),
-  ENTRY(f32_asinpi_r2),
-  ENTRY(f32_asinpi_r3),
+#if 1
+  //ENTRY(f32_asinpi_r1),
+  //ENTRY(f32_asinpi_r2),
+  //ENTRY(f32_asinpi_r3),
   ENTRY(f32_asinpi_r4),
   ENTRY(f32_asinpi_r5),
   ENTRY(f32_asinpi_r6),
@@ -206,6 +227,7 @@ func_entry_t func_table[] =
   ENTRY(f32_asinpi_c6),
   ENTRY(f32_asinpi_c7),
   ENTRY(f32_asinpi_c8),
+  ENTRY(f32_asinpi_bf),
 #endif
 };
 
@@ -215,7 +237,31 @@ float cr_func(float x) { return cr_asinpif(x); }
 
 #include "common.h"
 
-//********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
+// kernels: wip..not motivated
+
+#if 0
+static inline float const_result(float x, float k) { (void)x; return k; }
+
+kernel_range_t core_range[] = {
+  {.x1 = 0, .f = cr_func },
+};
+
+kernel_entry_t core_table[] = {
+  KERNEL(f32_asinpi_k5, 0.f,0.5f),
+};
+
+func_error_t core_error[LENGTHOF(core_table)];
+
+void kernel_test(void) {
+  func_error_t error[LENGTHOF(core_table)] = {{0}};
+}
+#endif
+
+
+
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 // f(x) = x/pi up to 0x1.e768f4p-24 33f3b47a
 void scan_linear(void)

@@ -233,6 +233,39 @@ float gross_3(float x)
 }
 
 
+double f32_atan_ue_dk(double x2)
+{
+  static const double N[] = {-0xb.65d3cb953908p-48,-0x3.975debc74bb1p-4,
+                             -0x3.2db6edaee4d64p-4,-0x7.aaf3b0c3bf22p-8};
+  static const double D[] = { 0xa.c619c60a22078p-4, 0x6.6badb3354c53p-4,
+                              0x9.5b472df81dfdp-8};
+  double n = N[3];
+  double d = D[2];
+
+  n = fma(n, x2, N[2]);
+  n = fma(n, x2, N[1]);
+  n = fma(n, x2, N[0]);
+
+  d = fma(d, x2, D[1]);
+  d = fma(d, x2, 1.0); 
+  d = fma(d, x2, D[0]);
+
+  // (float)fma(x,(n/d),x)   // this would complete
+  return (n/d);
+}
+
+float asin_bf(float a)
+{
+  double x = (double)a;
+  double t = x/(1.0+sqrt((1.0-x)*(1.0+x)));
+  double r = f32_atan_ue_dk(t*t);
+  double y = 2.0*fma(t,r,t);
+
+  return (float)y;
+}
+
+
+
 // expand classic constructions
 float asin_x0_k3(float x) { return f32_asin_x0(x, &f32_asincos_k3); }
 float asin_x0_k4(float x) { return f32_asin_x0(x, &f32_asincos_k4); }
@@ -249,18 +282,7 @@ float asin_x1_k6(float x) { return f32_asin_x1(x, &f32_asincos_k6); }
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
-// oh my!
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#pragma GCC diagnostic ignored "-Wimplicit-float-conversion"
-#pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include "core_math_expand.h"
 
 #include <fenv.h>
 
@@ -341,11 +363,11 @@ float cr_asinf(float x){
 
 func_entry_t func_table[] =
 {
-#if 0  
+#if 1
   ENTRY(libm),
   ENTRY(fdlibm_asinf),
-  //ENTRY(cephes_asinf),
-  //ENTRY(sleef_asinf),
+  ENTRY(cephes_asinf),
+  ENTRY(sleef_asinf),
   
   ENTRY(asin_x0_k3),
   ENTRY(asin_x0_k4),
@@ -357,11 +379,14 @@ func_entry_t func_table[] =
   ENTRY(asin_x1_k5),
   ENTRY(asin_x1_k6),
 #endif
+  ENTRY(asin_bf),
+#if 1
   ENTRY(eniko),
   ENTRY(gross_0),
   ENTRY(gross_1),
   ENTRY(gross_2),
   ENTRY(gross_3),
+#endif  
 };
 
 const char* func_name = "asin";
