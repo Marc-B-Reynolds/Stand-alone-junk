@@ -4,11 +4,70 @@
 
 #pragma once
 
-//────────────────────────────────────────────────────────────────────────────────────
-// classic polynomial approximations of asin(x) on [-1/2, 1/2]
-// if P(x) is one of the following then:
-// asin(x) ~= x + x³ P(x²)
+// cores for asin(x) on [-1/2,1/2]
+// r1: |10|1042132380| 5959415|many|98.596715|0.563824|0.445368| 4.172325e-07|
+// r2: | 1|1055687408| 1277201|  0 |99.879163|0.120837|  --    | 5.960464e-08|
+// k3: | 2|1036328662|19489934|many|98.047622|1.843953|0.108425| 5.960464e-08|
+// k4: | 1|1055615346| 1349263|  0 |99.872345|0.127655|   --   | 5.960464e-08|
+// k5: | 1|1056788626|  175983|  0 |99.983350|0.016650|   --   | 5.960464e-08|
 
+
+//────────────────────────────────────────────────────────────────────────────────────
+// rational approximations of asin(x) on [-1/2, 1/2] (relative error)
+//    asin(x) ≈ x + x N(x²)/D(x²)
+//
+// example evaluation:
+//   float x2 = x*x;
+//   float p  = R(x2);         // core approximation N(x²)/D(x²)
+//   float r  = fmaf(p,x,x);   // asin(x)
+
+
+// TODO: need to verify I can pull out the final x² on n without
+// messing with the error bound so they can be used by the same
+// range reduction wrappers as the polynomial cores.
+
+static inline float f32_asincos_r1(float x2)
+{
+  static const float N[] = { 0x2.aaad94p-4f, -0x7.2bb3ep-8f };
+  static const float D[] = {-0x9.df388p-4f};
+
+  float n = N[1];
+  float d = D[0];
+  
+  n = fmaf(n, x2, N[0])*x2;
+  d = fmaf(d, x2, 1.f);
+  
+  return n/d;
+}
+
+static inline float f32_asincos_r2(float x2)
+{
+  static const float N[] = { 1.6666658222675323486328125e-01f,
+                            -4.2003266513347625732421875e-02f,
+                            -8.193426765501499176025390625e-03f };
+  static const float D[] = {-7.0207977294921875e-01f};
+  
+  float n = N[2];
+  float d = D[0];
+  
+  n = fmaf(n, x2, N[1]);
+  n = fmaf(n, x2, N[0])*x2;
+  d = fmaf(d, x2, 1.f);
+  
+  return n/d;
+}
+
+
+//────────────────────────────────────────────────────────────────────────────────────
+// classic polynomial approximations of asin(x) on [-1/2, 1/2] (relative error)
+// P is the function call
+//    asin(x) ≈ x + x³ P(x²)
+//
+// example evaluation:
+//   float x2 = x*x;
+//   float p  = x2*P(x2);
+//   float r  = fmaf(p,x,x);   // asin(x)
+//
 // NOTES:
 // ∙ only uses hybrid method of sign range reduction (SEE: f32_odd_reduce)
 
@@ -76,6 +135,10 @@ static inline float f32_asincos_k6(float x2)
 
 // SEE: f32_asin_x1. stripped of double promotion. can hit
 // 2 ulp and could be cleaned & sped up...but meh.
+
+// What I need to do is see if I can rework to not double
+// extend by using a splash of double word math. 
+
 static inline float f32_asin_x0(float x, float (*P)(float))
 {
   float a = fabsf(x);
