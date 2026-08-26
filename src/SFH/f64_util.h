@@ -110,14 +110,14 @@ static inline f64_pair_t f64_pair(double x, double y)
 
 // extended precision multiplicative constants as unevaluate pairs: {RN(K) + RN(K-RN(K))}
 // product: Kx = fma(H,x,L*x) -> f64_up_mul(K,x)
-static const f64_pair_t f64_mul_k_pi      = {.h = 0x1.921fb54442d18p1,  .l= 0x1.1a62633145c07p-53};
-static const f64_pair_t f64_mul_k_pi_i    = {.h = 0x1.45f306dc9c883p-2, .l=-0x1.6b01ec5417056p-56};
-static const f64_pair_t f64_mul_k_log2    = {.h = 0x1.62e42fefa39efp-1, .l= 0x1.abc9e3b39803fp-56};
-static const f64_pair_t f64_mul_k_log2_i  = {.h = 0x1.71547652b82fep0,  .l= 0x1.777d0ffda0d24p-56};
-static const f64_pair_t f64_mul_k_log10   = {.h = 0x1.26bb1bbb55516p1,  .l=-0x1.f48ad494ea3e9p-53};
-static const f64_pair_t f64_mul_k_log10_i = {.h = 0x1.bcb7b1526e50ep-2, .l= 0x1.95355baaafad3p-57};
-static const f64_pair_t f64_mul_k_e       = {.h = 0x1.5bf0a8b145769p1,  .l= 0x1.4d57ee2b1013ap-53};
-static const f64_pair_t f64_mul_k_e_i     = {.h = 0x1.78b56362cef38p-2, .l=-0x1.ca8a4270fadf5p-57};
+static const f64_pair_t f64_up_pi      = {.h = 0x1.921fb54442d18p1,  .l= 0x1.1a62633145c07p-53};
+static const f64_pair_t f64_up_pi_i    = {.h = 0x1.45f306dc9c883p-2, .l=-0x1.6b01ec5417056p-56};
+static const f64_pair_t f64_up_log2    = {.h = 0x1.62e42fefa39efp-1, .l= 0x1.abc9e3b39803fp-56};
+static const f64_pair_t f64_up_log2_i  = {.h = 0x1.71547652b82fep0,  .l= 0x1.777d0ffda0d24p-56};
+static const f64_pair_t f64_up_log10   = {.h = 0x1.26bb1bbb55516p1,  .l=-0x1.f48ad494ea3e9p-53};
+static const f64_pair_t f64_up_log10_i = {.h = 0x1.bcb7b1526e50ep-2, .l= 0x1.95355baaafad3p-57};
+static const f64_pair_t f64_up_e       = {.h = 0x1.5bf0a8b145769p1,  .l= 0x1.4d57ee2b1013ap-53};
+static const f64_pair_t f64_up_e_i     = {.h = 0x1.78b56362cef38p-2, .l=-0x1.ca8a4270fadf5p-57};
 
 // single word precision "helpers"
 static const double f64_pi      = 0x1.921fb54442d18p1;
@@ -447,7 +447,7 @@ static inline double f64_up_madd(const f64_pair_t a, double b, double c)
 
 static inline double f64_mul_pi(double x)
 {
-  return f64_up_mul(f64_mul_k_pi,x);
+  return f64_up_mul(f64_up_pi,x);
 }
 				
 

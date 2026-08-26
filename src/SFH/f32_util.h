@@ -127,16 +127,16 @@ static const float f32_succ_pred_k = 0x1.000002p-24f;
 // product: Kx = fmaf(H,x,L*x) -> f32_up_mul(K,x)
 // K_i = 1/K  (e.g. pi_i = 1/pi)
 // sollya script: src/Sollya/mulk.sollya
-static const f32_pair_t f32_mul_k_pi      = {.h = 0x1.921fb6p1f,  .l=-0x1.777a5cp-24f};
-static const f32_pair_t f32_mul_k_pi_i    = {.h = 0x1.45f306p-2f, .l= 0x1.b9391p-27f};
-static const f32_pair_t f32_mul_k_log2    = {.h = 0x1.62e43p-1f,  .l=-0x1.05c61p-29f};
-static const f32_pair_t f32_mul_k_log2_i  = {.h = 0x1.715476p0f,  .l= 0x1.4ae0cp-26f};
-static const f32_pair_t f32_mul_k_log10   = {.h = 0x1.26bb1cp1f,  .l=-0x1.12aabap-25f};
-static const f32_pair_t f32_mul_k_log10_i = {.h = 0x1.bcb7b2p-2f, .l=-0x1.5b235ep-27f};
-static const f32_pair_t f32_mul_k_e       = {.h = 0x1.5bf0a8p1f,  .l= 0x1.628aeep-24f};
-static const f32_pair_t f32_mul_k_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
+static const f32_pair_t f32_up_pi      = {.h = 0x1.921fb6p1f,  .l=-0x1.777a5cp-24f};
+static const f32_pair_t f32_up_pi_i    = {.h = 0x1.45f306p-2f, .l= 0x1.b9391p-27f};
+static const f32_pair_t f32_up_log2    = {.h = 0x1.62e43p-1f,  .l=-0x1.05c61p-29f};
+static const f32_pair_t f32_up_log2_i  = {.h = 0x1.715476p0f,  .l= 0x1.4ae0cp-26f};
+static const f32_pair_t f32_up_log10   = {.h = 0x1.26bb1cp1f,  .l=-0x1.12aabap-25f};
+static const f32_pair_t f32_up_log10_i = {.h = 0x1.bcb7b2p-2f, .l=-0x1.5b235ep-27f};
+static const f32_pair_t f32_up_e       = {.h = 0x1.5bf0a8p1f,  .l= 0x1.628aeep-24f};
+static const f32_pair_t f32_up_e_i     = {.h = 0x1.78b564p-2f, .l=-0x1.3a621ap-27f};
 
-static const f32_pair_t f32_mul_k_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
+static const f32_pair_t f32_up_3_i     = {.h = 0x1.555556p-2f, .l=-0x1.555556p-27f};
 
 
 // single word precision "helpers"
@@ -472,7 +472,7 @@ static inline float f32_up_madd(f32_pair_t const a, float b, float c)
 // pi*x (extended precision)
 static inline float f32_mul_pi(float x)
 {
-  return f32_up_mul(f32_mul_k_pi,x);
+  return f32_up_mul(f32_up_pi,x);
 }
 
 // x + pi  (FMA variant)

@@ -59,8 +59,8 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
     float t2 = x*x;
     float r  = P(t2);
     // extended precision 1/pi lead term
-    r = fmaf(r,t2, f32_mul_k_pi_i.l);
-    r = fmaf(x,    f32_mul_k_pi_i.h, x*r);
+    r = fmaf(r,t2, f32_up_pi_i.l);
+    r = fmaf(x,    f32_up_pi_i.h, x*r);
 
     return r;
   }
@@ -77,8 +77,8 @@ static inline float f32_asinpi_x0(float (*P)(float), float x)
   float t  =    m * f32_sqrt(t2);
   float r  = P(t2);
   
-  r = fmaf(r,t2, f32_mul_k_pi_i.l);
-  r = fmaf(t,    f32_mul_k_pi_i.h, t*r);
+  r = fmaf(r,t2, f32_up_pi_i.l);
+  r = fmaf(t,    f32_up_pi_i.h, t*r);
   
   // merging this and t*r into fma increases error
   return r + c;
@@ -95,8 +95,8 @@ static inline float f32_asinpi_x1(float (*P)(float), float x)
   if (a <= 0.5f) {
     float t2 = x*x;
     float r  = P(t2);
-    r = fmaf(r,t2, f32_mul_k_pi_i.l);
-    r = fmaf(x,    f32_mul_k_pi_i.h, x*r);
+    r = fmaf(r,t2, f32_up_pi_i.l);
+    r = fmaf(x,    f32_up_pi_i.h, x*r);
 
     return r;
   }
@@ -177,8 +177,8 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
   if (a <= 0.5f) {
     float t2 = x*x;
     float r  = P(t2);
-    r =  fmaf(r,t2, f32_mul_k_pi_i.l);
-    r =  fmaf(x,    f32_mul_k_pi_i.h, x*r);
+    r =  fmaf(r,t2, f32_up_pi_i.l);
+    r =  fmaf(x,    f32_up_pi_i.h, x*r);
 
     // merging via FMA with x*r increase error
     return 0.5f-r;
@@ -191,7 +191,7 @@ static inline float f32_acospi_x1(float (*P)(float), float x)
   double r  = (double)P(tf);
   double c  = (x < 0.f) ? -1.f : 0.f;
   
-  r = fma(t2, r, f64_mul_k_pi_i.h);
+  r = fma(t2, r, f64_up_pi_i.h);
   r = fma(t,  r, c);
 
   return f32_xor((float)r, sx);

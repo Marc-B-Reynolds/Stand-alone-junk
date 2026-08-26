@@ -63,7 +63,7 @@ static inline float f32_atanpi_k4(float x, float a)
   r = fmaf(r,  x2, C[1]);
   r = fmaf(r,  x2, C[0]);
   r = fmaf(r*x,x2, x);
-  r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
+  r = f32_up_madd(f32_up_pi_i, r,a); // r/π + a
 
   return r;
 }
@@ -136,14 +136,14 @@ static inline float f32_atanpi_(float x)
   
   // 116 inputs are at 2 ulp
   r = fmaf(r*x,x2, x);
-  r = f32_up_madd(f32_mul_k_pi_i, r,a); // r/π + a
+  r = f32_up_madd(f32_up_pi_i, r,a); // r/π + a
 #else
 
   // (1/π)(x(x² r + 1))   + a
   // (x/π)(x² r + 1)      + a
   // (xh + xl)(x² r + 1)  + a
-  float xh = x*f32_mul_k_pi_i.h;
-  float xl = fma(x,f32_mul_k_pi_i.h, /*x*f32_mul_k_pi_i.l*/-xh);
+  float xh = x*f32_up_pi_i.h;
+  float xl = fma(x,f32_up_pi_i.h, /*x*f32_up_pi_i.l*/-xh);
 
   //float tl = fma(xl*r,x2,xl);
   //float th = fma(xh*r,x2,xh+tl);
