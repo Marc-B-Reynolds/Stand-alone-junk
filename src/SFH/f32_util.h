@@ -236,6 +236,14 @@ static inline float f32_mask_select1(uint32_t m, float x)
   return f32_from_bits(m & f32_to_bits(x));
 }
 
+static inline float f32_mask_select(uint32_t m, float a, float b)
+{
+  uint32_t ua = f32_to_bits(a);
+  uint32_t ub = f32_to_bits(b);
+  
+  return f32_from_bits((m & ua)|((~m) & ub));
+}
+
 // returns 'c' if 'cond' is less than zero. otherwise zero
 static inline float f32_sign_select1(float c, float cond)
 {
