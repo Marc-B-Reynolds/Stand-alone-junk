@@ -469,13 +469,19 @@ static inline float f32_up_madd(f32_pair_t const a, float b, float c)
   return fmaf(a.h, b, fmaf(a.l, b, c));
 }
 
-// pi*x (extended precision)
+// π x (extended precision)
 static inline float f32_mul_pi(float x)
 {
   return f32_up_mul(f32_up_pi,x);
 }
 
-// x + pi  (FMA variant)
+// correctly rounded division by π
+static inline float f32_div_pi(float x)
+{
+  return f32_up_mul(f32_up_pi_i,x);
+}
+
+// x+π  (FMA variant)
 static inline float f32_add_pi(float x)
 {
   const float pi_a = f32_mk_pi.h;

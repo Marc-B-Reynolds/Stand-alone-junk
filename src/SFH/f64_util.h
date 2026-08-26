@@ -449,7 +449,13 @@ static inline double f64_mul_pi(double x)
 {
   return f64_up_mul(f64_up_pi,x);
 }
-				
+
+// correctly rounded division by π
+static inline double f64_div_pi(double x)
+{
+  return f64_up_mul(f64_up_pi_i,x);
+}
+
 
 // (a*b) exactly represented by unevaluated pair (h+l)
 // ∙ |l| <= ulp(h)/2
