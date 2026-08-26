@@ -180,7 +180,7 @@ static inline float f32_atanpi_fr(double x, double a)
   static const double ipi = 0x1.45f306dc9c883p-2;  // 1/π
   r = fma(ipi, r, a);                              // r/π + a
 #else
-  r = f64_up_madd(f64_mul_k_pi_i, r,a);            // r/π + a
+  r = f64_up_madd(f64_up_pi_i, r,a);            // r/π + a
 #endif  
   
   return (float)r;
@@ -311,7 +311,7 @@ void scan_linear(void) {
 
   do {
     float x = f32_from_bits(++ix);
-    r = (float)f64_up_mul(f64_mul_k_pi_i, (double)x);
+    r = (float)f64_up_mul(f64_up_pi_i, (double)x);
     cr = cr_func(x);
   } while(r == cr);
 
@@ -333,7 +333,7 @@ void test_all(void)
   uint32_t x0 = 0;
   uint32_t x1 = 0x332332e8;
   
-  test_linear_range_dp_up(x0, x1, f64_mul_k_pi_i);
+  test_linear_range_dp_up(x0, x1, f64_up_pi_i);
 
   x0 = x1+1; x1=f32_to_bits(1.f/64.f);
   test_force(x0,x1);

@@ -276,7 +276,7 @@ void scan_linear(void)
 #if 0    
     r  = (float)((double)x / M_PI);
 #else
-    r = (float)f64_up_mul(f64_mul_k_pi_i, (double)x);
+    r = (float)f64_up_mul(f64_up_pi_i, (double)x);
 #endif    
 
     cr = cr_func(x);
@@ -300,7 +300,7 @@ void test_all(void)
 {
   // asinpi(x) = RN(x/pi) on range: [-0x1.e768f4p-24, 0x1.e768f4p-24]
   static const uint32_t cut = 0x33f3b47a;
-  test_linear_range_dp_up(0, cut, f64_mul_k_pi_i);  
+  test_linear_range_dp_up(0, cut, f64_up_pi_i);  
 
   test_force(cut+1, f32_to_bits( 1.f/32.f));
 

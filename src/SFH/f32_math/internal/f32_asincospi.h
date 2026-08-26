@@ -108,7 +108,7 @@ static inline float f32_asinpi_x1(float (*P)(float), float x)
   double t  = -2.0 * f64_sqrt(t2);
   double r  = (double)P(tf);
   
-  r = fma(t2, r, f64_mul_k_pi_i.h);
+  r = fma(t2, r, f64_up_pi_i.h);
   r = fma(t,  r, 0.5);
 
   // dep-chain of sign application could be removed. requires
@@ -149,7 +149,7 @@ static inline float f32_asinpi_x2(float (*P)(float), float v)
   // |x| <= 0.5 : asinpi(x) = a/π + a³ P(a²), a = |x|
   // |x| >  0.5 : asinpi(x) = 1/2 - 2 asinpi( sqrt(1-x)/2 )
   r  = (double)P((float)t2);
-  r = fma(t2, r, f64_mul_k_pi_i.h);
+  r = fma(t2, r, f64_up_pi_i.h);
   r = fma(t,  r, c);
 
   return (float)r;
