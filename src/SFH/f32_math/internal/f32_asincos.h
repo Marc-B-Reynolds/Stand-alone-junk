@@ -6,7 +6,7 @@
 
 // cores for asin(x) on [-1/2,1/2]
 // r1: |10|1042132380| 5959415|many|98.596715|0.563824|0.445368| 4.172325e-07|
-// r2: | 1|1055687408| 1277201|  0 |99.879163|0.120837|  --    | 5.960464e-08|
+// r2: | 1|1055687090| 1277519|  0 |99.879133|0.120867|  --    | 5.960464e-08|
 // k3: | 2|1036328662|19489934|many|98.047622|1.843953|0.108425| 5.960464e-08|
 // k4: | 1|1055615346| 1349263|  0 |99.872345|0.127655|   --   | 5.960464e-08|
 // k5: | 1|1056788626|  175983|  0 |99.983350|0.016650|   --   | 5.960464e-08|
@@ -14,17 +14,8 @@
 
 //────────────────────────────────────────────────────────────────────────────────────
 // rational approximations of asin(x) on [-1/2, 1/2] (relative error)
-//    asin(x) ≈ x + x N(x²)/D(x²)
+//    asin(x) ≈ x + x³ N(x²)/D(x²)
 //
-// example evaluation:
-//   float x2 = x*x;
-//   float p  = R(x2);         // core approximation N(x²)/D(x²)
-//   float r  = fmaf(p,x,x);   // asin(x)
-
-
-// TODO: need to verify I can pull out the final x² on n without
-// messing with the error bound so they can be used by the same
-// range reduction wrappers as the polynomial cores.
 
 static inline float f32_asincos_r1(float x2)
 {
@@ -34,7 +25,7 @@ static inline float f32_asincos_r1(float x2)
   float n = N[1];
   float d = D[0];
   
-  n = fmaf(n, x2, N[0])*x2;
+  n = fmaf(n, x2, N[0]);
   d = fmaf(d, x2, 1.f);
   
   return n/d;
@@ -51,7 +42,7 @@ static inline float f32_asincos_r2(float x2)
   float d = D[0];
   
   n = fmaf(n, x2, N[1]);
-  n = fmaf(n, x2, N[0])*x2;
+  n = fmaf(n, x2, N[0]);
   d = fmaf(d, x2, 1.f);
   
   return n/d;
@@ -63,13 +54,6 @@ static inline float f32_asincos_r2(float x2)
 // P is the function call
 //    asin(x) ≈ x + x³ P(x²)
 //
-// example evaluation:
-//   float x2 = x*x;
-//   float p  = x2*P(x2);
-//   float r  = fmaf(p,x,x);   // asin(x)
-//
-// NOTES:
-// ∙ only uses hybrid method of sign range reduction (SEE: f32_odd_reduce)
 
 // too short to meet faithfully rounded (can hit 2 ulp)
 static inline float f32_asincos_k3(float x2)
