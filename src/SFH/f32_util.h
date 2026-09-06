@@ -147,6 +147,8 @@ static const float f32_half_pi = 0.5f*0x1.921fb6p1f;
 // extended precision additive constants as unevaluate pairs:
 // K + x = fma(H,L,x)
 // recall:  x+K = (x+L)+H  (additive instead of mult is generally more useful)
+//
+// This is a slightly less accurate representation of π than additive: log2(|π-this|) ≈ -44.8356
 static const f32_pair_t f32_mk_pi = {.h = (float)(61*256661), .l= (float)(13*73*14879)*0x1.0p-46f};
 
 
