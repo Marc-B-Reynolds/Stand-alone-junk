@@ -1,4 +1,4 @@
-﻿// -*- coding: utf-8 -*-
+// -*- coding: utf-8 -*-
 // Marc B. Reynolds, 2016-2026
 // Public Domain under http://unlicense.org, see link for details.
 
@@ -50,33 +50,43 @@
 #endif
 
 // NOTE: there are additional bitops in carryless.h
+
 typedef union {
   struct {uint32_t a,b;   };
-  struct {uint32_t hi,lo; }; 
+  struct {uint32_t lo,hi; }; 
   struct {uint32_t q,r;   };
-  uint32_t u32[2];
 } pair_u32_t;
 
 typedef union {
+  struct {int32_t a,b;   };
+  struct {int32_t lo,hi; }; 
+  struct {int32_t q,r;   };
+} pair_i32_t;
+
+// WARNING: not for type punning
+typedef union {
   struct {uint64_t a,b;   };
-  struct {uint64_t hi,lo; }; 
+  struct {uint64_t lo,hi; }; 
   struct {uint64_t q,r;   };
-  uint64_t u64[2];
 } pair_u64_t;
 
 typedef union {
-  struct {int32_t a,b;   };
-  struct {int32_t hi,lo; }; 
-  struct {int32_t q,r;   };
-  int32_t i32[2];
-} pair_i32_t;
-
-typedef union {
   struct {int64_t a,b;   };
-  struct {int64_t hi,lo; }; 
+  struct {int64_t lo,hi; }; 
   struct {int64_t q,r;   };
-  int64_t i64[2];
 } pair_i64_t;
+
+
+// not using stdint naming style on purpose & likewise for having
+// GCC/clang vs. MSVC types being incompatible.
+#if defined(__GNUC__)||defined(__clang__)
+#define u128_t __uint128_t
+#define i128_t __int128_t
+#else
+#define u128_t pair_u64_t
+#define i128_t pair_i64_t
+#endif
+
 
 // yes. this is evil except for undordered and very special cases of ordered 
 static inline pair_u32_t pair_u32(uint32_t a, uint32_t b) { return (pair_u32_t){.a=a, .b=b }; }
