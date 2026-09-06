@@ -53,6 +53,17 @@ static inline int32_t  max_i32( int32_t x,  int32_t y) { return (x>y) ? x : y; }
 static inline int64_t  min_i64( int64_t x,  int64_t y) { return (x<y) ? x : y; }
 static inline int64_t  max_i64( int64_t x,  int64_t y) { return (x>y) ? x : y; }
 
+// |a| for a intrepreted as signed
+static inline uint32_t abs_u32(uint32_t a)
+{
+  return (int32_t)a >= 0 ? a : -a;
+}
+
+static inline uint64_t abs_u64(uint64_t a)
+{
+  return (int64_t)a >= 0 ? a : -a;
+}
+
 // floor and ceiling log_2(x)
 static inline uint32_t log2_u32(uint32_t x)       { return (31 - clz_32(x));   }
 static inline uint64_t log2_u64(uint64_t x)       { return (63 - clz_64(x));   }
@@ -64,6 +75,18 @@ static inline uint32_t ave_u32(uint32_t a, uint32_t b)      { return (a&b) + ((a
 static inline uint64_t ave_u64(uint64_t a, uint64_t b)      { return (a&b) + ((a^b)>>1); }
 static inline uint32_t ave_ceil_u32(uint32_t a, uint32_t b) { return (a|b) - ((a^b)>>1); }
 static inline uint64_t ave_ceil_u64(uint64_t a, uint64_t b) { return (a|b) - ((a^b)>>1); }
+
+//────────────────────────────────────────────────────────────────────────────────────
+
+static inline pair_u64_t add_pair_u64(pair_u64_t a, pair_u64_t b)
+{
+  pair_u64_t r;
+
+  r.lo = a.lo + b.lo;
+  r.hi = a.hi + b.hi + (r.lo < a.lo);
+
+  return r;
+}
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -130,7 +153,18 @@ static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 }
 
 
-// 2^64 mod k
+// ceil(2^b/k)
+static inline uint32_t ceil_2p32_div_u32(uint32_t k)
+{
+  return (~UINT32_C(0))/k + 1;
+}
+
+static inline uint64_t ceil_2p64_div_u64(uint64_t k)
+{
+  return (~UINT64_C(0))/k + 1;
+}
+
+// 2^b mod k
 static inline uint64_t mod_k_base_u64(uint64_t k)
 {
 #if !defined(__GNUC__)
@@ -148,7 +182,6 @@ static inline uint64_t mod_k_base_u64(uint64_t k)
 #endif  
 }
 
-// 2^32 mod k
 static inline uint32_t mod_k_base_u32(uint32_t k)
 {
 #if 0
@@ -169,8 +202,13 @@ static inline uint32_t mod_k_base_u32(uint32_t k)
 
 //────────────────────────────────────────────────────────────────────────────────────
 
+static inline uint64_t mul_full_u32(uint32_t a, uint32_t b)
+{
+  return (uint64_t)a * (uint64_t)b;
+}
+
 // 128-bit result of 64-bit product (access via hi and lo elements)
-static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
+static inline pair_u64_t mul_full_u64(uint64_t a, uint64_t b)
 {
   uint64_t hi,lo;
 
@@ -188,8 +226,31 @@ static inline pair_u64_t mul_hilo_64(uint64_t a, uint64_t b)
   return (pair_u64_t){.hi=hi, .lo=lo};
 }
 
-// high 64-bit result of 64-bit product
-static inline uint64_t mul_u64_hi(uint64_t a, uint64_t b) { return mul_hilo_64(a,b).hi; }
+static inline pair_i64_t mul_full_i64(int64_t a, int64_t b)
+{
+  int64_t hi,lo;
+
+#if defined(__GNUC__)
+  __int128_t r = (__int128_t)a * (__int128_t)b;
+  hi = (int64_t)(r >> 64);
+  lo = (int64_t)r;
+#elif defined(_MSC_VER)
+  lo = _mul128(a,b,&hi);
+#else
+  static_assert(0);
+  hi = lo = 0;
+#endif
+
+  return (pair_i64_t){.hi=hi, .lo=lo};
+}
+
+static inline uint64_t mul_hi_u32(uint32_t a, uint32_t b)
+{
+  return mul_full_u32(a,b) >> 32;
+}
+
+static inline uint64_t mul_hi_u64(uint64_t a, uint64_t b) { return mul_full_u64(a,b).hi; }
+static inline int64_t  mul_hi_i64(int64_t a,  int64_t b)  { return mul_full_i64(a,b).hi; }
 
 
 typedef struct {uint64_t r; int64_t x,y; } gcd_ext_u64_t;
@@ -287,48 +348,44 @@ uint64_t gcd_nz_u64(uint64_t u, uint64_t v)
   return u<<s;
 }
 
-gcd_ext_u32_t gcd_extended_u32(uint32_t u, uint32_t v)
+gcd_ext_u32_t gcd_extended_u32(uint32_t a, uint32_t b)
 {
-  int32_t  x0 = 0, y0 = 1;
-  int32_t  x1 = 1, y1 = 0;
-  uint32_t a1 = u, a2 = v;
-  uint32_t q  = 0;
+  int64_t  a0 = 1, a1 = 0;
+  int64_t  b0 = 0, b1 = 1;
+  uint32_t r0 = a, r1 = b;
   
-  while (a2 != 0) {
-    int32_t  x2 = x0 - (int32_t)q*x1;
-    int32_t  y2 = y0 - (int32_t)q*y1;
-    uint32_t a0 = a1;
-
-    x0=x1; y0=y1;
-    x1=x2; y1=y2; a1=a2;
+  while (r1 != 0) {
+    uint32_t q  = r0 / r1;
+    uint32_t r2 = r0 - q * r1;
+    int64_t  s2 = a0 - (int64_t)q * a1;
+    int64_t  t2 = b0 - (int64_t)q * b1;
     
-    q  = a0/a1;
-    a2 = a0 - q*a1;
+    r0 = r1; r1 = r2;
+    a0 = a1; a1 = s2;
+    b0 = b1; b1 = t2;
   }
-
-  return (gcd_ext_u32_t){.r=a1, .x=x1, .y=y1};
+  
+  return (gcd_ext_u32_t){.r=r0, .x=(int32_t)a0, .y=(int32_t)b0};
 }
 
-gcd_ext_u64_t gcd_extended_u64(uint64_t u, uint64_t v)
+gcd_ext_u64_t gcd_extended_u64(uint64_t a, uint64_t b)
 {
-  int64_t  x0 = 0, y0 = 1;
-  int64_t  x1 = 1, y1 = 0;
-  uint64_t a1 = u, a2 = v;
-  uint64_t q  = 0;
+  __int128 a0 = 1, a1 = 0;
+  __int128 b0 = 0, b1 = 1;
+  uint64_t r0 = a, r1 = b;
   
-  while (a2 != 0) {
-    int64_t  x2 = x0 - (int64_t)q*x1;
-    int64_t  y2 = y0 - (int64_t)q*y1;
-    uint64_t a0 = a1;
-
-    x0=x1; y0=y1;
-    x1=x2; y1=y2; a1=a2;
+  while (r1 != 0) {
+    uint64_t q  = r0 / r1;
+    uint64_t r2 = r0 - q * r1;
+    __int128 s2 = a0 - (__int128)q * a1;
+    __int128 t2 = b0 - (__int128)q * b1;
     
-    q  = a0/a1;
-    a2 = a0 - q*a1;
+    r0 = r1; r1 = r2;
+    a0 = a1; a1 = s2;
+    b0 = b1; b1 = t2;
   }
-
-  return (gcd_ext_u64_t){.r=a1, .x=x1, .y=y1};
+  
+  return (gcd_ext_u64_t){.r=r0, .x=(int64_t)a0, .y=(int64_t)b0};
 }
 
 #endif
