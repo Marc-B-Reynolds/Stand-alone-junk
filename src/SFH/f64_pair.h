@@ -78,6 +78,11 @@ static_assert(0, "unknown compiler: fill in the blanks");
   #define fe_unlikely(x)
 #endif
 
+// note if the hardware as direct conversions with unsigned integers
+#if defined(__aarch64__) || defined(__AVX512F__)
+#define FE_UNSIGNED_CONVERT
+#endif
+
 /*
 
 [^1]: *Formalization of double-word arithmetic, and comments on [^2]*, Muller & Rideau, 2021 [link](https://hal.science/hal-02972245)
@@ -874,7 +879,7 @@ static inline fe_pair_t fe_inv_dn(double x)
   // lo is computed with one Newton step
   // uiCA: 13.00 
   double h = 1.0/x;
-  double t = fma(x,h,-1.f);
+  double t = fma(x,h,-1.0);
   double l = -t*h;
   
   return fe_pair(h,l);
@@ -886,7 +891,7 @@ static inline fe_pair_t fe_inv_dh(double x)
   // lo is computed with one Halley step
   // uiCA: 13.18
   double h = 1.0/x;
-  double t = fma(x,-h,1.f);
+  double t = fma(x,-h,1.0);
   double l = h*fma(t,t,t);
   
   return fe_pair(h,l);
@@ -1864,6 +1869,38 @@ static inline fe_pair_t fe_from_i64(int64_t x)
 
   // fast-sum to canonicalize: note legal when a=0
   return fe_fast_sum(a,b);
+}
+
+static inline fe_pair_t fe_from_u64(uint64_t x)
+{
+  // This uses a simple fixed scheme of grab top and
+  // bottom 32-bits, convert to both to binary64 and
+  // perform a fast-two-sum to normalize. If we've
+  // (not) detected that there's hardware support for
+  // direct unsigned to floating point then it adds a
+  // little song and dance to used signed integer
+  // conversion. This allows the two halves to process
+  // independently up to the fast-two-sum. Being fancy
+  // using a leading zero count: serializes the
+  // processing of the two parts and still doesn't
+  // produce an normalized result: hi+lo can be equal
+  // to hi+1. This should expand into a branch-free
+  // sequence.
+
+#if defined(FE_UNSIGNED_CONVERT)
+  double a = (double)(x & UINT64_C(0xffffffff00000000));
+  double b = (double)(x-((uint64_t)a));
+
+  return fe_fast_sum(a,b);
+#else
+  int64_t t  = (int64_t)(x>>1);
+  int64_t ih = t & INT64_C(0x7fffffff80000000);
+  int64_t il = (int64_t)(x & INT64_C(0x00000000ffffffff));
+  double  a  = (double)(ih);
+  double  b  = (double)(il);
+                        
+  return fe_fast_sum(a+a,b);
+#endif
 }
 
 
