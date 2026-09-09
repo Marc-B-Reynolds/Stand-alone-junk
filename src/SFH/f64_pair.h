@@ -1893,6 +1893,9 @@ static inline fe_pair_t fe_from_u64(uint64_t x)
 
   return fe_fast_sum(a,b);
 #else
+  // same except unconditionally shift the top right by
+  // one and compenstate by doubling it after it's a
+  // binary64 to allow signed conversion.
   int64_t t  = (int64_t)(x>>1);
   int64_t ih = t & INT64_C(0x7fffffff80000000);
   int64_t il = (int64_t)(x & INT64_C(0x00000000ffffffff));
@@ -1901,6 +1904,12 @@ static inline fe_pair_t fe_from_u64(uint64_t x)
                         
   return fe_fast_sum(a+a,b);
 #endif
+}
+
+
+static inline fr_pair_t fr_from_u64(uint64_t x)
+{
+  return fe2fr(fe_from_u64(x));
 }
 
 
