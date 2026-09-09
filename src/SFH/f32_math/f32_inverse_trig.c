@@ -2,8 +2,12 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2025
 
-#include "f32_utils.h"
+#ifndef  F32_UTIL_H
+#include "SFH/f32_util.h"
+#endif
 
+// building block routines come first and example expansions (reasonable set of
+// useable functions) are after the double bars.
 
 //────────────────────────────────────────────────────────────────────────────────────
 // atan(x) and atanpi(x) for x on [-1,1] (unit extent) specialized versions
@@ -41,7 +45,6 @@
 // 3) | 31|   2046260|  3458308|many|  0.192073| 0.324616| 1.937151e-07|
 //
 // 
-
 
 // compute: the tan P(x²)/Q(x²) 
 static inline float f32_atan_ue_k(float x2)
@@ -353,12 +356,67 @@ float f32_atanpi(float X)
 }
 
 
-
-
-
 //────────────────────────────────────────────────────────────────────────────────────
 // atan2(y,x) variants should be put here
 
 
 //════════════════════════════════════════════════════════════════════════════════════
 // blah
+
+
+
+
+
+float f32_asin_bf(float a)
+{
+  static const double N[] =  {
+    // polynomial for |x| on [0, 1/2]
+    0x1.596d288dc7987p-5f,
+    0x1.8c283c3a5a46ap-6f,
+    0x1.747e4a3065be5p-5f,
+    0x1.3301e4689933p-4f,
+    0x1.5555c88340c2cp-3f,
+
+    // polynomial for |x| on [1/2, 1]
+    -0x1.34df4625198ddp-8,
+     0x1.a354224d7d72p-6,
+    -0x1.34625edcedc4ap-4,
+     0x1.af0d71c21deefp-3,
+    -0x1.91fdeaf5921aap0
+  };
+
+  double   x  = (double)a;
+  uint64_t sx = f64_sign_bit(x);
+
+  x = f64_mulsign(x,sx);
+  
+#if 1
+  int      i  = (x <= 0.5);
+  double   v  = hint_select(i, x*x, x);
+  double   n  = hint_select(i, v,   1.0);
+  double   b  = hint_select(i, x,   0.5*f64_pi);
+  double   s  = hint_select(i, x,   sqrt(1.0-x));
+  const double*  c  = hint_select(i, N, N+5);
+#elif 0
+  uint64_t m  = f64_sign_mask(x-0.5);
+  double   v  = f64_mask_select(m, x*x, x);
+  double   n  = f64_mask_select(m, v,   1.0);
+  double   b  = f64_mask_select(m, x,   0.5*f64_pi);
+  double   s  = f64_mask_select(m, x,   sqrt(1.0-x));
+  const double*  c  = N + ((~m) & 5);
+#else
+  double   v  = (x <= 0.5) ? x*x : x;
+  double   n  = (x <= 0.5) ? v   : 1.0;
+  double   b  = (x <= 0.5) ? x   : 0.5*f64_pi;
+  double   s  = (x <= 0.5) ? x   : sqrt(1.0-x);
+  const double*  c  = (x <= 0.5) ? N   : N+5;
+#endif  
+
+  r = fma(r, v, N[i+1]);
+  r = fma(r, v, N[i+2]);
+  r = fma(r, v, N[i+3]);
+  r = fma(r, v, N[i+4]) * n;
+  r = fma(r, s, b);
+
+  return (float)f64_mulsign(r,sx);
+}
