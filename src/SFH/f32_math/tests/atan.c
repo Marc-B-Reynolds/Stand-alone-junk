@@ -35,6 +35,10 @@
 
 #include "internal/f32_math_common.h"
 #include "util.h"
+#include "SFH/f64_pair.h"
+
+// yeah..ugly but here we are
+//#include "SFH/f32_math/f32_inverse_trig.c"
 
 // core identity for range reduction:
 //   atan(u) +/- atan(v) = atan( (u +/- v)/(1 -/+ uv)  ) 
@@ -146,7 +150,6 @@ static inline double f32_atan_d5(double x)
   return f64_horner_5(x,C);
 }
 
-#include "SFH/f64_pair.h"
 
 float atan_hack(float x)
 {
