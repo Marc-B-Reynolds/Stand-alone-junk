@@ -62,7 +62,8 @@ procedure acospi_build_exact(x0, x1)
 
 // relative error (via f32_build...)
 //display=hexadecimal!;
-//f32_build_constrained(F, ebasis5, x0, x1, 0.5*tx).approx;
+f=f32_build_constrained(F, ebasis5, x0, x1, 0.5*tx);
+f;
 //f32_build_constrained(F, ebasis6, x0, x1, 0.5*tx).approx;
 //f32_build_constrained(F, ebasis7, x0, x1, 0.5*tx).approx;
 
