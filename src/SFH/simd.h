@@ -382,6 +382,7 @@
 #define SIMD_I64_X i64x2,i64x4,i64x8
 #define SIMD_F64_X f64x2,f64x4,f64x8
 
+#define SIMD_WS_512 ( 8,64),(16,32),(32,16),(64, 8)
 #else
 
 #define SIMD_S8_X  ( 8,8),( 8,16),( 8,32)
@@ -407,12 +408,19 @@
 
 #endif
 
+#define SIMD_WS_256 ( 8,32),(16,16),(32, 8),(64, 4)
+#define SIMD_WS_128 ( 8,16),(16, 8),(32, 4),(64,2)
+#define SIMD_WS_64  ( 8,8), (16,4), (32,2)
+
 #define SIMD_BASE_SETS (SIMD_S8_X),(SIMD_S16_X),(SIMD_S32_X),(SIMD_S64_X)
 
-// floating point collection
+
+// 32/64 element expansion sets
 #define SIMD_FP_X  SIMD_F32_X,SIMD_F64_X
 #define SIMD_UI_X  SIMD_U32_X,SIMD_U64_X
 #define SIMD_SI_X  SIMD_I32_X,SIMD_I64_X
+#define SIMD_INT_X SIMD_UI_X,SIMD_SI_X
+#define SIMD_ALL_X SIMD_FP_X,SIMD_INT_X
 
 
 // choose vector attribute type
@@ -514,9 +522,14 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
 // complete this
 
 //────────────────────────────────────────────────────────────────────────────────────
-// manually expanded "generic" type puns.
-// using a macro to expand it (which would happen
-// each time it's used) seems really sucky.
+// type generic bitcasting between types. for known types simply cast:
+//   f32x4_t f; ...  u32x4_t u = (u32x4_t)f;  // u is bit patterns of f
+//
+//  simd_bitcast_fi/simd_bitcast_if   floating point ↔ signed integer
+//  simd_bitcast_fu/simd_bitcast_uf   floating point ↔ unsigned integer
+//  simd_bitcast_iu/simd_bitcast_ui   signed integer ↔ unsigned integer
+// 
+// named expansion (i.e. bitcast_fu_32x2) is for the generics above
 
 // entries for 512-bit packages
 #if defined(SIMD_ENABLE_512)
@@ -658,7 +671,12 @@ SIMD_SMAP(SIMD_BUILD_TYPE_64,  SIMD_S64_X);
   })
 
 //────────────────────────────────────────────────────────────────────────────────────
-// macros to get the converted type
+// macros to get the generic converted type when not using C23's auto. Sticking
+// with example from above all the following are equivalent:
+//   simd_fu_typeof(f) u = simd_convert_fu(f)    
+//   auto              u = simd_convert_fu(f)
+//   u32x4_t           u = (u32x4_t)f
+//   
 
 // for external use. this allows comma list of variables
 // with and without initializers. 
@@ -890,50 +908,80 @@ static_assert(__builtin_classify_type((f32x4_t){0})==SIMD_VEC_CLASS_TYPE, "class
 
 
 //────────────────────────────────────────────────────────────────────────────────────
+// generic to specialized expansion macros (expand function or prototype)
+// the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
+//   simd_foo → foo_f32x4
+
+#define SIMD_MAKE_NAME(name,T) CAT(name,_,T)
+
+#define SIMD_MAKE_UFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a)
+#define SIMD_MAKE_BFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b)
+#define SIMD_MAKE_3FUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c)
+#define SIMD_MAKE_4FUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c,CAT(T,_t) d)
+
+#define SIMD_MAKE_UFUN(name,T) static inline SIMD_MAKE_UFUN_(name,T) { return CAT(simd_,name)(a); }
+#define SIMD_MAKE_BFUN(name,T) static inline SIMD_MAKE_BFUN_(name,T) { return CAT(simd_,name)(a,b); }
+#define SIMD_MAKE_3FUN(name,T) static inline SIMD_MAKE_3FUN_(name,T) { return CAT(simd_,name)(a,b,c); }
+#define SIMD_MAKE_4FUN(name,T) static inline SIMD_MAKE_4FUN_(name,T) { return CAT(simd_,name)(a,b,c,d); }
+
+// map "name" to internal _v names
+#define SIMD_MAKE_UFUN_V(name,T) static inline SIMD_MAKE_UFUN_(name,T) { return CAT(simd_,name,_v)(a); }
+#define SIMD_MAKE_BFUN_V(name,T) static inline SIMD_MAKE_BFUN_(name,T) { return CAT(simd_,name,_v)(a,b); }
+#define SIMD_MAKE_3FUN_V(name,T) static inline SIMD_MAKE_3FUN_(name,T) { return CAT(simd_,name,_v)(a,b,c); }
+#define SIMD_MAKE_4FUN_V(name,T) static inline SIMD_MAKE_4FUN_(name,T) { return CAT(simd_,name,_v)(a,b,c,d); }
+
+
+//════════════════════════════════════════════════════════════════════════════════════
+// "user" functions below this point (should be that way..do it)
+
+
+//────────────────────────────────────────────────────────────────────────────────────
 // type widen/narrow
+//
+// add notes. why is this supporting scalars? do I really want to do that?
 
 // clean these with (with other similar)
-#define simd_def_promote(x,ti,to) \
+#define simd_def_promote(ti,to) \
   static inline CAT(to,_t) CAT(promote_,ti)(CAT(ti,_t) v)  { return __builtin_convertvector(v,CAT(to,_t)); }
 
-#define simd_def_demote(x,ti,to) \
+#define simd_def_demote(ti,to) \
   static inline CAT(to,_t) CAT(demote_,ti)(CAT(ti,_t) v)   { return __builtin_convertvector(v,CAT(to,_t)); }
 
-#define simd_def_widen_narrow(x,ti,to) \
-  simd_def_promote(x,ti,to) \
-  simd_def_demote(x,to,ti) 
+#define simd_def_widen_narrow(ti,to) \
+  simd_def_promote(ti,to) \
+  simd_def_demote(to,ti) 
 
 //  8/16 pairs
-simd_def_widen_narrow(x, u8x8,  u16x8);
-simd_def_widen_narrow(x, i8x8,  i16x8);
-simd_def_widen_narrow(x, u8x16, u16x16);
-simd_def_widen_narrow(x, i8x16, i16x16);
+simd_def_widen_narrow(u8x8,  u16x8);
+simd_def_widen_narrow(i8x8,  i16x8);
+simd_def_widen_narrow(u8x16, u16x16);
+simd_def_widen_narrow(i8x16, i16x16);
 
 // 16/32 pairs
-simd_def_widen_narrow(x, u16x4, u32x4);
-simd_def_widen_narrow(x, i16x4, i32x4);
-simd_def_widen_narrow(x, u16x8, u32x8);
-simd_def_widen_narrow(x, i16x8, i32x8);
+simd_def_widen_narrow(u16x4, u32x4);
+simd_def_widen_narrow(i16x4, i32x4);
+simd_def_widen_narrow(u16x8, u32x8);
+simd_def_widen_narrow(i16x8, i32x8);
 
 // 32/64 pairs
-simd_def_widen_narrow(x, f32x2, f64x2);
-simd_def_widen_narrow(x, u32x2, u64x2);
-simd_def_widen_narrow(x, i32x2, i64x2);
-simd_def_widen_narrow(x, f32x4, f64x4);
-simd_def_widen_narrow(x, u32x4, u64x4);
-simd_def_widen_narrow(x, i32x4, i64x4);
+simd_def_widen_narrow(f32x2, f64x2);
+simd_def_widen_narrow(u32x2, u64x2);
+simd_def_widen_narrow(i32x2, i64x2);
+simd_def_widen_narrow(f32x4, f64x4);
+simd_def_widen_narrow(u32x4, u64x4);
+simd_def_widen_narrow(i32x4, i64x4);
 
 // expand to 512 packages if enabled
 #if defined(SIMD_ENABLE_512)
-simd_def_widen_narrow(x, u8x32, u16x32);
-simd_def_widen_narrow(x, i8x32, i16x32);
+simd_def_widen_narrow(u8x32, u16x32);
+simd_def_widen_narrow(i8x32, i16x32);
 
-simd_def_widen_narrow(x, u16x16, u32x16);
-simd_def_widen_narrow(x, i16x16, i32x16);
+simd_def_widen_narrow(u16x16, u32x16);
+simd_def_widen_narrow(i16x16, i32x16);
 
-simd_def_widen_narrow(x, f32x8, f64x8);
-simd_def_widen_narrow(x, u32x8, u64x8);
-simd_def_widen_narrow(x, i32x8, i64x8);
+simd_def_widen_narrow(f32x8, f64x8);
+simd_def_widen_narrow(u32x8, u64x8);
+simd_def_widen_narrow(i32x8, i64x8);
 
 // extra generic entries
 #define simd_promote_f_x f32x8_t: promote_f32x8,
@@ -1046,20 +1094,33 @@ static inline float    demote_f64 (double x)  { return (float) x; }
   })
 
 
+// nuke expansion defines
+#undef simd_def_promote
+#undef simd_def_demote
+#undef simd_def_widen_narrow
+
+#if defined(SIMD_ENABLE_512)
+#undef simd_promote_f_x
+#undef simd_promote_u_x
+#undef simd_promote_i_x
+#undef simd_demote_f_x
+#undef simd_demote_u_x
+#undef simd_demote_i_x
+#endif
+
 //────────────────────────────────────────────────────────────────────────────────────
-// generic to specialized expansion macros (expand function or prototype)
-// the expanded name do *NOT* have a `simd_` prefix. They are `name`_`type`
-//   simd_foo → foo_f32x4
+// floor((a+b)/2) & ceil((a+b)/2) w/o intermediate overflow of unsigned integers
+//   clang/GCC mapping to ARM urhadd  & intel vpavg for supported sizes
 
-#define SIMD_MAKE_NAME(name,T) CAT(name,_,T)
+#define simd_ceil_ave(A,B) ({typeof(A) _a=(A),_b=(B); ((_a|_b)-((_a^_b)>>1)); })
+#define simd_ave(A,B)      ({typeof(A) _a=(A),_b=(B); ((_a&_b)+((_a^_b)>>1)); })
 
-#define SIMD_MAKE_UFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a)
-#define SIMD_MAKE_BFUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b)
-#define SIMD_MAKE_3FUN_(name,T) CAT(T,_t) SIMD_MAKE_NAME(name,T)(CAT(T,_t) a, CAT(T,_t) b,CAT(T,_t) c)
+// only expand for unsigned integers
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, ceil_ave, SIMD_U8_X,SIMD_U16_X,SIMD_UI_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, ave,      SIMD_U8_X,SIMD_U16_X,SIMD_UI_X)
 
-#define SIMD_MAKE_UFUN(name,T) static inline SIMD_MAKE_UFUN_(name,T) { return CAT(simd_,name)(a); }
-#define SIMD_MAKE_BFUN(name,T) static inline SIMD_MAKE_BFUN_(name,T) { return CAT(simd_,name)(a,b); }
-#define SIMD_MAKE_3FUN(name,T) static inline SIMD_MAKE_3FUN_(name,T) { return CAT(simd_,name)(a,b,c); }
+#undef simd_ceil_ave
+#undef simd_ave
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -1071,7 +1132,7 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 //  out top two for the synthetic f32x2
 #define simd_subadd(A,B) ({                   \
   simd_param_2(A,B);                          \
-  for(size_t i=0; i<simd_dim(_a); i+=2) {     \
+  for(size_t i=0; i<simd_dim_v(_a); i+=2) {   \
     _a[i  ] -= _b[i];                         \
     _a[i+1] += _b[i+1];                       \
   }                                           \
@@ -1084,65 +1145,19 @@ static inline float    demote_f64 (double x)  { return (float) x; }
 #define simd_addsub(A,B) simd_subadd((A),-(B))
 
 
-#if !defined(__x86_64__) || !defined(__AVX2__)
-
-// fma(a,b,-c)/fmaf(a,b,c) (even/odd lanes)
-//   intel: GCC & clang aren't matching these with GCC going crazy
-#define simd_fmsubadd(A,B,C) ({                       \
-  simd_param_3(A,B,C);                                \
-  for(size_t i=0; i<simd_dim(_a); i+=2) {             \
-    _a[i  ] = simd_fma_s(_a[i  ], _b[i  ], -_c[i  ]); \
-    _a[i+1] = simd_fma_s(_a[i+1], _b[i+1],  _c[i+1]); \
-  }                                                   \
-  _a;                                                 \
-})
-
-#else
-
-// both GCC & clang zero out top two of each (sadface)
-static inline f32x2_t fmsubadd_f32x2_v(f32x2_t a, f32x2_t b, f32x2_t c)
-{
-  f32x4_t _a = {a[0],a[1]};
-  f32x4_t _b = {b[0],b[1]};
-  f32x4_t _c = {c[0],c[1]};
-  f32x4_t _r = __builtin_ia32_vfmaddsubps(_a,_b,_c);
-
-  return (f32x2_t){_r[0],_r[1]};
-}
-
-#define simd_fmsubadd(A,B,C) ({             \
-  simd_param_3(A,B,C);                      \
-  _Generic((_a),                            \
-    f32x2_t: fmsubadd_f32x2_v,              \
-    f32x4_t: __builtin_ia32_vfmaddsubps,    \
-    f32x8_t: __builtin_ia32_vfmaddsubps256, \
-    f64x2_t: __builtin_ia32_vfmaddsubpd,    \
-    f64x4_t: __builtin_ia32_vfmaddsubpd256, \
-    default: (void*)0)(_a,_b,_c);           \
-})
-
-#endif
-
-// RN(ab+c)/RN(ab-c) (even/odd lanes)
-#define simd_fmaddsub(A,B,C) simd_fmsubadd(A,B,-(C))
-
-
 // only specializing floating point types
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, subadd, SIMD_FP_X);
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X);
-
   
 //────────────────────────────────────────────────────────────────────────────────────
 // add adjacent even/odd pairs: bottom half is 'a' and top 'b'
 // floating point types only
 
-#if defined(__clang__) || !defined(__x86_64__) || !defined(__AVX2__)
-#define simd_hadd(A,B) ({                   \
+// generic version
+#define simd_hadd_i(A,B) ({                 \
   simd_param_2(A,B);                        \
-  static_assert(simd_is_scalar_fp(_a[0]),   \
-    "floating-point only");                 \
   typeof(_a) _r;                            \
-  size_t h = simd_dim(_a) >> 1;             \
+  size_t h = simd_dim_v(_a) >> 1;           \
   for(size_t i=0,o=0; o<h; i+=2,o++) {      \
     _r[o  ] = _a[i] + _a[i+1];              \
     _r[o+h] = _b[i] + _b[i+1];              \
@@ -1150,22 +1165,36 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X);
   _r;                                       \
 })
 
-#else
+#if (!defined(__x86_64__) || !defined(__AVX2__))
+
+// name to not conflict with expansion below
+static inline f32x2_t hadd_f32x2_v(f32x2_t a, f32x2_t b)
+{
+  f32x4_t _a = {a[0],a[1]};
+  f32x4_t _b = {b[0],b[1]};
+  f32x4_t _r = __builtin_ia32_haddps(_a,_b);
+
+  return (f32x2_t){_r[0],_r[1]};
+}
 
 // intel GCC needs it's hand held ATM to match the opcodes
 #define simd_hadd(A,B) ({                   \
   simd_param_2(A,B);                        \
-  static_assert(simd_is_scalar_fp(_a[0]),   \
-    "floating-point only");                 \
   _Generic((_a),                            \
+    f32x2_t: hadd_f32x2_v,                  \
     f32x4_t: __builtin_ia32_haddps,         \
     f32x8_t: __builtin_ia32_haddps256,      \
     f64x2_t: __builtin_ia32_haddpd,         \
     f64x4_t: __builtin_ia32_haddpd256,      \
-    default: (void*)0)(_a,_b);              \
+    default: simd_hadd_i;                   \
 })
 
+#else
+#define simd_hadd simd_hadd_i
 #endif
+
+
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, hadd, SIMD_FP_X);
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -1226,8 +1255,10 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 
 
 //────────────────────────────────────────────────────────────────────────────────────
-// min/max
+// simd_min/simd_max & min_{T}/max_{T}
 //
+// floating point: if one is a NaN then both min & max will return the other value.
+// SEE: fmin/fmax
 
 // the comparision is written this way for floating point which
 // will cause the first parameter to be returned if the inputs
@@ -1248,12 +1279,15 @@ SIMD_MAP_PEEL(SIMD_MAKE_UFUN, abs,  SIMD_SI_X)
 #define simd_min(A,B) simd_component_map(simd_min_s,A,simd_elem(B,i))
 #define simd_max(A,B) simd_component_map(simd_max_s,A,simd_elem(B,i))
 
-// expand inline functions
-SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_UI_X)
-SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_SI_X)
-SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_FP_X);
-SIMD_MAP_PEEL(SIMD_MAKE_BFUN, max, SIMD_FP_X);
+// expand for all integers
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, min, SIMD_ALL_X)
+SIMD_MAP_PEEL(SIMD_MAKE_BFUN, max, SIMD_ALL_X)
 
+
+//────────────────────────────────────────────────────────────────────────────────────
+// simd_fmin/simd_fmax & fmin_{T}/fmax_{T}
+//
+//
 
 #if 0
 // disable for now.
@@ -1268,6 +1302,8 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmin, SIMD_FP_X);
 SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 #endif
 
+
+//────────────────────────────────────────────────────────────────────────────────────
 // temp hack as-is
 // todo: either 'x' is a vector or all are same scalar type
 #define simd_clamp(x,lo,hi) simd_min(simd_max(x,lo),hi)
@@ -1364,6 +1400,62 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
 
 #endif
 
+// TODO:
+// GCC is expanding f64x2 badly. expand differently perhaps.
+// want this to be simd_fma_v. 
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN_V, fma, SIMD_FP_X);
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN_V, fms, SIMD_FP_X);
+
+
+//────────────────────────────────────────────────────────────────────────────────────
+
+#if !defined(__x86_64__) || !defined(__AVX2__)
+
+// fma(a,b,-c)/fmaf(a,b,c) (even/odd lanes)
+//   intel: GCC & clang aren't matching these with GCC going crazy
+#define simd_fmsubadd(A,B,C) ({                       \
+  simd_param_3(A,B,C);                                \
+  for(size_t i=0; i<simd_dim_v(_a); i+=2) {           \
+    _a[i  ] = simd_fma_s(_a[i  ], _b[i  ], -_c[i  ]); \
+    _a[i+1] = simd_fma_s(_a[i+1], _b[i+1],  _c[i+1]); \
+  }                                                   \
+  _a;                                                 \
+})
+
+#else
+
+// both GCC & clang zero out top two of each (sadface)
+static inline f32x2_t fmsubadd_f32x2_v(f32x2_t a, f32x2_t b, f32x2_t c)
+{
+  f32x4_t _a = {a[0],a[1]};
+  f32x4_t _b = {b[0],b[1]};
+  f32x4_t _c = {c[0],c[1]};
+  f32x4_t _r = __builtin_ia32_vfmaddsubps(_a,_b,_c);
+
+  return (f32x2_t){_r[0],_r[1]};
+}
+
+#define simd_fmsubadd(A,B,C) ({             \
+  simd_param_3(A,B,C);                      \
+  _Generic((_a),                            \
+    f32x2_t: fmsubadd_f32x2_v,              \
+    f32x4_t: __builtin_ia32_vfmaddsubps,    \
+    f32x8_t: __builtin_ia32_vfmaddsubps256, \
+    f64x2_t: __builtin_ia32_vfmaddsubpd,    \
+    f64x4_t: __builtin_ia32_vfmaddsubpd256, \
+    default: (void*)0)(_a,_b,_c);           \
+})
+
+#endif
+
+// RN(ab+c)/RN(ab-c) (even/odd lanes)
+#define simd_fmaddsub(A,B,C) simd_fmsubadd(A,B,-(C))
+
+
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, fmsubadd, SIMD_FP_X);
+
+//────────────────────────────────────────────────────────────────────────────────────
+
 // SIMD LERP: R_i = A_i(1-T_i) + B_i•T_i
 // • end-points are exact (2 FMA formulation)
 #define simd_lerp(A,B,T) ({                \
@@ -1395,6 +1487,9 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   _a;                           \
 })
 #endif
+
+
+SIMD_MAP_PEEL(SIMD_MAKE_3FUN, lerp, SIMD_FP_X);
 
 // TODO: alternating sign version (even = add, odd = sub)
 // but neither GCC nor clang match the pattern so it'd
@@ -1450,6 +1545,11 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, fmax, SIMD_FP_X);
   simd_assert_vec(A,B);           \
   simd_blend_i(A,B,S);            \
 })
+
+
+//SIMD_MAP_PEEL(SIMD_MAKE_3FUN_V, blend_v, SIMD_FP_X);
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 // ab+cd
 // • within ±3/2 ulp
