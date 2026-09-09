@@ -181,6 +181,63 @@ static inline float f32_asin_x1(float x, float (*P)(float))
 }
 
 //────────────────────────────────────────────────────────────────────────────────────
+// branchfree asin (double computation)
+
+
+// what the [0,1/2] approximation looks like:
+static inline float asin_lo_d_bf(float a)
+{
+  static const double N[] =  {
+    0x1.596d288dc7987p-5f,
+    0x1.8c283c3a5a46ap-6f,
+    0x1.747e4a3065be5p-5f,
+    0x1.3301e4689933p-4f,
+    0x1.5555c88340c2cp-3f
+  };
+  
+  double x = (double)a;
+  double v = x*x;
+  double r = N[0];
+
+  r = fma(r, v, N[1]);
+  r = fma(r, v, N[2]);
+  r = fma(r, v, N[3]);
+  r = fma(r, v, N[4]);
+
+  r = v*r;
+  r = fma(r,x,x);
+
+  return (float)r;
+}
+
+// what the [1/2,1] approximation looks like:
+static inline float asin_hi_d_bf(float a)
+{
+  static const double N[] =  {
+    -0x1.34df4625198ddp-8,
+     0x1.a354224d7d72p-6,
+    -0x1.34625edcedc4ap-4,
+     0x1.af0d71c21deefp-3,
+    -0x1.91fdeaf5921aap0
+  };
+  
+  double x = (double)a;
+  double s = sqrt(1.0-x);
+  double r = N[i+0];
+
+  double v = x;
+
+  r = fma(r, v, N[1]);
+  r = fma(r, v, N[2]);
+  r = fma(r, v, N[3]);
+  r = fma(r, v, N[4]);
+
+  r = fma(r,s, 0.5*f64_pi);
+
+  return (float)r;
+}
+
+//────────────────────────────────────────────────────────────────────────────────────
 // acos expansions
 
 // classic core for acos:
@@ -274,4 +331,7 @@ static inline float f32_acos_x2(float x, float (*P)(float))
   
   return f32_mulsign((float)r, sx);
 }
+
+//────────────────────────────────────────────────────────────────────────────────────
+// branch-free faithfully rounded
 
