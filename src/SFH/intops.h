@@ -76,6 +76,117 @@ static inline uint64_t ave_u64(uint64_t a, uint64_t b)      { return (a&b) + ((a
 static inline uint32_t ave_ceil_u32(uint32_t a, uint32_t b) { return (a|b) - ((a^b)>>1); }
 static inline uint64_t ave_ceil_u64(uint64_t a, uint64_t b) { return (a|b) - ((a^b)>>1); }
 
+
+//────────────────────────────────────────────────────────────────────────────────────
+// GCC vs. clang vs. MSVC: division and some 128-bit stuff
+
+// uint64_t division work-a-round
+static inline pair_u64_t divmod_u64(uint64_t a, uint64_t b)
+{
+  pair_u64_t r;
+
+#if !defined(_MSC_VER)  
+#if !defined(__clang__) || !defined(__x86_64__) 
+  r = pair_u64(a/b, a%b);
+#else
+  // clang (23.1.0) performs at runtime:
+  //   "if ((a|b)>>32) == 0 then jump to 32-bit divide"
+  // on Intel targets since there's a large latency difference
+  // on older uarches. So use with care especially if the
+  // branch is predictable.
+  __asm__ volatile (
+      "xor %%edx, %%edx\n\t"
+      "divq %2"
+      : "=a"(r.q), "=d"(r.r)
+      : "c"(b), "a"(a)
+      : "cc"
+    );
+
+#endif  
+#else
+  r.q = _udiv128(0, a, b, &r.r);
+#endif
+
+  return r;
+}
+
+static inline pair_i64_t divmod_i64(int64_t a, int64_t b)
+{
+  pair_i64_t r;
+
+#if !defined(_MSC_VER)  
+  r   = pair_i64(a/b, a%b);
+#else
+  r.q = _div128(0, a, b, &r.r);
+#endif
+
+  return r;
+}
+
+// single result work-a-round wrappers
+static inline uint64_t div_u64(uint64_t a, uint64_t b) { return divmod_u64(a,b).q; }
+static inline uint64_t rem_u64(uint64_t a, uint64_t b) { return divmod_u64(a,b).r; }
+static inline int64_t  div_i64(int64_t  a, int64_t  b) { return divmod_i64(a,b).q; }
+static inline int64_t  rem_i64(int64_t  a, int64_t  b) { return divmod_i64(a,b).r; }
+
+
+// unsigned/signed 128/64 div & rem
+static inline pair_u64_t div_u128_u64(pair_u64_t n, uint64_t d)
+{
+  pair_u64_t r;
+
+#if    defined(_MSC_VER)
+  r.q = _div128(n.hi, n.lo, d, &r.r);
+#else
+  uint64_t q,m;
+  
+#if !defined(__x86_64__)
+  __uint128_t a = pair_to_u128(n);
+  q = (uint64_t)(a/d);
+  m = (uint64_t)(a%d);
+#else  
+  __asm__ volatile (
+      "divq %[div]"
+      : "=a"(q), "=d"(m)
+      : "a"(n.lo), "d"(n.hi), [div] "r"(d)
+      : "cc"
+  );
+#endif
+#endif  
+  r.q = q; r.r = m;
+
+  return r;
+}
+
+static inline pair_i64_t div_i128_i64(pair_u64_t n, int64_t d)
+{
+  pair_i64_t r;
+
+#if   defined(_MSC_VER)  
+  r.q = _div128(n.hi, n.lo, d, &r.r);
+#else
+  int64_t q,m;
+  
+#if  !defined(__x86_64__)
+  __int128_t a = pair_to_u128(n);
+
+  q = (int64_t)(a/d);
+  m = (int64_t)(a%d);
+#else  
+  __asm__ volatile (
+      "idivq %[div]"
+       : "=a"(q), "=d"(m)
+       : "a"(n.lo), "d"(n.hi), [div] "r"(d)
+       : "cc"
+  );
+#endif
+#endif
+  r.q = q; r.r = m;
+
+  return r;
+}
+
+
 //────────────────────────────────────────────────────────────────────────────────────
 
 static inline pair_u64_t add_pair_u64(pair_u64_t a, pair_u64_t b)
@@ -212,7 +323,7 @@ static inline pair_u64_t mul_full_u64(uint64_t a, uint64_t b)
 {
   uint64_t hi,lo;
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   __uint128_t r = (__uint128_t)a * (__uint128_t)b;
   hi = (uint64_t)(r >> 64);
   lo = (uint64_t)r;
@@ -230,7 +341,7 @@ static inline pair_i64_t mul_full_i64(int64_t a, int64_t b)
 {
   int64_t hi,lo;
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   __int128_t r = (__int128_t)a * (__int128_t)b;
   hi = (int64_t)(r >> 64);
   lo = (int64_t)r;
@@ -269,41 +380,26 @@ extern const uint8_t mod_inverse_table_8[];
 #else
 
 // 8-bit mod inverse table. only odd elements accessed for legal input
-// (could shift and half the same of the table..but meh)
+// (could shift and half the same of the table..but meh. Rather interleave
+// a even only entry table just be nerdy.)
 const uint8_t mod_inverse_table_8[] =
 {
-  0,0x01,0,0xab,0,0xcd,0,0xb7,
-  0,0x39,0,0xa3,0,0xc5,0,0xef,
-  0,0xf1,0,0x1b,0,0x3d,0,0xa7,
-  0,0x29,0,0x13,0,0x35,0,0xdf,
-  0,0xe1,0,0x8b,0,0xad,0,0x97,
-  0,0x19,0,0x83,0,0xa5,0,0xcf,
-  0,0xd1,0,0xfb,0,0x1d,0,0x87,
-  0,0x09,0,0xf3,0,0x15,0,0xbf,
-  0,0xc1,0,0x6b,0,0x8d,0,0x77,
-  0,0xf9,0,0x63,0,0x85,0,0xaf,
-  0,0xb1,0,0xdb,0,0xfd,0,0x67,
-  0,0xe9,0,0xd3,0,0xf5,0,0x9f,
-  0,0xa1,0,0x4b,0,0x6d,0,0x57,
-  0,0xd9,0,0x43,0,0x65,0,0x8f,
-  0,0x91,0,0xbb,0,0xdd,0,0x47,
-  0,0xc9,0,0xb3,0,0xd5,0,0x7f,
-  0,0x81,0,0x2b,0,0x4d,0,0x37,
-  0,0xb9,0,0x23,0,0x45,0,0x6f,
-  0,0x71,0,0x9b,0,0xbd,0,0x27,
-  0,0xa9,0,0x93,0,0xb5,0,0x5f,
-  0,0x61,0,0x0b,0,0x2d,0,0x17,
-  0,0x99,0,0x03,0,0x25,0,0x4f,
-  0,0x51,0,0x7b,0,0x9d,0,0x07,
-  0,0x89,0,0x73,0,0x95,0,0x3f,
-  0,0x41,0,0xeb,0,0x0d,0,0xf7,
-  0,0x79,0,0xe3,0,0x05,0,0x2f,
-  0,0x31,0,0x5b,0,0x7d,0,0xe7,
-  0,0x69,0,0x53,0,0x75,0,0x1f,
-  0,0x21,0,0xcb,0,0xed,0,0xd7,
-  0,0x59,0,0xc3,0,0xe5,0,0x0f,
-  0,0x11,0,0x3b,0,0x5d,0,0xc7,
-  0,0x49,0,0x33,0,0x55,0,0xff
+  0,0x01,0,0xab,0,0xcd,0,0xb7,0,0x39,0,0xa3,0,0xc5,0,0xef,
+  0,0xf1,0,0x1b,0,0x3d,0,0xa7,0,0x29,0,0x13,0,0x35,0,0xdf,
+  0,0xe1,0,0x8b,0,0xad,0,0x97,0,0x19,0,0x83,0,0xa5,0,0xcf,
+  0,0xd1,0,0xfb,0,0x1d,0,0x87,0,0x09,0,0xf3,0,0x15,0,0xbf,
+  0,0xc1,0,0x6b,0,0x8d,0,0x77,0,0xf9,0,0x63,0,0x85,0,0xaf,
+  0,0xb1,0,0xdb,0,0xfd,0,0x67,0,0xe9,0,0xd3,0,0xf5,0,0x9f,
+  0,0xa1,0,0x4b,0,0x6d,0,0x57,0,0xd9,0,0x43,0,0x65,0,0x8f,
+  0,0x91,0,0xbb,0,0xdd,0,0x47,0,0xc9,0,0xb3,0,0xd5,0,0x7f,
+  0,0x81,0,0x2b,0,0x4d,0,0x37,0,0xb9,0,0x23,0,0x45,0,0x6f,
+  0,0x71,0,0x9b,0,0xbd,0,0x27,0,0xa9,0,0x93,0,0xb5,0,0x5f,
+  0,0x61,0,0x0b,0,0x2d,0,0x17,0,0x99,0,0x03,0,0x25,0,0x4f,
+  0,0x51,0,0x7b,0,0x9d,0,0x07,0,0x89,0,0x73,0,0x95,0,0x3f,
+  0,0x41,0,0xeb,0,0x0d,0,0xf7,0,0x79,0,0xe3,0,0x05,0,0x2f,
+  0,0x31,0,0x5b,0,0x7d,0,0xe7,0,0x69,0,0x53,0,0x75,0,0x1f,
+  0,0x21,0,0xcb,0,0xed,0,0xd7,0,0x59,0,0xc3,0,0xe5,0,0x0f,
+  0,0x11,0,0x3b,0,0x5d,0,0xc7,0,0x49,0,0x33,0,0x55,0,0xff
 };
 
 #define INTOPS_SWAP(T,X,Y) { T t = X; X=Y; Y=t; }
