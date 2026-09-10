@@ -50,42 +50,30 @@
 #endif
 
 // NOTE: there are additional bitops in carryless.h
-
 typedef union {
   struct {uint32_t a,b;   };
-  struct {uint32_t lo,hi; }; 
+  struct {uint32_t hi,lo; }; 
   struct {uint32_t q,r;   };
 } pair_u32_t;
 
 typedef union {
   struct {int32_t a,b;   };
-  struct {int32_t lo,hi; }; 
+  struct {int32_t hi,lo; }; 
   struct {int32_t q,r;   };
 } pair_i32_t;
 
 // WARNING: not for type punning
 typedef union {
   struct {uint64_t a,b;   };
-  struct {uint64_t lo,hi; }; 
+  struct {uint64_t hi,lo; }; 
   struct {uint64_t q,r;   };
 } pair_u64_t;
 
 typedef union {
   struct {int64_t a,b;   };
-  struct {int64_t lo,hi; }; 
+  struct {int64_t hi,lo; }; 
   struct {int64_t q,r;   };
 } pair_i64_t;
-
-
-// not using stdint naming style on purpose & likewise for having
-// GCC/clang vs. MSVC types being incompatible.
-#if defined(__GNUC__)||defined(__clang__)
-#define u128_t __uint128_t
-#define i128_t __int128_t
-#else
-#define u128_t pair_u64_t
-#define i128_t pair_i64_t
-#endif
 
 
 // yes. this is evil except for undordered and very special cases of ordered 
@@ -93,6 +81,30 @@ static inline pair_u32_t pair_u32(uint32_t a, uint32_t b) { return (pair_u32_t){
 static inline pair_u64_t pair_u64(uint64_t a, uint64_t b) { return (pair_u64_t){.a=a, .b=b }; }
 static inline pair_i32_t pair_i32(int32_t  a, int32_t  b) { return (pair_i32_t){.a=a, .b=b }; }
 static inline pair_i64_t pair_i64(int64_t  a, int64_t  b) { return (pair_i64_t){.a=a, .b=b }; }
+
+
+#if defined(__GNUC__) || defined(__clang__)
+static inline __uint128_t pair_to_u128(pair_u64_t p)
+{
+  return (((__uint128_t)p.hi)<<64)|p.lo;
+}
+
+static inline __int128_t pair_to_i128(pair_i64_t p)
+{
+  return (((__int128_t)p.hi)<<64)|p.lo;
+}
+
+static inline pair_u64_t pair_from_u128(__uint128_t p)
+{
+  return pair_u64((uint64_t)(p>>64), (uint64_t)p);
+}
+
+static inline pair_i64_t pair_from_i128(__int128_t p)
+{
+  return pair_i64((int64_t)(p>>64), (int64_t)p);
+}
+#endif
+
 
 // widen/narrow (suffix for source type)
 static inline pair_u64_t pair_promote_u32(pair_u32_t p) { return pair_u64((uint64_t)p.a, (uint64_t)p.b); }
