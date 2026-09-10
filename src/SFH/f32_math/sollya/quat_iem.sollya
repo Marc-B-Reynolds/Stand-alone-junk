@@ -1,0 +1,134 @@
+// -*- mode: c; -*- 
+
+execute("util.sollya");
+
+x0 = 0;
+x1 = 1-2^-2048;
+x1 = 1-2^-48;
+//x1 = 1+2^-23;
+
+// polynomial approximations of cos(pi/2 x) on [0,1]
+
+print("//**** w term: this is an even polynomial to the printed x*x in code is the norm of the input (i.e. dot(v,v))\n");
+
+procedure w_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_ae(cos(pi*x/2), basis, x0, x1);
+  //r = f32_build(cos(pi*x/2), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel_even("f32_iem_k", r.approx);
+  
+  return r;
+};
+
+basis = [|0,2|];
+
+for i from 4 to 14 by 2 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = w_build(basis, x0,x1);
+//print("//", approx.approx);
+  print("");
+};
+
+
+//quit; // move to here. actual version elsewhere ATM
+
+// polynomial approximations of sin(pi/2 x)/x on [0,1]
+
+if (false) then {
+
+print("//**** direct scaling term for the bivector\n");
+
+x0 = 0x1.9p-25;
+x1 = 1 - 2^-25;  // 1 - ulp(1)/2
+basis = [|0,1|];
+
+procedure s_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build(sin(pi/2 * sqrt(x))/sqrt(x), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel("f32_iem_s_k", r.approx);
+  
+  return r;
+};
+
+
+for i from 2 to 8 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = s_build(basis, x0,x1);
+//print("//", approx.approx);
+  print("");
+};
+};
+
+
+
+
+
+procedure f_build(basis, x0,x1)
+{
+  var r;
+
+  //r = f32_build_ae(2/pi*acos(x)/sqrt(1-x), basis, x0, x1);
+  r = f32_build_ae(2/pi*acos(x)/sqrt(1-x^2), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel("f32_fem_k", r.approx);
+  
+  return r;
+};
+
+
+basis = [|0,1,2,3,4,5,6|];
+
+for i from 7 to 10 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = f_build(basis, x0,x1);
+//print("//", approx.approx);
+  print("");
+};
+
+
+
+print("//**** direct approximation of forward\n");
+
+procedure fd_build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build_ae(2/pi*acos(x)/sqrt(1-x^2), basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel("f32_fem_direct_k", r.approx);
+  
+  return r;
+};
+
+
+basis = [|0,1,2,3,4,5,6|];
+
+for i from 7 to 11 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = fd_build(basis, x0,x1);
+//print("//", approx.approx);
+  print("");
+};
+

@@ -1,0 +1,10 @@
+# yes this is evil
+# ignore everything
+*
+
+# except files with a dot
+!*.*
+
+#and ignore these
+*~
+.makedep

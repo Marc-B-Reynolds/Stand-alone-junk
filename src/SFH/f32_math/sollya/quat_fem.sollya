@@ -1,0 +1,127 @@
+// -*- coding: utf-8; mode: c -*-
+
+// Using the exponential map to perform unit quaternion to unit ball:
+//
+//
+//   Q = A + w    (unit)
+//   B = f(w) A   (result)  B = (2/pi) log(Q)
+//
+//   f(w) = (2/pi) acos(w)/sin(acos(w))
+//        = (2/pi) acos(w)/sqrt(1-w²)
+//
+//  one way to approximation acos directly on [0,1] can be
+//  formed by:  acos(x) ≈ P(x) sqrt(1-x)
+//
+//   f(w) ≈ P(w) sqrt(1-w)/sqrt(1-w²) 
+//        ≈ P(w)/sqrt(1+w)
+//
+
+execute("util.sollya");
+
+// set up some globals
+E  = absolute;
+B  = [|SG...|];
+F  = (2/pi)*acos(x)/sqrt(1-x^2);
+tx = 1/sqrt(1+x);
+
+// range set to avoid bad control points
+x0 = 0;
+x1 = 1 - 2^-25;  // 1 - ulp(1)/2
+R  = [x0 ; x1];
+
+execute("util.sollya");
+execute("cut.sollya");
+
+rbasis2 = [|tx,tx*x|];
+rbasis3 = [|tx,tx*x,tx*x^2|];
+rbasis4 = [|tx,tx*x,tx*x^2,tx*x^3|];
+rbasis5 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4|];
+rbasis6 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
+rbasis7 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+rbasis8 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|];
+rbasis9 = [|tx,tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^8|];
+
+ebasis2 = [|tx*x|];
+ebasis3 = [|tx*x,tx*x^2|];
+ebasis4 = [|tx*x,tx*x^2,tx*x^3|];
+ebasis5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
+ebasis6 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
+ebasis7 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+ebasis8 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7|];
+ebasis9 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6,tx*x^7,tx*x^9|];
+
+procedure qem_relaxed(builder_basis)
+{
+  var r;
+
+  r.arange  = [x0;x1];
+  r.approx = fpminimax(F, builder_basis, B, r.arange, floating, E);
+  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+
+  return r;
+};
+
+
+// f(0) relaxed approx
+procedure qem_build_relaxed(x0, x1)
+{
+  var r;
+
+  r.arange  = [x0;x1];
+  r.approx = fpminimax(F, builder_basis, B, r.arange, floating, E);
+  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+
+  return r;
+};
+
+// f(0) exact approx
+procedure qem_build_exact(x0, x1)
+{
+  var r;
+
+  r.arange  = [x0;x1];
+  r.approx = fpminimax(F, builder_basis, B, r.arange, floating, E, tx*0.5);
+  r.aerror = single(dirtyinfnorm(r.approx-F, r.arange));
+
+  return r;
+};
+
+
+// relative error (via f32_build...)
+//display=hexadecimal!;
+//f32_build_constrained(F, ebasis5, x0, x1, 0.5*tx).approx;
+//f32_build_constrained(F, ebasis6, x0, x1, 0.5*tx).approx;
+//f32_build_constrained(F, ebasis7, x0, x1, 0.5*tx).approx;
+
+// the 2 promote to 64-bit kernels
+//f64_build(F, rbasis7, x0, x1).approx;
+//f64_build(F, rbasis8, x0, x1).approx;
+
+
+procedure qem_find_cut_exact(basis)
+{
+  builder_basis=basis;
+  return find_cut(qem_build_exact, x0, x1);
+};
+
+procedure qem_find_cut_relaxed(basis)
+{
+  builder_basis=basis;
+  return find_cut(qem_build_relaxed, x0, x1);
+};
+
+
+
+p3 = qem_relaxed(rbasis3);
+p4 = qem_relaxed(rbasis4);
+p5 = qem_relaxed(rbasis5);
+p6 = qem_relaxed(rbasis6);
+p7 = qem_relaxed(rbasis7);
+
+p6;
+p7;
+
+display=hexadecimal!;
+p7;
+
+
