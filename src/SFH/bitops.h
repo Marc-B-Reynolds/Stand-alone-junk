@@ -83,6 +83,7 @@ static inline pair_i32_t pair_i32(int32_t  a, int32_t  b) { return (pair_i32_t){
 static inline pair_i64_t pair_i64(int64_t  a, int64_t  b) { return (pair_i64_t){.a=a, .b=b }; }
 
 
+// using pairs to represent 128-bit integers is a hack for MSVC vs gcc/clang
 #if defined(__GNUC__) || defined(__clang__)
 static inline __uint128_t pair_to_u128(pair_u64_t p)
 {
