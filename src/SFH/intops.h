@@ -253,13 +253,13 @@ static inline uint64_t add_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 
 static inline uint32_t sub_mod_n_u32(uint32_t x, uint32_t y, uint32_t n)
 {
-  uint32_t t = (y > x) ? 0 : n;
+  uint32_t t = (y < x) ? 0 : n;
   return x-y+t;
 }
 
 static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
 {
-  uint64_t t = (y > x) ? 0 : n;
+  uint64_t t = (y < x) ? 0 : n;
   return x-y+t;
 }
 
@@ -274,6 +274,9 @@ static inline uint64_t ceil_2p64_div_u64(uint64_t k)
 {
   return (~UINT64_C(0))/k + 1;
 }
+
+
+
 
 // 2^b mod k
 static inline uint64_t mod_k_base_u64(uint64_t k)
