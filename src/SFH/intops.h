@@ -131,7 +131,7 @@ static inline int64_t  rem_i64(int64_t  a, int64_t  b) { return divmod_i64(a,b).
 
 
 // unsigned/signed 128/64 div & rem
-static inline pair_u64_t div_u128_u64(pair_u64_t n, uint64_t d)
+static inline pair_u64_t divmod_u128_u64(pair_u64_t n, uint64_t d)
 {
   pair_u64_t r;
 
@@ -158,7 +158,7 @@ static inline pair_u64_t div_u128_u64(pair_u64_t n, uint64_t d)
   return r;
 }
 
-static inline pair_i64_t div_i128_i64(pair_u64_t n, int64_t d)
+static inline pair_i64_t divmod_i128_i64(pair_u64_t n, int64_t d)
 {
   pair_i64_t r;
 
@@ -185,6 +185,7 @@ static inline pair_i64_t div_i128_i64(pair_u64_t n, int64_t d)
 
   return r;
 }
+
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -263,6 +264,13 @@ static inline uint64_t sub_mod_n_u64(uint64_t x, uint64_t y, uint64_t n)
   return x-y+t;
 }
 
+// 2^{32} mod n (32-bit result)
+//   -n = 2^{32}-n → (2^{32}-n) % n = 2^{32} mod n
+static inline uint32_t pow2_32_mod_u32(uint32_t n) {  return (-n) % n;}
+
+// 2^{64} mod n (64-bit result)
+static inline uint64_t pow2_64_mod_u64(uint64_t n)  { return (-n) % n;}
+
 
 // ceil(2^b/k)
 static inline uint32_t ceil_2p32_div_u32(uint32_t k)
@@ -274,9 +282,6 @@ static inline uint64_t ceil_2p64_div_u64(uint64_t k)
 {
   return (~UINT64_C(0))/k + 1;
 }
-
-
-
 
 // 2^b mod k
 static inline uint64_t mod_k_base_u64(uint64_t k)
