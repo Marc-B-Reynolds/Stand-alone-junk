@@ -38,7 +38,6 @@
 #define mont_check_relaxed(V,K)   do { assert(V < (K.n+K.n-1));} while(0)
 #endif
 
-#define ALT
 
 // precomputed data for working in Montgomery form for odd modulus 'n'.
 typedef struct {
