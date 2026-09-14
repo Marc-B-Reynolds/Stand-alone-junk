@@ -3,7 +3,8 @@
 
 /// FLINT bridge functions
 ///==============================================================
-///
+/// FLINT doesn't directly support GF(2) matrices (as of this writting. It does
+//  have `nmod_mat_mul_u8` FWIW)
 ///
 ///
 ///
@@ -11,18 +12,16 @@
 #include "bmat_i.h"
 #include "bmat_flint.h"
 
-// mod 2 constant
-const mp_limb_t flint_n = 2;
-
 
 //******************************************************************************
-// matrix alloc/free
+// matrix alloc/free: super inefficient but this is only intended for
+// testing
 
 nmod_mat_t* flint_gf2m_alloc_n(slong n)
 {
   nmod_mat_t* m = (nmod_mat_t*)flint_malloc(sizeof(nmod_mat_t));
   
-  nmod_mat_init(m[0],n,n,flint_n);
+  nmod_mat_init(m[0],n,n,2);
   
   return m;
 }
@@ -31,7 +30,7 @@ nmod_poly_t* flint_gf2p_alloc(void)
 {
   nmod_poly_t* p = (nmod_poly_t*)flint_malloc(sizeof(nmod_poly_t));
   
-  nmod_poly_init(p[0],flint_n);
+  nmod_poly_init(p[0],2);
   
   return p;
 }
@@ -103,7 +102,7 @@ void m4ri_to_flint(nmod_mat_t R, mzd_t* M)
 
   for (rci_t x=0; x<n; x++) {
     for (rci_t y=0; y<n; y++) {
-      nmod_mat_entry(R,x,y) = (mp_limb_t)mzd_read_bit(M,x,y);
+      nmod_mat_entry(R,x,y) = (uint32_t)mzd_read_bit(M,x,y);
     }
   }
 }
@@ -149,7 +148,7 @@ void bmat_to_flint_8(nmod_mat_t R, bmat_param_8(m))
   for(uint32_t r=0; r<D; r++) {
     uint32_t row = s[r];
     for(uint32_t c=0; c<D; c++) {
-      nmod_mat_entry(R,r,c) = (mp_limb_t)(row & 1);
+      nmod_mat_entry(R,r,c) = (uint32_t)(row & 1);
       row >>= 1;
     }
   }
@@ -165,7 +164,7 @@ void bmat_to_flint_16(nmod_mat_t R, bmat_param_16(m))
   for(uint32_t r=0; r<D; r++) {
     uint32_t row = s[r];
     for(uint32_t c=0; c<D; c++) {
-      nmod_mat_entry(R,r,c) = (mp_limb_t)(row & 1);
+      nmod_mat_entry(R,r,c) = (uint32_t)(row & 1);
       row >>= 1;
     }
   }
@@ -181,7 +180,7 @@ void bmat_to_flint_32(nmod_mat_t R, bmat_param_32(m))
   for(uint32_t r=0; r<D; r++) {
     uint32_t row = s[r];
     for(uint32_t c=0; c<D; c++) {
-      nmod_mat_entry(R,r,c) = (mp_limb_t)(row & 1);
+      nmod_mat_entry(R,r,c) = (uint32_t)(row & 1);
       row >>= 1;
     }
   }
@@ -194,7 +193,7 @@ void bmat_to_flint_64(nmod_mat_t R, bmat_param_32(m))
   for(uint32_t r=0; r<D; r++) {
     uint64_t row = m[r];
     for(uint32_t c=0; c<D; c++) {
-      nmod_mat_entry(R,r,c) = (mp_limb_t)(row & 1);
+      nmod_mat_entry(R,r,c) = (uint32_t)(row & 1);
       row >>= 1;
     }
   }
