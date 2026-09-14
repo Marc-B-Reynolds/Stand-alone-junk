@@ -396,6 +396,11 @@ uint64_t wrap_mul_two(uint64_t a, const nmod_redc_ctx_t ctx)
   return nmod_redc_add(a,a,ctx);
 }
 
+uint64_t wrap_sq(uint64_t a, const nmod_redc_ctx_t ctx)
+{
+  return nmod_redc_mul(a,a,ctx);
+}
+
 // I'm assuming FLINT limbs are 64-bit
 
 #define LENGTHOF(T) (sizeof(T)/sizeof((T)[0]))
@@ -403,11 +408,13 @@ uint64_t wrap_mul_two(uint64_t a, const nmod_redc_ctx_t ctx)
 const ufunc_32_t ufunc_32[] = {
   {.name="32 neg",  .s=0, .op="-",  .ref=nmod_redc_neg, .f=mont_neg_u32},
   {.name="32 mul2", .s=0, .op="2*", .ref=wrap_mul_two,  .f=mont_mul2_u32},
+  {.name="32 sq",   .s=0, .op=" ",  .ref=wrap_sq,       .f=mont_sq_u32},
 };
 
 const ufunc_64_t ufunc_64[] = {
   {.name="64 neg",  .s=0, .op="-",  .ref=nmod_redc_neg,.f=mont_neg_u64},
   {.name="64 mul2", .s=0, .op="2*", .ref=wrap_mul_two, .f=mont_mul2_u64},
+  {.name="64 sq",   .s=0, .op=" ",  .ref=wrap_sq,      .f=mont_sq_u64},
 };
 
 const bfunc_32_t bfunc_32[] = {
