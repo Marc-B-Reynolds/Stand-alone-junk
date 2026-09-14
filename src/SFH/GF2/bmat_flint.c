@@ -224,7 +224,7 @@ void bmat_from_flint_8(bmat_param_8(m), nmod_mat_t M)
     uint32_t row = 0;
 
     for (uint32_t c=0; c<D; c++) {
-      row ^= (nmod_mat_get_entry(M,r,c) << c);
+      row ^= (uint32_t)nmod_mat_get_entry(M,r,c) << c;
     }
 
     d[r] = (uint8_t)row;
@@ -243,7 +243,7 @@ void bmat_from_flint_16(bmat_param_16(m), nmod_mat_t M)
     uint32_t row = 0;
 
     for (uint32_t c=0; c<D; c++) {
-      row ^= (nmod_mat_get_entry(M,r,c) << c);
+      row ^= (uint32_t)nmod_mat_get_entry(M,r,c) << c;
     }
 
     d[r] = (uint16_t)row;
@@ -262,7 +262,7 @@ void bmat_from_flint_32(bmat_param_32(m), nmod_mat_t M)
     uint32_t row = 0;
 
     for (uint32_t c=0; c<D; c++) {
-      row ^= (nmod_mat_get_entry(M,r,c) << c);
+      row ^= (uint32_t)nmod_mat_get_entry(M,r,c) << c;
     }
 
     d[r] = row;
@@ -279,7 +279,7 @@ void bmat_from_flint_64(bmat_param_8(m), nmod_mat_t M)
     uint64_t row = 0;
 
     for (uint32_t c=0; c<D; c++) {
-      row ^= ((uint64_t)nmod_mat_get_entry(M,r,c) << c);
+      row ^= (uint64_t)nmod_mat_get_entry(M,r,c) << c;
     }
 
     m[r] = row;
