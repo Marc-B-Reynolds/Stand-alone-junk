@@ -70,12 +70,14 @@ extern const u256_data_t bmat_md_256_64;
 #define bmat_adup_32(A,M) uint32_t A[32]; bmat_to_array_32(A,M)
 #define bmat_adup_64(A,M) uint64_t A[64]; bmat_to_array_64(A,M)
 
+
 // * Guy Steele's shifted bit field swap between two registers. (misplaced..clean up vs. bitops.h)
 #define BMAT_DELTA_SWAP2_8(X,Y,M,S)  { uint8_t  t = (X^(Y>>S)) & M; X=(uint8_t) (X^t); Y=(uint8_t) (Y^(t<<S)); }
 #define BMAT_DELTA_SWAP2_16(X,Y,M,S) { uint16_t t = (X^(Y>>S)) & M; X=(uint16_t)(X^t); Y=(uint16_t)(Y^(t<<S)); }
 #define BMAT_DELTA_SWAP2_32(X,Y,M,S) { uint32_t t = (X^(Y>>S)) & M; X=(uint32_t)(X^t); Y=(uint32_t)(Y^(t<<S)); }
 #define BMAT_DELTA_SWAP2_64(X,Y,M,S) { uint64_t t = (X^(Y>>S)) & M; X=(uint64_t)(X^t); Y=(uint64_t)(Y^(t<<S)); }
 
+#define BMAT_SWAP(X,Y)  do { typeof(X) t = (X); X=(Y); Y=(t); } while(0)
 
 #define BMAT_REP_SHIFT_4(X,S) {X,X<<S,X<<(2*S),X<<(3*S)}
 

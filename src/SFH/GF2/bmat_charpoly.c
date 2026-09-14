@@ -73,7 +73,7 @@ static inline void bmat_hessenberg_w(uint64_t* r, uint32_t n)
 
       if (r[i] & bj) {
 	// pivot found: swap the row & column
-	BIT_SWAP2_64(r[i],r[j]);
+	BMAT_SWAP(r[i],r[j]);
 	bmat_col_swap_w(r,i,j,n);
 
 	// forward reduce

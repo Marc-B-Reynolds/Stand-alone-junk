@@ -91,7 +91,7 @@ uint32_t bmat_echelon_n(uint64_t* A, uint32_t n, uint32_t m)
       // found and perform elimination
       if (A[i] & bj) {
         uint64_t row = A[i];                // row of pivot
-        BIT_SWAP2_64(A[i],A[rank]);         // swap
+        BMAT_SWAP(A[i],A[rank]);            // swap
         rank += 1;
 
         // forward eliminiation
