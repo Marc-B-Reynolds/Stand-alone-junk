@@ -204,6 +204,9 @@ uint32_t test_flint(prng_t* prng, uint32_t trials)
 //******************************************************************************
 // start of hack of berkowitz
 
+#if 0
+#include <flint/nmod.h>
+
 void
 _nmod_mat_charpoly_berkowitz_x(mp_ptr cp, const nmod_mat_t mat, nmod_t mod)
 {
@@ -323,14 +326,9 @@ uint64_t flint_wrap_charpoly_8_ (bmat_param_8 (m)) { return flint_wrap_charpoly_
 uint64_t flint_wrap_charpoly_16_(bmat_param_16(m)) { return flint_wrap_charpoly_n_(bmat_make_flint_16(m)); }
 uint64_t flint_wrap_charpoly_32_(bmat_param_32(m)) { return flint_wrap_charpoly_n_(bmat_make_flint_32(m)); }
 uint64_t flint_wrap_charpoly_64_(bmat_param_64(m)) { return flint_wrap_charpoly_n_(bmat_make_flint_64(m)); }
-
+#endif
 
 //******************************************************************************
-
-
-void baz(void)
-{
-}
 
 
 int main(void)
