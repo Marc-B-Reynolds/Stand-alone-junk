@@ -401,6 +401,28 @@ uint64_t wrap_sq(uint64_t a, const nmod_redc_ctx_t ctx)
   return nmod_redc_mul(a,a,ctx);
 }
 
+#if 0
+// need to think these thorough some more. all expect fms_31 seem to work.
+static inline uint32_t mont_fma_u31(uint32_t a, uint32_t b, uint32_t c, const mont_u32_t k)
+{
+  return mont_reduce_u31(mont_fma_u32_i(a,b,c,k),k);
+}
+
+static inline uint32_t mont_fms_u31(uint32_t a, uint32_t b, uint32_t c, const mont_u32_t k)
+{
+  return mont_reduce_u31(mont_fms_u32_i(a,b,c,k),k);
+}
+
+static inline uint64_t mont_fma_u63(uint64_t a, uint64_t b, uint64_t c, const mont_u64_t k)
+{
+  return mont_reduce_u63(mont_fma_u64_i(a,b,c,k),k);
+}
+
+static inline uint64_t mont_fms_u63(uint64_t a, uint64_t b, uint64_t c, const mont_u64_t k)
+{
+  return mont_reduce_u63(mont_fms_u64_i(a,b,c,k),k);
+}
+#endif
 
 // I'm assuming FLINT limbs are 64-bit
 
@@ -447,18 +469,23 @@ uint64_t wrap_fms(uint64_t a, uint64_t b, uint64_t c, const nmod_redc_ctx_t ctx)
 
 const tfunc_32_t tfunc_32[] = {
   {.name="32 fma", .s=0, .op1="*",.op2="+", .ref=wrap_fma, .f=mont_fma_u32},
+//{.name="31 fma", .s=1, .op1="*",.op2="+", .ref=wrap_fma, .f=mont_fma_u31},
   {.name="32 fms", .s=0, .op1="*",.op2="-", .ref=wrap_fms, .f=mont_fms_u32},
+//{.name="31 fms", .s=1, .op1="*",.op2="+", .ref=wrap_fma, .f=mont_fms_u31},
 };
 
 const tfunc_64_t tfunc_64[] = {
   {.name="64 fma", .s=0, .op1="*",.op2="+", .ref=wrap_fma, .f=mont_fma_u64},
+//{.name="63 fma", .s=1, .op1="*",.op2="+", .ref=wrap_fma, .f=mont_fma_u63},
   {.name="64 fms", .s=0, .op1="*",.op2="-", .ref=wrap_fms, .f=mont_fms_u64},
+//{.name="63 fms", .s=1, .op1="*",.op2="-", .ref=wrap_fms, .f=mont_fms_u63},
 };
 
 
 int main(void)
 {
   printf("testing: montgomery form\n");
+
   for(size_t i=0; i<LENGTHOF(ufunc_32); i++) test_ufunc_32(ufunc_32 + i);
   for(size_t i=0; i<LENGTHOF(ufunc_64); i++) test_ufunc_64(ufunc_64 + i);
   for(size_t i=0; i<LENGTHOF(bfunc_32); i++) test_bfunc_32(bfunc_32 + i);
