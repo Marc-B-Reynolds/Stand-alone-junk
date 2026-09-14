@@ -49,6 +49,7 @@
 #pragma GCC diagnostic push
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wlanguage-extension-token"
+#pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
 #endif
 
 // force expression 'v' to be register at this point, forget information about 'v' but
