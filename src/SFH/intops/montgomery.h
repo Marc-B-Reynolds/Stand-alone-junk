@@ -174,10 +174,10 @@ static inline mont_u32_t mont_init_u32(uint32_t n)
   mont_assert((n & 1)==1 && "modulus must be odd");
   
   k.n  = n;                               // modulus (odd)
+  k.i  = mod_inverse_u32(n);              // n^{-1} mod R
   k.r2 = (uint32_t)((-t) % t);            // R^2 mod n
   k.r  = mont_sreduce_u32(k.r2,k);        // R   mod n
-  k.i  = mod_inverse_u32(n);              // n^{-1} mod R
-
+  
   return k;
 }
 
@@ -209,9 +209,9 @@ static inline mont_u64_t mont_init_u64(uint64_t n)
   assert((n & 1)==1 && "modulus must be odd");
   
   k.n  = n;                               // modulus (odd)
+  k.i  = mod_inverse_u64(n);              // n^{-1} mod R
   k.r2 = t;                               // R^2 mod n
   k.r  = mont_sreduce_u64(k.r2,k);        // R   mod n
-  k.i  = mod_inverse_u64(n);              // n^{-1} mod R
   
   return k;
 }
