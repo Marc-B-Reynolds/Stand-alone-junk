@@ -64,10 +64,10 @@
 
 #if defined(__clang__)
 #define hint_alive_clang    hint_alive
-#define hint_alive_gcc(V)   ({(V)})
+#define hint_alive_gcc(V)   ({(V);})
 #else
 #define hint_alive_gcc      hint_alive
-#define hint_alive_clang(V) ({(V)})
+#define hint_alive_clang(V) ({(V);})
 #endif
 
 #pragma GCC diagnostic pop
