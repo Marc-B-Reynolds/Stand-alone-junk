@@ -239,7 +239,6 @@ static inline uint64_t mont_mul_u63(uint64_t a, uint64_t b, const mont_u64_t k)
   return mont_reduce_u63(mul_full_u64(a,b),k);
 }
 
-// nope: reduces
 static inline uint32_t mont_sq_u32(uint32_t a, const mont_u32_t k)
 {
   mont_check_canonical(a,k);
@@ -250,6 +249,16 @@ static inline uint64_t mont_sq_u64(uint64_t a, const mont_u64_t k)
 {
   mont_check_canonical(a,k);
   return mont_reduce_u64(mul_full_u64(a,a),k);
+}
+
+static inline uint32_t mont_sq_u31(uint32_t a, const mont_u32_t k)
+{
+  return mont_reduce_u31(mul_full_u32(a,a),k);
+}
+
+static inline uint64_t mont_sq_u63(uint64_t a, const mont_u64_t k)
+{
+  return mont_reduce_u63(mul_full_u64(a,a),k);
 }
 
 
