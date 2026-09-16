@@ -75,10 +75,16 @@ static inline uint32_t mont_reduce_u32(uint64_t T, const mont_u32_t k)
 
   mont_check_canonical(h,k);
 
+#if 1
   uint32_t m = (uint32_t)mul_hi_u32(l*k.i, k.n);
   uint32_t t = (h + k.n) - m;
   uint32_t d = h - m;
   uint32_t r = (h < m) ? t : d;
+#else
+  uint64_t m = mul_full_u32(l*k.i, k.n);
+  uint32_t y = (uint32_t)((T-m)>>32);
+  uint32_t r = (T < m) ? y+k.n : y;
+#endif  
 
   mont_check_canonical(r,k);
 
