@@ -6,7 +6,9 @@
 
 #include <stdint.h>
 
-// for the full products ATM. make local copies
+// we need the following:
+//   intops.h: mul_full_{u32,u64}, mul_hi_{u32,u64}, mod_inverse_{u32,u64}
+//   bitops.h: pair_u64_t (to wrap unsigned 128 bit integers)
 #include "SFH/intops.h"
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -75,6 +77,8 @@ static inline uint32_t mont_reduce_u32(uint64_t T, const mont_u32_t k)
 
   mont_check_canonical(h,k);
 
+  // really should reconsider the various formulations WRT individual
+  // ISAs
 #if 1
   uint32_t m = (uint32_t)mul_hi_u32(l*k.i, k.n);
   uint32_t t = (h + k.n) - m;
@@ -167,6 +171,8 @@ static inline uint64_t mont_sreduce_u64(uint64_t x, const mont_u64_t k)
 
 
 //─────────────────────────────────────────────────────────────────────────────────
+// initial the control structure. note that the compiler really needs to see the
+// usage of these as constant data for optimial codegen.
 
 static inline uint32_t mont_sq_u32(uint32_t, const mont_u32_t);
 static inline uint64_t mont_sq_u64(uint64_t, const mont_u64_t);
@@ -436,8 +442,9 @@ static inline uint64_t mont_mul2_u64(uint64_t a, const mont_u64_t k)
   return (t > a) ? a+a : a-t;
 }
 
-//────────────────────────────────────────────────────────────────────────────────────
 
+//────────────────────────────────────────────────────────────────────────────────────
+// compute a*b+c with lower reduction costs
 
 static inline uint64_t mont_fma_u32_i(uint32_t x, uint32_t y, uint32_t c, const mont_u32_t k)
 {
