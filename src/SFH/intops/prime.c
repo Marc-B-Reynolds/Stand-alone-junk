@@ -1,4 +1,6 @@
 // -*- coding: utf-8 -*-
+// Marc B. Reynolds, 2026
+// Public Domain under http://unlicense.org, see link for details.
 //
 // "Fast Primality Testing for Integers That Fit into a Machine Word"
 // 
@@ -182,11 +184,24 @@ static inline bool is_prime_core_u32(uint32_t n)
 bool is_prime_u32(uint32_t n)
 {
   // trial divisions: 2,3,5,7
-  int t2 = n & 1;
+#if 0
+  int t2 = (n & 1);
   int t3 = (n % 3) != 0;
   int t5 = (n % 5) != 0;
   int t7 = (n % 7) != 0;
   int t  = (t2 & t3) & (t5 & t7);
+#elif 0
+  // merged 3,5 test
+  int t2  = (n & 1);
+  int t35 = ((0xe996 >> (n % 15)) & 1);
+  int t7  = (n % 7) != 0;
+  int t   = (t2 & t7) & t35;
+#else
+  // merged 2,3,5 test
+  int ts  = (0xe08a2882 >> (n % 30)) & 1;
+  int t7  = (n % 7) != 0;
+  int t   = ts & t7;
+#endif  
   
   // have we passed the trial divisions?
   if (t != 0) {
