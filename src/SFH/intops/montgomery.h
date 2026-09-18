@@ -218,7 +218,7 @@ static inline mont_u64_t mont_init_u64(uint64_t n)
   uint64_t   t = pow2_128_mod_u64(n);     // R^2 mod n (64-bit)
   mont_u64_t k;
 
-  assert((n & 1)==1 && "modulus must be odd");
+  mont_assert((n & 1)==1 && "modulus must be odd");
   
   k.n  = n;                               // modulus (odd)
   k.i  = mod_inverse_u64(n);              // n^{-1} mod R
