@@ -96,7 +96,7 @@ bool is_prime(uint32_t x)
 static inline int mont_miller_rabin_u32(const uint32_t a, const uint32_t n)
 {
   // perform the test either directly in 32-bits or promote to 64-bits
-  // and use a simplified reduce.
+  // and use a simplified reduce. TODO: make an informed selection.
 #if 0
   const mont_u32_t k  = mont_init_u32(n);
   const uint32_t   nr = n-k.r;
@@ -184,6 +184,9 @@ static inline bool is_prime_core_u32(uint32_t n)
 bool is_prime_u32(uint32_t n)
 {
   // trial divisions: 2,3,5,7
+  // TODO: make an informed selection. could also
+  // add SIMD trials for ISAs with approp multiply ops.
+  // and abstract the trial set constants.
 #if 0
   int t2 = (n & 1);
   int t3 = (n % 3) != 0;
@@ -191,6 +194,8 @@ bool is_prime_u32(uint32_t n)
   int t7 = (n % 7) != 0;
   int t  = (t2 & t3) & (t5 & t7);
 #elif 0
+  // merged tests probably shouldn't depend on the
+  // compiler to produce the mod.
   // merged 3,5 test
   int t2  = (n & 1);
   int t35 = ((0xe996 >> (n % 15)) & 1);
@@ -226,6 +231,89 @@ bool is_prime_u32(uint32_t n)
   if ((n-1) > 6) return false;
 
   // for the remaining query a baked bitset of primes
+  static const uint32_t bitset = (1u<<2)|(1u<<3)|(1u<<5)|(1u<<7);
+  
+  return (bitset & (1u << n)) != 0;
+}
+
+
+
+static inline bool mont_miller_rabin_u64(const uint64_t base[], const int num, const uint64_t n)
+{
+  // set-up Montgomery form for "mod n"
+  const mont_u64_t k  = mont_init_u64(n);
+  const uint64_t   nr = n-k.r;
+  uint64_t         u  = n-1;
+  uint32_t         s  = ctz_64(u);
+  
+  u >>= s;
+  
+  for (int j=0; j<num; j++) {
+    uint64_t A = mont_form_u64(base[j],k);
+    uint64_t d = k.r;
+    uint64_t v = u;
+    
+    if (!A) continue;
+    
+    // compute a^u mod n
+    do {
+      if (v & 1)
+        d = mont_mul_u64(d,A,k);
+      A= mont_sq_u64(A,k);
+    } while (v >>= 1);
+    
+    if (d == k.r || d == nr) continue;
+    
+    uint32_t i;
+    
+    // walk powers: a^d, a^(2d), ... mod n
+    for (i=1; i<s; i++) {
+      d = mont_sq_u64(d,k);
+      if (d == k.r) return false;
+      if (d == nr)  break;
+    }
+    
+    if (i == s)
+      return false;
+  }
+  
+  return true;
+}
+
+
+// 64-bit version is very run-of-the-mill that will be murdered
+// by a proper library.
+bool is_prime_u64(uint64_t n)
+{
+  // same outer structure as 32-bit
+  int t2 = n & 1;
+  int t3 = (n % 3) != 0;
+  int t5 = (n % 5) != 0;
+  int t7 = (n % 7) != 0;
+  int t  = (t2 & t3) & (t5 & t7);
+  
+  if (t != 0) {
+    if (n >= 121) {
+      // use 32-bit test if possible. statistically
+      // no help for "uniform" inputs but testing
+      // very small WRT 2^64 is a reasonable pattern.
+      if ((n >> 32) == 0)
+        return is_prime_core_u32((uint32_t)n);
+
+      // being lazy about 64-bit and but MR with min base set
+      static const uint64_t bases[] = {2, 325, 9375, 28178, 450775, 9780504, 1795265022};
+
+      // could conditionally use a 63-bit version but meh, that's
+      // just a piece of duct-tape.
+      return  mont_miller_rabin_u64(bases,7,n);
+    }
+    else {
+      return (n != 1);
+    }
+  }
+  
+  if ((n-1) > 6) return false;
+
   static const uint32_t bitset = (1u<<2)|(1u<<3)|(1u<<5)|(1u<<7);
   
   return (bitset & (1u << n)) != 0;
