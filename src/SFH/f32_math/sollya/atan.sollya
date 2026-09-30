@@ -1,5 +1,4 @@
-// -*- coding: utf-8 -*-
-// -*- mode: c; -*- 
+// -*- coding: utf-8; mode: c -*-
 
 // classic polynomial approximation of atan on [-tan(π/8),tan(π/8)]
 // small ULP kernels are rational approximations
