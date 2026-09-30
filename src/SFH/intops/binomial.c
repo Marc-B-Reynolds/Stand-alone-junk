@@ -113,7 +113,7 @@ static uint64_t binomial_data[1056] = {0};
 
 uint64_t binomial_table(uint64_t n, uint64_t k)
 {
-  // illegal 'n' silently returning 0
+  // illegal 'n' silently returns `binomial_error`
   if (n <= 67) {
     // rework these
     if (k > n)              return 0;
@@ -135,7 +135,7 @@ uint64_t binomial_table(uint64_t n, uint64_t k)
     return binomial_data[id];
   }
 
-  return 0;
+  return binomial_error;
 }
 
 // warn at compile time if haven't found macro for hooking-up init time
@@ -331,7 +331,7 @@ uint64_t binomial_small(uint64_t n, uint64_t k)
   }
   if ((!k) || (k==n)) return 1;
 
-  return 0;
+  return binomial_error;
 }
 
 #endif
