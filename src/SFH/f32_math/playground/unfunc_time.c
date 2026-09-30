@@ -252,8 +252,8 @@ volatile float global_sink = 0;
 #define HINT_ASMC_I "r"
 #endif
 
-#define asm_volatile __asm__ __volatile__
-#define hint_alive_fp(V)  ({ typeof(V) _v = (V); asm_volatile("" : "+" HINT_ASMC_F (_v)); _v; })
+//#define asm_volatile __asm__ __volatile__
+//#define hint_alive_fp(V)  ({ typeof(V) _v = (V); asm_volatile("" : "+" HINT_ASMC_F (_v)); _v; })
 
 void time_func(float (*f)(float), int32_t n)
 {
