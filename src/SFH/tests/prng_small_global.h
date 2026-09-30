@@ -4,6 +4,9 @@
 #pragma once
 #define PRNG_SMALL_GLOBAL_H
 
+// for registering init time macros
+#include "SFH/compiler_hints.h"
+
 // small feature pseudorandom number generator with exactly one
 // global generator. (for single threaded mini-programs)
 // 
@@ -123,23 +126,22 @@ void prng_init(uint64_t data)
   prng_u64();
 }
 
-#if !defined(_MSC_VER)
-static __attribute__((constructor))
-void prng_auto_init(void)
+register_init_time_function(prng_auto_init)
 {
   uint64_t data;
 
-#if defined(__x86_64__)
+#ifdef _MSC_VER
+  data = __rdtsc();  
+#elif defined(__x86_64__)
   data =  __builtin_ia32_rdtsc();
 #elif defined(__aarch64__)
   asm volatile("mrs %0, cntvct_el0" : "=r" (data));
 #else
-#error "in this life. you're on your own."               
+#error "in this life. you're on your own."
 #endif
 
   prng_init(data);
 }
-#endif
 
 #else
 extern prng_t prng_state;
@@ -216,6 +218,22 @@ static inline double prng_odd_f64(void)
 
 #if defined(SFH_SIMD_2D3D_H)
 
+
+// unit square [0,1)²
+static inline vec2f_t uniform_square_f32(void)
+{
+  uint64_t v = prng_u64();
+  float    x = (float)(v >> 40)      * 0x1.0p-24f;
+  float    y = (float)(v & 0xFFFFFF) * 0x1.0p-24f;
+
+  return vec2f(x,y);
+}
+
+static inline vec2d_t uniform_square_f64(void)
+{
+  return vec2d(prng_f64(), prng_f64());
+}
+
 static inline float uniform_disc_norm_f32(vec2f_t* p)
 {
   float d,x,y;
@@ -225,8 +243,8 @@ static inline float uniform_disc_norm_f32(vec2f_t* p)
     v = prng_u64();
     x = (float)(v >> 40)      * 0x1.0p-24f;
     y = (float)(v & 0xFFFFFF) * 0x1.0p-24f;
-    x = 2.f*x-1.f; d  = x*x;
-    y = 2.f*y-1.f; d += y*y;
+    x = 2.f*x-1.f; d = x*x;
+    y = 2.f*y-1.f; d = fmaf(y,y,d);
   } while(d >= 1.f);
 
   p[0][0] = x;
@@ -245,7 +263,7 @@ static inline float uniform_hdisc_norm_f32(vec2f_t* p)
     x = (float)(v >> 40)      * 0x1.0p-24f;
     y = (float)(v & 0xFFFFFF) * 0x1.0p-24f;
     d  = x*x;
-    y = 2.f*y-1.f; d += y*y;
+    y = 2.f*y-1.f; d = fmaf(y,y,d);
   } while(d >= 1.f);
 
   p[0][0] = x;
@@ -254,9 +272,24 @@ static inline float uniform_hdisc_norm_f32(vec2f_t* p)
   return d;
 }
 
-// unit square [0,1)²
-static inline vec2f_t uniform_square_f32(void) { return vec2f(prng_f32(), prng_f32()); }
-static inline vec2d_t uniform_square_f64(void) { return vec2d(prng_f64(), prng_f64()); }
+static inline float uniform_qdisc_norm_f32(vec2f_t* p)
+{
+  float d,x,y;
+  uint64_t v;
+
+  do {
+    v = prng_u64();
+    x = (float)(v >> 40)      * 0x1.0p-24f;
+    y = (float)(v & 0xFFFFFF) * 0x1.0p-24f;
+    d  = fmaf(x,x,y*y);
+  } while(d >= 1.f);
+
+  p[0][0] = x;
+  p[0][1] = y;
+
+  return d;
+}
+
 
 
 static inline vec3f_t uniform_sphere_f32(void)
@@ -270,6 +303,17 @@ static inline vec3f_t uniform_sphere_f32(void)
   return vec3f(s*v[0], s*v[1], 1.f-2.f*d);
 }
 
+static inline vec3f_t uniform_ball_f32(void)
+{
+  float   d,s,r;
+  vec2f_t v;
+
+  r = cbrtf(prng_f32());
+  d = uniform_disc_norm_f32(&v);  
+  s = 2.f*r*sqrtf(1.f-d);
+  
+  return vec3f(s*v[0], s*v[1], r-2.f*r*d);
+}
 
 
 static inline quatf_t uniform_quat_f32(void)
