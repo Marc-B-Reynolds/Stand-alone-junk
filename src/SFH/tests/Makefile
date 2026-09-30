@@ -4,7 +4,7 @@
 
 # if CC is the default (not environment varible nor supplied to make, then default
 ifeq ($(origin CC),default)
-  CC = clang-15
+  CC = clang
 endif
 
 IDIRS  = -I../.. -I..
