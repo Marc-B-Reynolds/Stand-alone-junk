@@ -193,7 +193,7 @@ bool is_prime_u32(uint32_t n)
   int t5 = (n % 5) != 0;
   int t7 = (n % 7) != 0;
   int t  = (t2 & t3) & (t5 & t7);
-#elif 0
+#elif 1
   // merged tests probably shouldn't depend on the
   // compiler to produce the mod.
   // merged 3,5 test
