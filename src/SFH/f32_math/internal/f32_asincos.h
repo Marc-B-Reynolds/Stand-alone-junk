@@ -223,7 +223,7 @@ static inline float asin_hi_d_bf(float a)
   
   double x = (double)a;
   double s = sqrt(1.0-x);
-  double r = N[i+0];
+  double r = N[0];
 
   double v = x;
 
