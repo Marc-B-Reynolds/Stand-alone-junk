@@ -37,23 +37,35 @@ R  = [x0 ; x1];
 
 execute("util.sollya");
 
-rbasis2 = [|tx,tx*x|];
-rbasis3 = rbasis2 :. tx*x^2;
-rbasis4 = rbasis3 :. tx*x^3;
-rbasis5 = rbasis4 :. tx*x^4;
-rbasis6 = rbasis5 :. tx*x^5;
-rbasis7 = rbasis6 :. tx*x^6;
-rbasis8 = rbasis7 :. tx*x^7;
-rbasis9 = rbasis8 :. tx*x^8;
+print("//**** direct polynomials\n");
 
-ebasis2 = [|tx*x|];
-ebasis3 = ebasis2 :. tx*x^2;
-ebasis4 = ebasis3 :. tx*x^3;
-ebasis5 = ebasis4 :. tx*x^4;
-ebasis6 = ebasis5 :. tx*x^5;
-ebasis7 = ebasis6 :. tx*x^6;
-ebasis8 = ebasis7 :. tx*x^7;
-ebasis9 = ebasis8 :. tx*x^8;
+basis = [|1|];
+
+// NOTE: promoting to doubles to compute the polynomial isn't helpful. Likewise
+// for an extended precision 'x' coefficient.
+for i from 2 to 10 do
+{
+  var approx;
+  var zeroes;
+  
+  basis  = basis :.i;
+  approx = fpminimax(F, [|0|] @ basis, [|SG...|],R,absolute);
+
+  // force constant term to 1. In cases where it isn't automatically
+  // will fail to converge without perform the initial step allowing
+  // it to be optimizied.
+  if (coeff(approx,0) != 1) then {
+    zeroes = dirtyfindzeros(F-approx, R);
+    approx = fpminimax(F,basis,[|SG...|],zeroes,absolute,1);
+  };
+
+  print("// ~abs  error =", dirtyinfnorm(approx-F,R));
+  print("// ~f(1) error =", abs(single(2/pi)-single(approx(1))));
+  f32_write_list("P",list_of_coeff(approx));
+
+  print("");
+};
+
 
 procedure qem_relaxed(builder_basis)
 {
@@ -92,6 +104,26 @@ procedure qem_build_exact(builder_basis)
 };
 
 
+print("*******  P(w)/sqrt(1+w) approximations. see comments in file.\n");
+
+rbasis2 = [|tx,tx*x|];
+rbasis3 = rbasis2 :. tx*x^2;
+rbasis4 = rbasis3 :. tx*x^3;
+rbasis5 = rbasis4 :. tx*x^4;
+rbasis6 = rbasis5 :. tx*x^5;
+rbasis7 = rbasis6 :. tx*x^6;
+rbasis8 = rbasis7 :. tx*x^7;
+rbasis9 = rbasis8 :. tx*x^8;
+
+ebasis2 = [|tx*x|];
+ebasis3 = ebasis2 :. tx*x^2;
+ebasis4 = ebasis3 :. tx*x^3;
+ebasis5 = ebasis4 :. tx*x^4;
+ebasis6 = ebasis5 :. tx*x^5;
+ebasis7 = ebasis6 :. tx*x^6;
+ebasis8 = ebasis7 :. tx*x^7;
+ebasis9 = ebasis8 :. tx*x^8;
+
 p7 = qem_build_relaxed(rbasis7);
 //p7 = qem_build_exact(ebasis7);
 p8 = qem_relaxed(rbasis8);
@@ -106,5 +138,3 @@ display=decimal!;
 p8;
 display=hexadecimal!;
 p8.approx;
-
-
