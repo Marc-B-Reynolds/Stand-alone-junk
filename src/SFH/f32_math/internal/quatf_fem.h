@@ -10,12 +10,13 @@
 // error numbers are on a fixed test set (not an accurate bound) and are
 // distance measures vs. reference. This is very close to a half-turn
 // angle measure.
-
+//
 // There are three approximations methods:
 //   quatf_fem_p{n}   : direct polynomials
-//   quatf_fem_t{n}   : 
+//   quatf_fem_t{n}   : see comments in ../sollya/quat_fem.sollya
 //   quatf_fem_{n}{d} : single digits 'n' & 'd - degrees of rational approximation
-
+//
+// Order in file is from least to most accurate.
 
 // ~4.80498423e-03
 static inline vec3f_t quatf_fem_p3(quatf_t q)
@@ -222,7 +223,7 @@ static inline vec3f_t quatf_fem_t7(quatf_t q)
     0x1.fffffep-1f};
 
   float w = fabsf(q[3]);
-  float a = sqrtf(copysignf(1.f,q[3])/(1.f+w));
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
   float p = K[0];
 
   p = fmaf(p, w, K[1]);
