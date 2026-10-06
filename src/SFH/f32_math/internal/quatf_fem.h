@@ -50,6 +50,22 @@ static inline vec3f_t quatf_fem_p4(quatf_t q)
   return s*quat_bivector(q);
 }
 
+// ~3.14763605e-04
+static inline vec3f_t quatf_fem_t3(quatf_t q)
+{
+  static const float K[] = { 0x1.efb86ap-6f, -0x1.088fd6p-3f, 0x1.ffd6c4p-1f };
+
+  float w = fabsf(q[3]);
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
+  float p = K[0];
+
+  p = fmaf(p, w, K[1]);
+  p = fmaf(p, w, K[2]);
+  p = a*p;
+  
+  return p*quat_bivector(q);
+}
+
 // ~2.57426940e-04
 static inline vec3f_t quatf_fem_11(quatf_t q)
 {
@@ -105,6 +121,26 @@ static inline vec3f_t quatf_fem_21(quatf_t q)
 }
 #endif
 
+
+// ~3.65338093e-05
+static inline vec3f_t quatf_fem_t4(quatf_t q)
+{
+  static const float K[] = {
+    -0x1.8ea382p-7f, 0x1.863354p-5f,
+    -0x1.14d17ep-3f, 0x1.fffb3cp-1f };
+
+  float w = fabsf(q[3]);
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
+  float p = K[0];
+
+  p = fmaf(p, w, K[1]);
+  p = fmaf(p, w, K[2]);
+  p = fmaf(p, w, K[3]);
+  p = a*p;
+  
+  return p*quat_bivector(q);
+}
+
 // ~1.66997281e-05
 static inline vec3f_t quatf_fem_p6(quatf_t q)
 {
@@ -126,7 +162,6 @@ static inline vec3f_t quatf_fem_p6(quatf_t q)
   return s*quat_bivector(q);
 }
 
-
 // ~8.77135897e-06
 static inline vec3f_t quatf_fem_12(quatf_t q)
 {
@@ -146,6 +181,26 @@ static inline vec3f_t quatf_fem_12(quatf_t q)
   return (n/d)*quat_bivector(q);
 }
 
+// ~ 4.82217785e-06
+static inline vec3f_t quatf_fem_t5(quatf_t q)
+{
+  static const float K[] = {
+    0x1.70ba6ap-8f, -0x1.78d516p-6f,
+    0x1.babc12p-5f, -0x1.173b6p-3f,
+    0x1.ffff66p-1f };
+
+  float w = fabsf(q[3]);
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
+  float p = K[0];
+
+  p = fmaf(p, w, K[1]);
+  p = fmaf(p, w, K[2]);
+  p = fmaf(p, w, K[3]);
+  p = fmaf(p, w, K[4]);
+  p = a*p;
+  
+  return p*quat_bivector(q);
+}
 
 // ~2.83623552e-06
 static inline vec3f_t quatf_fem_p7(quatf_t q)
@@ -168,6 +223,28 @@ static inline vec3f_t quatf_fem_p7(quatf_t q)
   return s*quat_bivector(q);
 }
 
+
+// ~8.78031246e-07
+static inline vec3f_t quatf_fem_t6(quatf_t q)
+{
+  static const float K[] = {
+    -0x1.7274aep-9f, 0x1.98e5a2p-7f,
+    -0x1.d7319cp-6f, 0x1.caaf8ep-5f,
+    -0x1.17b15p-3f,  0x1.ffffecp-1f }; 
+
+  float w = fabsf(q[3]);
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
+  float p = K[0];
+
+  p = fmaf(p, w, K[1]);
+  p = fmaf(p, w, K[2]);
+  p = fmaf(p, w, K[3]);
+  p = fmaf(p, w, K[4]);
+  p = fmaf(p, w, K[5]);
+  p = a*p;
+  
+  return p*quat_bivector(q);
+}
 
 // ~7.27805800e-07
 static inline vec3f_t quatf_fem_22(quatf_t q)
@@ -211,7 +288,6 @@ static inline vec3f_t quatf_fem_p8(quatf_t q)
   
   return s*quat_bivector(q);
 }
-
 
 // ~3.69837095e-07
 static inline vec3f_t quatf_fem_t7(quatf_t q)
