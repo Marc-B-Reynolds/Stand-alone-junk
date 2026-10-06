@@ -61,6 +61,7 @@ for i from 2 to 10 do
 
   print("// ~abs  error =", dirtyinfnorm(approx-F,R));
   print("// ~f(1) error =", abs(single(2/pi)-single(approx(1))));
+  print("// ", approx);
   f32_write_list("P",list_of_coeff(approx));
 
   print("");
@@ -79,7 +80,8 @@ procedure qem_relaxed(builder_basis)
 };
 
 
-print("*******  P(w)/sqrt(1+w) approximations. see comments in file.\n");
+print("*******  P(w)/sqrt(1+w) approximations. see comments in file.");
+print("output is a mess 'cause I can't think of a way to internally\nprocess into a neater form.\n");
 
 rbasis2 = [|tx,tx*x|];
 rbasis3 = rbasis2 :. tx*x^2;
@@ -90,16 +92,52 @@ rbasis7 = rbasis6 :. tx*x^6;
 rbasis8 = rbasis7 :. tx*x^7;
 rbasis9 = rbasis8 :. tx*x^8;
 
+p2 = qem_relaxed(rbasis2);
+p3 = qem_relaxed(rbasis3);
+p4 = qem_relaxed(rbasis4);
+p5 = qem_relaxed(rbasis5);
+p6 = qem_relaxed(rbasis6);
 p7 = qem_relaxed(rbasis7);
 p8 = qem_relaxed(rbasis8);
+
+display=decimal!;
+p2;
+display=hexadecimal!;
+p2.approx;
+print("");
+
+display=decimal!;
+p3;
+display=hexadecimal!;
+p3.approx;
+print("");
+
+display=decimal!;
+p4;
+display=hexadecimal!;
+p4.approx;
+print("");
+
+display=decimal!;
+p5;
+display=hexadecimal!;
+p5.approx;
+print("");
+
+display=decimal!;
+p6;
+display=hexadecimal!;
+p6.approx;
+print("");
 
 display=decimal!;
 p7;
 display=hexadecimal!;
 p7.approx;
-
 print("");
+
 display=decimal!;
 p8;
 display=hexadecimal!;
 p8.approx;
+
