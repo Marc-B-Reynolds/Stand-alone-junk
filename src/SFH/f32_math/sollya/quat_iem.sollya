@@ -20,6 +20,7 @@ procedure w_build(basis, x0,x1)
 
   print("// ~abs error =", r.aerror);
   print("// ~rel error =", r.rerror);
+  print("//", r.approx);
   f32_print_kernel_even("f32_iem_k", r.approx);
   
   return r;
@@ -36,6 +37,7 @@ L5    = dirtyfindzeros(F-T5, R);
 A5    = fpminimax(F, [|2,4,6,8|], [|SG...|],L5,absolute,1);
 
 print("// ~abs error =", dirtyinfnorm(A5-F,R));
+print("//", A5);
 f32_print_kernel_even("f32_iem_k",A5);
 
 
@@ -45,6 +47,7 @@ L4    = dirtyfindzeros(F-T4, R);
 A4    = fpminimax(F, [|2,4,6|], [|SG...|],L4,absolute,1);
 
 print("// ~abs error =", dirtyinfnorm(A4-F,R));
+print("//", A4);
 f32_print_kernel_even("f32_iem_k",A4);
 
 
