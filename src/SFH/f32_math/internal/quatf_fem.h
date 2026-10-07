@@ -4,28 +4,38 @@
 
 #pragma once
 
-// (scaled) exponential map: 2/π log(q) for unit q where if q.w < 0
-// q is negated prior to taking the log.
-
+// forward (scaled) exponential map:
+//   2/π log(Q) provided Q is unit and Q.w >= 0.
+//
+// routine handles Q.w < 0 as: 2/π log(-Q)
+//
+// Using the exponential map to perform unit quaternion to unit ball:
+//   Q = A + w    (unit with w ≥ 0)
+//   B = f(w) A   (result)
+//
 // error numbers are on a fixed test set (not an accurate bound) and are
 // distance measures vs. reference. This is very close to a half-turn
 // angle measure.
 //
 // There are three approximations methods:
 //   quatf_fem_p{n}   : direct polynomials
-//   quatf_fem_t{n}   : see comments in ../sollya/quat_fem.sollya
+//   quatf_fem_t{n}   : see comments in ../sollya/quat_fem.sollya and/or quatf_fem_t8 below
 //                    : (underperform in accuracy and throughput. sadface)
 //   quatf_fem_{n}{d} : single digits 'n' & 'd - degrees of rational approximation
-//
-// Order in file is from most to least accurate.
+//                      produced using: https://gitlab.inria.fr/sfilip/rminimax
+//                      example command line: ratapprox --function="2*(acos(x)/(sqrt(1-x^2)))/pi" --dom=[0,0.99999999] --denF=[SG] --numF=[SG] --num=[1,x,x^2] --den=[1,x,x^2] --output=fem_22.sollya
+//                      was used to produce quatf_fem_22
+// 
+// Order in file is from most to least accurate (again: these are not tight measures)
 // 
 // example sloppy (no other work) throughput numbers. 'median' results are very consistent across runs.
 // ┌───────────────────┬──────────────────────────────┬────────────────┬─────────┬─────────┬─────────┐
 // │ function          │       mean ± std (cycles)    │                │    min  │  median │    max  │
 // ├───────────────────┼──────────────────────────────┼────────────────┼─────────┼─────────┼─────────┤
 // │ quatf_fem_atan2   │    237.286110 ±     85.361152│ (1 ± 0.359739) │   194.32│   199.68│   601.24│
-// │ quatf_fem_acos    │    172.101064 ±     56.776856│ (1 ± 0.329904) │   144.37│   148.17│   380.10│ ← opponent
+// │ quatf_fem_acos    │    172.101064 ±     56.776856│ (1 ± 0.329904) │   144.37│   148.17│   380.10│ ← error bound opponent
 // │ quatf_fem_p9      │     94.896225 ±     32.630150│ (1 ± 0.343851) │    81.34│    84.26│   242.50│
+// │ quatf_fem_t8      │    101.008263 ±     36.335606│ (1 ± 0.359729) │    83.21│    86.26│   260.00│
 // │ quatf_fem_43      │     99.573567 ±     43.225816│ (1 ± 0.434109) │    79.50│    83.75│   302.22│
 // │ quatf_fem_33      │     91.987692 ±     32.089290│ (1 ± 0.348843) │    78.65│    81.24│   242.92│ ← last to outperform WRT error
 // │ quatf_fem_32      │     88.814970 ±     31.370987│ (1 ± 0.353217) │    77.75│    80.60│   240.92│
@@ -68,7 +78,7 @@ static inline vec3f_t quatf_fem_ref(quatf_t Q)
 
 
 // simple: scale standard log.
-// ∙ distance error: 2.54740144e-07
+// ~2.54740144e-07
 static inline vec3f_t quatf_fem_atan2(quatf_t q)
 {
   static const float K = 0x1.45f306p-1f; // 2/π
@@ -164,6 +174,43 @@ static inline vec3f_t quatf_fem_p9(quatf_t q)
 }
 
 
+// these forms are underperforming as noted above. keeping since
+// a fast & accurate 1/sqrt(x) hardware op could make it interesting again
+// 
+// one way to approximation acos directly on [0,1] can be
+// formed by:  acos(x) ≈ P(x) sqrt(1-x)
+//
+//   f(w) ≈ P(w) sqrt(1-w)/sqrt(1-w²)
+//        ≈ P(w)/sqrt(1+w)
+//
+// ~3.02827380e-07
+static inline vec3f_t quatf_fem_t8(quatf_t q)
+{
+  static const float K[] = {
+    -0x1.b86cc6p-11f,0x1.1ec656p-8f,
+    -0x1.6a761ap-7f, 0x1.4455cap-6f,
+    -0x1.060ff2p-5f, 0x1.d01d6cp-5f,
+    -0x1.17cb74p-3f
+  };
+
+  float w = fabsf(q[3]);
+  float a = copysignf(sqrtf(1.f/(1.f+w)), q[3]);
+  float p = K[0];
+
+  // compute f(w): 
+  //   actual polynomial used is P(w) = 1 + w K(w), with
+  //   a = 1/sqrt(1+w) → f(w) = a + aw K(w)
+  p = fmaf(p,  w, K[1]);
+  p = fmaf(p,  w, K[2]);
+  p = fmaf(p,  w, K[3]);
+  p = fmaf(p,  w, K[4]);
+  p = fmaf(p,  w, K[5]);
+  p = fmaf(p,  w, K[6]);
+  p = fmaf(a*p,w,a);
+  
+  return p*quat_bivector(q);
+}
+
 // ~3.14340340e-07
 static inline vec3f_t quatf_fem_43(quatf_t q)
 {
@@ -187,6 +234,7 @@ static inline vec3f_t quatf_fem_43(quatf_t q)
   
   return (n/d)*quat_bivector(q);
 }
+
 
 // ~3.37359953e-07
 static inline vec3f_t quatf_fem_33(quatf_t q)
