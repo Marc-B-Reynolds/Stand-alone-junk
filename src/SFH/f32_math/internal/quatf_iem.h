@@ -38,6 +38,10 @@ static inline quatf_t quatf_iem_naive(vec3f_t v)
 }
 
 
+
+// SEE: ../sollya/quat_iem.sollya
+
+
 // exp(π/2 V) special cased for 'V' in unit ball
 //  given V = ΘU (in unit ball, U = unit bivector)
 //  returns cos(π/2 Θ) + sin(π/2 Θ) U
