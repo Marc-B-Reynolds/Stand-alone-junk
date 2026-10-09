@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <math.h>
+#include "SFH/simd_2d3d.h"
+#include "SFH/f32_horner.h"
+
 static inline quatf_t quatf_iem_ref(vec3f_t V)
 {
   vec3d_t v = vec3f_promote(V);

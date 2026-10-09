@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <math.h>
+#include "SFH/simd_2d3d.h"
+
+
 // forward (scaled) exponential map:
 //   2/π log(Q) provided Q is unit and Q.w >= 0.
 //
