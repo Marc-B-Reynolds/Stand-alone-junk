@@ -31,25 +31,42 @@ static inline quatf_t quatf_iem_ref(vec3f_t V)
 }
 
 // ~ 2.63713986e-07
-static inline quatf_t quatf_iem_naive(vec3f_t v)
+static inline quatf_t quatf_iem_std(vec3f_t v)
 {
   float d = vec3_norm_fma(v);
   float x = sqrtf(d);
   float a = ((float)(0.5*M_PI))*x;
   float w = cosf(a);
-  float s = sinf(a)/x;               // not worrying about limit x approaches zero
-  return quatf_bs(s*v,w);            //   since not for real use
+  float s = sinf(a)/x;
+
+  s = (x != 0.f) ? s : 1.f;
+  
+  return quatf_bs(s*v,w);
 }
-
-
-
-// SEE: ../sollya/quat_iem.sollya
-
 
 // exp(π/2 V) special cased for 'V' in unit ball
 //  given V = ΘU (in unit ball, U = unit bivector)
 //  returns cos(π/2 Θ) + sin(π/2 Θ) U
-// ~2.06779305e-07
+// SEE: ../sollya/quat_iem.sollya
+
+#if 0
+// hit the limit. this is no better than `quatf_iem_p5`
+static inline quatf_t quatf_iem_p6(vec3f_t v)
+{
+  static const float C[] = {-0x1.c03c0cp-22f, -0x1.792486p-16f,
+                             0x1.e04a62p-11f, -0x1.55cc8ap-6f,
+                             0x1.03c1d4p-2f,  -0x1.3bd3ccp0f };
+
+  float d = vec3_norm_fma(v);
+  float p = f32_horner_5(d,C);
+  float s = sqrtf(-fmaf(d,p*p,p+p));
+  float w = fmaf(d,p,1.f);
+
+  return quatf_bs(s*v,w);
+}
+#endif
+
+// ~2.17674611e-07: {-0x1.208210p-1, 0x1.38b960p-1, 0x1.10a256p-1}
 static inline quatf_t quatf_iem_p5(vec3f_t v)
 {
   // cos(π/2 Θ) ≈ 1 + Θ²P(Θ²) where Θ² = d = v∙v
@@ -102,5 +119,15 @@ static inline quatf_t quatf_iem_p3(vec3f_t v)
   return quatf_bs(s*v,w);
 }
 
+// ~.27434533e-03
+static inline quatf_t quatf_iem_p2(vec3f_t v)
+{
+  static const float C[] = {0x1.cea6f8p-3f, -0x1.39a5e4p0f };
 
+  float d = vec3_norm_fma(v);
+  float p = fmaf(d,C[0],C[1]);
+  float s = sqrtf(-fmaf(d,p*p,p+p));
+  float w = fmaf(d,p,1.f);
 
+  return quatf_bs(s*v,w);
+}
