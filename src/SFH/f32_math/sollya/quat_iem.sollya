@@ -26,6 +26,9 @@ procedure w_build(basis, x0,x1)
   return r;
 };
 
+basis = [|0,2,4,6,8,10,12|];
+A     = w_build(basis, x0,x1);
+
 basis = [|0,2,4,6,8,10|];
 A     = w_build(basis, x0,x1);
 
@@ -50,5 +53,14 @@ print("// ~abs error =", dirtyinfnorm(A4-F,R));
 print("//", A4);
 f32_print_kernel_even("f32_iem_k",A4);
 
+
+basis = [|0,2,4|];
+T3    = fpminimax(F, basis, [|SG...|],R,absolute);
+L3    = dirtyfindzeros(F-T3, R);
+A3    = fpminimax(F, [|2,4|], [|SG...|],L3,absolute,1);
+
+print("// ~abs error =", dirtyinfnorm(A3-F,R));
+print("//", A3);
+f32_print_kernel_even("f32_iem_k",A3);
 
 
