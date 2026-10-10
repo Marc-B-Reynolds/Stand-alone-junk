@@ -27,7 +27,8 @@
 //                    : (underperform in accuracy and throughput. sadface)
 //   quatf_fem_{n}{d} : single digits 'n' & 'd - degrees of rational approximation
 //                      produced using: https://gitlab.inria.fr/sfilip/rminimax
-//                      example command line: ratapprox --function="2*(acos(x)/(sqrt(1-x^2)))/pi" --dom=[0,0.99999999] --denF=[SG] --numF=[SG] --num=[1,x,x^2] --den=[1,x,x^2] --output=fem_22.sollya
+
+//                      example command line: ratapprox --function="2*(acos(x)/(sqrt(1-x^2)))/pi" --dom=[0,0.99999999] --denF=[SG] --numF=[SG] --num=[1,x,x^2] --den=[1,x,x^2] --weight=1 --output=fem_22.sollya
 //                      was used to produce quatf_fem_22
 // 
 // Order in file is from most to least accurate (again: these are not tight measures)
@@ -83,7 +84,7 @@ static inline vec3f_t quatf_fem_ref(quatf_t Q)
 
 // simple: scale standard log.
 // ~2.54740144e-07
-static inline vec3f_t quatf_fem_atan2(quatf_t q)
+static inline vec3f_t quatf_fem_hq(quatf_t q)
 {
   static const float K = 0x1.45f306p-1f; // 2/π
   float x = q[3];                        // m cos(Θ)
@@ -100,7 +101,7 @@ static inline vec3f_t quatf_fem_atan2(quatf_t q)
 
 // standard functions: move to acos and computing
 // |V| as sqrt(1-w²)
-static inline vec3f_t quatf_fem_acos(quatf_t q)
+static inline vec3f_t quatf_fem_std(quatf_t q)
 {
   static const float K = 0x1.45f306p-1f;
 
@@ -153,30 +154,6 @@ static inline vec3f_t quatf_fem_p10(quatf_t q)
   return s*quat_bivector(q);
 }
 
-// ~3.11947188e-07
-static inline vec3f_t quatf_fem_p9(quatf_t q)
-{
-  static const float C[] = {-0x1.45f212p-1f, 0x1.ffbd38p-2f,
-                            -0x1.af6d2ap-2f, 0x1.6ccb1cp-2f,
-                            -0x1.182382p-2f, 0x1.51cb5cp-3f,
-                            -0x1.088bd8p-4f, 0x1.81fabap-7f};
-
-  float w = fabsf(q[3]);
-  float s = C[7];
-
-  s = fmaf(s,w,C[6]);
-  s = fmaf(s,w,C[5]);
-  s = fmaf(s,w,C[4]);
-  s = fmaf(s,w,C[3]);
-  s = fmaf(s,w,C[2]);
-  s = fmaf(s,w,C[1]);
-  s = fmaf(s,w,C[0]);
-  s = fmaf(s,w,1.f);
-  s = copysignf(s, q[3]);
-  
-  return s*quat_bivector(q);
-}
-
 
 // these forms are underperforming as noted above. keeping since
 // a fast & accurate 1/sqrt(x) hardware op could make it interesting again
@@ -213,6 +190,30 @@ static inline vec3f_t quatf_fem_t8(quatf_t q)
   p = fmaf(a*p,w,a);
   
   return p*quat_bivector(q);
+}
+
+// ~3.11947188e-07
+static inline vec3f_t quatf_fem_p9(quatf_t q)
+{
+  static const float C[] = {-0x1.45f212p-1f, 0x1.ffbd38p-2f,
+                            -0x1.af6d2ap-2f, 0x1.6ccb1cp-2f,
+                            -0x1.182382p-2f, 0x1.51cb5cp-3f,
+                            -0x1.088bd8p-4f, 0x1.81fabap-7f};
+
+  float w = fabsf(q[3]);
+  float s = C[7];
+
+  s = fmaf(s,w,C[6]);
+  s = fmaf(s,w,C[5]);
+  s = fmaf(s,w,C[4]);
+  s = fmaf(s,w,C[3]);
+  s = fmaf(s,w,C[2]);
+  s = fmaf(s,w,C[1]);
+  s = fmaf(s,w,C[0]);
+  s = fmaf(s,w,1.f);
+  s = copysignf(s, q[3]);
+  
+  return s*quat_bivector(q);
 }
 
 // ~3.14340340e-07
