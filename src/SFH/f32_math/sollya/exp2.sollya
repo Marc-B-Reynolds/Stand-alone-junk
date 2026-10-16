@@ -1,0 +1,48 @@
+// -*- mode: c; -*- 
+
+// polynomial approximations of 2^f for f on [-1/2,1/2]
+
+execute("util.sollya");
+
+F  = 2^x;
+x0 = -1/2;
+x1 =  1/2;
+
+procedure build(basis, x0,x1)
+{
+  var r;
+
+  r = f32_build(F, basis, x0, x1);
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  print("//", r.approx);
+  f32_print_kernel("f32_exp2_k", r.approx);
+  
+  return r;
+};
+
+printf("base poly approximations");
+
+basis = [|0,1,2|];
+
+for i from 3 to 7 do {
+  var approx;
+  
+  basis  = basis :.i;
+  approx = build(basis, x0,x1);
+  print("");
+};
+
+print("extended percision lead: degree 6 poly with k*x term (k is 48 bit) ");
+print("  output is not user friendly. These are binary32 except degree 2 which");
+print("  needs to be split into a pair of binary32. being lazy.");
+basis = [|0,1,2,3,4,5,6|];
+R     = [x0;x1];
+G0    = fpminimax(F, basis, [|SG,48,SG...|],R,relative);
+Z0    = dirtyfindzeros(F-G0, R);
+A0    = fpminimax(F, [|1,2,3,4,5,6|], [|48,SG...|],Z0,relative,1);
+print("// ~abs error =", dirtyinfnorm(A0-F,R));
+print("// ~rel error =", dirtyinfnorm(1-(A0/F),R));
+print("//", A0);
+f64_print_kernel("foo", A0);
