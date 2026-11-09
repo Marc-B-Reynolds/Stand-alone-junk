@@ -238,100 +238,44 @@ static inline float asin_hi_d_bf(float a)
 }
 
 //────────────────────────────────────────────────────────────────────────────────────
-// acos expansions
+// acos expansion
 
 // classic core for acos:
 // P is an approximation of asin on x on [-1/2,1/2] where:
-//   asin(x) = x + x³ P(x²)
-//           = fma(x, (x*x)*P(x*x), x)
+//   asin(x) ≈ x + x³ P(x²)
 //
-// ∙ broken into three intervals: |x| < 1/2, x > 1/2, x < -1/2
-//   using P for all three via identities
-static inline float f32_acos_x1(float x, float (*P)(float))
+// ∙ broken into three intervals:
+//   acos(x) = π   - 2 asin(sqrt((1-x)/2))   : x < -1/2          : 0
+//   acos(x) = π/2 -   asin(x)               : x on [-1/2,1/2]   : 1
+//                   2 asin(sqrt((1-x)/2))   : x >  1/2          : 2
+//
+// ∙ this is structured to be branchfree (stupid compilers)
+
+static inline float f32_acos_x(float x, float (*P)(float))
 {
   float a = fabsf(x);
-
-  // |x| < 0.5 : acos(x) = π/2 - asin(x)
-  if (a <= 0.5f) {
-    float x2 = x*x;
-    float k  = P(x2);
-    float r  = fmaf(x,x2*k,x);        
-    return f32_add_half_pi(-r);         // FMA addition
-  }
-
-  // 1-|x| is exact (Sterbenz lemma)
-  //float sx = f32_xor(x,a);
-  float t2 = 0.5f*(1.f-a);
-  float p  = f32_asincos_k5(t2);
-
-  // x < -0.5 : acos(x) = π - 2 asin( sqrt((1+x)/2 )
-  if (x < 0.f) {
-    float t = f32_sqrt(t2);
-    float r = fmaf(t,t2*p,t);
-
-    return 2.f*f32_add_half_pi(-r);     // FMA addition
-  }
- 
-  // x >  0.5 : acos(x) = 2 asin( sqrt((1-x)/2 )
-  // this is the troublesome interval. the square root
-  // doesn't have enough precision for a tight result.
-  // requires 2 promotes and one demote.
-  double dp  = (double)p;
-  double dt2 = (double)t2;
-  double dt  = f64_sqrt(dt2);
-  double dr  = 2.f*fma(dt,dt2*dp,dt);
-
-  return (float)dr;
-}
-
-// modified classic: same as 'f32_acos_x1' except the 
-// two |x| > 1/2 intervals are merged to be less branchy.
-// this means the x < -0.5 is likewise burdened with the
-// double promote/demote latencies. If the expection is
-// that under high utilization that the inputs are not
-// highly correlated then this is probably the better
-// choice (and vise-versa if highly correlated).
-// lowers average error for (x < -0.5) due to higher
-// precision computations.
-static inline float f32_acos_x2(float x, float (*P)(float))
-{
-  float a = fabsf(x);
-
-  // |x| < 0.5 : acos(x) = π/2 - asin(x)
-  if (a <= 0.5f) {
-    float x2 = x*x;
-    float k  = P(x2);
-    float r  = fmaf(x,x2*k,x);        
-    return f32_add_half_pi(-r);       // FMA addition
-  }
-
-  // x < -0.5 : acos(x) = π - 2 asin( sqrt((1+x)/2 )
-  // x >  0.5 : acos(x) =     2 asin( sqrt((1-x)/2 )
-
-  uint32_t sx = f32_xor_to_bits(x,a);
-
-  // the whole point of this version is not to branch on
-  // the sign of the input. otherwise might as well use
-  // the 'x1' expansion. sledgehammer it ATM.
+  float r, t;
   
-  // we simply want this branchfree. flip of types
-  // (binary32 in -> binary64 out is generating
-  // a branch in current gcc & clang). creating a
-  // sadly long chain of ops ATM. need to rethink.
-  // promoting x to double is even sader?
-//double   c  = (x < 0.f) ? -M_PI : 0.0;
-  uint64_t m  = f32_sign_mask_u64(x);
-  double   c  = f64_from_bits(m & f64_to_bits(-f64_pi));
-
-  float  z  = 0.5f*(1.f-a);         // exact: Sterbenz lemma
-  double t2 = (double)z;
-  double t  = 2.0*f64_sqrt(t2);
-  double p  = (double)P(z);
-  double r  = fma(t, t2*p, t+c);
+  // (1-x)/2 computation is exact (Sterbenz)
+  t = sqrtf(fmaf(.5f, -a, 0.5f));
+  t = (a > 0.5f) ? t : a;
+  t = f32_mul_by_sign(t, x);
+  t = (a > 0.5f) ? t : -t;
   
-  return f32_mulsign((float)r, sx);
-}
+  // asin(t) ≈ x + x³P(x²)) on [-1/2,1/2]
+  float t2 = t*t;
 
-//────────────────────────────────────────────────────────────────────────────────────
-// branch-free faithfully rounded
+  r = P(t2);
+  r = r * t2;
+  r = fmaf(r, t, t);
+  
+  // r + π/2 (extended precision in one fma)
+  float ar = f32_add_half_pi(r);
+  
+  // complete range reduction transforms
+  r = (x <= 0.5f) ? ar    : r;
+  r = (a >  0.5f) ? (r+r) : r;
+  
+  return r;
+}
 
