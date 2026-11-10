@@ -150,12 +150,11 @@ static inline float f32_asin_x0(float x, float (*P)(float))
 // classic core for asin:
 // P is an approximation of asin on x on [-1/2,1/2] where:
 //   asin(x) = x + x³ P(x²)
-//           = fma(x, (x*x)*P(x*x), x)
 //
 // ∙ broken into two sets of ranges: |x| < 1/2, |x| > 1/2
 //   using P for both.
-// ∙ |x| > 1/2 has a sadface of the square root not having enough
-//   precision to meet target. punt to doubles.
+// ∙ |x| > 1/2 has a sadface of needing extra precision
+//   to meet target. punt to doubles.
 static inline float f32_asin_x1(float x, float (*P)(float))
 {
   float a = fabsf(x);
