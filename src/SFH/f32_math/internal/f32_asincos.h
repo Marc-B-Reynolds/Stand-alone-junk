@@ -15,7 +15,9 @@
 //────────────────────────────────────────────────────────────────────────────────────
 // rational approximations of asin(x) on [-1/2, 1/2] (relative error)
 //    asin(x) ≈ x + x³ N(x²)/D(x²)
-//
+// routines compute N(x²)/D(x²) portion (for expansion routine compat with polynomials).
+// The cores are structured this way to allow two different formulations of range reduction
+// wrappers: sqrt completion is needed early or late.
 
 static inline float f32_asincos_r1(float x2)
 {
@@ -125,25 +127,23 @@ static inline float f32_asincos_k6(float x2)
 
 static inline float f32_asin_x0(float x, float (*P)(float))
 {
-  float a = fabsf(x);
+  float a  = fabsf(x);
+  float t  = fmaf(.5f, -a, 0.5f);
+  float u2 = (a > 0.5f) ? t        : a*a;
+  float u  = (a > 0.5f) ? sqrtf(t) : a;
+  float r;
 
-  // |x| <= 0.5
-  if (a <= 0.5f) {
-    float x2 = x*x;
-    float r  = x2*P(x2);
-    return fmaf(r,x,x);
-  }
+  r = P(u2);
+  r = r * u2;
+  r = fmaf(r,u,u);
 
-  // |x| > 0.5 : asin(x) = π/2 - 2 asin( 0.5*sqrt(1-x) )
-  float sx = f32_xor(x,a);
-  float t2 = 0.5f * (1.f-a);            // exact: Sterbenz lemma
-  float t  = -2.f*f32_sqrt(t2); 
-  float r  = t2*P(t2);
+  r = (a > 0.5f) ? r+r : r;
+
+  if (a > 0.5f) r = f32_add_half_pi(-r);
   
-  r = fmaf(r,t,t);
-  r = f32_add_half_pi(r);               // FMA: r + π/2
-
-  return f32_xor((float)r,sx);
+  r = f32_mul_by_sign(r,x);
+  
+  return r;
 }
 
 
@@ -238,16 +238,16 @@ static inline float asin_hi_d_bf(float a)
 }
 
 //────────────────────────────────────────────────────────────────────────────────────
-// acos expansion
+// acos expansion (full range)
 
 // classic core for acos:
-// P is an approximation of asin on x on [-1/2,1/2] where:
+// P is an approximation of asin with x on [-1/2,1/2] where:
 //   asin(x) ≈ x + x³ P(x²)
 //
-// ∙ broken into three intervals:
-//   acos(x) = π   - 2 asin(sqrt((1-x)/2))   : x < -1/2          : 0
-//   acos(x) = π/2 -   asin(x)               : x on [-1/2,1/2]   : 1
-//                   2 asin(sqrt((1-x)/2))   : x >  1/2          : 2
+// ∙ broken into three intervals (the classic choice):
+//           = π   - 2 asin(sqrt((1-|x|)/2))  : x < -1/2          : 0
+//   acos(x) = π/2 -   asin(x)                : x on [-1/2,1/2]   : 1
+//           =       2 asin(sqrt((1-|x|)/2))  : x >  1/2          : 2
 //
 // ∙ this is structured to be branchfree (stupid compilers)
 
@@ -261,8 +261,8 @@ static inline float f32_acos_x(float x, float (*P)(float))
   t = (a > 0.5f) ? t : a;
   t = f32_mul_by_sign(t, x);
   t = (a > 0.5f) ? t : -t;
-  
-  // asin(t) ≈ x + x³P(x²)) on [-1/2,1/2]
+
+  // compute the core approximation
   float t2 = t*t;
 
   r = P(t2);
@@ -278,4 +278,9 @@ static inline float f32_acos_x(float x, float (*P)(float))
   
   return r;
 }
+
+
+// add: same as f32_acos_x but with input limited to x ≥ 0.
+// reintroduce deferred sqrt which should be bit identical
+
 
