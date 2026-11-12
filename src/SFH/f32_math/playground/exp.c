@@ -62,7 +62,7 @@ static inline int32_t exp_initial_bithack(float x, float k)
 static inline float exp_base_g0(float x, float k)
 {
   int32_t u = f32_linear_bithack(x,k,(float)0x3f7a68c7);
-  return asfloat(u);
+  return f32_from_bits((uint32_t)u);
 }
 
 static inline float exp_base_g1(float x, float k)
@@ -75,7 +75,7 @@ static inline float exp_base_g1(float x, float k)
 
   e  |= (int32_t)(d2*d3);
 
-  return asfloat(e);
+  return f32_from_bits((uint32_t)e);
 }
 
 
@@ -104,7 +104,7 @@ static inline float exp_base_g2(float x, float k)
 
   h |= (int32_t)(d2*d3);
 
-  return asfloat(h);
+  return f32_from_bits((uint32_t)h);
 }
 
 
@@ -132,7 +132,7 @@ static inline float exp_base_l0(float x, float k)
 
   h |= f32_linear_bithack((float)l, a[i], b[i]);
 
-  return 0x1.fc29c0p-1f * asfloat(h);
+  return 0x1.fc29c0p-1f * f32_from_bits((uint32_t)h);
 }
 
 static inline float exp_base_l1(float x, float k) 
@@ -148,7 +148,7 @@ static inline float exp_base_l1(float x, float k)
   h |= f32_linear_bithack((float)l, a[i], b[i]);
 
   // float point constant could be tweaked
-  return 0x1.ff0a92p-1f * asfloat(h); 
+  return 0x1.ff0a92p-1f * f32_from_bits((uint32_t)h); 
 }
 
 
@@ -166,7 +166,7 @@ static inline float exp_base_l2(float x, float k)
 
   h |= (int32_t)(((int64_t)l*(int64_t)a[i])>>23)+b[i];
 
-  return asfloat(h); 
+  return f32_from_bits((uint32_t)h); 
 }
 
 static inline float exp_base_l3(float x, float k) 
@@ -187,7 +187,7 @@ static inline float exp_base_l3(float x, float k)
 
   h |= (int32_t)(((int64_t)l*(int64_t)a[i])>>23)+b[i];
 
-  return asfloat(h); 
+  return f32_from_bits((uint32_t)h); 
 }
 
 static inline float exp_base_l4(float x, float k) 
@@ -216,7 +216,7 @@ static inline float exp_base_l4(float x, float k)
 
   h |= (int32_t)(((int64_t)l*(int64_t)a[i])>>23)+b[i];
 
-  return asfloat(h); 
+  return f32_from_bits((uint32_t)h); 
 }
 
 #if 0
@@ -430,7 +430,7 @@ float log2_g2(float x)
                       0x1.9eba92p-1f,  0x1.90aadep-1f,  0x1.838746p-1f,  0x1.763428p-1f };
 
   
-  int32_t i =  *(int32_t*) & x;
+  int32_t i =  (int32_t)f32_to_bits(x);
   int32_t k = i & 0x007fffff;
   int32_t j = k >> 19;
   float   l = (float)k;
@@ -440,7 +440,7 @@ float log2_g2(float x)
   k = f32_linear_bithack(l,b[j],a[j]);
   k = 0x3f800000|k;
 
-  float y = asfloat(k);
+  float y = f32_from_bits((uint32_t)k);
 
   return y + (float)i;
 }
@@ -463,7 +463,7 @@ float log2_g0(float x)
                        0x1.3b1cc0p-25f, 0x1.22e05cp-25f, 0x1.0d5538p-25f, 0x1.f431c4p-26f,
                        0x1.d1b3c4p-26f, 0x1.b2a8a4p-26f, 0x1.969e7cp-26f, 0x1.7d353p-26f };
   
-  int32_t i =  *(int*) & x;
+  int32_t i = (int32_t)f32_to_bits(x);
   int32_t k = i & 0x007fffff;
   float   l = (float)k;
   int32_t j = k>>19;
@@ -471,7 +471,7 @@ float log2_g0(float x)
   k  = (int32_t)(c0[j] + l*(c1[j] - c2[j]*l));
   k |= 0x3f800000;
 
-  float y = asfloat(k);
+  float y = f32_from_bits((uint32_t)k);
   
   y = y + (float)(logbf(x)-1);
 
@@ -488,7 +488,7 @@ float log2_g1(float x)
   const float a0[] = { 1.4130103f,     1.2080635f };
   const float a1[] = { 5230.6446f,     364861.f  };
   
-  int32_t i = *(int*) & x;
+  int32_t i = (int32_t)f32_to_bits(x);
   int32_t k = i & 0x007fffff;
   float   l = (float)k;
 
@@ -499,7 +499,7 @@ float log2_g1(float x)
   k  = f32_linear_bithack(l, -fmaf(l,m[id],-a0[id]), a1[id]);
   k |= 0x3f800000;
 
-  return asfloat(k) + (float)i;
+  return f32_from_bits((uint32_t)k) + (float)i;
 }
 
 
