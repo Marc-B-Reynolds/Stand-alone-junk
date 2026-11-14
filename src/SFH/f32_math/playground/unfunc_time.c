@@ -7,11 +7,13 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
+
 #include <unistd.h>
 #include <time.h>
 //#include <errno.h> // sigh
 #include <pthread.h>
 #include <sched.h>
+#include <sys/personality.h>
 
 #include "SFH/compiler_hints.h"
 #include "SFH/bitops.h"
@@ -185,10 +187,11 @@ typedef struct {
 func_entry_t func_table[] =
 {
   ENTRY(asinf),
-  ENTRY(asin_r2),
-  ENTRY(asin_k4),
-  ENTRY(asin_bf),
-  ENTRY(asin_d_hi_fr),
+  ENTRY(exp2f),
+  //ENTRY(asin_r2),
+  //ENTRY(asin_k4),
+  //ENTRY(asin_bf),
+  //ENTRY(asin_d_hi_fr),
   //ENTRY(f32_atan),
   //ENTRY(f32_atanpi_fr),
   //ENTRY(f32_atanpi_ue),
@@ -436,6 +439,24 @@ int set_thread_max_priority(pthread_t thread)
   return false;
 }
 
+
+#ifndef ADDR_NO_RANDOMIZE
+#define ADDR_NO_RANDOMIZE 0x0040000
+#endif
+
+int is_aslr_disabled(void)
+{
+  int r = personality(0xffffffff);
+  
+  if (r == -1) {
+    fprintf(stderr, "error: couldn't query personality\n");
+    return -1;
+  }
+
+  return (r & ADDR_NO_RANDOMIZE) != 0;
+}
+
+
 void timing_hack(void)
 {
   if (time_cycles)
@@ -457,6 +478,10 @@ void timing_hack(void)
   else
     printf("thread priority: realtime\n");
 
+  if (is_aslr_disabled())
+    printf("ALSR:            disabled\n");
+  else
+    printf("ALSR:            enabled\n");
 
   printf("uniform samples: [%f,%f]\n", X0,X1);
   timing_test(func_table,  LENGTHOF(func_table));
