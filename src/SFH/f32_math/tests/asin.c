@@ -26,6 +26,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,6 +42,10 @@
 #include "internal/f32_asincos.h"
 
 #include "util.h"
+
+// testing test uniform range
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
 
 //**********************************************************************
 
@@ -424,6 +433,7 @@ void test_simple(void)
 // clean up testing 
 void test_spot(void)
 {
+  // hit portion that needs range reduction
   uint32_t x0 = f32_to_bits(0.5f);
   uint32_t x1 = f32_to_bits(1.0f);
   test_force(x0,x1);

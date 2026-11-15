@@ -1,6 +1,11 @@
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2023
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -24,6 +24,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,6 +38,10 @@
 
 #include "internal/f32_math_common.h"
 #include "util.h"
+
+// testing test uniform range
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
 
 #if defined(__GNUC__)
 #define UNUSED __attribute__((unused))
