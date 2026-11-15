@@ -218,8 +218,8 @@ void test_sample_positive_finite(uint32_t count)
 
   for(uint32_t fi=0; fi < LENGTHOF(func_table); fi++) {
     // use an additive recurrence to cover the range cheaply
-    static const uint32_t A = 2654435769;
-    uint32_t u = A;
+    static const uint32_t a = 2654435769;
+    uint32_t u = a;
     uint32_t n = count;
 
     while (n > 0) {
@@ -232,7 +232,7 @@ void test_sample_positive_finite(uint32_t count)
 	test_error_add(error+fi, cr,r);
 	n--;
       }
-      u += A;
+      u += a;
     }
   }
   
