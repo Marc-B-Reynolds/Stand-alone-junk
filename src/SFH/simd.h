@@ -1185,8 +1185,8 @@ static inline f32x2_t hadd_f32x2_v(f32x2_t a, f32x2_t b)
     f32x4_t: __builtin_ia32_haddps,         \
     f32x8_t: __builtin_ia32_haddps256,      \
     f64x2_t: __builtin_ia32_haddpd,         \
-    f64x4_t: __builtin_ia32_haddpd256,      \
-    default: simd_hadd_i;                   \
+    f64x4_t: __builtin_ia32_haddpd256)      \
+    (_a,_b);                                \
 })
 
 #else
