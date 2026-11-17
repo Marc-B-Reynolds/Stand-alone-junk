@@ -1165,7 +1165,7 @@ SIMD_MAP_PEEL(SIMD_MAKE_BFUN, addsub, SIMD_FP_X);
   _r;                                       \
 })
 
-#if (!defined(__x86_64__) || !defined(__AVX2__))
+#if defined(__AVX2__)
 
 // name to not conflict with expansion below
 static inline f32x2_t hadd_f32x2_v(f32x2_t a, f32x2_t b)
