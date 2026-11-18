@@ -500,7 +500,7 @@ static inline float f32_add_pi(float x)
   return fmaf(pi_a, pi_b, x);
 }
 
-// x + pi/2  (FMA variant)
+// x+π/2  (FMA variant)
 static inline float f32_add_half_pi(float x)
 {
   const float pi_a = f32_mk_pi.h;
