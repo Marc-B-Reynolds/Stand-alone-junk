@@ -139,7 +139,7 @@ static inline float f64_add_pi(float x)
 // x+π/2  (FMA variant)
 static inline double f64_add_half_pi(double x)
 {
-  const double pi_a = f64_mk_pi.h;
+  const double pi_a = 0.5*f64_mk_pi.h;
   const double pi_b = f64_mk_pi.l;
 
   return fma(pi_a, pi_b, x);
