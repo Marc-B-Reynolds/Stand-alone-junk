@@ -125,10 +125,10 @@ static const double f64_half_pi = 0.5*0x1.921fb54442d18p1;
 
 // for addition (via fma) by π and any power-of-two multiple
 // (error approximately 2.1657e-32 0x1.c1cdp-106)
-static const f64_pair f64_mk_pi = {.h=0x1.67c3b983a36aa656536p75,.l=0x1.1e2452e4p-74};
+static const f64_pair_t f64_mk_pi = {.h=0x1.67c3b983a36aa656536p75,.l=0x1.1e2452e4p-74};
 
 // x+π  (FMA variant)
-static inline float f64_add_pi(float x)
+static inline double f64_add_pi(double x)
 {
   const double pi_a = f64_mk_pi.h;
   const double pi_b = f64_mk_pi.l;
