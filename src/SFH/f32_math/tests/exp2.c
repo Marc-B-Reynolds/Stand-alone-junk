@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // nothing here yet.
@@ -26,6 +27,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,11 +42,140 @@
 #include "internal/f32_math_common.h"
 #include "util.h"
 
-//**********************************************************************
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return exp2f(x); }
 
-//**********************************************************************
+
+static const int32_t exp_bits_k = INT32_C(0x7F800000);
+static const int32_t mag_bits_k = INT32_C(0x007fffff);
+
+static inline int32_t f32_linear_bithack(float x, float m, float a)
+{
+  // using FMA doesn't matter: solely instruction issue choice
+  return (int32_t)fmaf(m,x,a);
+}
+
+static inline int32_t exp_initial_bithack(float x, float k)
+{
+  return f32_linear_bithack(x, k, (float)f32_one_bits_k);
+}
+
+static inline float exp_base_g2(float x, float k)
+{
+  const float a[] = {0.31214472e-7f, 0.37120473e-7f, 0.4414393e-7f, 0.52496276e-7f};
+  const float b[] = {(float)0x151d842, (float)0x1113a74, (float)0xcdf4b4, (float)0x81354a};
+  const float c[] = {328.83582f, (float)0x9f16, (float)0x3e4d6, (float)0x10a440};
+  
+  int32_t u = exp_initial_bithack(x,k);
+  int32_t h = u & exp_bits_k;
+  int32_t l = u & mag_bits_k;
+
+  float d1,d2,d3;
+
+  int32_t i = l >> 21;
+  
+  d1 = a[i];
+  d2 = b[i];
+  d3 = c[i];
+  
+  d2 += (float)l;
+  d3 += (float)l;
+
+  d2=d1*d2;
+
+  h |= (int32_t)(d2*d3);
+
+  return f32_from_bits((uint32_t)h);
+}
+
+float f32_exp2(float x) { return exp_base_g2(x, (float)0x00800000); } // peek = (-0.000032,0.0
+
+
+
+// 2^x (crazy slow)
+float f32_exp2__(float x)
+{
+  static const float C[] = { 0x1.3f9068p-13f, 0x1.5f0a66p-10f,
+                             0x1.3b300bp-7f,  0x1.c6af78p-5f,
+                             0x1.ebfbd8p-3f,  0x1.62e430p-1f };
+
+  // clamp to inf/zero results (should lower to intel/arm min/max ops)
+  // the structure of f32_clamp is lowered branchfree in current GCC/clang
+  x = f32_clamp(x,-128.f,128.f);
+  
+  // simple range reduction (break into integer 'i' and fractional 'f' parts)
+  //   x   = i + f      : f on [-1/2,1/2]
+  //   2^x = 2^i * 2^f   
+  //   2^f = 1 + f P(f)
+
+  float i = nearbyintf(x);    // round to nearest (any ties works)
+  float f = x - i;
+  int   e = (int)i;
+
+  // compute: 2^f on [1/sqrt(2),sqrt(2)] [0x1.6a09e6p-1,x1.6a09e6p0]
+  float r = C[0];
+
+  r = fmaf(r,f,C[1]);
+  r = fmaf(r,f,C[2]);
+  r = fmaf(r,f,C[3]);
+  r = fmaf(r,f,C[4]);
+  r = fmaf(r,f,C[5]);
+  r = fmaf(r,f,1.f);
+
+  r = ldexpf(r,e);
+
+  return r;
+}
+
+
+// nope...worse atm
+float f32_exp2_(float x)
+{
+  static const float Kh  = 0x1.62e43p-1f;
+  static const float Kl  = 0x1.96e1d4p-26f;
+  static const float C[] = { 0x1.42dc06p-13, 0x1.5f465ep-10,
+                             0x1.3b2c02p-7,  0x1.c6aed2p-5,
+                             0x1.ebfbdep-3};
+  
+  if (x >  128.0f) return(f32_inf);
+  if (x < -127.0f) return(0.f);
+  
+  // simple range reduction (break into integer and fractional parts)
+  //   x   = i + f      : f on [-1/2,1/2]
+  //   2^x = 2^i * 2^f   
+  //   2^f = 1 + xP(x)
+  // i = round to nearest (tie breaking choice = don't care)
+  float i = nearbyintf(x);
+  float f = x - i;
+  int   e = (int)i;
+
+  float r = C[0];
+
+  // not done: worse as is
+  r = fmaf(r,f,C[1]);
+  r = fmaf(r,f,C[2]);
+  r = fmaf(r,f,C[3]);
+  r = fmaf(r,f,C[4]);
+
+#if 0
+  r = fmaf(r,f,Kh);
+  r = fmaf(r,f,1.f);
+#else
+  float h = f*Kh;
+  float l = fmaf(f,Kh,fmaf(f,Kl,-h));
+
+  r = fmaf(r,f,1.f+h)+l;
+#endif  
+
+  r = ldexpf(r,e);
+
+  return r;
+}
+
+
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -156,12 +291,12 @@ float cr_exp2f(float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(f32_exp2)
 };
 
 const char* func_name = "exp2f";
@@ -170,9 +305,7 @@ float cr_func(float x) { return cr_exp2f(x); }
 
 #include "common.h"
 
-//********************************************************
-
-// ALL JUNK BELOW HERE
+//────────────────────────────────────────────────────────────────────────────────────
 
 // f(x) = 0 for x < -0x1.2bfffep+7 (c315fffe)
 // f(x) denormal until -126 (c2fc0000)
@@ -216,20 +349,49 @@ void test_sanity(void)
 
 void test_spot(void)
 {
+  //test_1pot(0x1p-124f);
+  // test_1pot(0.25f);
+   test_1pot(0.5f);
+  //test_1pot(1.0f);
+  //  test_1pot(32.0f);
 }
 
 void test_all(void)
 {
-  // break down somewhat
-  uint32_t x0 = 0xc315fff0;  // into zero range
-  uint32_t x1 = 0x43000012;  // into infinity range
+  uint32_t x0,x1;
 
+  x0 = 0xc3100000;
+  x1 = 0xc315fffe;
+
+#if 1
+  // should be good enough to test the zero results
+  test_const_range(x0,x1,0.f);
+
+  // test denormal result range
+  x0 = x1+1;
+  x1 = 0xc2fc0000;
   test_force(x0,x1);
+
+  // normal results: negative inputs
+  x0 = f32_to_bits(-126);
+  x1 = 0x80000000;
+  test_force(x0,x1);
+
+  // normal results: postive inputs
+  x0 = 0;
+  x1 = f32_to_bits(126.f);
+  test_force(x0,x1);
+#endif  
+
+  test_1pot(126.f);
 }
 
 int main(int argc, char** argv)
 {
+
   //scan_limits(); return 0;
+  float x = -128.f;
+  printf("exp2(%f) = %a %a\n", x, exp2f(x), f32_exp2(x));
   
   return test_run(argc, argv);
 }
