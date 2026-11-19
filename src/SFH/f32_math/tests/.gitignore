@@ -4,6 +4,7 @@ cbrt
 asin
 acos
 atan
+atanh
 asinpi
 acospi
 atanpi
@@ -17,9 +18,13 @@ acosh
 asinh
 exp
 exp2
+exp2m1
 expm1
+lgamma
 log2
 log2p1
 log
+log1p
 log21
 rsqrt
+tgamma
