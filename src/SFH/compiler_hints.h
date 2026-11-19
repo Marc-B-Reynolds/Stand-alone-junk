@@ -157,16 +157,25 @@
 
 // function attributes
 #if defined(__GNUC__) || defined(__clang__)
+#define hint_hot                __attribute__((__hot__))
+#define hint_small_hot          __attribute__((aligned(32),__hot__))
+#define hint_cold               __attribute__((__noinline__,__cold__))
 #define hint_flatten            __attribute__((__flatten__))
 #define hint_no_inline          __attribute__((__noinline__))
 #define hint_pure_func          __attribute__((__pure__))
 #define hint_const_func         __attribute__((__const__))
 #elif defined(_MSC_VER)
+#define hint_hot
+#define hint_small_hot
+#define hint_cold               __declspec(code_seg(".text$cold"))
 #define hint_no_inline          __declspec(noinline)
 #define hint_flatten
 #define hint_pure_func               
 #define hint_const_func
 #else
+#define hint_hot
+#define hint_small_hot
+#define hint_cold
 #define hint_flatten
 #define hint_no_inline
 #define hint_pure_fun
