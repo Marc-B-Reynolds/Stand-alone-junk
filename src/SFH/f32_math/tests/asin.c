@@ -47,9 +47,47 @@
 #define SAMPLE_X0 -1.f
 #define SAMPLE_X1  1.f
 
-//**********************************************************************
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return asinf(x); }
+
+// shortest on this range that can be faithfully
+// ~abs error = 2.537727133928723261062792857843111134758531206661e-9
+// ~rel error = 4.8467089328708679834127844130452675483925206809803e-9
+static inline double f32_asin_d4(double x)
+{
+  static const double C[] = {0x1.596d288dc7987p-5f, 0x1.8c283c3a5a46ap-6f, 0x1.747e4a3065be5p-5f, 0x1.3301e4689933p-4f, 0x1.5555c88340c2cp-3f};
+
+  return f64_horner_4(x,C);
+}
+
+#include "SFH/f64_util.h"
+
+static inline float f32_asin_dx(float X, double (*P)(double))
+{
+  double x = (double)X;
+  double a  = fabs(x);
+  double t  = fma(.5, -a, 0.5);
+  double u2 = (a > 0.5) ? t       : a*a;
+  double u  = (a > 0.5) ? sqrt(t) : a;
+  double r;
+
+  r = P(u2);
+  r = r * u2;
+  r = fma(r,u,u);
+
+  r = (a > 0.5) ? r+r : r;
+
+  // f64_add_half_pi doesn't change error
+  if (a > 0.5) r = (0.5*M_PI) - r;
+  
+  r = f64_mul_by_sign(r,x);
+  
+  return (float)r;
+}
+
+float asin_foo(float x) { return f32_asin_dx(x,f32_asin_d4); }
 
 float sleef_asinf(float d)
 {
@@ -152,7 +190,6 @@ float cephes_asinf(float x)
 
 // https://mastodon.gamedev.place/@eniko/115813868508988177
 // max abs error ~= 1.140559e-02
-// uica: 33.00/33.00 (clang 21.1.0 / gcc 15.2)
 float eniko(float x)
 {
   float c = 1.f - sqrtf(-fmaf(x,x,-1.f));
@@ -162,8 +199,7 @@ float eniko(float x)
 }
 
 // max abs error ~= 4.261762e-03
-// uica: 22.11/21.00  (skylake predicted throughput)
-float gross_0(float x)
+float f32_asin_a0(float x)
 {
   // Hastings 1955 style except forcing the constant
   // term of P so f(0) & f(1) are exact
@@ -183,8 +219,7 @@ float gross_0(float x)
 }
 
 // max abs error ~= 4.024506e-04
-// uica: 22.11/21.00 
-float gross_1(float x)
+float f32_asin_a1(float x)
 {
   // like above but 2nd order P
   //   P(x) = (c₁x + c₀)x - π/2
@@ -202,8 +237,7 @@ float gross_1(float x)
 
 
 // max abs error ~= 4.506111e-05
-// uica: 22.78/21.70
-float gross_2(float x)
+float f32_asin_a2(float x)
 {
   // like above but 3rd order P
   //   P(x) = ((c₂x + c₁)x + c₀)x - π/2
@@ -222,8 +256,7 @@ float gross_2(float x)
 
 
 // max abs error ~= 5.662441e-06
-// uica: 23.00/21.60
-float gross_3(float x)
+float f32_asin_a3(float x)
 {
   // like above but 4th order P
   //   P(x) = ((((c₃ + c₂)x + x + c₁)x + c₀)x - π/2
@@ -287,7 +320,7 @@ float asin_x1_k5(float x) { return f32_asin_x1(x, &f32_asincos_k5); }
 float asin_x1_k6(float x) { return f32_asin_x1(x, &f32_asincos_k6); }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -367,8 +400,7 @@ float cr_asinf(float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 func_entry_t func_table[] =
 {
@@ -382,6 +414,7 @@ func_entry_t func_table[] =
   ENTRY(asin_x0_k4),
   ENTRY(asin_x0_k5),
   ENTRY(asin_x0_k6),
+  ENTRY(asin_foo),
 
   ENTRY(asin_x1_k3),
   ENTRY(asin_x1_k4),
@@ -391,10 +424,10 @@ func_entry_t func_table[] =
   ENTRY(asin_bf),
 #if 1
   ENTRY(eniko),
-  ENTRY(gross_0),
-  ENTRY(gross_1),
-  ENTRY(gross_2),
-  ENTRY(gross_3),
+  ENTRY(f32_asin_a0),
+  ENTRY(f32_asin_a1),
+  ENTRY(f32_asin_a2),
+  ENTRY(f32_asin_a3),
 #endif  
 };
 
@@ -404,8 +437,7 @@ float cr_func(float x) { return cr_asinf(x); }
 
 #include "common.h"
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // asinf(x) = x on |x| < 0x1.d12edp-12
 void test_simple(void)
 {
