@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -24,6 +25,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,11 +42,15 @@
 
 #include "util.h"
 
-//**********************************************************************
+// testing test uniform range
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
+
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x)   { return acosf(x); }
 float libm_d(float x) { return (float)acos((double)x); }
-
 
 static const float
 pio2_hi = 1.5707962513e+00f, /* 0x3fc90fda */
@@ -309,73 +319,6 @@ float f32_acos_(float x)
 #endif
 }
 
-// branchfree direction WIP
-static inline float f32_acos_x3(float v, float (*P)(float))
-{
-  double x = (double)v;
-  double a = fabs(v);
-
-  // |x| <  0.5 : acos(x) = pi/2 -   asin(x)
-  // x   < -0.5 : acos(x) = pi   - 2 asin( sqrt((1+x)/2 )
-  // x   >  0.5 : acos(x) =        2 asin( sqrt((1-x)/2 )
-
-
-#if 0
-  uint32_t sx = f32_sign_bit(v);
-  uint64_t m  = f64_sign_mask(x);
-  double   c  = f64_from_bits(m & f64_to_bits(-f64_pi));
-  
-  double t, t2;
-  
-  if (a <= 0.5) {
-    t  = v;
-    t2 = v*v;
-    
-    double k  = P(v*v);
-    double r  = fma(x,x*x*k,x);        
-    return (float)(0.5*M_PI-r);
-  }
-  else {
-    t2 = 0.5*(1.0-a);
-    t  = f64_sqrt(t2);
-  }
-
-  double z  = 0.5*(1.0-a);         // exact: Sterbenz lemma
-  double t2 = z;
-  double t  = 2.0*f64_sqrt(t2);
-  double p  = (double)P((float)z);
-  double r  = fma(t, t2*p, t+c);
-
-  float    f  = (float)r;
-  uint32_t ir = f32_to_bits(f);
-
-  return f32_from_bits(f+e);
-#else
-  uint32_t sx = f32_sign_bit(v);
-  uint64_t m  = f64_sign_mask(x);
-  double   c  = f64_from_bits(m & f64_to_bits(-f64_pi));
-  
-  if (a <= 0.5) {
-    double k  = P(v*v);
-    double r  = fma(x,x*x*k,x);        
-    return (float)(0.5*M_PI-r);
-  } 
-
-  double z  = 0.5*(1.0-a);         // exact: Sterbenz lemma
-  double t2 = z;
-  double t  = 2.0*f64_sqrt(t2);
-  double p  = (double)P((float)z);
-  double r  = fma(t, t2*p, t+c);
-
-  
-  return f32_mulsign((float)r, sx);
-#endif  
-}
-
-
-float f32_acos_hq(float x) { return f32_acos_x2(x, &f32_asincos_k5); }
-float f32_acos(float x)    { return f32_acos_x2(x, &f32_asincos_k4); }
-
 
 #if 1
 double f32_atan_ue_dk(double x2)
@@ -417,9 +360,223 @@ float acos_bf(float a)
 #endif
 
 
+float f32_acos(float x)
+{
+  static const float C[] = {0x1.55554cp-3f, 0x1.33389ep-4f,
+                            0x1.6caabcp-5f, 0x1.04aedp-5f,
+                            0x1.d79aa8p-7f, 0x1.33d094p-5f };
+  float a = fabsf(x);
+  float r, t;
+
+  // approximate using asin kernel on [-1/2, 1/2]
+  //   acos(x) = π   - 2 asin(sqrt((1-x)/2))   : x < -1/2          : 0
+  //   acos(x) = π/2 -   asin(x)               : x on [-1/2,1/2]   : 1
+  //                   2 asin(sqrt((1-x)/2))   : x >  1/2          : 2
+  
+  t = sqrtf(fmaf(.5f, -a, 0.5f));
+  t = (a > 0.5f) ? t : a;
+  t = f32_mul_by_sign(t, x);
+  t = (a > 0.5f) ? t : -t;
+  
+  // asin(t) ≈ x + x³P(x²)) on [-1/2,1/2]
+  float t2 = t*t;
+
+#if 1
+  r =             C[5];
+  r = fmaf(r, t2, C[4]);
+  r = fmaf(r, t2, C[3]);
+  r = fmaf(r, t2, C[2]);
+  r = fmaf(r, t2, C[1]);
+  r = fmaf(r, t2, C[0]);
+  r = r * t2;
+  r = fmaf(r, t, t);
+#else
+  r = t2* f32_asincos_k4(t2);
+  r = fmaf(r, t, t);
+#endif  
+  
+  // r + π/2 (extended precision in one fma)
+  float ar = f32_add_half_pi(r);
+  
+  // complete range reduction transforms
+  r = (x <= 0.5f) ? ar    : r;
+  r = (a >  0.5f) ? (r+r) : r;
+  
+  return r;
+}
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
+/*
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/*
+ * Fast version of acosf
+ * Max ULP: 1.53
+ * This routine does not handle special cases such as NaN/INF
+ *
+ * Signature:
+ *   float acosf(float x)
+ *
+ * Spec:
+ *   acosf(0)    = pi/2
+ *   acosf(1)    = 0
+ *   acosf(-1)   = pi
+ *   acosf(+inf) = NaN
+ *   acosf(-inf) = NaN
+ *
+ *
+ ********************************************
+ * Implementation Notes
+ * ---------------------
+ * To compute acosf(float x)
+ *
+ * Based on the value of x, acosf(x) is calculated as,
+ *
+ * 1. If x > 0.5
+ *      acosf(x) = 2 * asinf(sqrt((1 - x) / 2))
+ *
+ * 2. If x < -0.5
+ *      acosf(x) = pi - 2asinf(sqrt((1 + x) / 2))
+ *
+ * 3. If x <= |0.5|
+ *      acosf(x) = pi / 2 - asinf(x)
+ *
+ * 4.   acosf(-x) = 1 / 2 * pi + asinf(x)
+ *
+ * acosf(x) is calculated using the polynomial,
+ *      x + C1*x^3 + C2*x^5 + C3*x^7 + C4*x^9 + C5*x^11
+ *
+ */
+
+#include "amd_source.h"
+
+static struct {
+  float const piby2, pi;
+  float half;
+  float a[2], b[2], poly_acosf[5];
+} acosf_data = {
+  .piby2      = 1.5707963705e+00F,
+  .pi         = 3.1415926535897933e+00F,
+  .half       = 0x1p-1,
+  .a          = {
+    0,
+    0x1.921fb6p-1,
+  },
+  .b          = {
+    0x1.921fb6p0,
+    0x1.921fb6p-1,
+  },
+  /* Polynomial coefficients*/
+  .poly_acosf = {
+    0x1.5555fcp-3,
+    0x1.32f8d8p-4,
+    0x1.7525aap-5,
+    0x1.86e46ap-6,
+    0x1.5d456cp-5,
+  },
+};
+
+#define ALM_ACOSF_PIBY2 acosf_data.piby2
+#define ALM_ACOSF_PI    acosf_data.pi
+#define ALM_ACOSF_HALF  acosf_data.half
+
+#define A acosf_data.a
+#define B acosf_data.b
+
+#define C1 acosf_data.poly_acosf[0]
+#define C2 acosf_data.poly_acosf[1]
+#define C3 acosf_data.poly_acosf[2]
+#define C4 acosf_data.poly_acosf[3]
+#define C5 acosf_data.poly_acosf[4]
+
+float amd_acos(float x)
+{
+    float y, z, poly, result;
+    unsigned int ux, aux, xneg;
+    int xexp;
+    int32_t n = 0;
+
+    ux   = asuint32 (x);
+
+    /* Get absolute value of input */
+    aux  = (ux & ~SIGNBIT_SP32);
+
+    /* Get sign of input */
+    xneg = (ux & SIGNBIT_SP32);
+
+    /* Get the exponent part */
+    xexp = (int)((ux & EXPBITS_SP32) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+
+    if (xexp < -26)
+    {
+        /* Input small enough that arccos(x) = pi/2 */
+        return ALM_ACOSF_PIBY2;
+    }
+    else if (xexp >= 0)
+    {   /* abs(x) >= 1.0 */
+        if (x == 1.0F)
+            return 0.0F;
+        else if (x == -1.0F)
+            return ALM_ACOSF_PI;
+    }
+
+    y = asfloat(aux);
+
+    if (y > ALM_ACOSF_HALF)
+    {
+        z = ALM_ACOSF_HALF * (1.0f - y);
+        y = -2.0f * ALM_PROTO_KERN(sqrtf)(z);
+    }
+    else
+    {
+        n = 1;
+        z = y * y;
+    }
+    /*
+     *  Compute acosf(x) using the polynomial
+     *  x + C1*x^3 + C2*x^5 + C3*x^7 + C4*x^9 + C5*x^11
+     */
+    poly = POLY_EVAL_5(z, C1, C2, C3, C4, C5);
+    poly = y + y * z * poly;
+
+    if (xneg)
+        result = (B[n] + poly) + B[n];
+    else
+        result = (A[n] - poly) + A[n];
+
+    return result;
+}
+
+// re-enable any disabled warnings from "amd_source.h"
+#pragma GCC diagnostic pop
+// end of AMD
+
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -497,51 +654,63 @@ float cr_acosf(float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
 
+//────────────────────────────────────────────────────────────────────────────────────
 
-float f32_acos_x1_3(float x)  { return f32_acos_x1(x, &f32_asincos_k3); }
-float f32_acos_x1_4(float x)  { return f32_acos_x1(x, &f32_asincos_k4); }
-float f32_acos_x1_5(float x)  { return f32_acos_x1(x, &f32_asincos_k5); }
-float f32_acos_x1_6(float x)  { return f32_acos_x1(x, &f32_asincos_k6); }
+float f32_acos_x0_r1(float x) { return f32_acos_x0(x, &f32_asincos_r1); }
+float f32_acos_x0_r2(float x) { return f32_acos_x0(x, &f32_asincos_r2); }
 
-float f32_acos_x2_3(float x)  { return f32_acos_x2(x, &f32_asincos_k3); }
-float f32_acos_x2_4(float x)  { return f32_acos_x2(x, &f32_asincos_k4); }
-float f32_acos_x2_5(float x)  { return f32_acos_x2(x, &f32_asincos_k5); }
-float f32_acos_x2_6(float x)  { return f32_acos_x2(x, &f32_asincos_k6); }
+float f32_acos_x0_3(float x)  { return f32_acos_x0(x, &f32_asincos_k3); }
+//float f32_acos_x1_3(float x)  { return f32_acos_x1(x, &f32_asincos_k3); }
+//float f32_acos_x3_3(float x)  { return f32_acos_x0(x, &f32_asincos_k3); }
 
-float f32_acos_x3_3(float x)  { return f32_acos_x3(x, &f32_asincos_k3); }
-float f32_acos_x3_4(float x)  { return f32_acos_x3(x, &f32_asincos_k4); }
-float f32_acos_x3_5(float x)  { return f32_acos_x3(x, &f32_asincos_k5); }
-float f32_acos_x3_6(float x)  { return f32_acos_x3(x, &f32_asincos_k6); }
+float f32_acos_x0_4(float x)  { return f32_acos_x0(x, &f32_asincos_k4); }
+float f32_acos_px_4(float x)  { return f32_acos_px(x, &f32_asincos_k4); }
+//float f32_acos_x3_4(float x)  { return f32_acos_x0(x, &f32_asincos_k4); }
+
+float f32_acos_x0_5(float x)  { return f32_acos_x0(x, &f32_asincos_k5); }
+//float f32_acos_x1_5(float x)  { return f32_acos_x1(x, &f32_asincos_k5); }
+//float f32_acos_x3_5(float x)  { return f32_acos_x0(x, &f32_asincos_k5); }
+
+float f32_acos_x0_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
+//float f32_acos_x1_6(float x)  { return f32_acos_x1(x, &f32_asincos_k6); }
+//float f32_acos_x3_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
 
 func_entry_t func_table[] =
 {
-  ENTRY(libm),
   //ENTRY(libm_d),
   //ENTRY(fdlibm_acosfu),
   //ENTRY(fdlibm_acosf),
   //ENTRY(sleef_acosf),
+  //ENTRY(amd_acos),          // out 2 ulp and slower than local faithfully rounded
   //ENTRY(f32_acos_),
   //ENTRY(f32_acos),
-#if 0
-  ENTRY(f32_acos_x1_3),
-  ENTRY(f32_acos_x2_3),
-  ENTRY(f32_acos_x3_3),
+  ENTRY(libm),
+#if 1
+//ENTRY(f32_acos_a0),
+
+  ENTRY(f32_acos_x0_r1),
+
+  ENTRY(f32_acos_x0_3),
+  //ENTRY(f32_acos_x1_3),
+  //ENTRY(f32_acos_x3_3),
   
-  ENTRY(f32_acos_x1_4),
-  ENTRY(f32_acos_x2_4),
-  ENTRY(f32_acos_x3_4),
+  ENTRY(f32_acos_x0_r2),
 
-  ENTRY(f32_acos_x1_5),
-  ENTRY(f32_acos_x2_5),
-  ENTRY(f32_acos_x3_5),
+  ENTRY(f32_acos_px_4),
+  ENTRY(f32_acos_x0_4),
+  //ENTRY(f32_acos_x1_4),
+  //ENTRY(f32_acos_x3_4),
 
-  ENTRY(f32_acos_x1_6),
-  ENTRY(f32_acos_x2_6),
-  ENTRY(f32_acos_x3_6),
+  ENTRY(f32_acos_x0_5),
+  //ENTRY(f32_acos_x1_5),
+  //ENTRY(f32_acos_x3_5),
+
+  ENTRY(f32_acos_x0_6),
+  //ENTRY(f32_acos_x1_6),
+  //ENTRY(f32_acos_x3_6),
 #else
-  ENTRY(acos_bf),
+  ENTRY(f32_acos),
 #endif  
 };
 
@@ -551,8 +720,7 @@ float cr_func(float x) { return cr_acosf(x); }
 
 #include "common.h"
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // validating range that f(x) = pi/2
 //  f(x) = pi/2 on [0x1.110b46p-26,-0x1.bbbd2ep-24]
 void scan_constant(void)
@@ -580,11 +748,15 @@ void scan_constant(void)
 
 void test_spot(void)
 {
+#if 0
   test_1pot_pn(1.f/32.f);
   test_1pot_pn(1.f/16.f);
   test_1pot_pn(1.f/ 8.f);
   test_1pot_pn(1.f/ 4.f);
   test_1pot_pn(1.f/ 2.f);
+#else
+  test_force(f32_to_bits(1.f/32.f), f32_to_bits(1.f));
+#endif
 }
 
 void test_all(void)
@@ -608,8 +780,25 @@ void test_sanity(void)
 {
 }
 
+#include "dref.h"
+
+void foo(void)
+{
+  uint32_t x0 = f32_to_bits(0.125f);
+  uint32_t x1 = f32_to_bits(1.f);
+
+  do {
+    float x  = f32_from_bits(x0);
+    float r0 = f32_acos_x0_4(x);
+    float r1 = f32_acos_px_4(x);
+    if (r0 != r1) { printf("%f %f %f\n", x,r0,r1); }
+  } while(x0++ < x1);
+}
+
+
 int main(int argc, char** argv)
 {
+  //foo(); return 0;
   //scan_constant(); return 0;
   return test_run(argc, argv);
 }
