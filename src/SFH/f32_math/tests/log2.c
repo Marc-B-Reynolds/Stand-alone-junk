@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // nothing here yet.
@@ -27,6 +28,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#if defined(__linux__) || defined(__unix__)
+// for thread affinity
+#define _GNU_SOURCE 
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -39,11 +45,16 @@
 #include "internal/f32_math_common.h"
 #include "util.h"
 
-//**********************************************************************
+
+// testing test uniform range
+#define SAMPLE_X0 0.f
+#define SAMPLE_X1 3.f  // make a better range reduction based choice
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return log2f(x); }
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -147,14 +158,12 @@ float cr_log2f(float x) {
 
 #pragma GCC diagnostic pop
 
-//********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // Copyright (c) 2017-2025, Arm Limited.
 // SPDX-License-Identifier: MIT OR Apache-2.0 WITH LLVM-exception
 
 
-
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 //   Cephes Math Library Release 2.2:  June, 1992
 //   Copyright 1984, 1987, 1988, 1992 by Stephen L. Moshier
 //   Direct inquiries to 30 Frost Street, Cambridge, MA 02140
@@ -235,8 +244,7 @@ float log2_cephes(float xx)
   return z;
 }
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 // x on [1,2]
 // |    func|   max ULP|        CR|        FR|     2 ULP|   > 2 ULP|       CR%|       FR%|    2 ULP%|  > 2 ULP%|         abs|
@@ -323,10 +331,10 @@ func_entry_t func_table[] =
 
   // these are temp hacks for testing them..don't belong
   ENTRY(log2_cephes),
-  ENTRY(log2_h2),
-  ENTRY(log2_h3),
-  ENTRY(log2_h4),
-  ENTRY(log2_h5),
+  //ENTRY(log2_h2),
+  //ENTRY(log2_h3),
+  //ENTRY(log2_h4),
+  //ENTRY(log2_h5),
 };
 
 const char* func_name = "log2f";
@@ -335,8 +343,7 @@ float cr_func(float x) { return cr_log2f(x); }
 
 #include "common.h"
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // ALL JUNK BELOW HERE
 
 void scan_limits(void)
