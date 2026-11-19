@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -40,12 +41,13 @@
 #include "internal/f32_cbrt.h"
 #include "util.h"
 
-//**********************************************************************
+
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return cbrtf(x); }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 // temp hack only: works but sucky. need to move to bit manipulation
 #if 0
@@ -81,7 +83,7 @@ float f32_cbrt_6(float x) { return f32_cbrt_fxd(x, &f32_cbrt_d1); }
 float f32_cbrt_7(float x) { return f32_cbrt_fxd(x, &f32_cbrt_d2); }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -138,8 +140,7 @@ float cr_cbrtf (float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 func_entry_t func_table[] =
 {
@@ -161,8 +162,7 @@ float cr_func(float x) { return cr_cbrtf(x); }
 
 #include "common.h"
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // move to common.h
 
 void test_spot(void)

@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 // Marc B. Reynolds, 2022-2023
 
@@ -18,8 +19,7 @@
 
 #include "util.h"
 
-
-//********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // helpers: mostly to make the code more readable than
 // the original versions & easier to experiment.
 
@@ -74,7 +74,7 @@ static inline float f32_rsqrt_nr_bar(float x, float y)
   return fmaf(y,fmaf(h,t,v),y);
 }
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 static inline float f32_rsqrt_quake_step(float x, uint32_t K)
 {
@@ -91,9 +91,7 @@ static inline float f32_rsqrt_initial_md(float x, uint32_t K)
   return f32_from_bits((K-f32_to_bits(x)) >> 1);
 }
 
-//*********************************************************************
-
-
+//────────────────────────────────────────────────────────────────────────────────────
 // Mike Day core routines as in paper. Without star is paper
 // and contractions are disabled. Starred versions are explict FMAs
 // where version choosen uses the greedy measure to minimize
@@ -244,8 +242,7 @@ float rsqrt_day_cr(float x)
   return y;
 }
 
-//*********************************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 // Walczyk, Moroz, Cieslinski, Cezary:
 // "InvSqrt2" - modified to use FMA
 //    no constant refinement
@@ -265,7 +262,7 @@ float rsqrt_wmc(float x)
   return x;
 }
 
-//*********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // "Modified Fast Inverse Square Root and Square Root Approximation
 //  Algorithms: The Method of Switching Magic Constants"
 //  Moroz, Volodymyr, Samotyy and Horyachyy, 2021
@@ -287,7 +284,7 @@ float rsqrt_msh(float x)
 }
 
 
-//*********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 #include <x86intrin.h>
 
@@ -333,7 +330,7 @@ float rsqrt_nope(float x)
   return f32_sqrt(x)*(1.f/x);
 }
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 func_entry_t func_table[] =
 {
@@ -374,7 +371,7 @@ float cr_func(float x) { return f32_rsqrt_cr(x); }
 
 #include "common.h"
 
-//********************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 void test_spot(void)
 {

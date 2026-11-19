@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
 // *****EXCEPT:************************
@@ -49,7 +50,7 @@
 #define UNUSED
 #endif
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return acosf(x)/((float)M_PI); }
 
@@ -58,7 +59,7 @@ float libm_crdiv(float x) { return f32_up_mul(f32_up_pi_i, acosf(x)); }
 
 
 
-//******************************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 
 #include "internal/f32_acospi_sb.h"
 
@@ -116,7 +117,7 @@ float f32_acospi_c6(float x) { return f32_acospi_x1(&f32_asinpi_k6, x); }
 //float f32_acospi_c8(float x) { return f32_acospi_x1(&f32_asinpi_k8, x); }
 
 
-//**********************************************************************
+//────────────────────────────────────────────────────────────────────────────────────
 // SEE: https://core-math.gitlabpages.inria.fr
 // and license info at top of file.
 
@@ -205,8 +206,7 @@ float cr_acospif(float x){
 
 #pragma GCC diagnostic pop
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 #if !defined(WIP_FUNC)
 
@@ -258,8 +258,7 @@ float cr_func(float x) { return cr_acospif(x); }
 
 #include "common.h"
 
-//********************************************************
-
+//────────────────────────────────────────────────────────────────────────────────────
 
 // validating range that f(x)=1/2
 void scan_half(void)
