@@ -89,7 +89,7 @@ float cr_tanpif(float x){
 #ifdef CORE_MATH_SUPPORT_ERRNO
 	errno = EDOM;
 #endif
-	feraiseexcept (FE_INVALID);
+	//feraiseexcept (FE_INVALID);  // MBR: don't care
 	return __builtin_nanf("inf");
       }
       return x + x; // x = nan

@@ -168,7 +168,7 @@ float cr_tanf(float x){
 #ifdef CORE_MATH_SUPPORT_ERRNO
     errno = EDOM;
 #endif
-    feraiseexcept(FE_INVALID);
+    //feraiseexcept(FE_INVALID);  MBR: don't care
     return __builtin_nanf("tinf"); // inf
   }
   double z2 = z*z, z4 = z2*z2;
