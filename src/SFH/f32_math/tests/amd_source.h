@@ -1,4 +1,4 @@
-// compact junk for testing AMD version
+// compact junk for testing AMD versions
 
 /*
  * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
