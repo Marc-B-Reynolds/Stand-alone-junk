@@ -248,25 +248,28 @@ static inline float asin_hi_d_bf(float a)
 //   acos(x) = π/2 -   asin(x)                : x on [-1/2,1/2]   : 1
 //           =       2 asin(sqrt((1-|x|)/2))  : x >  1/2          : 2
 //
-// ∙ this is structured to be branchfree (stupid compilers)
+// ∙ this is "structured" to be branchfree (stupid compilers)
 
-static inline float f32_acos_x(float x, float (*P)(float))
+static inline float f32_acos_x0(float x, float (*P)(float))
 {
   float a = fabsf(x);
-  float r, t;
-  
-  // (1-x)/2 computation is exact (Sterbenz)
-  t = sqrtf(fmaf(.5f, -a, 0.5f));
-  t = (a > 0.5f) ? t : a;
-  t = f32_mul_by_sign(t, x);
-  t = (a > 0.5f) ? t : -t;
+  float t  = fmaf(.5f, -a, 0.5f);   // exact: Sterbenz
+  float r, u;
+
+  // inital range reduction steps
+  u = sqrtf(t);
+  u = (a > 0.5f) ? u : a;
+  u = f32_mul_by_sign(u, x);
+  u = (a > 0.5f) ? u : -u;
+
+  // slightly more accurate this way and the
+  // sqrt doesn't need to be completed until the end
+  float u2 = (a > 0.5f) ? t : u*u;
 
   // compute the core approximation
-  float t2 = t*t;
-
-  r = P(t2);
-  r = r * t2;
-  r = fmaf(r, t, t);
+  r = P(u2);
+  r = r * u2;
+  r = fmaf(r, u, u);
   
   // r + π/2 (extended precision in one fma)
   float ar = f32_add_half_pi(r);
@@ -280,6 +283,25 @@ static inline float f32_acos_x(float x, float (*P)(float))
 
 
 // add: same as f32_acos_x but with input limited to x ≥ 0.
-// reintroduce deferred sqrt which should be bit identical
+static inline float f32_acos_px(float x, float (*P)(float))
+{
+  float t  = fmaf(.5f, -x, 0.5f);
+  float r, u;
+
+  u = sqrtf(t);
+  u = (x > 0.5f) ? u : -x;
+  float u2 = (x > 0.5f) ? t : x*x;
+
+  r = P(u2);
+  r = r * u2;
+  r = fmaf(r, u, u);
+  
+  float ar = f32_add_half_pi(r);
+
+  r += r;
+  r  = (x > 0.5f) ? r : ar;
+  
+  return r;
+}
 
 
