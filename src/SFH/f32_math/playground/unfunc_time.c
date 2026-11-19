@@ -1,19 +1,28 @@
 // -*- coding: utf-8 -*-
 
+#if defined(__linux__) || defined(__unix__)
 // for thread affinity
 #define _GNU_SOURCE 
+#endif
 
 #include <stdint.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
 
+// this is temp hack garbage
+#if defined(__linux__) || defined(__unix__)
 #include <unistd.h>
 #include <time.h>
-//#include <errno.h> // sigh
 #include <pthread.h>
 #include <sched.h>
 #include <sys/personality.h>
+#elif defined(_WIN32)
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <unistd.h>
+#include <time.h>
+#else
+#endif
 
 #include "SFH/compiler_hints.h"
 #include "SFH/bitops.h"
@@ -155,15 +164,15 @@ static inline float asin_d_hi_fr(float a)
 float asin_r2(float x) { return asin_wrap(x,f32_asincos_r2); }
 float asin_k4(float x) { return asin_wrap(x,f32_asincos_k4); }
 
-#define X0 -0.5f
-#define X1  0.5f
+#define SAMPLE_X0 -0.5f
+#define SAMPLE_X1  0.5f
 
 #else
 float asin_r2(float x) { return f32_asin_x1(x,f32_asincos_r2); }
 float asin_k4(float x) { return f32_asin_x1(x,f32_asincos_k4); }
 
-#define X0  0.5f
-#define X1  1.f
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
 #endif
 
 
@@ -186,8 +195,14 @@ typedef struct {
      
 func_entry_t func_table[] =
 {
+  ENTRY(sinf),
+  ENTRY(cosf),
   ENTRY(asinf),
+  ENTRY(acosf),
   ENTRY(exp2f),
+  ENTRY(expf),
+  ENTRY(log2f),
+  ENTRY(logf),
   //ENTRY(asin_r2),
   //ENTRY(asin_k4),
   //ENTRY(asin_bf),
@@ -244,26 +259,26 @@ static inline uint64_t time_get(void)
 
 volatile float global_sink = 0;
 
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__arm64__) || defined(__aarch64__)
-
-
-#define HINT_ASMC_F "w"
-#else
-#define HINT_ASMC_F "x"
-#endif
-#define HINT_ASMC_I "r"
+#ifndef SAMPLE_X0
+#define SAMPLE_X0 0.f
+#define SAMPLE_WARN
 #endif
 
-//#define asm_volatile __asm__ __volatile__
-//#define hint_alive_fp(V)  ({ typeof(V) _v = (V); asm_volatile("" : "+" HINT_ASMC_F (_v)); _v; })
+#ifndef SAMPLE_X1
+#define SAMPLE_X1 1.f
+#define SAMPLE_WARN
+#endif
+
+#ifdef SAMPLE_WARN
+#warning "set sampling ranges"
+#endif
 
 void time_func(float (*f)(float), int32_t n)
 {
   float sink = 0;
 
   while(n-- > 0) {
-    float x = fmaf(((X1)-(X0)), prng_f32(), X0);
+    float x = fmaf(((SAMPLE_X1)-(SAMPLE_X0)), prng_f32(), SAMPLE_X0);
     sink += f(x);
   }
 
@@ -456,15 +471,15 @@ int is_aslr_disabled(void)
   return (r & ADDR_NO_RANDOMIZE) != 0;
 }
 
-
-void timing_hack(void)
+int main(int argc, char** argv)
 {
+  (void)argc;
+
   if (time_cycles)
     time_string = time_string_cycles;
   else
     time_string = time_string_ns;
     
-  
   // doesn't matter if it fails. just a hack
   // when using __rdtsc to have less fails
   // of counter reads (if thread switches
@@ -474,7 +489,7 @@ void timing_hack(void)
   
   // if fails probably forgot to sudo
   if (!set_thread_max_priority(pthread_self()))
-    printf("thread priority: default (did you sudo?)\n");
+    printf("thread priority: default (did you: sudo setarch -R %s)\n", argv[0]);
   else
     printf("thread priority: realtime\n");
 
@@ -483,12 +498,8 @@ void timing_hack(void)
   else
     printf("ALSR:            enabled\n");
 
-  printf("uniform samples: [%f,%f]\n", X0,X1);
+  printf("uniform samples: [%f,%f]\n", SAMPLE_X0,SAMPLE_X1);
   timing_test(func_table,  LENGTHOF(func_table));
-}
 
-int main(void)
-{
-  timing_hack();
   return 0;
 }
