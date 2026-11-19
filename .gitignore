@@ -27,3 +27,6 @@ src/SFH/intops/binomial
 *.o
 /src/SFH/backup
 src/SFH/f32_math/tests/erf
+src/SFH/f32_math/tests/atanh
+src/SFH/f32_math/tests/atanh
+src/SFH/f32_math/tests/atanh
