@@ -44,7 +44,7 @@ procedure asin_build_dp(basis, x0,x1)
 
   print("// ~abs error =", r.aerror);
   print("// ~rel error =", r.rerror);
-  f32_print_kernel_list("f32_asin_d" @ (length(c)-1) , c);
+  f64_print_kernel_list("f32_asin_d" @ (length(c)-1) , c);
   
   return r;
 };
@@ -52,7 +52,6 @@ procedure asin_build_dp(basis, x0,x1)
 
 // attempt a branchfree select but need [0,1/2] to be in doubles
 D5 = asin_build_dp([|3,5,7,9,11|], x0,x1);
-
 
 // I haven't tried but there doesn't appear to be any "margin" in being fancy.
 if (false) then {
