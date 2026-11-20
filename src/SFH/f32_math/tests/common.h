@@ -120,6 +120,31 @@ void test_force(uint32_t x0, uint32_t x1)
   error_dump_i(error);
 }
 
+void test_scan_peak(float (*f)(float), uint32_t x0, uint32_t x1)
+{
+  if (x1 < x0) { uint32_t t = x0; x0=x1; x1=t; }
+
+  float f0 = f32_from_bits(x0);
+  float f1 = f32_from_bits(x1);
+  
+  printf("\nprogressive peak error: %s on [%08x,%08x] [%e,%e]\n", func_name, x0,x1,f0,f1);
+
+  uint32_t max = 0;
+  
+  for(uint32_t ix = x0; ix<x1; ix++) {
+    float x  = f32_from_bits(ix);
+    float cr = cr_func(x);
+    float r  = f(x);
+    if (cr == r) continue;
+    uint32_t ulp = f32_ulp_dist(cr,r);
+    if (ulp <= max) continue;
+
+    max = ulp;
+    
+    printf("  %8d : %a %a %a (%f %f %f)\n", ulp, x, cr, r,x,cr,r);
+  }
+}
+
 
 // correctly rounded f(x) = RN(kx) on [x0,x1]
 void test_linear_range(uint32_t x0, uint32_t x1, float k)
