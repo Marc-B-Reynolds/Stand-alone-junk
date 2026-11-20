@@ -677,7 +677,6 @@ float f32_acos_x0_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
 //float f32_acos_x3_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
 
 
-// frown.
 float f32_acos_a0(float x)
 {
   static const float c0 = 0.17539402770089185f;
@@ -688,33 +687,24 @@ float f32_acos_a0(float x)
   float t = sqrtf(1.f-a);                    // sqrt(1-|x|)
   float p = fmaf(x,c0,-k);                   // P(x)
 
-#if 0  
-  h = (x <= 0.f) ? h : 0;
-
+  // the cancellation of π/2 terms in the positive
+  // case is on purpose. Removing it increase the work
+  // needed...notiably for handling ±0.
   return h-fmaf(t,p,k);
-#else
-  return h-fmaf(t,p,k);
-#endif  
 }
 
 float f32_acos_a1(float x)
 {
   static const float c1 = -0.05344910528338329f;
   static const float c0 =  0.20744683027439512f;
-  
+
   float h = f32_pi/2.f;
   float k = f32_mul_by_sign(h,x);
   float a = fabsf(x);
   float t = sqrtf(1.f-a);
   float p = fmaf(x,fmaf(a,c1,c0),-k);
 
-#if 0  
-  h = (x <= 0.f) ? h : 0;
-
   return h-fmaf(t,p,k);
-#else
-  return h-fmaf(t,p,k);
-#endif  
 }
 
 float f32_acos_a2(float x)
@@ -729,13 +719,7 @@ float f32_acos_a2(float x)
   float t = sqrtf(1.f-a);
   float p = fmaf(x,fmaf(a,fmaf(a,c2,c1),c0),-k);
 
-#if 0  
-  h = (x <= 0.f) ? h : 0;
-
   return h-fmaf(t,p,k);
-#else
-  return h-fmaf(t,p,k);
-#endif  
 }
 
 float f32_acos_a3(float x)
@@ -751,13 +735,7 @@ float f32_acos_a3(float x)
   float t = sqrtf(1.f-a);
   float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,c3,c2),c1),c0),-k);
 
-#if 0  
-  h = (x <= 0.f) ? h : 0;
-
   return h-fmaf(t,p,k);
-#else
-  return h-fmaf(t,p,k);
-#endif  
 }
 
 
@@ -843,6 +821,8 @@ void test_spot(void)
   test_1pot_pn(1.f/ 4.f);
   test_1pot_pn(1.f/ 2.f);
 #else
+  //test_scan_peak(f32_acos_a0, f32_to_bits(-1.f/32.f), f32_to_bits(-1.f));
+  
   test_force(f32_to_bits(-1.f/32.f), f32_to_bits(-1.f));
   test_force(f32_to_bits( 1.f/32.f), f32_to_bits( 1.f));
 #endif
@@ -888,12 +868,14 @@ void foo(void)
 int main(int argc, char** argv)
 {
   float x = -0.75f;
-  printf("%f %f\n", f32_acos_a1(x), acosf(x));
+  x = -1.0f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x));
+  x = -0.5f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x));
+  x = -0.0f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x));
+  x =  0.0f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x));
+  x =  0.5f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x));
+  x =  1.0f; printf("%f %f\n", f32_acos_a0(x), cr_acosf(x)); //return 0;
   
   //foo(); return 0;
   //scan_constant(); return 0;
   return test_run(argc, argv);
 }
-
-
-
