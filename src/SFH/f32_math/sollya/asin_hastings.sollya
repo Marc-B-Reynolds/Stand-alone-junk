@@ -29,30 +29,38 @@ k  = -single(pi/2)*tx;         //  (ditto)
 // rounded to the number of precision bits and B to an
 // explict list of that number.
 
+// accurateinfnorm takes too long to be worthwhile
+
+display = hexadecimal!;
+
 b0 = [|tx*x|];
 P0 = fpminimax(F, b0, B, R, T, E, k);
 P0;
-print("norm = ", accurateinfnorm(F-P0, R, 23), "\n");
+print("norm = ", dirtyinfnorm(F-P0, R), "\n");
 
-/*
 b1 = [|tx*x,x^2*tx|];
 P1 = fpminimax(F, b1, B, R, T, E, k);
 P1;
-print("norm = ", accurateinfnorm(F-P1, R, 23), "\n");
+print("norm = ", dirtyinfnorm(F-P1, R), "\n");
 
 b2 = [|tx*x,tx*x^2,tx*x^3|];
 P2 = fpminimax(F, b2, B, R, T, E, k);
 P2;
-print("norm = ", accurateinfnorm(F-P2, R, 23), "\n");
+print("norm = ", dirtyinfnorm(F-P2, R), "\n");
 
 b3 = [|tx*x,tx*x^2,tx*x^3,tx*x^4|];
 P3 = fpminimax(F, b3, B, R, T, E, k);
 P3;
-print("norm = ", accurateinfnorm(F-P3, R, 23), "\n");
-*/
+print("norm = ", dirtyinfnorm(F-P3, R), "\n");
 
-//
-b0 = [|tx,tx*x|];
-P0 = fpminimax(F, b0, B, R, T, E);
-P0;
-print("norm = ", accurateinfnorm(F-P0, R, 23), "\n");
+b4 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5|];
+P4 = fpminimax(F, b4, B, R, T, E, k);
+P4;
+print("norm = ", dirtyinfnorm(F-P4, R), "\n");
+
+b5 = [|tx*x,tx*x^2,tx*x^3,tx*x^4,tx*x^5,tx*x^6|];
+P5 = fpminimax(F, b5, B, R, T, E, k);
+P5;
+print("norm = ", dirtyinfnorm(F-P5, R), "\n");
+
+
