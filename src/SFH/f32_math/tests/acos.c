@@ -677,6 +677,7 @@ float f32_acos_x0_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
 //float f32_acos_x3_6(float x)  { return f32_acos_x0(x, &f32_asincos_k6); }
 
 
+// abs error: 
 float f32_acos_a0(float x)
 {
   static const float c0 = 0.17539402770089185f;
@@ -689,10 +690,11 @@ float f32_acos_a0(float x)
 
   // the cancellation of π/2 terms in the positive
   // case is on purpose. Removing it increase the work
-  // needed...notiably for handling ±0.
+  // needed...notably for handling ±0.
   return h-fmaf(t,p,k);
 }
 
+// abs error: 
 float f32_acos_a1(float x)
 {
   static const float c1 = -0.05344910528338329f;
@@ -707,6 +709,7 @@ float f32_acos_a1(float x)
   return h-fmaf(t,p,k);
 }
 
+// abs error: 
 float f32_acos_a2(float x)
 {
   static const float c2 =  0.021641525571976804f;
@@ -722,6 +725,7 @@ float f32_acos_a2(float x)
   return h-fmaf(t,p,k);
 }
 
+// abs error: 
 float f32_acos_a3(float x)
 {
   static const float c3 = -0.010044210004718978f; 
@@ -734,6 +738,43 @@ float f32_acos_a3(float x)
   float a = fabsf(x);
   float t = sqrtf(1.f-a);
   float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,c3,c2),c1),c0),-k);
+
+  return h-fmaf(t,p,k);
+}
+
+// abs error: 
+float f32_acos_a4(float x)
+{
+  static const float c4 =  0x1.4bd458p-8f;
+  static const float c3 = -0x1.57f016p-6f;
+  static const float c2 =  0x1.7ae748p-5f;
+  static const float c1 = -0x1.69a5acp-4f;
+  static const float c0 =  0x1.b76b9ap-3f;
+  
+  float h = f32_pi/2.f;
+  float k = f32_mul_by_sign(h,x);
+  float a = fabsf(x);
+  float t = sqrtf(1.f-a);
+  float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,fmaf(a,c4,c3),c2),c1),c0),-k);
+
+  return h-fmaf(t,p,k);
+}
+
+// abs error: 
+float f32_acos_a5(float x)
+{
+  static const float c5 = -0x1.64fd5ap-9f;
+  static const float c4 =  0x1.941a0ap-7f;
+  static const float c3 = -0x1.cce15cp-6f;
+  static const float c2 =  0x1.949beap-5f;
+  static const float c1 = -0x1.6c11d2p-4f;
+  static const float c0 =  0x1.b77e22p-3f;
+  
+  float h = f32_pi/2.f;
+  float k = f32_mul_by_sign(h,x);
+  float a = fabsf(x);
+  float t = sqrtf(1.f-a);
+  float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,fmaf(a,fmaf(a,c5,c4),c3),c2),c1),c0),-k);
 
   return h-fmaf(t,p,k);
 }
@@ -754,6 +795,8 @@ func_entry_t func_table[] =
   ENTRY(f32_acos_a1),
   ENTRY(f32_acos_a2),
   ENTRY(f32_acos_a3),
+  ENTRY(f32_acos_a4),
+  ENTRY(f32_acos_a5),
 
   ENTRY(f32_acos_x0_r1),
 
