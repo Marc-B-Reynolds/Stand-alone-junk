@@ -1,0 +1,50 @@
+// -*- mode: c; -*- 
+
+// classic polynomial approximation of tan on [-1,1] (unit extent)
+// x + x^3 P(x^2)
+
+// set up some globals
+x0 = 2^-225;
+x1 = 1;
+
+execute("util.sollya");
+
+// x + x^3 P(x^2)
+procedure build(basis, x0,x1)
+{
+  var r,c;
+
+  // build the approximation and dump P. need to drop
+  // the coefficient of 'x' (which is constrained to 1)
+  r = f32_build_constrained(tan(x), basis, x0, x1, x);
+  c = tail(list_of_odd_coeff(r.approx));
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f32_print_kernel_list("f32_tan_ue_k" @ (length(c)-1) , c);
+  
+  return r;
+};
+
+
+procedure build_dk(basis, x0,x1)
+{
+  var r,c;
+
+  // build the approximation and dump P. need to drop
+  // the coefficient of 'x' (which is constrained to 1)
+  r = f64_build_constrained(tan(x), basis, x0, x1, x);
+  c = tail(list_of_odd_coeff(r.approx));
+
+  print("// ~abs error =", r.aerror);
+  print("// ~rel error =", r.rerror);
+  f64_print_kernel_list("f32_tan_ue_dk" @ (length(c)-1) , c);
+  
+  return r;
+};
+
+
+P4 = build([|3,5,7,9|],          x0,x1);
+P5 = build([|3,5,7,9,11|],       x0,x1);
+P6 = build([|3,5,7,9,11,13|],    x0,x1);
+P7 = build([|3,5,7,9,11,13,15|], x0,x1);
