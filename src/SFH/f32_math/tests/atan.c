@@ -53,6 +53,12 @@
 // limit u->inf:        atan(-(1/v)) = -atan(1/v)
 // so:                  atan(inf)+atan(x) = pi/2 - atan(1/x)
 
+
+// testing test uniform range
+#define SAMPLE_X0 -6.f
+#define SAMPLE_X1  6.f
+
+
 //────────────────────────────────────────────────────────────────────────────────────
 
 float libm(float x) { return atanf(x); }
