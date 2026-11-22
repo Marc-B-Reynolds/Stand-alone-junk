@@ -26,7 +26,8 @@
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x)    { return log1pf(x); }
+float libm_dp(float x) { return (float)log1p((double)x); }
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -153,11 +154,12 @@ float cr_log1pf(float x) {
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(libm_dp),
 };
 
-const char* func_name = "lol";
+const char* func_name = "log1p";
 
-float cr_func(float x) { return 0.f; }
+float cr_func(float x) { return cr_log1pf(x); }
 
 #include "common.h"
 
@@ -168,10 +170,18 @@ float cr_func(float x) { return 0.f; }
 
 void test_spot(void)
 {
+  // junk
+  uint32_t x0 = f32_to_bits(0.5f);
+  uint32_t x1 = f32_to_bits(1.0f);
+  test_force(x0,x1);
 }
 
 void test_all(void)
 {
+  // junk
+  uint32_t x0 = f32_to_bits(0.5f);
+  uint32_t x1 = f32_to_bits(1.0f);
+  test_force(x0,x1);
 }
 
 void test_sanity(void)
@@ -180,6 +190,5 @@ void test_sanity(void)
 
 int main(int argc, char** argv)
 {
-  printf("empty stub\n");
-  //return test_run(argc, argv);
+  return test_run(argc, argv);
 }

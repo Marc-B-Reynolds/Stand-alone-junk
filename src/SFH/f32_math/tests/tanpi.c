@@ -26,7 +26,7 @@
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x) { return (float)tan(M_PI * (double)x); }
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -143,9 +143,9 @@ func_entry_t func_table[] =
   ENTRY(libm),
 };
 
-const char* func_name = "lol";
+const char* func_name = "tanpi";
 
-float cr_func(float x) { return 0.f; }
+float cr_func(float x) { return cr_tanpif(x); }
 
 #include "common.h"
 
@@ -169,5 +169,5 @@ void test_sanity(void)
 int main(int argc, char** argv)
 {
   printf("empty stub\n");
-  //return test_run(argc, argv);
+  return test_run(argc, argv);
 }

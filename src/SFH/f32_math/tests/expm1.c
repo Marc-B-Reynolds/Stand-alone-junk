@@ -26,7 +26,7 @@
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x) { return expm1f(x); }
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -169,9 +169,9 @@ func_entry_t func_table[] =
   ENTRY(libm),
 };
 
-const char* func_name = "lol";
+const char* func_name = "expm1";
 
-float cr_func(float x) { return 0.f; }
+float cr_func(float x) { return cr_expm1f(x); }
 
 #include "common.h"
 
@@ -195,5 +195,5 @@ void test_sanity(void)
 int main(int argc, char** argv)
 {
   printf("empty stub\n");
-  //return test_run(argc, argv);
+  return test_run(argc, argv);
 }

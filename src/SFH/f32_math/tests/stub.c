@@ -26,7 +26,7 @@
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x) { return x; }
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -73,5 +73,5 @@ void test_sanity(void)
 int main(int argc, char** argv)
 {
   printf("empty stub\n");
-  //return test_run(argc, argv);
+  return test_run(argc, argv);
 }
