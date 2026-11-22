@@ -38,8 +38,10 @@
 #include <string.h>
 #include <assert.h>
 
-#include "internal/f32_math_common.h"
-#include "internal/f32_asincos.h"
+// evil hack
+#include "SFH/f32_math/f32_asincos.c"
+#include "SFH/f32_math/internal/f32_math_common.h"
+#include "SFH/f32_math/internal/f32_asincos.h"
 
 #include "util.h"
 
@@ -198,82 +200,6 @@ float eniko(float x)
   return r;
 }
 
-// max abs error ~= 4.261762e-03
-float f32_asin_a0(float x)
-{
-  // Hastings 1955 style except forcing the constant
-  // term of P so f(0) & f(1) are exact
-  // positive 'x':
-  //   π/2 + sqrt(1-x)P(x)
-  //   P(x) = c₀x - π/2
-  // and fold through by product with sign(x) to handle
-  // negative x inputs (and x's become |x|).
-
-  static const float c0 = 0.17539402770089185f;
-  
-  float k = f32_mul_by_sign(f32_pi/2.f,x);   // sign(x) * π/2
-  float a = fabsf(x);                        // |x|
-  float t = sqrtf(1.f-a);                    // sqrt(1-|x|)
-  float p = fmaf(x,c0,-k);                   // P(x)
-  return fmaf(t,p,k);
-}
-
-// max abs error ~= 4.024506e-04
-float f32_asin_a1(float x)
-{
-  // like above but 2nd order P
-  //   P(x) = (c₁x + c₀)x - π/2
-
-  static const float c1 = -0.05344910528338329f;
-  static const float c0 =  0.20744683027439512f;
-  
-  float k = f32_mul_by_sign(f32_pi/2.f,x);
-  float a = fabsf(x);
-  float t = sqrtf(1.f-a);
-  float p = fmaf(x,fmaf(a,c1,c0),-k);
-
-  return fmaf(t,p,k);
-}
-
-
-// max abs error ~= 4.506111e-05
-float f32_asin_a2(float x)
-{
-  // like above but 3rd order P
-  //   P(x) = ((c₂x + c₁)x + c₀)x - π/2
-
-  static const float c2 =  0.021641525571976804f;
-  static const float c1 = -0.07798149543591731f;
-  static const float c0 =  0.21330134383396135f;
-  
-  float k = f32_mul_by_sign(f32_pi/2.f,x);
-  float a = fabsf(x);
-  float t = sqrtf(1.f-a);
-  float p = fmaf(x,fmaf(a,fmaf(a,c2,c1),c0),-k);
-
-  return fmaf(t,p,k);
-}
-
-
-// max abs error ~= 5.662441e-06
-float f32_asin_a3(float x)
-{
-  // like above but 4th order P
-  //   P(x) = ((((c₃ + c₂)x + x + c₁)x + c₀)x - π/2
-
-  static const float c3 = -0.010044210004718978f; 
-  static const float c2 =  0.03822427750032387f;
-  static const float c1 = -0.0860213463845701f;
-  static const float c0 =  0.2143665611826344f;
-  
-  float k = f32_mul_by_sign(f32_pi/2.f,x);
-  float a = fabsf(x);
-  float t = sqrtf(1.f-a);
-  float p = fmaf(x,fmaf(a,fmaf(a,fmaf(a,c3,c2),c1),c0),-k);
-
-  return fmaf(t,p,k);
-}
-
 
 double f32_atan_ue_dk(double x2)
 {
@@ -428,6 +354,8 @@ func_entry_t func_table[] =
   ENTRY(f32_asin_a1),
   ENTRY(f32_asin_a2),
   ENTRY(f32_asin_a3),
+  ENTRY(f32_asin_a4),
+  ENTRY(f32_asin_a5),
 #endif  
 };
 
@@ -462,6 +390,20 @@ void test_simple(void)
   }
 }
 
+void scan_small(void)
+{
+  uint32_t ix = 0;
+  float    r;
+
+  do {
+    float x = f32_from_bits(++ix);
+    r = f32_asin_a5(x);
+  } while(r == 0);
+
+  printf("%a (%f)\n", r,r);
+}
+
+
 // clean up testing 
 void test_spot(void)
 {
@@ -489,6 +431,7 @@ void test_sanity(void)
 
 int main(int argc, char** argv)
 {
+  //scan_small(); return 0;
   //scan(); return 0;
   test_sanity();
 
