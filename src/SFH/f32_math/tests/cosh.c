@@ -20,13 +20,13 @@
 
 
 // testing test uniform range
-//#define SAMPLE_X0 -1.f
-//#define SAMPLE_X1  1.f
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
 
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x) { return coshf(x); }
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -150,9 +150,9 @@ func_entry_t func_table[] =
   ENTRY(libm),
 };
 
-const char* func_name = "lol";
+const char* func_name = "cosh";
 
-float cr_func(float x) { return 0.f; }
+float cr_func(float x) { return cr_coshf(x); }
 
 #include "common.h"
 
@@ -176,5 +176,5 @@ void test_sanity(void)
 int main(int argc, char** argv)
 {
   printf("empty stub\n");
-  //return test_run(argc, argv);
+  return test_run(argc, argv);
 }
