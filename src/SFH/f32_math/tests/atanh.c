@@ -1,7 +1,14 @@
 // -*- coding: utf-8 -*-
 // Public Domain under http://unlicense.org, see link for details.
 //
+//  atanh(-x) = -atanh(x)
+//  atanh(x)  = 1/2 log((1+x)/(1-x))   x ≥ 0
 //
+//  1+x = 1-x+2x → (1+x)/(1-x) = (1-x+2x)/(1-x) = 1 + 2x/(1-x)
+//  2x  = 2x-2x²+2x² → 2x/(1-x) = 2x(1-x)/(1-x) + 2x²/(1-x) 
+//
+//  atanh(x) = 1/2 log1p(2x/(1-x))
+//           = 1/2 log1p(2x + 2x²/(1-x))
 
 #if defined(__linux__) || defined(__unix__)
 // for thread affinity
@@ -20,13 +27,38 @@
 
 
 // testing test uniform range
-//#define SAMPLE_X0 -1.f
-//#define SAMPLE_X1  1.f
+#define SAMPLE_X0 -1.f
+#define SAMPLE_X1  1.f
 
 
 //────────────────────────────────────────────────────────────────────────────────────
 
-float libm(float x) { return 0; }
+float libm(float x) { return atanhf(x); }
+
+float naive(float x)
+{
+  float a = fabsf(x);
+
+  if (a > 0x1.713742p-12f) {
+#if 1
+    float t = a+a;
+    float u = t/(1.f-a);
+    float v = (a < 0.5f) ? fmaf(a,u,t) : u;
+
+    return 0.5f * log1pf(v);
+#else
+    // frown. correctly rounded with whatever glibc I'm currently linking
+    double t = (double)x+(double)x;
+    t = 0.5*log1p(t+t*x/(1.0-x));
+
+    return f32_mul_by_sign((float)t,x);
+#endif
+
+    // missing mulsign as well
+  }
+
+  return x;
+}
 
 
 //────────────────────────────────────────────────────────────────────────────────────
@@ -172,11 +204,12 @@ float cr_atanhf(float x){
 func_entry_t func_table[] =
 {
   ENTRY(libm),
+  ENTRY(naive),
 };
 
-const char* func_name = "lol";
+const char* func_name = "atanh";
 
-float cr_func(float x) { return 0.f; }
+float cr_func(float x) { return cr_atanhf(x); }
 
 #include "common.h"
 
@@ -185,12 +218,41 @@ float cr_func(float x) { return 0.f; }
 
 // move to common.h
 
+// atanh(x) = x for |x| on [0,0x1.713742p-12]
+void scan_id(void)
+{
+  uint32_t ix = 0;
+  float    r,x;
+
+  do {
+    x = f32_from_bits(++ix);
+    r = cr_func(x);
+  } while(r == x);
+
+  x = f32_from_bits(ix-1);
+  r = cr_func(x);
+  if (r != x) printf("X");
+  
+  printf("f(x) = x on [%a,%a]\n", 0.f, x);
+}
+
 void test_spot(void)
 {
+  // hit portion that needs range reduction
+  uint32_t x0 = f32_to_bits(0.5f);
+  uint32_t x1 = f32_to_bits(1.0f);
+  test_force(x0,x1);
 }
 
 void test_all(void)
 {
+  uint32_t x0 = f32_to_bits(0.0f);
+  uint32_t x1 = f32_to_bits(0x1.713742p-12f);
+
+  test_identity_range(x0,x1);
+
+  test_force(x1+1, f32_to_bits(0.5f)-1);
+  test_spot();
 }
 
 void test_sanity(void)
@@ -199,6 +261,8 @@ void test_sanity(void)
 
 int main(int argc, char** argv)
 {
-  printf("empty stub\n");
-  //return test_run(argc, argv);
+  printf("%f\n",naive(0.5f));
+  //scan_id();
+  
+  return test_run(argc, argv);
 }
