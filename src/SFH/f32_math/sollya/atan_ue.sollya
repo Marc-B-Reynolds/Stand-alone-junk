@@ -18,7 +18,8 @@ procedure build(basis, x0,x1)
 
   // build the approximation and dump P. need to drop
   // the coefficient of 'x' (which is constrained to 1)
-  r = f32_build_constrained(atan(x), basis, x0, x1, x);
+  // optimized for abs-error
+  r = f32_build_constrained_ae(atan(x), basis, x0, x1, x);
   c = tail(list_of_odd_coeff(r.approx));
 
   print("// ~abs error =", r.aerror);
@@ -34,9 +35,7 @@ procedure build_dk(basis, x0,x1)
 {
   var r,c;
 
-  // build the approximation and dump P. need to drop
-  // the coefficient of 'x' (which is constrained to 1)
-  r = f64_build_constrained(atan(x), basis, x0, x1, x);
+  r = f64_build_constrained_ae(atan(x), basis, x0, x1, x);
   c = tail(list_of_odd_coeff(r.approx));
 
   print("// ~abs error =", r.aerror);
